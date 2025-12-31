@@ -1,0 +1,1387 @@
+"""
+Pooling Layers
+
+Implements pooling layers for neural networks.
+"""
+
+import mlx.core as mx
+import mlx.nn as mxnn
+from ..module import Module
+from ...tensor import Tensor
+from ...ops.pooling import max_pool2d, avg_pool2d
+from typing import Union, Tuple
+
+
+def _single(x):
+    """Ensure value is a single int."""
+    if isinstance(x, (list, tuple)):
+        return x[0]
+    return x
+
+
+def _pair(x):
+    """Convert single value to pair."""
+    if isinstance(x, (list, tuple)):
+        return tuple(x)
+    return (x, x)
+
+
+def _triple(x):
+    """Convert single value to triple."""
+    if isinstance(x, (list, tuple)):
+        return tuple(x)
+    return (x, x, x)
+
+
+class MaxPool2d(Module):
+    """
+    2D Max Pooling layer.
+
+    Applies a 2D max pooling over an input signal.
+
+    Args:
+        kernel_size: Size of pooling window
+        stride: Stride of pooling (default: kernel_size)
+        padding: Padding to apply (default: 0)
+        dilation: Dilation factor (default: 1)
+        return_indices: Whether to return indices (not supported)
+        ceil_mode: Whether to use ceil for output size (default: False)
+
+    Shape:
+        - Input: [N, C, H, W]
+        - Output: [N, C, H_out, W_out]
+
+    Example:
+        >>> pool = nn.MaxPool2d(kernel_size=2, stride=2)
+        >>> x = mlx_compat.randn(4, 64, 32, 32)
+        >>> output = pool(x)
+    """
+
+    def __init__(
+        self,
+        kernel_size: Union[int, Tuple[int, int]],
+        stride: Union[int, Tuple[int, int], None] = None,
+        padding: Union[int, Tuple[int, int]] = 0,
+        dilation: Union[int, Tuple[int, int]] = 1,
+        return_indices: bool = False,
+        ceil_mode: bool = False
+    ):
+        super().__init__()
+        self.kernel_size = _pair(kernel_size)
+        self.stride = _pair(stride) if stride is not None else self.kernel_size
+        self.padding = _pair(padding)
+        self.dilation = _pair(dilation)
+        self.return_indices = return_indices
+        self.ceil_mode = ceil_mode
+
+    def forward(self, input: Tensor):
+        """
+        Apply max pooling.
+
+        Args:
+            input: Input tensor of shape [N, C, H, W]
+
+        Returns:
+            If return_indices is False: Output tensor of shape [N, C, H_out, W_out]
+            If return_indices is True: Tuple of (output, indices)
+        """
+        if self.return_indices:
+            from ..functional import max_pool2d_with_indices
+            return max_pool2d_with_indices(
+                input,
+                kernel_size=self.kernel_size,
+                stride=self.stride,
+                padding=self.padding,
+                dilation=self.dilation,
+                ceil_mode=self.ceil_mode
+            )
+        else:
+            return max_pool2d(
+                input,
+                kernel_size=self.kernel_size,
+                stride=self.stride,
+                padding=self.padding,
+                dilation=self.dilation,
+                return_indices=self.return_indices,
+                ceil_mode=self.ceil_mode
+            )
+
+    def extra_repr(self) -> str:
+        return (
+            f'kernel_size={self.kernel_size}, '
+            f'stride={self.stride}, '
+            f'padding={self.padding}'
+        )
+
+
+class AvgPool2d(Module):
+    """
+    2D Average Pooling layer.
+
+    Applies a 2D average pooling over an input signal.
+
+    Args:
+        kernel_size: Size of pooling window
+        stride: Stride of pooling (default: kernel_size)
+        padding: Padding to apply (default: 0)
+        ceil_mode: Whether to use ceil for output size (default: False)
+        count_include_pad: Whether to include padding in average (default: True)
+
+    Shape:
+        - Input: [N, C, H, W]
+        - Output: [N, C, H_out, W_out]
+
+    Example:
+        >>> pool = nn.AvgPool2d(kernel_size=2, stride=2)
+        >>> x = mlx_compat.randn(4, 64, 32, 32)
+        >>> output = pool(x)
+    """
+
+    def __init__(
+        self,
+        kernel_size: Union[int, Tuple[int, int]],
+        stride: Union[int, Tuple[int, int], None] = None,
+        padding: Union[int, Tuple[int, int]] = 0,
+        ceil_mode: bool = False,
+        count_include_pad: bool = True,
+        divisor_override: int = None
+    ):
+        super().__init__()
+        self.kernel_size = _pair(kernel_size)
+        self.stride = _pair(stride) if stride is not None else self.kernel_size
+        self.padding = _pair(padding)
+        self.ceil_mode = ceil_mode
+        self.count_include_pad = count_include_pad
+        self.divisor_override = divisor_override
+
+    def forward(self, input: Tensor) -> Tensor:
+        """
+        Apply average pooling.
+
+        Args:
+            input: Input tensor of shape [N, C, H, W]
+
+        Returns:
+            Output tensor of shape [N, C, H_out, W_out]
+        """
+        return avg_pool2d(
+            input,
+            kernel_size=self.kernel_size,
+            stride=self.stride,
+            padding=self.padding,
+            ceil_mode=self.ceil_mode,
+            count_include_pad=self.count_include_pad,
+            divisor_override=self.divisor_override
+        )
+
+    def extra_repr(self) -> str:
+        return (
+            f'kernel_size={self.kernel_size}, '
+            f'stride={self.stride}, '
+            f'padding={self.padding}'
+        )
+
+
+class MaxPool1d(Module):
+    """
+    1D Max Pooling layer.
+
+    Applies a 1D max pooling over an input signal.
+
+    Args:
+        kernel_size: Size of pooling window
+        stride: Stride of pooling (default: kernel_size)
+        padding: Padding to apply (default: 0)
+        dilation: Dilation factor (default: 1)
+        return_indices: Whether to return indices (not supported)
+        ceil_mode: Whether to use ceil for output size (default: False)
+
+    Shape:
+        - Input: [N, C, L]
+        - Output: [N, C, L_out]
+    """
+
+    def __init__(
+        self,
+        kernel_size: int,
+        stride: int = None,
+        padding: int = 0,
+        dilation: int = 1,
+        return_indices: bool = False,
+        ceil_mode: bool = False
+    ):
+        super().__init__()
+        self.kernel_size = _single(kernel_size)
+        self.stride = _single(stride) if stride is not None else self.kernel_size
+        self.padding = _single(padding)
+        self.dilation = _single(dilation)
+        self.return_indices = return_indices
+        self.ceil_mode = ceil_mode
+
+    def forward(self, input: Tensor):
+        """Apply 1D max pooling.
+
+        Returns:
+            If return_indices is False: Output tensor of shape [N, C, L_out]
+            If return_indices is True: Tuple of (output, indices)
+        """
+        # _single returns int or tuple, normalize to int for 1D operations
+        ks = self.kernel_size[0] if isinstance(self.kernel_size, tuple) else self.kernel_size
+        st = self.stride[0] if isinstance(self.stride, tuple) else self.stride
+        pd = self.padding[0] if isinstance(self.padding, tuple) else self.padding
+        dl = self.dilation[0] if isinstance(self.dilation, tuple) else self.dilation
+
+        if self.return_indices:
+            from ..functional import max_pool1d_with_indices
+            return max_pool1d_with_indices(
+                input,
+                kernel_size=ks,
+                stride=st,
+                padding=pd,
+                dilation=dl,
+                ceil_mode=self.ceil_mode
+            )
+        else:
+            # MLX expects NLC format (channels last)
+            x = input._mlx_array
+            x = mx.transpose(x, [0, 2, 1])  # NCL -> NLC
+
+            # Use MLX MaxPool1d
+            pool = mxnn.MaxPool1d(kernel_size=self.kernel_size, stride=self.stride, padding=self.padding)
+            result = pool(x)
+
+            # Convert back: NLC -> NCL
+            result = mx.transpose(result, [0, 2, 1])
+
+            return Tensor._from_mlx_array(result)
+
+    def extra_repr(self) -> str:
+        return f'kernel_size={self.kernel_size}, stride={self.stride}, padding={self.padding}'
+
+
+class AvgPool1d(Module):
+    """
+    1D Average Pooling layer.
+
+    Applies a 1D average pooling over an input signal.
+
+    Args:
+        kernel_size: Size of pooling window
+        stride: Stride of pooling (default: kernel_size)
+        padding: Padding to apply (default: 0)
+        ceil_mode: Whether to use ceil for output size (default: False)
+        count_include_pad: Whether to include padding in average (default: True)
+
+    Shape:
+        - Input: [N, C, L]
+        - Output: [N, C, L_out]
+    """
+
+    def __init__(
+        self,
+        kernel_size: int,
+        stride: int = None,
+        padding: int = 0,
+        ceil_mode: bool = False,
+        count_include_pad: bool = True
+    ):
+        super().__init__()
+        self.kernel_size = _single(kernel_size)
+        self.stride = _single(stride) if stride is not None else self.kernel_size
+        self.padding = _single(padding)
+        self.ceil_mode = ceil_mode
+        self.count_include_pad = count_include_pad
+
+    def forward(self, input: Tensor) -> Tensor:
+        """Apply 1D average pooling."""
+        # MLX expects NLC format (channels last)
+        x = input._mlx_array
+        x = mx.transpose(x, [0, 2, 1])  # NCL -> NLC
+
+        # Use MLX AvgPool1d
+        pool = mxnn.AvgPool1d(kernel_size=self.kernel_size, stride=self.stride, padding=self.padding)
+        result = pool(x)
+
+        # Convert back: NLC -> NCL
+        result = mx.transpose(result, [0, 2, 1])
+
+        return Tensor._from_mlx_array(result)
+
+    def extra_repr(self) -> str:
+        return f'kernel_size={self.kernel_size}, stride={self.stride}, padding={self.padding}'
+
+
+class MaxPool3d(Module):
+    """
+    3D Max Pooling layer.
+
+    Applies a 3D max pooling over an input signal.
+
+    Args:
+        kernel_size: Size of pooling window
+        stride: Stride of pooling (default: kernel_size)
+        padding: Padding to apply (default: 0)
+        dilation: Dilation factor (default: 1)
+        return_indices: Whether to return indices (not supported)
+        ceil_mode: Whether to use ceil for output size (default: False)
+
+    Shape:
+        - Input: [N, C, D, H, W]
+        - Output: [N, C, D_out, H_out, W_out]
+    """
+
+    def __init__(
+        self,
+        kernel_size: Union[int, Tuple[int, int, int]],
+        stride: Union[int, Tuple[int, int, int], None] = None,
+        padding: Union[int, Tuple[int, int, int]] = 0,
+        dilation: Union[int, Tuple[int, int, int]] = 1,
+        return_indices: bool = False,
+        ceil_mode: bool = False
+    ):
+        super().__init__()
+        self.kernel_size = _triple(kernel_size)
+        self.stride = _triple(stride) if stride is not None else self.kernel_size
+        self.padding = _triple(padding)
+        self.dilation = _triple(dilation)
+        self.return_indices = return_indices
+        self.ceil_mode = ceil_mode
+
+    def forward(self, input: Tensor):
+        """Apply 3D max pooling using loop over depth.
+
+        Returns:
+            If return_indices is False: Output tensor of shape [N, C, D_out, H_out, W_out]
+            If return_indices is True: Tuple of (output, indices)
+        """
+        if self.return_indices:
+            from ..functional import max_pool3d_with_indices
+            return max_pool3d_with_indices(
+                input,
+                kernel_size=self.kernel_size,
+                stride=self.stride,
+                padding=self.padding,
+                dilation=self.dilation,
+                ceil_mode=self.ceil_mode
+            )
+
+        x = input._mlx_array
+        N, C, D, H, W = x.shape
+        kD, kH, kW = self.kernel_size
+        sD, sH, sW = self.stride
+        pD, pH, pW = self.padding
+
+        # Pad along depth dimension if needed
+        if pD > 0:
+            x = mx.pad(x, [(0, 0), (0, 0), (pD, pD), (0, 0), (0, 0)])
+
+        # Convert NCDHW to NDHWC
+        x = mx.transpose(x, [0, 2, 3, 4, 1])
+
+        # Calculate output depth
+        D_padded = D + 2 * pD
+        D_out = (D_padded - kD) // sD + 1
+
+        # Create MLX 2D max pooling layer
+        pool_2d = mxnn.MaxPool2d(kernel_size=(kH, kW), stride=(sH, sW), padding=(pH, pW))
+
+        outputs = []
+        for d_out in range(D_out):
+            d_start = d_out * sD
+            # Get depth slice and apply max over kernel depth
+            depth_slice = x[:, d_start:d_start + kD, :, :, :]
+            depth_max = mx.max(depth_slice, axis=1)  # [N, H, W, C]
+
+            # Apply 2D pooling
+            pooled = pool_2d(depth_max)
+            outputs.append(pooled)
+
+        # Stack along depth dimension
+        result = mx.stack(outputs, axis=1)  # [N, D_out, H_out, W_out, C]
+
+        # Convert back to NCDHW
+        result = mx.transpose(result, [0, 4, 1, 2, 3])
+
+        return Tensor._from_mlx_array(result)
+
+    def extra_repr(self) -> str:
+        return f'kernel_size={self.kernel_size}, stride={self.stride}, padding={self.padding}'
+
+
+class AvgPool3d(Module):
+    """
+    3D Average Pooling layer.
+
+    Applies a 3D average pooling over an input signal.
+
+    Args:
+        kernel_size: Size of pooling window
+        stride: Stride of pooling (default: kernel_size)
+        padding: Padding to apply (default: 0)
+        ceil_mode: Whether to use ceil for output size (default: False)
+        count_include_pad: Whether to include padding in average (default: True)
+
+    Shape:
+        - Input: [N, C, D, H, W]
+        - Output: [N, C, D_out, H_out, W_out]
+    """
+
+    def __init__(
+        self,
+        kernel_size: Union[int, Tuple[int, int, int]],
+        stride: Union[int, Tuple[int, int, int], None] = None,
+        padding: Union[int, Tuple[int, int, int]] = 0,
+        ceil_mode: bool = False,
+        count_include_pad: bool = True,
+        divisor_override: int = None
+    ):
+        super().__init__()
+        self.kernel_size = _triple(kernel_size)
+        self.stride = _triple(stride) if stride is not None else self.kernel_size
+        self.padding = _triple(padding)
+        self.ceil_mode = ceil_mode
+        self.count_include_pad = count_include_pad
+        self.divisor_override = divisor_override
+
+    def forward(self, input: Tensor) -> Tensor:
+        """Apply 3D average pooling using loop over depth."""
+        x = input._mlx_array
+        N, C, D, H, W = x.shape
+        kD, kH, kW = self.kernel_size
+        sD, sH, sW = self.stride
+        pD, pH, pW = self.padding
+
+        # Pad along depth dimension if needed
+        if pD > 0:
+            x = mx.pad(x, [(0, 0), (0, 0), (pD, pD), (0, 0), (0, 0)])
+
+        # Convert NCDHW to NDHWC
+        x = mx.transpose(x, [0, 2, 3, 4, 1])
+
+        # Calculate output depth
+        D_padded = D + 2 * pD
+        D_out = (D_padded - kD) // sD + 1
+
+        # Create MLX 2D average pooling layer
+        pool_2d = mxnn.AvgPool2d(kernel_size=(kH, kW), stride=(sH, sW), padding=(pH, pW))
+
+        outputs = []
+        for d_out in range(D_out):
+            d_start = d_out * sD
+            # Get depth slice and apply mean over kernel depth
+            depth_slice = x[:, d_start:d_start + kD, :, :, :]
+            depth_avg = mx.mean(depth_slice, axis=1)  # [N, H, W, C]
+
+            # Apply 2D pooling
+            pooled = pool_2d(depth_avg)
+            outputs.append(pooled)
+
+        # Stack along depth dimension
+        result = mx.stack(outputs, axis=1)  # [N, D_out, H_out, W_out, C]
+
+        # Convert back to NCDHW
+        result = mx.transpose(result, [0, 4, 1, 2, 3])
+
+        return Tensor._from_mlx_array(result)
+
+    def extra_repr(self) -> str:
+        return f'kernel_size={self.kernel_size}, stride={self.stride}, padding={self.padding}'
+
+
+class AdaptiveAvgPool1d(Module):
+    """
+    1D Adaptive Average Pooling layer.
+
+    Produces output of specified size regardless of input size.
+
+    Args:
+        output_size: Target output size
+
+    Shape:
+        - Input: [N, C, L]
+        - Output: [N, C, output_size]
+    """
+
+    def __init__(self, output_size: int):
+        super().__init__()
+        self.output_size = _single(output_size)
+
+    def forward(self, input: Tensor) -> Tensor:
+        """Apply adaptive average pooling."""
+        x = input._mlx_array
+        N, C, L = x.shape
+        out_size = self.output_size
+
+        if out_size == L:
+            return input
+        elif out_size == 1:
+            result = mx.mean(x, axis=2, keepdims=True)
+        else:
+            # Calculate adaptive kernel and stride
+            stride = L // out_size
+            kernel_size = L - (out_size - 1) * stride
+
+            # Convert NCL to NLC (channel last) for MLX
+            x_nlc = mx.transpose(x, [0, 2, 1])
+
+            # Use MLX AvgPool1d
+            pool = mxnn.AvgPool1d(kernel_size=kernel_size, stride=stride, padding=0)
+            result = pool(x_nlc)
+
+            # Convert back to NCL
+            result = mx.transpose(result, [0, 2, 1])
+
+        return Tensor._from_mlx_array(result)
+
+    def extra_repr(self) -> str:
+        return f'output_size={self.output_size}'
+
+
+class AdaptiveAvgPool2d(Module):
+    """
+    2D Adaptive Average Pooling layer.
+
+    Produces output of specified size regardless of input size.
+
+    Args:
+        output_size: Target output size (H, W) or single int for square
+
+    Shape:
+        - Input: [N, C, H, W]
+        - Output: [N, C, output_size[0], output_size[1]]
+    """
+
+    def __init__(self, output_size: Union[int, Tuple[int, int]]):
+        super().__init__()
+        self.output_size = _pair(output_size)
+
+    def forward(self, input: Tensor) -> Tensor:
+        """Apply adaptive average pooling."""
+        x = input._mlx_array
+        N, C, H, W = x.shape
+        out_H, out_W = self.output_size
+
+        if out_H == H and out_W == W:
+            return input
+        elif out_H == 1 and out_W == 1:
+            result = mx.mean(x, axis=(2, 3), keepdims=True)
+        else:
+            # Calculate adaptive kernel and stride
+            stride_h = H // out_H
+            stride_w = W // out_W
+            kernel_h = H - (out_H - 1) * stride_h
+            kernel_w = W - (out_W - 1) * stride_w
+
+            # Convert NCHW to NHWC
+            x_nhwc = mx.transpose(x, [0, 2, 3, 1])
+
+            # Use MLX AvgPool2d
+            pool = mxnn.AvgPool2d(kernel_size=(kernel_h, kernel_w), stride=(stride_h, stride_w), padding=0)
+            result = pool(x_nhwc)
+
+            # Convert back to NCHW
+            result = mx.transpose(result, [0, 3, 1, 2])
+
+        return Tensor._from_mlx_array(result)
+
+    def extra_repr(self) -> str:
+        return f'output_size={self.output_size}'
+
+
+class AdaptiveAvgPool3d(Module):
+    """
+    3D Adaptive Average Pooling layer.
+
+    Produces output of specified size regardless of input size.
+
+    Args:
+        output_size: Target output size (D, H, W) or single int for cube
+
+    Shape:
+        - Input: [N, C, D, H, W]
+        - Output: [N, C, output_size[0], output_size[1], output_size[2]]
+    """
+
+    def __init__(self, output_size: Union[int, Tuple[int, int, int]]):
+        super().__init__()
+        self.output_size = _triple(output_size)
+
+    def forward(self, input: Tensor) -> Tensor:
+        """Apply adaptive average pooling."""
+        x = input._mlx_array
+        N, C, D, H, W = x.shape
+        out_D, out_H, out_W = self.output_size
+
+        if out_D == D and out_H == H and out_W == W:
+            return input
+        elif out_D == 1 and out_H == 1 and out_W == 1:
+            result = mx.mean(x, axis=(2, 3, 4), keepdims=True)
+        else:
+            # Simple implementation using reshape + mean for specific output sizes
+            # This handles common cases like global pooling (1,1,1) efficiently
+            # For arbitrary sizes, we compute adaptive strides
+
+            # Convert NCDHW to NDHWC
+            x_ndhwc = mx.transpose(x, [0, 2, 3, 4, 1])
+
+            # Split and pool each dimension
+            stride_d = D // out_D
+            stride_h = H // out_H
+            stride_w = W // out_W
+            kernel_h = H - (out_H - 1) * stride_h
+            kernel_w = W - (out_W - 1) * stride_w
+
+            # Create MLX 2D avg pool for H,W pooling
+            pool_2d = mxnn.AvgPool2d(kernel_size=(kernel_h, kernel_w), stride=(stride_h, stride_w), padding=0)
+
+            outputs = []
+            for d in range(out_D):
+                d_start = d * stride_d
+                d_end = D if d == out_D - 1 else (d + 1) * stride_d
+                slice_d = x_ndhwc[:, d_start:d_end, :, :, :]
+                pooled_d = mx.mean(slice_d, axis=1, keepdims=True)  # Pool depth
+
+                # Pool H and W using mxnn.AvgPool2d
+                pooled_hw = pool_2d(mx.squeeze(pooled_d, axis=1))
+                outputs.append(mx.expand_dims(pooled_hw, axis=1))
+
+            result = mx.concatenate(outputs, axis=1)
+            # Convert back to NCDHW
+            result = mx.transpose(result, [0, 4, 1, 2, 3])
+
+        return Tensor._from_mlx_array(result)
+
+    def extra_repr(self) -> str:
+        return f'output_size={self.output_size}'
+
+
+class AdaptiveMaxPool1d(Module):
+    """
+    1D Adaptive Max Pooling layer.
+
+    Produces output of specified size regardless of input size.
+
+    Args:
+        output_size: Target output size
+        return_indices: Whether to return indices (not supported)
+
+    Shape:
+        - Input: [N, C, L]
+        - Output: [N, C, output_size]
+    """
+
+    def __init__(self, output_size: int, return_indices: bool = False):
+        super().__init__()
+        self.output_size = _single(output_size)
+        self.return_indices = return_indices
+
+        if return_indices:
+            raise NotImplementedError("return_indices is not supported")
+
+    def forward(self, input: Tensor) -> Tensor:
+        """Apply adaptive max pooling."""
+        x = input._mlx_array
+        N, C, L = x.shape
+        out_size = self.output_size
+
+        if out_size == L:
+            return input
+        elif out_size == 1:
+            result = mx.max(x, axis=2, keepdims=True)
+        else:
+            stride = L // out_size
+            kernel_size = L - (out_size - 1) * stride
+
+            # Convert NCL to NLC (channel last) for MLX
+            x_nlc = mx.transpose(x, [0, 2, 1])
+
+            # Use MLX MaxPool1d
+            pool = mxnn.MaxPool1d(kernel_size=kernel_size, stride=stride, padding=0)
+            result = pool(x_nlc)
+
+            # Convert back to NCL
+            result = mx.transpose(result, [0, 2, 1])
+
+        return Tensor._from_mlx_array(result)
+
+    def extra_repr(self) -> str:
+        return f'output_size={self.output_size}'
+
+
+class AdaptiveMaxPool2d(Module):
+    """
+    2D Adaptive Max Pooling layer.
+
+    Produces output of specified size regardless of input size.
+
+    Args:
+        output_size: Target output size (H, W) or single int for square
+        return_indices: Whether to return indices (not supported)
+
+    Shape:
+        - Input: [N, C, H, W]
+        - Output: [N, C, output_size[0], output_size[1]]
+    """
+
+    def __init__(
+        self,
+        output_size: Union[int, Tuple[int, int]],
+        return_indices: bool = False
+    ):
+        super().__init__()
+        self.output_size = _pair(output_size)
+        self.return_indices = return_indices
+
+        if return_indices:
+            raise NotImplementedError("return_indices is not supported")
+
+    def forward(self, input: Tensor) -> Tensor:
+        """Apply adaptive max pooling."""
+        x = input._mlx_array
+        N, C, H, W = x.shape
+        out_H, out_W = self.output_size
+
+        if out_H == H and out_W == W:
+            return input
+        elif out_H == 1 and out_W == 1:
+            result = mx.max(x, axis=(2, 3), keepdims=True)
+        else:
+            stride_h = H // out_H
+            stride_w = W // out_W
+            kernel_h = H - (out_H - 1) * stride_h
+            kernel_w = W - (out_W - 1) * stride_w
+
+            # Convert NCHW to NHWC
+            x_nhwc = mx.transpose(x, [0, 2, 3, 1])
+
+            # Use MLX MaxPool2d
+            pool = mxnn.MaxPool2d(kernel_size=(kernel_h, kernel_w), stride=(stride_h, stride_w), padding=0)
+            result = pool(x_nhwc)
+
+            # Convert back to NCHW
+            result = mx.transpose(result, [0, 3, 1, 2])
+
+        return Tensor._from_mlx_array(result)
+
+    def extra_repr(self) -> str:
+        return f'output_size={self.output_size}'
+
+
+class AdaptiveMaxPool3d(Module):
+    """
+    3D Adaptive Max Pooling layer.
+
+    Produces output of specified size regardless of input size.
+
+    Args:
+        output_size: Target output size (D, H, W) or single int for cube
+        return_indices: Whether to return indices (not supported)
+
+    Shape:
+        - Input: [N, C, D, H, W]
+        - Output: [N, C, output_size[0], output_size[1], output_size[2]]
+    """
+
+    def __init__(
+        self,
+        output_size: Union[int, Tuple[int, int, int]],
+        return_indices: bool = False
+    ):
+        super().__init__()
+        self.output_size = _triple(output_size)
+        self.return_indices = return_indices
+
+        if return_indices:
+            raise NotImplementedError("return_indices is not supported")
+
+    def forward(self, input: Tensor) -> Tensor:
+        """Apply adaptive max pooling."""
+        x = input._mlx_array
+        N, C, D, H, W = x.shape
+        out_D, out_H, out_W = self.output_size
+
+        if out_D == D and out_H == H and out_W == W:
+            return input
+        elif out_D == 1 and out_H == 1 and out_W == 1:
+            result = mx.max(x, axis=(2, 3, 4), keepdims=True)
+        else:
+            x_ndhwc = mx.transpose(x, [0, 2, 3, 4, 1])
+
+            stride_d = D // out_D
+            stride_h = H // out_H
+            stride_w = W // out_W
+            kernel_h = H - (out_H - 1) * stride_h
+            kernel_w = W - (out_W - 1) * stride_w
+
+            # Create MLX 2D max pool for H,W pooling
+            pool_2d = mxnn.MaxPool2d(kernel_size=(kernel_h, kernel_w), stride=(stride_h, stride_w), padding=0)
+
+            outputs = []
+            for d in range(out_D):
+                d_start = d * stride_d
+                d_end = D if d == out_D - 1 else (d + 1) * stride_d
+                slice_d = x_ndhwc[:, d_start:d_end, :, :, :]
+                pooled_d = mx.max(slice_d, axis=1, keepdims=True)
+
+                # Pool H and W using mxnn.MaxPool2d
+                pooled_hw = pool_2d(mx.squeeze(pooled_d, axis=1))
+                outputs.append(mx.expand_dims(pooled_hw, axis=1))
+
+            result = mx.concatenate(outputs, axis=1)
+            result = mx.transpose(result, [0, 4, 1, 2, 3])
+
+        return Tensor._from_mlx_array(result)
+
+    def extra_repr(self) -> str:
+        return f'output_size={self.output_size}'
+
+
+class LPPool1d(Module):
+    """
+    Apply 1D power-average pooling.
+
+    The output is computed as:
+        out = (sum(|x|^p))^(1/p)
+
+    Args:
+        norm_type: The exponent value p (typically 1 or 2)
+        kernel_size: Size of the pooling window
+        stride: Stride of pooling (default: kernel_size)
+        ceil_mode: If True, use ceil instead of floor for output size
+
+    Shape:
+        - Input: [N, C, L]
+        - Output: [N, C, L_out]
+
+    Example:
+        >>> pool = nn.LPPool1d(norm_type=2, kernel_size=3)
+        >>> x = mlx_compat.randn(1, 16, 50)
+        >>> output = pool(x)
+    """
+
+    def __init__(
+        self,
+        norm_type: float,
+        kernel_size: int,
+        stride: int = None,
+        ceil_mode: bool = False
+    ):
+        super().__init__()
+        self.norm_type = norm_type
+        self.kernel_size = _single(kernel_size)
+        self.stride = _single(stride) if stride is not None else self.kernel_size
+        self.ceil_mode = ceil_mode
+
+    def forward(self, input: Tensor) -> Tensor:
+        """Apply 1D LP pooling."""
+        x = input._mlx_array
+        N, C, L = x.shape
+
+        # Take absolute value and raise to power p
+        x_p = mx.power(mx.abs(x), self.norm_type)
+
+        # Convert NCL to NLC (channel last) for MLX
+        x_p = mx.transpose(x_p, [0, 2, 1])
+
+        # Sum pooling using avg pooling scaled by kernel size
+        pool = mxnn.AvgPool1d(kernel_size=self.kernel_size, stride=self.stride, padding=0)
+        pooled = pool(x_p)
+
+        # Multiply by kernel_size to get sum, then take p-th root
+        pooled = pooled * self.kernel_size
+        result = mx.power(pooled, 1.0 / self.norm_type)
+
+        # Convert back: NLC -> NCL
+        result = mx.transpose(result, [0, 2, 1])
+
+        return Tensor._from_mlx_array(result)
+
+    def extra_repr(self) -> str:
+        return f'norm_type={self.norm_type}, kernel_size={self.kernel_size}, stride={self.stride}'
+
+
+class LPPool2d(Module):
+    """
+    Apply 2D power-average pooling.
+
+    The output is computed as:
+        out = (sum(|x|^p))^(1/p)
+
+    Args:
+        norm_type: The exponent value p (typically 1 or 2)
+        kernel_size: Size of the pooling window
+        stride: Stride of pooling (default: kernel_size)
+        ceil_mode: If True, use ceil instead of floor for output size
+
+    Shape:
+        - Input: [N, C, H, W]
+        - Output: [N, C, H_out, W_out]
+
+    Example:
+        >>> pool = nn.LPPool2d(norm_type=2, kernel_size=3)
+        >>> x = mlx_compat.randn(1, 16, 50, 50)
+        >>> output = pool(x)
+    """
+
+    def __init__(
+        self,
+        norm_type: float,
+        kernel_size: Union[int, Tuple[int, int]],
+        stride: Union[int, Tuple[int, int], None] = None,
+        ceil_mode: bool = False
+    ):
+        super().__init__()
+        self.norm_type = norm_type
+        self.kernel_size = _pair(kernel_size)
+        self.stride = _pair(stride) if stride is not None else self.kernel_size
+        self.ceil_mode = ceil_mode
+
+    def forward(self, input: Tensor) -> Tensor:
+        """Apply 2D LP pooling."""
+        x = input._mlx_array
+        kH, kW = self.kernel_size
+        sH, sW = self.stride
+
+        # Take absolute value and raise to power p
+        x_p = mx.power(mx.abs(x), self.norm_type)
+
+        # Convert NCHW to NHWC
+        x_p = mx.transpose(x_p, [0, 2, 3, 1])
+
+        # Sum pooling using avg pooling scaled by kernel area
+        pool = mxnn.AvgPool2d(kernel_size=(kH, kW), stride=(sH, sW), padding=0)
+        pooled = pool(x_p)
+
+        # Multiply by kernel area to get sum, then take p-th root
+        kernel_area = kH * kW
+        pooled = pooled * kernel_area
+        result = mx.power(pooled, 1.0 / self.norm_type)
+
+        # Convert back to NCHW
+        result = mx.transpose(result, [0, 3, 1, 2])
+
+        return Tensor._from_mlx_array(result)
+
+    def extra_repr(self) -> str:
+        return f'norm_type={self.norm_type}, kernel_size={self.kernel_size}, stride={self.stride}'
+
+
+class LPPool3d(Module):
+    """
+    Apply 3D power-average pooling.
+
+    The output is computed as:
+        out = (sum(|x|^p))^(1/p)
+
+    Args:
+        norm_type: The exponent value p (typically 1 or 2)
+        kernel_size: Size of the pooling window
+        stride: Stride of pooling (default: kernel_size)
+        ceil_mode: If True, use ceil instead of floor for output size
+
+    Shape:
+        - Input: [N, C, D, H, W]
+        - Output: [N, C, D_out, H_out, W_out]
+    """
+
+    def __init__(
+        self,
+        norm_type: float,
+        kernel_size: Union[int, Tuple[int, int, int]],
+        stride: Union[int, Tuple[int, int, int], None] = None,
+        ceil_mode: bool = False
+    ):
+        super().__init__()
+        self.norm_type = norm_type
+        self.kernel_size = _triple(kernel_size)
+        self.stride = _triple(stride) if stride is not None else self.kernel_size
+        self.ceil_mode = ceil_mode
+
+    def forward(self, input: Tensor) -> Tensor:
+        """Apply 3D LP pooling."""
+        import numpy as np
+
+        x = np.array(input._mlx_array)
+        N, C, D, H, W = x.shape
+        kD, kH, kW = self.kernel_size
+        sD, sH, sW = self.stride
+
+        # Calculate output size
+        D_out = (D - kD) // sD + 1
+        H_out = (H - kH) // sH + 1
+        W_out = (W - kW) // sW + 1
+
+        # Take absolute value and raise to power p
+        x_p = np.power(np.abs(x), self.norm_type)
+
+        # Manual 3D pooling
+        output = np.zeros((N, C, D_out, H_out, W_out), dtype=x.dtype)
+        for d in range(D_out):
+            for h in range(H_out):
+                for w in range(W_out):
+                    d_start = d * sD
+                    h_start = h * sH
+                    w_start = w * sW
+                    window = x_p[:, :, d_start:d_start+kD, h_start:h_start+kH, w_start:w_start+kW]
+                    pool_sum = np.sum(window, axis=(2, 3, 4))
+                    output[:, :, d, h, w] = np.power(pool_sum, 1.0 / self.norm_type)
+
+        return Tensor._from_mlx_array(mx.array(output, dtype=input._mlx_array.dtype))
+
+    def extra_repr(self) -> str:
+        return f'norm_type={self.norm_type}, kernel_size={self.kernel_size}, stride={self.stride}'
+
+
+class FractionalMaxPool2d(Module):
+    """
+    Applies 2D fractional max pooling over an input signal.
+
+    Fractional max pooling randomly selects pooling regions, providing a form
+    of stochastic pooling that can improve generalization.
+
+    Args:
+        kernel_size: Size of the pooling region
+        output_size: Target output size (H_out, W_out)
+        output_ratio: Target output ratio relative to input
+        return_indices: Whether to return indices (default: False)
+        _random_samples: Optional random samples for reproducibility
+
+    Note:
+        Either output_size or output_ratio must be specified, but not both.
+
+    Shape:
+        - Input: (N, C, H_in, W_in)
+        - Output: (N, C, H_out, W_out)
+    """
+
+    def __init__(
+        self,
+        kernel_size: Union[int, Tuple[int, int]],
+        output_size: Union[int, Tuple[int, int], None] = None,
+        output_ratio: Union[float, Tuple[float, float], None] = None,
+        return_indices: bool = False,
+        _random_samples=None
+    ):
+        super().__init__()
+        self.kernel_size = _pair(kernel_size)
+        self.output_size = _pair(output_size) if output_size is not None else None
+        self.output_ratio = _pair(output_ratio) if output_ratio is not None else None
+        self.return_indices = return_indices
+        self._random_samples = _random_samples
+
+        if output_size is None and output_ratio is None:
+            raise ValueError("Either output_size or output_ratio must be defined")
+        if output_size is not None and output_ratio is not None:
+            raise ValueError("Only one of output_size or output_ratio should be defined")
+
+    def forward(self, input: Tensor):
+        """Apply fractional max pooling."""
+        import numpy as np
+
+        x = np.array(input._mlx_array)
+        N, C, H, W = x.shape
+        kH, kW = self.kernel_size
+
+        # Determine output size
+        if self.output_size is not None:
+            H_out, W_out = self.output_size
+        else:
+            H_out = int(H * self.output_ratio[0])
+            W_out = int(W * self.output_ratio[1])
+
+        # Generate random pooling regions
+        # This is a simplified implementation
+        h_regions = np.sort(np.random.choice(range(1, H - kH + 1), H_out - 1, replace=False))
+        h_regions = np.concatenate([[0], h_regions, [H - kH + 1]])
+        w_regions = np.sort(np.random.choice(range(1, W - kW + 1), W_out - 1, replace=False))
+        w_regions = np.concatenate([[0], w_regions, [W - kW + 1]])
+
+        output = np.zeros((N, C, H_out, W_out), dtype=x.dtype)
+        indices = np.zeros((N, C, H_out, W_out), dtype=np.int64)
+
+        for i in range(H_out):
+            for j in range(W_out):
+                h_start = int(h_regions[i])
+                h_end = int(h_regions[i + 1]) + kH - 1
+                w_start = int(w_regions[j])
+                w_end = int(w_regions[j + 1]) + kW - 1
+
+                h_end = min(h_end, H)
+                w_end = min(w_end, W)
+
+                window = x[:, :, h_start:h_end, w_start:w_end]
+                output[:, :, i, j] = np.max(window, axis=(2, 3))
+                if self.return_indices:
+                    flat_idx = np.argmax(window.reshape(N, C, -1), axis=2)
+                    indices[:, :, i, j] = flat_idx + h_start * W + w_start
+
+        result = Tensor._from_mlx_array(mx.array(output, dtype=input._mlx_array.dtype))
+
+        if self.return_indices:
+            idx_tensor = Tensor._from_mlx_array(mx.array(indices))
+            return result, idx_tensor
+        return result
+
+    def extra_repr(self) -> str:
+        return f'kernel_size={self.kernel_size}, output_size={self.output_size}, output_ratio={self.output_ratio}'
+
+
+class FractionalMaxPool3d(Module):
+    """
+    Applies 3D fractional max pooling over an input signal.
+
+    Args:
+        kernel_size: Size of the pooling region
+        output_size: Target output size (D_out, H_out, W_out)
+        output_ratio: Target output ratio relative to input
+        return_indices: Whether to return indices (default: False)
+        _random_samples: Optional random samples for reproducibility
+
+    Shape:
+        - Input: (N, C, D_in, H_in, W_in)
+        - Output: (N, C, D_out, H_out, W_out)
+    """
+
+    def __init__(
+        self,
+        kernel_size: Union[int, Tuple[int, int, int]],
+        output_size: Union[int, Tuple[int, int, int], None] = None,
+        output_ratio: Union[float, Tuple[float, float, float], None] = None,
+        return_indices: bool = False,
+        _random_samples=None
+    ):
+        super().__init__()
+        self.kernel_size = _triple(kernel_size)
+        self.output_size = _triple(output_size) if output_size is not None else None
+        self.output_ratio = _triple(output_ratio) if output_ratio is not None else None
+        self.return_indices = return_indices
+        self._random_samples = _random_samples
+
+        if output_size is None and output_ratio is None:
+            raise ValueError("Either output_size or output_ratio must be defined")
+        if output_size is not None and output_ratio is not None:
+            raise ValueError("Only one of output_size or output_ratio should be defined")
+
+    def forward(self, input: Tensor):
+        """Apply fractional max pooling 3D."""
+        import numpy as np
+
+        x = np.array(input._mlx_array)
+        N, C, D, H, W = x.shape
+        kD, kH, kW = self.kernel_size
+
+        if self.output_size is not None:
+            D_out, H_out, W_out = self.output_size
+        else:
+            D_out = int(D * self.output_ratio[0])
+            H_out = int(H * self.output_ratio[1])
+            W_out = int(W * self.output_ratio[2])
+
+        output = np.zeros((N, C, D_out, H_out, W_out), dtype=x.dtype)
+
+        # Simplified implementation - uniform grid
+        d_step = D / D_out
+        h_step = H / H_out
+        w_step = W / W_out
+
+        for di in range(D_out):
+            for hi in range(H_out):
+                for wi in range(W_out):
+                    d_start = int(di * d_step)
+                    d_end = min(int((di + 1) * d_step) + kD - 1, D)
+                    h_start = int(hi * h_step)
+                    h_end = min(int((hi + 1) * h_step) + kH - 1, H)
+                    w_start = int(wi * w_step)
+                    w_end = min(int((wi + 1) * w_step) + kW - 1, W)
+
+                    window = x[:, :, d_start:d_end, h_start:h_end, w_start:w_end]
+                    output[:, :, di, hi, wi] = np.max(window, axis=(2, 3, 4))
+
+        return Tensor._from_mlx_array(mx.array(output, dtype=input._mlx_array.dtype))
+
+    def extra_repr(self) -> str:
+        return f'kernel_size={self.kernel_size}, output_size={self.output_size}, output_ratio={self.output_ratio}'
+
+
+class MaxUnpool1d(Module):
+    """
+    Computes a partial inverse of MaxPool1d.
+
+    MaxPool1d is not fully invertible, since the non-maximal values are lost.
+    MaxUnpool1d takes the output of MaxPool1d including the indices of the
+    maximal values and computes a partial inverse.
+
+    Args:
+        kernel_size: Size of max pooling window
+        stride: Stride of the max pooling window (default: kernel_size)
+        padding: Padding that was added to the input
+
+    Shape:
+        - Input: (N, C, L_in)
+        - Output: (N, C, L_out)
+    """
+
+    def __init__(
+        self,
+        kernel_size: Union[int, Tuple[int]],
+        stride: Union[int, Tuple[int], None] = None,
+        padding: Union[int, Tuple[int]] = 0
+    ):
+        super().__init__()
+        self.kernel_size = _single(kernel_size)
+        self.stride = _single(stride) if stride is not None else self.kernel_size
+        self.padding = _single(padding)
+
+    def forward(self, input: Tensor, indices: Tensor, output_size=None):
+        """Apply max unpooling."""
+        import numpy as np
+
+        x = np.array(input._mlx_array)
+        idx = np.array(indices._mlx_array).astype(np.int64)
+        N, C, L_in = x.shape
+
+        if output_size is not None:
+            L_out = output_size[-1]
+        else:
+            L_out = (L_in - 1) * self.stride - 2 * self.padding + self.kernel_size
+
+        output = np.zeros((N, C, L_out), dtype=x.dtype)
+
+        for n in range(N):
+            for c in range(C):
+                for l in range(L_in):
+                    output[n, c, idx[n, c, l]] = x[n, c, l]
+
+        return Tensor._from_mlx_array(mx.array(output, dtype=input._mlx_array.dtype))
+
+    def extra_repr(self) -> str:
+        return f'kernel_size={self.kernel_size}, stride={self.stride}, padding={self.padding}'
+
+
+class MaxUnpool2d(Module):
+    """
+    Computes a partial inverse of MaxPool2d.
+
+    Args:
+        kernel_size: Size of max pooling window
+        stride: Stride of the max pooling window (default: kernel_size)
+        padding: Padding that was added to the input
+
+    Shape:
+        - Input: (N, C, H_in, W_in)
+        - Output: (N, C, H_out, W_out)
+    """
+
+    def __init__(
+        self,
+        kernel_size: Union[int, Tuple[int, int]],
+        stride: Union[int, Tuple[int, int], None] = None,
+        padding: Union[int, Tuple[int, int]] = 0
+    ):
+        super().__init__()
+        self.kernel_size = _pair(kernel_size)
+        self.stride = _pair(stride) if stride is not None else self.kernel_size
+        self.padding = _pair(padding)
+
+    def forward(self, input: Tensor, indices: Tensor, output_size=None):
+        """Apply max unpooling 2D."""
+        import numpy as np
+
+        x = np.array(input._mlx_array)
+        idx = np.array(indices._mlx_array).astype(np.int64)
+        N, C, H_in, W_in = x.shape
+
+        if output_size is not None:
+            H_out, W_out = output_size[-2], output_size[-1]
+        else:
+            H_out = (H_in - 1) * self.stride[0] - 2 * self.padding[0] + self.kernel_size[0]
+            W_out = (W_in - 1) * self.stride[1] - 2 * self.padding[1] + self.kernel_size[1]
+
+        output = np.zeros((N, C, H_out, W_out), dtype=x.dtype)
+
+        for n in range(N):
+            for c in range(C):
+                for h in range(H_in):
+                    for w in range(W_in):
+                        flat_idx = idx[n, c, h, w]
+                        h_idx = flat_idx // W_out
+                        w_idx = flat_idx % W_out
+                        if 0 <= h_idx < H_out and 0 <= w_idx < W_out:
+                            output[n, c, h_idx, w_idx] = x[n, c, h, w]
+
+        return Tensor._from_mlx_array(mx.array(output, dtype=input._mlx_array.dtype))
+
+    def extra_repr(self) -> str:
+        return f'kernel_size={self.kernel_size}, stride={self.stride}, padding={self.padding}'
+
+
+class MaxUnpool3d(Module):
+    """
+    Computes a partial inverse of MaxPool3d.
+
+    Args:
+        kernel_size: Size of max pooling window
+        stride: Stride of the max pooling window (default: kernel_size)
+        padding: Padding that was added to the input
+
+    Shape:
+        - Input: (N, C, D_in, H_in, W_in)
+        - Output: (N, C, D_out, H_out, W_out)
+    """
+
+    def __init__(
+        self,
+        kernel_size: Union[int, Tuple[int, int, int]],
+        stride: Union[int, Tuple[int, int, int], None] = None,
+        padding: Union[int, Tuple[int, int, int]] = 0
+    ):
+        super().__init__()
+        self.kernel_size = _triple(kernel_size)
+        self.stride = _triple(stride) if stride is not None else self.kernel_size
+        self.padding = _triple(padding)
+
+    def forward(self, input: Tensor, indices: Tensor, output_size=None):
+        """Apply max unpooling 3D."""
+        import numpy as np
+
+        x = np.array(input._mlx_array)
+        idx = np.array(indices._mlx_array).astype(np.int64)
+        N, C, D_in, H_in, W_in = x.shape
+
+        if output_size is not None:
+            D_out, H_out, W_out = output_size[-3], output_size[-2], output_size[-1]
+        else:
+            D_out = (D_in - 1) * self.stride[0] - 2 * self.padding[0] + self.kernel_size[0]
+            H_out = (H_in - 1) * self.stride[1] - 2 * self.padding[1] + self.kernel_size[1]
+            W_out = (W_in - 1) * self.stride[2] - 2 * self.padding[2] + self.kernel_size[2]
+
+        output = np.zeros((N, C, D_out, H_out, W_out), dtype=x.dtype)
+
+        for n in range(N):
+            for c in range(C):
+                for d in range(D_in):
+                    for h in range(H_in):
+                        for w in range(W_in):
+                            flat_idx = idx[n, c, d, h, w]
+                            d_idx = flat_idx // (H_out * W_out)
+                            rem = flat_idx % (H_out * W_out)
+                            h_idx = rem // W_out
+                            w_idx = rem % W_out
+                            if 0 <= d_idx < D_out and 0 <= h_idx < H_out and 0 <= w_idx < W_out:
+                                output[n, c, d_idx, h_idx, w_idx] = x[n, c, d, h, w]
+
+        return Tensor._from_mlx_array(mx.array(output, dtype=input._mlx_array.dtype))
+
+    def extra_repr(self) -> str:
+        return f'kernel_size={self.kernel_size}, stride={self.stride}, padding={self.padding}'
+
+
+__all__ = [
+    'MaxPool1d', 'MaxPool2d', 'MaxPool3d',
+    'AvgPool1d', 'AvgPool2d', 'AvgPool3d',
+    'AdaptiveAvgPool1d', 'AdaptiveAvgPool2d', 'AdaptiveAvgPool3d',
+    'AdaptiveMaxPool1d', 'AdaptiveMaxPool2d', 'AdaptiveMaxPool3d',
+    'LPPool1d', 'LPPool2d', 'LPPool3d',
+    'FractionalMaxPool2d', 'FractionalMaxPool3d',
+    'MaxUnpool1d', 'MaxUnpool2d', 'MaxUnpool3d',
+]

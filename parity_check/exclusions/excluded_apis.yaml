@@ -1,0 +1,739 @@
+# Excluded APIs for mlx_compat parity checking
+#
+# This file lists PyTorch APIs that are intentionally NOT implemented
+# in mlx_compat. Each exclusion must include a reason.
+#
+# Format:
+#   module_name:
+#     api_name: "reason for exclusion"
+
+torch:
+  # ==========================================================================
+  # CUDA-specific modules and functions
+  # ==========================================================================
+  cuda: "CUDA-specific module - MLX uses Metal on Apple Silicon"
+  cuda_extension: "CUDA compilation utilities"
+  cudnn: "cuDNN-specific module"
+  cudnn_affine_grid_generator_backward: "cuDNN-specific function"
+  cudnn_batch_norm: "cuDNN-specific function"
+  cudnn_convolution: "cuDNN-specific function"
+  cudnn_convolution_transpose: "cuDNN-specific function"
+  cudnn_grid_sampler: "cuDNN-specific function"
+  cudnn_affine_grid_generator: "cuDNN-specific function"
+  cudnn_convolution_add_relu: "cuDNN-specific function"
+  cudnn_convolution_relu: "cuDNN-specific function"
+  cudnn_is_acceptable: "cuDNN-specific function"
+
+  # ==========================================================================
+  # Backend-specific modules
+  # ==========================================================================
+  backends: "Backend-specific configuration"
+  xpu: "Intel XPU-specific module"
+  mps: "Apple MPS backend - we use MLX directly instead"
+  mtia: "Meta Training and Inference Accelerator"
+  hip: "AMD HIP-specific module"
+
+  # MIOpen (AMD)
+  miopen_batch_norm: "MIOpen-specific function"
+  miopen_convolution: "MIOpen-specific function"
+  miopen_convolution_add_relu: "MIOpen-specific function"
+  miopen_convolution_relu: "MIOpen-specific function"
+  miopen_convolution_transpose: "MIOpen-specific function"
+  miopen_depthwise_convolution: "MIOpen-specific function"
+  miopen_rnn: "MIOpen-specific function"
+
+  # MKL-DNN (Intel)
+  mkldnn_adaptive_avg_pool2d: "MKL-DNN specific function"
+  mkldnn_convolution: "MKL-DNN specific function"
+  mkldnn_linear_backward_weights: "MKL-DNN specific function"
+  mkldnn_max_pool2d: "MKL-DNN specific function"
+  mkldnn_max_pool3d: "MKL-DNN specific function"
+  mkldnn_rnn_layer: "MKL-DNN specific function"
+
+  # FBGEMM (Facebook)
+  fbgemm_linear_fp16_weight: "FBGEMM-specific function"
+  fbgemm_linear_fp16_weight_fp32_activation: "FBGEMM-specific function"
+  fbgemm_linear_int8_weight: "FBGEMM-specific function"
+  fbgemm_linear_int8_weight_fp32_activation: "FBGEMM-specific function"
+  fbgemm_linear_quantize_weight: "FBGEMM-specific function"
+  fbgemm_pack_gemm_matrix_fp16: "FBGEMM-specific function"
+  fbgemm_pack_quantized_matrix: "FBGEMM-specific function"
+
+  # ==========================================================================
+  # JIT/Compilation infrastructure
+  # ==========================================================================
+  jit: "TorchScript JIT compiler - not applicable to MLX"
+  fx: "FX graph transformation - not applicable"
+  compile: "torch.compile infrastructure - MLX has its own compilation"
+  _dynamo: "TorchDynamo internals"
+  _functorch: "functorch internals"
+  _inductor: "TorchInductor internals"
+  cpp: "C++ extension module"
+  export: "Export module for torch.compile"
+
+  # JIT parsing and IR functions
+  parse_ir: "JIT IR parsing"
+  parse_schema: "JIT schema parsing"
+  parse_type_comment: "JIT type comment parsing"
+  import_ir_module: "JIT module import"
+  import_ir_module_from_buffer: "JIT module import from buffer"
+  merge_type_from_type_comment: "JIT type merging"
+  unify_type_list: "JIT type unification"
+
+  # Symbolic functions (torch.compile)
+  sym_float: "Symbolic float for tracing"
+  sym_int: "Symbolic int for tracing"
+  sym_not: "Symbolic not for tracing"
+  sym_max: "Symbolic max for tracing"
+  sym_min: "Symbolic min for tracing"
+  sym_sqrt: "Symbolic sqrt for tracing"
+  sym_sum: "Symbolic sum for tracing"
+  sym_ite: "Symbolic if-then-else for tracing"
+  sym_fresh_size: "Symbolic fresh size for tracing"
+  sym_constrain_range: "Symbolic constraint for tracing"
+  sym_constrain_range_for_size: "Symbolic constraint for tracing"
+  cond: "Conditional for torch.compile"
+  vmap: "Vectorized map - functorch feature"
+
+  # ==========================================================================
+  # Distributed training
+  # ==========================================================================
+  distributed: "Distributed training - MLX has different paradigm"
+  multiprocessing: "PyTorch multiprocessing utilities"
+
+  # ==========================================================================
+  # Storage classes (internal implementation)
+  # ==========================================================================
+  storage: "Low-level storage classes"
+  TypedStorage: "Low-level typed storage"
+  UntypedStorage: "Low-level untyped storage"
+  Storage: "Low-level storage base"
+  BoolStorage: "Internal storage class"
+  ByteStorage: "Internal storage class"
+  CharStorage: "Internal storage class"
+  DoubleStorage: "Internal storage class"
+  FloatStorage: "Internal storage class"
+  IntStorage: "Internal storage class"
+  LongStorage: "Internal storage class"
+  ShortStorage: "Internal storage class"
+  is_storage: "Storage check function"
+
+  # ==========================================================================
+  # Typed tensor classes (deprecated)
+  # ==========================================================================
+  BoolTensor: "Deprecated typed tensor - use dtype parameter"
+  ByteTensor: "Deprecated typed tensor - use dtype parameter"
+  CharTensor: "Deprecated typed tensor - use dtype parameter"
+  DoubleTensor: "Deprecated typed tensor - use dtype parameter"
+  FloatTensor: "Deprecated typed tensor - use dtype parameter"
+  IntTensor: "Deprecated typed tensor - use dtype parameter"
+  LongTensor: "Deprecated typed tensor - use dtype parameter"
+  ShortTensor: "Deprecated typed tensor - use dtype parameter"
+
+  # ==========================================================================
+  # Symbolic types (for torch.compile)
+  # ==========================================================================
+  SymBool: "Symbolic type for torch.compile"
+  SymFloat: "Symbolic type for torch.compile"
+  SymInt: "Symbolic type for torch.compile"
+
+  # ==========================================================================
+  # Serialization internals
+  # ==========================================================================
+  _load_global_deps: "Internal serialization"
+  _weights_only_unpickler: "Internal unpickler"
+
+  # ==========================================================================
+  # C++ extensions and internals
+  # ==========================================================================
+  _C: "C++ internals"
+  _VF: "Vectorized functions internals"
+
+  # ==========================================================================
+  # Quantization
+  # ==========================================================================
+  quantization: "Quantization module - different approach in MLX"
+  quantize_per_tensor: "Quantization function"
+  quantize_per_channel: "Quantization function"
+  quantize_per_tensor_dynamic: "Dynamic quantization function"
+  dequantize: "Dequantization function"
+  fake_quantize_per_tensor_affine: "Fake quantization"
+  fake_quantize_per_channel_affine: "Fake quantization"
+  choose_qparams_optimized: "Quantization parameter selection"
+  fused_moving_avg_obs_fake_quant: "Quantization-aware training"
+  int_repr: "Quantized tensor int representation"
+  q_per_channel_axis: "Quantization parameter"
+  q_per_channel_scales: "Quantization parameter"
+  q_per_channel_zero_points: "Quantization parameter"
+  q_scale: "Quantization scale"
+  q_zero_point: "Quantization zero point"
+  empty_quantized: "Empty quantized tensor"
+  quantized_batch_norm: "Quantized batch norm"
+  quantized_gru_cell: "Quantized GRU cell"
+  quantized_lstm_cell: "Quantized LSTM cell"
+  quantized_max_pool1d: "Quantized max pool 1D"
+  quantized_max_pool2d: "Quantized max pool 2D"
+  quantized_max_pool3d: "Quantized max pool 3D"
+  quantized_rnn_relu_cell: "Quantized RNN ReLU cell"
+  quantized_rnn_tanh_cell: "Quantized RNN tanh cell"
+
+  # ==========================================================================
+  # Sparse tensors (limited MLX support)
+  # ==========================================================================
+  sparse: "Sparse tensor module"
+  sparse_coo_tensor: "COO sparse tensor"
+  sparse_csr_tensor: "CSR sparse tensor"
+  sparse_csc_tensor: "CSC sparse tensor"
+  sparse_bsr_tensor: "BSR sparse tensor"
+  sparse_bsc_tensor: "BSC sparse tensor"
+  sparse_compressed_tensor: "Compressed sparse tensor"
+  spmm: "Sparse matrix multiply"
+  smm: "Sparse matrix multiply"
+  hsmm: "Half sparse matrix multiply"
+  dsmm: "Double sparse matrix multiply"
+  hspmm: "Half sparse matrix multiply"
+  saddmm: "Sparse add matrix multiply"
+  sspaddmm: "Sparse sparse add matrix multiply"
+
+  # ==========================================================================
+  # Nested tensors
+  # ==========================================================================
+  nested: "Nested tensor module"
+
+  # ==========================================================================
+  # FFT module (use MLX's FFT directly)
+  # ==========================================================================
+  fft: "FFT module - use MLX FFT"
+  stft: "Short-time Fourier transform - use MLX FFT"
+  istft: "Inverse STFT - use MLX FFT"
+
+  # ==========================================================================
+  # Profiling
+  # ==========================================================================
+  profiler: "Profiling utilities"
+  autograd.profiler: "Autograd profiler"
+
+  # ==========================================================================
+  # Testing utilities
+  # ==========================================================================
+  testing: "Testing utilities"
+
+  # ==========================================================================
+  # Package/deploy
+  # ==========================================================================
+  package: "Model packaging"
+
+  # ==========================================================================
+  # Utilities that don't apply
+  # ==========================================================================
+  hub: "Model hub - not applicable"
+  onnx: "ONNX export - not applicable"
+
+  # ==========================================================================
+  # RNG and determinism
+  # ==========================================================================
+  Generator: "RNG generator class - use manual_seed"
+  default_generator: "Default RNG generator"
+  get_rng_state: "RNG state - use manual_seed"
+  set_rng_state: "RNG state - use manual_seed"
+  initial_seed: "RNG seed query"
+  seed: "RNG seeding - use manual_seed"
+  # Note: are_deterministic_algorithms_enabled, get/set_deterministic_debug_mode are implemented
+  use_deterministic_algorithms: "Determinism control"
+  is_deterministic_algorithms_warn_only_enabled: "Determinism warning"
+
+  # ==========================================================================
+  # Anomaly detection
+  # ==========================================================================
+  is_anomaly_check_nan_enabled: "Anomaly detection"
+  is_anomaly_enabled: "Anomaly detection"
+  set_anomaly_enabled: "Anomaly detection"
+
+  # ==========================================================================
+  # Autocast (automatic mixed precision)
+  # ==========================================================================
+  autocast: "Autocast context manager - MLX handles precision differently"
+  autocast_increment_nesting: "Autocast internal"
+  autocast_decrement_nesting: "Autocast internal"
+  clear_autocast_cache: "Autocast cache"
+  get_autocast_cpu_dtype: "Autocast configuration"
+  get_autocast_dtype: "Autocast configuration"
+  get_autocast_gpu_dtype: "Autocast configuration"
+  get_autocast_ipu_dtype: "Autocast configuration"
+  get_autocast_xla_dtype: "Autocast configuration"
+  is_autocast_cache_enabled: "Autocast state"
+  is_autocast_cpu_enabled: "Autocast state"
+  is_autocast_enabled: "Autocast state"
+  is_autocast_ipu_enabled: "Autocast state"
+  is_autocast_xla_enabled: "Autocast state"
+  set_autocast_cache_enabled: "Autocast configuration"
+  set_autocast_cpu_dtype: "Autocast configuration"
+  set_autocast_cpu_enabled: "Autocast configuration"
+  set_autocast_dtype: "Autocast configuration"
+  set_autocast_enabled: "Autocast configuration"
+  set_autocast_gpu_dtype: "Autocast configuration"
+  set_autocast_ipu_dtype: "Autocast configuration"
+  set_autocast_ipu_enabled: "Autocast configuration"
+  set_autocast_xla_dtype: "Autocast configuration"
+  set_autocast_xla_enabled: "Autocast configuration"
+
+  # ==========================================================================
+  # Other utility classes and functions
+  # ==========================================================================
+  GradScaler: "AMP gradient scaler - not applicable to MLX"
+  inference_mode: "Inference mode context - use no_grad"
+  set_default_tensor_type: "Deprecated - use set_default_dtype"
+  set_flush_denormal: "CPU-specific denormal handling"
+  set_warn_always: "Warning configuration"
+  is_warn_always_enabled: "Warning configuration"
+  set_printoptions: "Print formatting - low priority"
+  typename: "Type name utility"
+
+  # ==========================================================================
+  # In-place operations (MLX is immutable, use functional equivalents)
+  # ==========================================================================
+  abs_: "In-place op - MLX immutable, use abs()"
+  acos_: "In-place op - MLX immutable, use acos()"
+  acosh_: "In-place op - MLX immutable, use acosh()"
+  addmv_: "In-place op - MLX immutable"
+  arccos_: "In-place op - MLX immutable, use arccos()"
+  arccosh_: "In-place op - MLX immutable, use arccosh()"
+  arcsin_: "In-place op - MLX immutable, use arcsin()"
+  arcsinh_: "In-place op - MLX immutable, use arcsinh()"
+  arctan_: "In-place op - MLX immutable, use arctan()"
+  arctanh_: "In-place op - MLX immutable, use arctanh()"
+  asin_: "In-place op - MLX immutable, use asin()"
+  asinh_: "In-place op - MLX immutable, use asinh()"
+  atan_: "In-place op - MLX immutable, use atan()"
+  atanh_: "In-place op - MLX immutable, use atanh()"
+  ceil_: "In-place op - MLX immutable, use ceil()"
+  clamp_: "In-place op - MLX immutable, use clamp()"
+  cos_: "In-place op - MLX immutable, use cos()"
+  cosh_: "In-place op - MLX immutable, use cosh()"
+  exp_: "In-place op - MLX immutable, use exp()"
+  expm1_: "In-place op - MLX immutable, use expm1()"
+  floor_: "In-place op - MLX immutable, use floor()"
+  frac_: "In-place op - MLX immutable, use frac()"
+  log_: "In-place op - MLX immutable, use log()"
+  log10_: "In-place op - MLX immutable, use log10()"
+  log1p_: "In-place op - MLX immutable, use log1p()"
+  log2_: "In-place op - MLX immutable, use log2()"
+  neg_: "In-place op - MLX immutable, use neg()"
+  reciprocal_: "In-place op - MLX immutable, use reciprocal()"
+  round_: "In-place op - MLX immutable, use round()"
+  rsqrt_: "In-place op - MLX immutable, use rsqrt()"
+  sigmoid_: "In-place op - MLX immutable, use sigmoid()"
+  sign_: "In-place op - MLX immutable, use sign()"
+  sin_: "In-place op - MLX immutable, use sin()"
+  sinh_: "In-place op - MLX immutable, use sinh()"
+  sqrt_: "In-place op - MLX immutable, use sqrt()"
+  tan_: "In-place op - MLX immutable, use tan()"
+  tanh_: "In-place op - MLX immutable, use tanh()"
+  trunc_: "In-place op - MLX immutable, use trunc()"
+  zero_: "In-place op - MLX immutable, use zeros_like()"
+
+  # ==========================================================================
+  # Vitals (internal monitoring)
+  # ==========================================================================
+  vitals_enabled: "Internal vitals"
+  read_vitals: "Internal vitals"
+  set_vital: "Internal vitals"
+
+  # ==========================================================================
+  # Threading (MLX manages this differently)
+  # ==========================================================================
+  get_num_interop_threads: "Threading configuration"
+  set_num_interop_threads: "Threading configuration"
+  init_num_threads: "Threading initialization"
+
+  # ==========================================================================
+  # Internal type classes (JIT infrastructure)
+  # ==========================================================================
+  AnyType: "JIT type class"
+  BoolType: "JIT type class"
+  ComplexType: "JIT type class"
+  DeviceObjType: "JIT type class"
+  DictType: "JIT type class"
+  EnumType: "JIT type class"
+  FloatType: "JIT type class"
+  FutureType: "JIT type class"
+  IntType: "JIT type class"
+  InterfaceType: "JIT type class"
+  ListType: "JIT type class"
+  NoneType: "JIT type class"
+  NumberType: "JIT type class"
+  OptionalType: "JIT type class"
+  PyObjectType: "JIT type class"
+  RRefType: "JIT type class"
+  StreamObjType: "JIT type class"
+  StringType: "JIT type class"
+  SymBoolType: "JIT type class"
+  SymIntType: "JIT type class"
+  TensorType: "JIT type class"
+  TupleType: "JIT type class"
+  Type: "JIT type class"
+  UnionType: "JIT type class"
+  AwaitType: "JIT type class"
+  ClassType: "JIT type class"
+
+  # ==========================================================================
+  # JIT graph and compilation classes
+  # ==========================================================================
+  AliasDb: "JIT alias database"
+  Argument: "JIT argument class"
+  ArgumentSpec: "JIT argument spec"
+  Block: "JIT graph block"
+  CallStack: "JIT call stack"
+  Code: "JIT code"
+  CompilationUnit: "JIT compilation unit"
+  CompleteArgumentSpec: "JIT complete argument spec"
+  ConcreteModuleType: "JIT concrete module type"
+  ConcreteModuleTypeBuilder: "JIT type builder"
+  ErrorReport: "JIT error report"
+  ExecutionPlan: "JIT execution plan"
+  FileCheck: "JIT file check"
+  FunctionSchema: "JIT function schema"
+  Graph: "JIT graph"
+  GraphExecutorState: "JIT executor state"
+  Gradient: "JIT gradient"
+  InferredType: "JIT inferred type"
+  Node: "JIT graph node"
+  OperatorInfo: "JIT operator info"
+  Use: "JIT use class"
+  Value: "JIT value class"
+  TracingState: "JIT tracing state"
+
+  # ==========================================================================
+  # Script classes (TorchScript)
+  # ==========================================================================
+  ScriptClass: "TorchScript class"
+  ScriptClassFunction: "TorchScript class function"
+  ScriptDict: "TorchScript dict"
+  ScriptDictIterator: "TorchScript dict iterator"
+  ScriptDictKeyIterator: "TorchScript dict key iterator"
+  ScriptFunction: "TorchScript function"
+  ScriptList: "TorchScript list"
+  ScriptListIterator: "TorchScript list iterator"
+  ScriptMethod: "TorchScript method"
+  ScriptModule: "TorchScript module"
+  ScriptModuleSerializer: "TorchScript serializer"
+  ScriptObject: "TorchScript object"
+  ScriptObjectProperty: "TorchScript property"
+  LiteScriptModule: "Lite TorchScript module"
+
+  # ==========================================================================
+  # Other internal classes
+  # ==========================================================================
+  AcceleratorError: "Accelerator error class"
+  AggregationType: "Aggregation type enum"
+  BenchmarkConfig: "Benchmark configuration"
+  BenchmarkExecutionStats: "Benchmark stats"
+  BufferDict: "Buffer dictionary"
+  Capsule: "PyCapsule wrapper"
+  DeepCopyMemoTable: "Deep copy memo"
+  DeserializationStorageContext: "Deserialization context"
+  DisableTorchFunction: "Torch function control"
+  DisableTorchFunctionSubclass: "Torch function control"
+  DispatchKey: "Dispatch key"
+  DispatchKeySet: "Dispatch key set"
+  Event: "CUDA event - not applicable"
+  ExcludeDispatchKeyGuard: "Dispatch guard"
+  FatalError: "Fatal error class"
+  Future: "Future class"
+  IODescriptor: "IO descriptor"
+  JITException: "JIT exception"
+  LockingLogger: "Locking logger"
+  NoopLogger: "Noop logger"
+  OutOfMemoryError: "OOM error"
+  ModuleDict: "Module dict - use nn.ModuleDict"
+  ParameterDict: "Parameter dict - use nn.ParameterDict"
+  PyTorchFileReader: "File reader"
+  PyTorchFileWriter: "File writer"
+  SerializationStorageContext: "Serialization context"
+  Size: "Size class - use tuple"
+  StaticModule: "Static module"
+  Stream: "CUDA stream - not applicable"
+  Tag: "Tag class"
+  ThroughputBenchmark: "Throughput benchmark"
+
+  # ==========================================================================
+  # Type annotations
+  # ==========================================================================
+  device: "Device class - implemented separately"
+  dtype: "Dtype class - implemented separately"
+  finfo: "Float info - low priority"
+  iinfo: "Int info - low priority"
+  layout: "Layout class"
+  memory_format: "Memory format"
+  qscheme: "Quantization scheme"
+
+  # ==========================================================================
+  # Constants (esoteric dtypes and quantization)
+  # ==========================================================================
+  AVG: "Aggregation constant"
+  SUM: "Aggregation constant"
+  bit: "Bit dtype"
+  bits16: "16-bit dtype"
+  bits1x8: "Packed bits dtype"
+  bits2x4: "Packed bits dtype"
+  bits4x2: "Packed bits dtype"
+  bits8: "8-bit dtype"
+  cdouble: "Complex double - limited MLX support"
+  cfloat: "Complex float - limited MLX support"
+  chalf: "Complex half - limited MLX support"
+  complex32: "Complex 32-bit - limited MLX support"
+  e: "Math constant - use math.e"
+  pi: "Math constant - use math.pi"
+  inf: "Infinity - use float('inf')"
+  nan: "NaN - use float('nan')"
+  newaxis: "New axis - use None"
+  float4_e2m1fn_x2: "Exotic float format"
+  float8_e4m3fn: "Float8 format - not supported"
+  float8_e4m3fnuz: "Float8 format - not supported"
+  float8_e5m2: "Float8 format - not supported"
+  float8_e5m2fnuz: "Float8 format - not supported"
+  float8_e8m0fnu: "Float8 format - not supported"
+  has_lapack: "Feature flag"
+  has_mkl: "Feature flag"
+  has_openmp: "Feature flag"
+  has_spectral: "Feature flag"
+  int1: "1-bit int - not supported"
+  int2: "2-bit int - not supported"
+  int3: "3-bit int - not supported"
+  int4: "4-bit int - not supported"
+  int5: "5-bit int - not supported"
+  int6: "6-bit int - not supported"
+  int7: "7-bit int - not supported"
+  uint1: "1-bit uint - not supported"
+  uint2: "2-bit uint - not supported"
+  uint3: "3-bit uint - not supported"
+  uint4: "4-bit uint - not supported"
+  uint5: "5-bit uint - not supported"
+  uint6: "6-bit uint - not supported"
+  uint7: "7-bit uint - not supported"
+  qint8: "Quantized int8"
+  qint32: "Quantized int32"
+  quint2x4: "Quantized uint 2x4"
+  quint4x2: "Quantized uint 4x2"
+  quint8: "Quantized uint8"
+
+  # ==========================================================================
+  # Batch norm internals (native implementations)
+  # ==========================================================================
+  batch_norm_backward_elemt: "Native batch norm backward"
+  batch_norm_backward_reduce: "Native batch norm backward"
+  batch_norm_elemt: "Native batch norm element"
+  batch_norm_gather_stats: "Native batch norm stats"
+  batch_norm_gather_stats_with_counts: "Native batch norm stats"
+  batch_norm_stats: "Native batch norm stats"
+  batch_norm_update_stats: "Native batch norm stats"
+  native_batch_norm: "Native batch norm"
+  native_channel_shuffle: "Native channel shuffle"
+  native_dropout: "Native dropout"
+  native_group_norm: "Native group norm"
+  native_layer_norm: "Native layer norm"
+  native_norm: "Native norm"
+
+  # ==========================================================================
+  # Copy variants (internal, rarely used directly)
+  # ==========================================================================
+  alias_copy: "Alias copy - internal"
+  as_strided_copy: "As strided copy - internal"
+  ccol_indices_copy: "Sparse indices copy"
+  col_indices_copy: "Sparse indices copy"
+  crow_indices_copy: "Sparse indices copy"
+  detach_copy: "Detach copy - use detach"
+  diagonal_copy: "Diagonal copy - use diagonal"
+  expand_copy: "Expand copy - use expand"
+  indices_copy: "Indices copy - internal"
+  narrow_copy: "Narrow copy - use narrow"
+  permute_copy: "Permute copy - use permute"
+  row_indices_copy: "Row indices copy"
+  select_copy: "Select copy - use select"
+  slice_copy: "Slice copy - use slice"
+  split_copy: "Split copy - use split"
+  split_with_sizes_copy: "Split copy - use split"
+  squeeze_copy: "Squeeze copy - use squeeze"
+  t_copy: "Transpose copy - use t"
+  transpose_copy: "Transpose copy - use transpose"
+  unbind_copy: "Unbind copy - use unbind"
+  unfold_copy: "Unfold copy - use unfold"
+  unsqueeze_copy: "Unsqueeze copy - use unsqueeze"
+  values_copy: "Values copy - internal"
+  view_copy: "View copy - use view"
+  view_as_complex_copy: "View as complex copy"
+  view_as_real_copy: "View as real copy"
+
+  # ==========================================================================
+  # Other internal functions
+  # ==========================================================================
+  fork: "Internal forking"
+  wait: "Internal synchronization"
+  align_tensors: "Internal tensor alignment"
+  conv_tbc: "Time-batch-channel conv - internal"
+  get_device: "Get device - use tensor.device"
+  get_device_module: "Get device module"
+  get_float32_matmul_precision: "Matmul precision config"
+  set_float32_matmul_precision: "Matmul precision config"
+  is_distributed: "Distributed check"
+  is_inference: "Inference check"
+  is_inference_mode_enabled: "Inference mode check"
+  is_vulkan_available: "Vulkan check"
+  prepare_multiprocessing_environment: "Multiprocessing setup"
+  resize_as_: "In-place resize - internal"
+  resize_as_sparse_: "Sparse resize - internal"
+
+torch.nn:
+  # Lazy modules (initialization pattern not needed)
+  LazyLinear: "Lazy initialization not needed in MLX"
+  LazyConv1d: "Lazy initialization not needed"
+  LazyConv2d: "Lazy initialization not needed"
+  LazyConv3d: "Lazy initialization not needed"
+  LazyConvTranspose1d: "Lazy initialization not needed"
+  LazyConvTranspose2d: "Lazy initialization not needed"
+  LazyConvTranspose3d: "Lazy initialization not needed"
+  LazyBatchNorm1d: "Lazy initialization not needed"
+  LazyBatchNorm2d: "Lazy initialization not needed"
+  LazyBatchNorm3d: "Lazy initialization not needed"
+  LazyInstanceNorm1d: "Lazy initialization not needed"
+  LazyInstanceNorm2d: "Lazy initialization not needed"
+  LazyInstanceNorm3d: "Lazy initialization not needed"
+
+  # Quantized modules
+  quantized: "Quantized modules subpackage"
+
+  # Parallel modules
+  DataParallel: "Data parallelism - MLX has different paradigm"
+  parallel: "Parallel training subpackage"
+
+  # RNN backends
+  _VF: "Vectorized functions for RNN"
+
+  # Intrinsic modules (quantization-aware training)
+  intrinsic: "Quantization intrinsic modules"
+
+  # Utils that are PyTorch-specific
+  utils: "NN utilities subpackage"
+
+torch.nn.functional:
+  # Quantized functions
+  quantized_linear: "Quantized linear"
+  quantized_conv1d: "Quantized conv1d"
+  quantized_conv2d: "Quantized conv2d"
+  quantized_conv3d: "Quantized conv3d"
+
+  # Grid sample (complex, lower priority)
+  grid_sample: "Grid sampling - complex implementation"
+  affine_grid: "Affine grid generation"
+
+torch.optim:
+  # Complex optimizers (lower priority)
+  LBFGS: "L-BFGS optimizer - complex, rarely used"
+  Rprop: "Rprop optimizer - rarely used"
+  ASGD: "Averaged SGD - rarely used"
+  Adamax: "Adamax optimizer - lower priority"
+  NAdam: "NAdam optimizer - lower priority"
+  RAdam: "RAdam optimizer - lower priority"
+  SparseAdam: "Sparse Adam - sparse tensor support needed"
+
+  # Learning rate schedulers submodule handled separately
+  swa_utils: "Stochastic Weight Averaging utilities"
+
+torch.utils.data:
+  # Distributed samplers
+  DistributedSampler: "Distributed sampler - different paradigm"
+
+  # Communication utilities
+  communication: "Communication submodule"
+
+  # Graph mode
+  graph: "Data loading graph mode"
+
+torch.linalg:
+  # Error handling class
+  LinAlgError: "Exception class - use standard exceptions"
+
+  # Documentation strings
+  common_notes: "Documentation string constant"
+
+  # Extended functions with error info (can be added later)
+  cholesky_ex: "Extended Cholesky with info - use cholesky"
+  inv_ex: "Extended inverse with info - use inv"
+  solve_ex: "Extended solve with info - use solve"
+  lu_factor_ex: "Extended LU with info - use lu_factor"
+  ldl_factor_ex: "Extended LDL with info - use ldl_factor"
+
+  # LDL decomposition (less common)
+  ldl_factor: "LDL decomposition - lower priority"
+  ldl_solve: "LDL solve - lower priority"
+
+  # LU decomposition variants
+  lu: "LU decomposition - use torch.lu or linalg.lu_factor"
+  lu_factor: "LU factorization - lower priority"
+  lu_solve: "LU solve - use torch.lu_solve"
+
+  # Advanced linalg (lower priority)
+  householder_product: "Householder reflections - advanced, lower priority"
+  tensorinv: "Tensor inverse - advanced, lower priority"
+  tensorsolve: "Tensor solve - advanced, lower priority"
+  lstsq: "Least squares - lower priority, use pinv + matmul"
+  cond: "Condition number - lower priority"
+  eigvals: "Eigenvalues only - use eig"
+  matrix_exp: "Matrix exponential - lower priority"
+  matrix_power: "Matrix power - lower priority"
+  vander: "Vandermonde matrix - lower priority"
+  vecdot: "Vector dot product - use dot"
+  multi_dot: "Chained dot products - lower priority"
+  solve_triangular: "Triangular solve - use triangular_solve"
+
+  # Duplicate of torch functions
+  diagonal: "Use torch.diagonal"
+  matmul: "Use torch.matmul"
+
+torch.autograd:
+  # Variable is deprecated
+  Variable: "Deprecated - use Tensor directly"
+  variable: "Deprecated factory - use tensor directly"
+
+  # Submodule
+  grad_mode: "Submodule - functions exposed at autograd level"
+
+  # Nested function (internal)
+  NestedIOFunction: "Internal nested I/O function"
+
+  # Anomaly detection (debugging feature)
+  detect_anomaly: "Anomaly detection context - debugging feature"
+  set_detect_anomaly: "Anomaly detection setter"
+
+  # Gradient checkpointing (advanced memory optimization)
+  graph: "Gradient graph utilities"
+  checkpoint: "Gradient checkpointing - advanced feature"
+  checkpoint_sequential: "Sequential checkpointing"
+
+  # Profiling
+  profiler: "Profiling utilities"
+  emit_nvtx: "NVTX profiling - CUDA specific"
+  set_multithreading_enabled: "Threading control"
+
+  # Advanced gradient computation (can be added later)
+  grad: "Compute gradients - advanced, use backward() with retain_graph"
+  gradcheck: "Gradient checking - testing utility"
+  gradgradcheck: "Second-order gradient checking - testing utility"
+
+  # Inference mode (use no_grad instead)
+  inference_mode: "Inference mode - use no_grad for similar behavior"
+
+torch.nn.parameter:
+  # Internal re-exports from stdlib/torch
+  OrderedDict: "Re-export from collections - not an API"
+  torch: "Re-export of torch module - not an API"
+
+torch.nn.grad:
+  # Internal re-export
+  torch: "Re-export of torch module - not an API"
+
+torch.random:
+  # Internal re-exports from stdlib
+  contextlib: "Re-export from stdlib - not an API"
+  torch: "Re-export of torch module - not an API"
+  warnings: "Re-export from stdlib - not an API"

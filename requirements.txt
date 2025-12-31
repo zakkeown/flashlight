@@ -1,0 +1,20 @@
+# Core dependencies
+mlx>=0.20.0
+numpy>=1.24.0
+
+# Testing dependencies
+pytest>=8.0.0
+pytest-cov>=4.1.0
+pytest-xdist>=3.0.0  # Parallel test execution
+
+# Development dependencies
+black>=23.0.0
+isort>=5.12.0
+flake8>=6.0.0
+
+# For numerical parity testing (PyTorch reference)
+torch>=2.0.0
+
+# Optional: For data loading in examples
+# torchvision>=0.15.0
+# pillow>=10.0.0

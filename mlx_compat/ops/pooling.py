@@ -1,0 +1,616 @@
+"""
+Pooling Operations
+
+Implements pooling operations with PyTorch-compatible API.
+"""
+
+import mlx.core as mx
+import mlx.nn as mxnn
+from ..tensor import Tensor
+from typing import Union, Tuple, Optional
+
+
+def _pair(x):
+    """Convert single value to pair."""
+    if isinstance(x, (list, tuple)):
+        return tuple(x)
+    return (x, x)
+
+
+def max_pool2d(
+    input: Tensor,
+    kernel_size: Union[int, Tuple[int, int]],
+    stride: Union[int, Tuple[int, int], None] = None,
+    padding: Union[int, Tuple[int, int]] = 0,
+    dilation: Union[int, Tuple[int, int]] = 1,
+    return_indices: bool = False,
+    ceil_mode: bool = False
+) -> Tensor:
+    """
+    2D max pooling operation.
+
+    Args:
+        input: Input tensor of shape [N, C, H, W] (PyTorch format)
+        kernel_size: Size of pooling window
+        stride: Stride for pooling (default: kernel_size)
+        padding: Padding to apply
+        dilation: Dilation factor
+        return_indices: Whether to return indices
+        ceil_mode: Whether to use ceil for output size calculation
+
+    Returns:
+        Output tensor of shape [N, C, H_out, W_out]
+        If return_indices is True, returns tuple of (output, indices)
+
+    Note:
+        MLX uses NHWC format, so we need to transpose from PyTorch's NCHW.
+    """
+    if return_indices:
+        from ..nn.functional import max_pool2d_with_indices
+        return max_pool2d_with_indices(
+            input, kernel_size=kernel_size, stride=stride, padding=padding,
+            dilation=dilation, ceil_mode=ceil_mode
+        )
+
+    # Convert parameters
+    kernel_size = _pair(kernel_size)
+    if stride is None:
+        stride = kernel_size
+    else:
+        stride = _pair(stride)
+    padding = _pair(padding)
+
+    # Convert input from NCHW to NHWC
+    # input: [N, C, H, W] -> [N, H, W, C]
+    input_nhwc = mx.transpose(input._mlx_array, [0, 2, 3, 1])
+
+    # Create MLX pooling layer and apply
+    pool = mxnn.MaxPool2d(kernel_size=kernel_size, stride=stride, padding=padding)
+    output_nhwc = pool(input_nhwc)
+
+    # Convert back from NHWC to NCHW
+    # [N, H, W, C] -> [N, C, H, W]
+    output_nchw = mx.transpose(output_nhwc, [0, 3, 1, 2])
+
+    result = Tensor._from_mlx_array(output_nchw)
+
+    # Handle autograd
+    from ..autograd.context import is_grad_enabled
+    if is_grad_enabled() and input.requires_grad:
+        result.requires_grad = True
+        # TODO: Add backward function for max_pool2d
+
+    return result
+
+
+def avg_pool2d(
+    input: Tensor,
+    kernel_size: Union[int, Tuple[int, int]],
+    stride: Union[int, Tuple[int, int], None] = None,
+    padding: Union[int, Tuple[int, int]] = 0,
+    ceil_mode: bool = False,
+    count_include_pad: bool = True,
+    divisor_override: Optional[int] = None
+) -> Tensor:
+    """
+    2D average pooling operation.
+
+    Args:
+        input: Input tensor of shape [N, C, H, W] (PyTorch format)
+        kernel_size: Size of pooling window
+        stride: Stride for pooling (default: kernel_size)
+        padding: Padding to apply
+        ceil_mode: Whether to use ceil for output size calculation
+        count_include_pad: Whether to include padding in average
+        divisor_override: If specified, use this as the divisor instead of kernel area
+
+    Returns:
+        Output tensor of shape [N, C, H_out, W_out]
+
+    Note:
+        MLX uses NHWC format, so we need to transpose from PyTorch's NCHW.
+    """
+    # Convert parameters
+    kernel_size = _pair(kernel_size)
+    if stride is None:
+        stride = kernel_size
+    else:
+        stride = _pair(stride)
+    padding = _pair(padding)
+
+    # Convert input from NCHW to NHWC
+    # input: [N, C, H, W] -> [N, H, W, C]
+    input_nhwc = mx.transpose(input._mlx_array, [0, 2, 3, 1])
+
+    if divisor_override is not None:
+        # When divisor_override is set, compute sum pooling and divide by the override
+        # MLX AvgPool2d divides by kernel_size, so we need to undo that and apply override
+        pool = mxnn.AvgPool2d(kernel_size=kernel_size, stride=stride, padding=padding)
+        output_nhwc = pool(input_nhwc)
+        # Multiply by kernel area to get sum, then divide by override
+        kernel_area = kernel_size[0] * kernel_size[1]
+        output_nhwc = output_nhwc * (kernel_area / divisor_override)
+    else:
+        # Create MLX pooling layer and apply
+        pool = mxnn.AvgPool2d(kernel_size=kernel_size, stride=stride, padding=padding)
+        output_nhwc = pool(input_nhwc)
+
+    # Convert back from NHWC to NCHW
+    # [N, H, W, C] -> [N, C, H, W]
+    output_nchw = mx.transpose(output_nhwc, [0, 3, 1, 2])
+
+    result = Tensor._from_mlx_array(output_nchw)
+
+    # Handle autograd
+    from ..autograd.context import is_grad_enabled
+    if is_grad_enabled() and input.requires_grad:
+        result.requires_grad = True
+        # TODO: Add backward function for avg_pool2d
+
+    return result
+
+
+def _single(x):
+    """Convert single value to single."""
+    if isinstance(x, (list, tuple)):
+        return x[0]
+    return x
+
+
+def avg_pool1d(
+    input: Tensor,
+    kernel_size: Union[int, Tuple[int]],
+    stride: Union[int, Tuple[int], None] = None,
+    padding: Union[int, Tuple[int]] = 0,
+    ceil_mode: bool = False,
+    count_include_pad: bool = True
+) -> Tensor:
+    """
+    1D average pooling operation.
+
+    Args:
+        input: Input tensor of shape [N, C, L] (PyTorch format)
+        kernel_size: Size of pooling window
+        stride: Stride for pooling (default: kernel_size)
+        padding: Padding to apply
+        ceil_mode: Whether to use ceil for output size calculation
+        count_include_pad: Whether to include padding in average
+
+    Returns:
+        Output tensor of shape [N, C, L_out]
+    """
+    kernel_size = _single(kernel_size)
+    if stride is None:
+        stride = kernel_size
+    else:
+        stride = _single(stride)
+    padding = _single(padding)
+
+    # Convert to 2D: [N, C, L] -> [N, C, 1, L]
+    input_4d = mx.expand_dims(input._mlx_array, axis=2)
+
+    # Convert from NCHW to NHWC
+    input_nhwc = mx.transpose(input_4d, [0, 2, 3, 1])
+
+    # Apply 2D pooling with kernel (1, kernel_size)
+    pool = mxnn.AvgPool2d(kernel_size=(1, kernel_size), stride=(1, stride), padding=(0, padding))
+    output_nhwc = pool(input_nhwc)
+
+    # Convert back and squeeze
+    output_nchw = mx.transpose(output_nhwc, [0, 3, 1, 2])
+    output_3d = mx.squeeze(output_nchw, axis=2)
+
+    result = Tensor._from_mlx_array(output_3d)
+
+    from ..autograd.context import is_grad_enabled
+    if is_grad_enabled() and input.requires_grad:
+        result.requires_grad = True
+
+    return result
+
+
+def max_pool1d(
+    input: Tensor,
+    kernel_size: Union[int, Tuple[int]],
+    stride: Union[int, Tuple[int], None] = None,
+    padding: Union[int, Tuple[int]] = 0,
+    dilation: Union[int, Tuple[int]] = 1,
+    return_indices: bool = False,
+    ceil_mode: bool = False
+) -> Tensor:
+    """
+    1D max pooling operation.
+
+    Args:
+        input: Input tensor of shape [N, C, L] (PyTorch format)
+        kernel_size: Size of pooling window
+        stride: Stride for pooling (default: kernel_size)
+        padding: Padding to apply
+        dilation: Dilation factor
+        return_indices: Whether to return indices
+        ceil_mode: Whether to use ceil for output size calculation
+
+    Returns:
+        Output tensor of shape [N, C, L_out]
+        If return_indices is True, returns tuple of (output, indices)
+    """
+    if return_indices:
+        from ..nn.functional import max_pool1d_with_indices
+        return max_pool1d_with_indices(
+            input, kernel_size=kernel_size, stride=stride, padding=padding,
+            dilation=dilation, ceil_mode=ceil_mode
+        )
+
+    kernel_size = _single(kernel_size)
+    if stride is None:
+        stride = kernel_size
+    else:
+        stride = _single(stride)
+    padding = _single(padding)
+
+    # Convert to 2D: [N, C, L] -> [N, C, 1, L]
+    input_4d = mx.expand_dims(input._mlx_array, axis=2)
+
+    # Convert from NCHW to NHWC
+    input_nhwc = mx.transpose(input_4d, [0, 2, 3, 1])
+
+    # Apply 2D pooling with kernel (1, kernel_size)
+    pool = mxnn.MaxPool2d(kernel_size=(1, kernel_size), stride=(1, stride), padding=(0, padding))
+    output_nhwc = pool(input_nhwc)
+
+    # Convert back and squeeze
+    output_nchw = mx.transpose(output_nhwc, [0, 3, 1, 2])
+    output_3d = mx.squeeze(output_nchw, axis=2)
+
+    result = Tensor._from_mlx_array(output_3d)
+
+    from ..autograd.context import is_grad_enabled
+    if is_grad_enabled() and input.requires_grad:
+        result.requires_grad = True
+
+    return result
+
+
+def adaptive_avg_pool1d(input: Tensor, output_size: int) -> Tensor:
+    """
+    1D adaptive average pooling.
+
+    Args:
+        input: Input tensor of shape [N, C, L]
+        output_size: Target output size L_out
+
+    Returns:
+        Output tensor of shape [N, C, output_size]
+    """
+    L = input.shape[2]
+
+    if output_size == L:
+        return input
+
+    # Compute kernel size and stride to achieve output_size
+    kernel_size = (L + output_size - 1) // output_size
+    stride = L // output_size
+
+    return avg_pool1d(input, kernel_size=kernel_size, stride=stride, padding=0)
+
+
+def adaptive_max_pool1d(input: Tensor, output_size: int) -> Tuple[Tensor, Tensor]:
+    """
+    1D adaptive max pooling.
+
+    Args:
+        input: Input tensor of shape [N, C, L]
+        output_size: Target output size L_out
+
+    Returns:
+        Tuple of (output, indices) where:
+        - output: Output tensor of shape [N, C, output_size]
+        - indices: Indices tensor of shape [N, C, output_size] with flattened indices
+    """
+    x = input._mlx_array
+    N, C, L = x.shape
+
+    if output_size == L:
+        # Identity case - indices are just 0, 1, 2, ...
+        indices_array = mx.broadcast_to(
+            mx.arange(L).reshape(1, 1, L),
+            (N, C, L)
+        )
+        return input, Tensor._from_mlx_array(indices_array.astype(mx.int64))
+
+    # Compute adaptive pooling regions
+    outputs = []
+    indices_list = []
+
+    for i in range(output_size):
+        # Compute start and end indices for this output position
+        start = (i * L) // output_size
+        end = ((i + 1) * L) // output_size
+
+        # Extract the region and find max
+        region = x[:, :, start:end]  # [N, C, region_size]
+        max_vals = mx.max(region, axis=2, keepdims=True)  # [N, C, 1]
+        outputs.append(max_vals)
+
+        # Find the indices of max values (relative to region)
+        region_argmax = mx.argmax(region, axis=2, keepdims=True)  # [N, C, 1]
+        # Convert to absolute indices in the input
+        abs_indices = region_argmax + start
+        indices_list.append(abs_indices)
+
+    # Concatenate outputs and indices
+    output_array = mx.concatenate(outputs, axis=2)  # [N, C, output_size]
+    indices_array = mx.concatenate(indices_list, axis=2)  # [N, C, output_size]
+
+    output = Tensor._from_mlx_array(output_array)
+    indices = Tensor._from_mlx_array(indices_array.astype(mx.int64))
+
+    # Handle autograd
+    from ..autograd.context import is_grad_enabled
+    if is_grad_enabled() and input.requires_grad:
+        output.requires_grad = True
+
+    return output, indices
+
+
+def _triple(x):
+    """Convert single value to triple."""
+    if isinstance(x, (list, tuple)):
+        return tuple(x)
+    return (x, x, x)
+
+
+def avg_pool3d(
+    input: Tensor,
+    kernel_size: Union[int, Tuple[int, int, int]],
+    stride: Union[int, Tuple[int, int, int], None] = None,
+    padding: Union[int, Tuple[int, int, int]] = 0,
+    ceil_mode: bool = False,
+    count_include_pad: bool = True,
+    divisor_override: int = None
+) -> Tensor:
+    """
+    3D average pooling operation.
+
+    Args:
+        input: Input tensor of shape [N, C, D, H, W] (PyTorch format)
+        kernel_size: Size of pooling window
+        stride: Stride for pooling (default: kernel_size)
+        padding: Padding to apply
+        ceil_mode: Whether to use ceil for output size calculation
+        count_include_pad: Whether to include padding in average
+        divisor_override: If specified, used as divisor
+
+    Returns:
+        Output tensor of shape [N, C, D_out, H_out, W_out]
+    """
+    kernel_size = _triple(kernel_size)
+    if stride is None:
+        stride = kernel_size
+    else:
+        stride = _triple(stride)
+    padding = _triple(padding)
+
+    x = input._mlx_array
+    N, C, D, H, W = x.shape
+    kD, kH, kW = kernel_size
+    sD, sH, sW = stride
+    pD, pH, pW = padding
+
+    # Pad if needed
+    if pD > 0 or pH > 0 or pW > 0:
+        x = mx.pad(x, [(0, 0), (0, 0), (pD, pD), (pH, pH), (pW, pW)])
+
+    # Convert NCDHW to NDHWC
+    x = mx.transpose(x, [0, 2, 3, 4, 1])
+
+    # Calculate output dimensions
+    D_padded = D + 2 * pD
+    H_padded = H + 2 * pH
+    W_padded = W + 2 * pW
+    D_out = (D_padded - kD) // sD + 1
+    H_out = (H_padded - kH) // sH + 1
+    W_out = (W_padded - kW) // sW + 1
+
+    # Apply pooling depth by depth using mxnn.AvgPool2d
+    pool_2d = mxnn.AvgPool2d(kernel_size=(kH, kW), stride=(sH, sW), padding=(0, 0))
+
+    outputs = []
+    for d_out in range(D_out):
+        d_start = d_out * sD
+        depth_slice = x[:, d_start:d_start + kD, :, :, :]
+        depth_avg = mx.mean(depth_slice, axis=1)  # [N, H, W, C]
+
+        # Apply 2D pooling on H,W dimensions
+        pooled = pool_2d(depth_avg)
+        outputs.append(pooled)
+
+    result = mx.stack(outputs, axis=1)  # [N, D_out, H_out, W_out, C]
+    result = mx.transpose(result, [0, 4, 1, 2, 3])  # [N, C, D_out, H_out, W_out]
+
+    out = Tensor._from_mlx_array(result)
+
+    from ..autograd.context import is_grad_enabled
+    if is_grad_enabled() and input.requires_grad:
+        out.requires_grad = True
+
+    return out
+
+
+def max_pool3d(
+    input: Tensor,
+    kernel_size: Union[int, Tuple[int, int, int]],
+    stride: Union[int, Tuple[int, int, int], None] = None,
+    padding: Union[int, Tuple[int, int, int]] = 0,
+    dilation: Union[int, Tuple[int, int, int]] = 1,
+    return_indices: bool = False,
+    ceil_mode: bool = False
+) -> Tensor:
+    """
+    3D max pooling operation.
+
+    Args:
+        input: Input tensor of shape [N, C, D, H, W] (PyTorch format)
+        kernel_size: Size of pooling window
+        stride: Stride for pooling (default: kernel_size)
+        padding: Padding to apply
+        dilation: Dilation factor
+        return_indices: Whether to return indices
+        ceil_mode: Whether to use ceil for output size calculation
+
+    Returns:
+        Output tensor of shape [N, C, D_out, H_out, W_out]
+        If return_indices is True, returns tuple of (output, indices)
+    """
+    if return_indices:
+        from ..nn.functional import max_pool3d_with_indices
+        return max_pool3d_with_indices(
+            input, kernel_size=kernel_size, stride=stride, padding=padding,
+            dilation=dilation, ceil_mode=ceil_mode
+        )
+
+    kernel_size = _triple(kernel_size)
+    if stride is None:
+        stride = kernel_size
+    else:
+        stride = _triple(stride)
+    padding = _triple(padding)
+
+    x = input._mlx_array
+    N, C, D, H, W = x.shape
+    kD, kH, kW = kernel_size
+    sD, sH, sW = stride
+    pD, pH, pW = padding
+
+    # Pad if needed
+    if pD > 0 or pH > 0 or pW > 0:
+        x = mx.pad(x, [(0, 0), (0, 0), (pD, pD), (pH, pH), (pW, pW)])
+
+    # Convert NCDHW to NDHWC
+    x = mx.transpose(x, [0, 2, 3, 4, 1])
+
+    # Calculate output dimensions
+    D_padded = D + 2 * pD
+    H_padded = H + 2 * pH
+    W_padded = W + 2 * pW
+    D_out = (D_padded - kD) // sD + 1
+
+    # Apply pooling depth by depth using mxnn.MaxPool2d
+    pool_2d = mxnn.MaxPool2d(kernel_size=(kH, kW), stride=(sH, sW), padding=(0, 0))
+
+    outputs = []
+    for d_out in range(D_out):
+        d_start = d_out * sD
+        depth_slice = x[:, d_start:d_start + kD, :, :, :]
+        depth_max = mx.max(depth_slice, axis=1)  # [N, H, W, C]
+
+        # Apply 2D pooling on H,W dimensions
+        pooled = pool_2d(depth_max)
+        outputs.append(pooled)
+
+    result = mx.stack(outputs, axis=1)  # [N, D_out, H_out, W_out, C]
+    result = mx.transpose(result, [0, 4, 1, 2, 3])  # [N, C, D_out, H_out, W_out]
+
+    out = Tensor._from_mlx_array(result)
+
+    from ..autograd.context import is_grad_enabled
+    if is_grad_enabled() and input.requires_grad:
+        out.requires_grad = True
+
+    return out
+
+
+def adaptive_avg_pool3d(
+    input: Tensor,
+    output_size: Union[int, Tuple[int, int, int]]
+) -> Tensor:
+    """
+    3D adaptive average pooling.
+
+    Args:
+        input: Input tensor of shape [N, C, D, H, W]
+        output_size: Target output size (D_out, H_out, W_out)
+
+    Returns:
+        Output tensor of shape [N, C, D_out, H_out, W_out]
+    """
+    output_size = _triple(output_size)
+    x = input._mlx_array
+    N, C, D, H, W = x.shape
+    out_D, out_H, out_W = output_size
+
+    if out_D == D and out_H == H and out_W == W:
+        return input
+    elif out_D == 1 and out_H == 1 and out_W == 1:
+        result = mx.mean(x, axis=(2, 3, 4), keepdims=True)
+        return Tensor._from_mlx_array(result)
+
+    # Calculate adaptive strides and kernel sizes
+    stride_d = D // out_D
+    stride_h = H // out_H
+    stride_w = W // out_W
+    kernel_d = D - (out_D - 1) * stride_d
+    kernel_h = H - (out_H - 1) * stride_h
+    kernel_w = W - (out_W - 1) * stride_w
+
+    return avg_pool3d(
+        input,
+        kernel_size=(kernel_d, kernel_h, kernel_w),
+        stride=(stride_d, stride_h, stride_w),
+        padding=0
+    )
+
+
+def adaptive_max_pool3d(
+    input: Tensor,
+    output_size: Union[int, Tuple[int, int, int]],
+    return_indices: bool = False
+) -> Tensor:
+    """
+    3D adaptive max pooling.
+
+    Args:
+        input: Input tensor of shape [N, C, D, H, W]
+        output_size: Target output size (D_out, H_out, W_out)
+        return_indices: Whether to return indices (not supported)
+
+    Returns:
+        Output tensor of shape [N, C, D_out, H_out, W_out]
+    """
+    if return_indices:
+        raise NotImplementedError("return_indices is not supported")
+
+    output_size = _triple(output_size)
+    x = input._mlx_array
+    N, C, D, H, W = x.shape
+    out_D, out_H, out_W = output_size
+
+    if out_D == D and out_H == H and out_W == W:
+        return input
+    elif out_D == 1 and out_H == 1 and out_W == 1:
+        result = mx.max(x, axis=(2, 3, 4), keepdims=True)
+        return Tensor._from_mlx_array(result)
+
+    # Calculate adaptive strides and kernel sizes
+    stride_d = D // out_D
+    stride_h = H // out_H
+    stride_w = W // out_W
+    kernel_d = D - (out_D - 1) * stride_d
+    kernel_h = H - (out_H - 1) * stride_h
+    kernel_w = W - (out_W - 1) * stride_w
+
+    return max_pool3d(
+        input,
+        kernel_size=(kernel_d, kernel_h, kernel_w),
+        stride=(stride_d, stride_h, stride_w),
+        padding=0
+    )
+
+
+__all__ = [
+    'max_pool2d', 'avg_pool2d',
+    'max_pool1d', 'avg_pool1d',
+    'max_pool3d', 'avg_pool3d',
+    'adaptive_avg_pool1d', 'adaptive_max_pool1d',
+    'adaptive_avg_pool3d', 'adaptive_max_pool3d',
+]

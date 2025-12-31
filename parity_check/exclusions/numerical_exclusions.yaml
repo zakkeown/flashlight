@@ -1,0 +1,289 @@
+# Numerical Parity Exclusions
+#
+# APIs excluded from numerical parity testing because they CANNOT be
+# meaningfully compared for numerical equivalence.
+#
+# IMPORTANT: This file should ONLY contain APIs that are FUNDAMENTALLY
+# untestable numerically - NOT APIs that are just hard to test or need
+# infrastructure work.
+#
+# Valid reasons for exclusion:
+# - Random number generators (outputs differ by design)
+# - Context managers (not callable operations)
+# - RNG state management (state, not computation)
+# - Boolean/type checks (not numerical)
+# - Device/memory management (system state)
+# - Serialization functions (I/O, not computation)
+# - Base classes (not directly instantiable)
+# - Container types (ModuleList, etc.)
+# - Type aliases (not functions)
+# - Eigenvector signs (mathematically arbitrary)
+#
+# INVALID reasons (should show as errors, not excluded):
+# - "Needs special comparison logic" - implement it
+# - "Complex input requirements" - add input generators
+# - "MLX limitation" - should show as implementation gap
+# - "Returns tuple/list" - add tuple comparison
+# - "Requires model setup" - set up the model
+#
+# Format:
+#   module_name:
+#     api_name: "reason for exclusion"
+#
+# Use "*" as api_name to exclude entire module
+
+torch:
+  # Generic Tensor class - not a function
+  Tensor: "Generic class - not directly testable"
+
+  # Random number generators - outputs differ by design (non-deterministic)
+  rand: "Random generator - outputs differ by design"
+  rand_like: "Random generator - outputs differ by design"
+  randn: "Random generator - outputs differ by design"
+  randn_like: "Random generator - outputs differ by design"
+  randint: "Random generator - outputs differ by design"
+  randint_like: "Random generator - outputs differ by design"
+  randperm: "Random generator - outputs differ by design"
+  bernoulli: "Random generator - outputs differ by design"
+  multinomial: "Random generator - outputs differ by design"
+  normal: "Random generator - outputs differ by design"
+  poisson: "Random generator - outputs differ by design"
+  binomial: "Random generator - outputs differ by design"
+
+  # Type/property checks - boolean results, not numerical
+  is_tensor: "Boolean check - not numerical"
+  is_floating_point: "Boolean check - not numerical"
+  is_complex: "Boolean check - not numerical"
+  is_nonzero: "Boolean check - not numerical"
+  is_inference: "Boolean check - not numerical"
+  is_grad_enabled: "Boolean check - not numerical"
+
+  # Device/memory management - not numerical operations
+  cuda: "Device management - not numerical"
+  device: "Device management - not numerical"
+  set_default_device: "Device management - not numerical"
+  set_default_dtype: "Dtype management - not numerical"
+  get_default_dtype: "Dtype management - not numerical"
+  get_default_device: "Device management - not numerical"
+
+  # Context managers - not callable operations
+  no_grad: "Context manager - not numerical"
+  enable_grad: "Context manager - not numerical"
+  inference_mode: "Context manager - not numerical"
+  autocast: "Context manager - not numerical"
+
+  # Serialization - not numerical
+  save: "Serialization - not numerical"
+  load: "Serialization - not numerical"
+
+  # Compilation/JIT - not numerical
+  compile: "Compilation - not numerical"
+  jit: "JIT - not numerical"
+
+  # Threading/system state - returns system-dependent values
+  get_num_threads: "System-dependent value"
+  set_num_threads: "System state modification"
+  set_deterministic_debug_mode: "Debug mode management"
+  are_deterministic_algorithms_enabled: "State check - not numerical"
+  get_deterministic_debug_mode: "State check - not numerical"
+  is_inference_mode_enabled: "State check - not numerical"
+
+  # RNG state management - state, not computation
+  manual_seed: "RNG state - not numerical"
+  initial_seed: "RNG state - not numerical"
+  seed: "RNG state - not numerical"
+  get_rng_state: "RNG state - not numerical"
+  set_rng_state: "RNG state - not numerical"
+
+  # Dtype utilities - boolean/type results
+  can_cast: "Dtype utility - returns boolean"
+  promote_types: "Dtype utility - returns dtype"
+  result_type: "Dtype utility - returns dtype"
+
+  # File I/O - not numerical
+  from_file: "File I/O - not numerical"
+
+  # Eigenvector decompositions - signs are mathematically arbitrary
+  svd: "SVD U/V have arbitrary signs - comparison not meaningful"
+
+torch.nn:
+  # Dropout layers - random behavior by design
+  Dropout: "Random behavior in training mode"
+  Dropout1d: "Random behavior in training mode"
+  Dropout2d: "Random behavior in training mode"
+  Dropout3d: "Random behavior in training mode"
+  AlphaDropout: "Random behavior in training mode"
+  FeatureAlphaDropout: "Random behavior in training mode"
+
+  # Fractional pooling - random region sampling by design
+  FractionalMaxPool2d: "Random region sampling - outputs differ by design"
+  FractionalMaxPool3d: "Random region sampling - outputs differ by design"
+
+  # Parameter/Buffer classes - container types, not numerical
+  Parameter: "Container type - not numerical operation"
+  ParameterList: "Container type - not numerical operation"
+  ParameterDict: "Container type - not numerical operation"
+  Buffer: "Container type - not numerical operation"
+
+  # Module utilities - base classes and containers
+  Module: "Base class - not numerical operation"
+  ModuleList: "Container type - not numerical operation"
+  ModuleDict: "Container type - not numerical operation"
+  Sequential: "Container type - not numerical operation"
+  Container: "Base class - deprecated container"
+
+  # Base classes - not directly instantiable
+  RNNBase: "Base class - not directly instantiable"
+  RNNCellBase: "Base class - not directly instantiable"
+
+  # Uninitialized parameter/buffer - lazy initialization
+  UninitializedBuffer: "Lazy initialization - not directly testable"
+  UninitializedParameter: "Lazy initialization - not directly testable"
+
+  # Submodule references - not numerical operations (these are module objects, not functions)
+  attention: "Module reference - not numerical operation"
+  common_types: "Module reference - not numerical operation"
+  grad: "Module reference - not numerical operation"
+  init: "Module reference - not numerical operation"
+  modules: "Module reference - not numerical operation"
+  parameter: "Module reference - not numerical operation"
+  qat: "Module reference - not numerical operation"
+  quantizable: "Module reference - not numerical operation"
+
+  # Factory kwargs utility
+  factory_kwargs: "Factory utility - not numerical operation"
+
+torch.nn.attention:
+  # Classes and context managers - not numerical operations
+  SDPBackend: "Enum class - not numerical operation"
+  sdpa_kernel: "Context manager - not numerical operation"
+
+torch.nn.quantizable:
+  # Module reference
+  modules: "Module reference - not numerical operation"
+
+torch.nn.utils.parametrize:
+  # Classes and context managers - not numerical operations
+  cached: "Context manager - not numerical operation"
+  ParametrizationList: "Container class - not numerical operation"
+
+
+torch.nn.functional:
+  # Dropout functions - random behavior by design
+  dropout: "Random behavior in training mode"
+  dropout1d: "Random behavior in training mode"
+  dropout2d: "Random behavior in training mode"
+  dropout3d: "Random behavior in training mode"
+  alpha_dropout: "Random behavior in training mode"
+  feature_alpha_dropout: "Random behavior in training mode"
+  gumbel_softmax: "Random behavior"
+
+  # Typing utilities - not functions
+  Callable: "Typing utility - not a function"
+  Optional: "Typing utility - not a function"
+  Union: "Typing utility - not a function"
+  DType: "Type alias - not a function"
+  Tensor: "Type alias - not a function"
+
+  # Internal utilities - not user-facing functions
+  handle_torch_function: "Internal utility"
+  has_torch_function: "Internal utility"
+  has_torch_function_unary: "Internal utility"
+  has_torch_function_variadic: "Internal utility"
+  assert_int_or_pair: "Internal utility"
+  boolean_dispatch: "Internal utility"
+  factory_kwargs: "Internal utility"
+
+  # Fractional pooling - random region sampling by design
+  fractional_max_pool2d: "Random region sampling - outputs differ by design"
+  fractional_max_pool3d: "Random region sampling - outputs differ by design"
+  fractional_max_pool2d_with_indices: "Random region sampling - outputs differ by design"
+  fractional_max_pool3d_with_indices: "Random region sampling - outputs differ by design"
+
+  # Internal JIT utilities - not actual functions
+  BroadcastingList1: "JIT internal utility"
+  BroadcastingList2: "JIT internal utility"
+  BroadcastingList3: "JIT internal utility"
+  reproducibility_notes: "Documentation constant"
+  sparse_support_notes: "Documentation constant"
+  tf32_notes: "Documentation constant"
+
+  # Submodule references - not numerical operations
+  grad: "Module reference - not numerical operation"
+  importlib: "Module reference - not numerical operation"
+  math: "Module reference - not numerical operation"
+  np: "Module reference - not numerical operation"
+  torch: "Module reference - not numerical operation"
+  warnings: "Module reference - not numerical operation"
+
+torch.optim:
+  # Optimizer base class - not directly instantiable
+  Optimizer: "Base class - not numerical operation"
+
+  # Not a standard PyTorch optimizer
+  Adafactor: "Not a standard PyTorch optimizer"
+
+torch.optim.lr_scheduler:
+  # Base class - not directly instantiable
+  LRScheduler: "Base class - not directly instantiable"
+
+  # Composite schedulers - require other scheduler instances as arguments
+  SequentialLR: "Composite scheduler - requires scheduler instances as input"
+  ChainedScheduler: "Composite scheduler - requires scheduler instances as input"
+
+torch.random:
+  # All random module functions and Generator class - RNG state
+  "*": "RNG state management - Generator class and state functions"
+
+torch.distributions:
+  # All distributions - require statistical testing, not exact comparison
+  "*": "Distributions require statistical testing - outputs are random samples"
+
+torch.distributions.constraints:
+  # Constraint objects - boolean checks, not numerical operations
+  "*": "Constraint objects - boolean checks, not numerical"
+
+torch.distributions.transforms:
+  # Transform objects - require statistical testing with distribution samples
+  "*": "Transforms require statistical testing with distribution samples"
+
+torch.autograd:
+  # All autograd utilities - context managers, classes, and gradient ops
+  "*": "Autograd utilities - context managers, classes, gradient operations"
+
+torch.utils.data:
+  # Data loading utilities - not numerical operations
+  "*": "Data loading utilities - not numerical"
+
+torch.amp:
+  # All AMP utilities - context managers and grad scaling
+  "*": "AMP utilities - context managers and grad scaling"
+
+torch.linalg:
+  # Eigenvalue decompositions - eigenvector signs are arbitrary
+  eig: "Eigenvectors have arbitrary sign - comparison not meaningful"
+  eigh: "Eigenvectors have arbitrary sign - comparison not meaningful"
+  svd: "SVD U/V have arbitrary sign - comparison not meaningful"
+
+  # Tensor type alias
+  Tensor: "Type alias - not a function"
+
+torch.fft:
+  # Tensor type alias
+  Tensor: "Type alias - not a function"
+
+torch.special:
+  # Tensor type alias
+  Tensor: "Type alias - not a function"
+
+torch.nn.init:
+  # All initialization functions - random by design
+  "*": "Initialization functions - random by design"
+
+torch.nn.modules:
+  # Module classes are also exported from torch.nn - avoid duplicate testing
+  "*": "Module classes tested via torch.nn"
+
+torch.nn.parameter:
+  # All parameter classes and utilities - container types
+  "*": "Parameter classes - container types, not numerical"

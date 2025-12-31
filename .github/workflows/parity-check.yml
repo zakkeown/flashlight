@@ -1,0 +1,145 @@
+name: API Parity Check
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run weekly on Sundays to catch PyTorch API changes
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+    # Allow manual triggering
+
+jobs:
+  parity-check:
+    name: Check API Parity
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # Install PyTorch CPU-only for faster CI
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install pyyaml packaging
+          # Install mlx_compat in editable mode
+          pip install -e .
+
+      - name: Run parity check (informational)
+        id: parity-info
+        run: |
+          python -m parity_check --format console
+        continue-on-error: true
+
+      - name: Generate JSON report
+        run: |
+          python -m parity_check --format json --output parity-report.json
+
+      - name: Generate Markdown report
+        run: |
+          python -m parity_check --format markdown --output parity-report.md
+
+      - name: Upload parity reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: parity-reports
+          path: |
+            parity-report.json
+            parity-report.md
+          retention-days: 30
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            // Read the markdown report
+            let report;
+            try {
+              report = fs.readFileSync('parity-report.md', 'utf8');
+            } catch (e) {
+              report = 'Failed to generate parity report.';
+            }
+
+            // Truncate if too long for PR comment
+            const maxLength = 65000;
+            if (report.length > maxLength) {
+              report = report.substring(0, maxLength) + '\n\n... (truncated)';
+            }
+
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('MLX-Compat API Parity Report')
+            );
+
+            if (botComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: report
+              });
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: report
+              });
+            }
+
+      - name: Strict validation (fail on missing APIs)
+        run: |
+          python -m parity_check --strict --signature-strict
+
+  parity-check-macos:
+    name: Check API Parity (macOS with MLX)
+    runs-on: macos-14  # Apple Silicon runner
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch
+          pip install mlx
+          pip install pyyaml packaging
+          pip install -e .
+
+      - name: Run parity check
+        run: |
+          python -m parity_check --format console
+
+      - name: Run integration parity tests
+        run: |
+          pip install pytest
+          pytest tests/integration/test_pytorch_parity.py -v || true

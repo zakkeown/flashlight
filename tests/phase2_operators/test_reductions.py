@@ -1,0 +1,291 @@
+"""
+Test Phase 2: Reduction Operations
+
+Tests reduction operations (sum, mean, max, min, argmax, var, std, etc.)
+"""
+
+import sys
+sys.path.insert(0, '../..')
+
+import unittest
+import numpy as np
+
+from tests.common_utils import TestCase, skipIfNoMLX
+
+try:
+    import mlx_compat
+    MLX_COMPAT_AVAILABLE = True
+except ImportError:
+    MLX_COMPAT_AVAILABLE = False
+
+
+@skipIfNoMLX
+class TestSum(TestCase):
+    """Test sum reduction."""
+
+    def test_sum_all(self):
+        """Test sum of all elements."""
+        x = mlx_compat.tensor([1.0, 2.0, 3.0, 4.0])
+        result = mlx_compat.sum(x)
+        self.assertAlmostEqual(result.item(), 10.0, places=5)
+
+    def test_sum_along_dim(self):
+        """Test sum along a dimension."""
+        x = mlx_compat.tensor([[1.0, 2.0], [3.0, 4.0]])
+        result = mlx_compat.sum(x, dim=0)
+        np.testing.assert_array_almost_equal(result.numpy(), np.array([4.0, 6.0]))
+
+    def test_sum_keepdim(self):
+        """Test sum with keepdim."""
+        x = mlx_compat.tensor([[1.0, 2.0], [3.0, 4.0]])
+        result = mlx_compat.sum(x, dim=1, keepdim=True)
+        self.assert_shape_equal(result.shape, (2, 1))
+        np.testing.assert_array_almost_equal(result.numpy(), np.array([[3.0], [7.0]]))
+
+    def test_sum_requires_grad(self):
+        """Test that sum propagates requires_grad."""
+        x = mlx_compat.tensor([1.0, 2.0], requires_grad=True)
+        result = mlx_compat.sum(x)
+        self.assertTrue(result.requires_grad)
+
+
+@skipIfNoMLX
+class TestMean(TestCase):
+    """Test mean reduction."""
+
+    def test_mean_all(self):
+        """Test mean of all elements."""
+        x = mlx_compat.tensor([1.0, 2.0, 3.0, 4.0])
+        result = mlx_compat.mean(x)
+        self.assertAlmostEqual(result.item(), 2.5, places=5)
+
+    def test_mean_along_dim(self):
+        """Test mean along a dimension."""
+        x = mlx_compat.tensor([[1.0, 2.0], [3.0, 4.0]])
+        result = mlx_compat.mean(x, dim=0)
+        np.testing.assert_array_almost_equal(result.numpy(), np.array([2.0, 3.0]))
+
+    def test_mean_keepdim(self):
+        """Test mean with keepdim."""
+        x = mlx_compat.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+        result = mlx_compat.mean(x, dim=1, keepdim=True)
+        self.assert_shape_equal(result.shape, (2, 1))
+        np.testing.assert_array_almost_equal(result.numpy(), np.array([[2.0], [5.0]]))
+
+
+@skipIfNoMLX
+class TestMax(TestCase):
+    """Test max reduction."""
+
+    def test_max_all(self):
+        """Test max of all elements."""
+        x = mlx_compat.tensor([1.0, 5.0, 3.0, 2.0])
+        result = mlx_compat.max(x)
+        self.assertAlmostEqual(result.item(), 5.0, places=5)
+
+    def test_max_along_dim(self):
+        """Test max along a dimension."""
+        x = mlx_compat.tensor([[1.0, 5.0], [3.0, 2.0]])
+        values, indices = mlx_compat.max(x, dim=1)
+        np.testing.assert_array_almost_equal(values.numpy(), np.array([5.0, 3.0]))
+        np.testing.assert_array_equal(indices.numpy(), np.array([1, 0]))
+
+    def test_max_keepdim(self):
+        """Test max with keepdim."""
+        x = mlx_compat.tensor([[1.0, 5.0], [3.0, 2.0]])
+        values, indices = mlx_compat.max(x, dim=1, keepdim=True)
+        self.assert_shape_equal(values.shape, (2, 1))
+        self.assert_shape_equal(indices.shape, (2, 1))
+
+
+@skipIfNoMLX
+class TestMin(TestCase):
+    """Test min reduction."""
+
+    def test_min_all(self):
+        """Test min of all elements."""
+        x = mlx_compat.tensor([1.0, 5.0, 3.0, 2.0])
+        result = mlx_compat.min(x)
+        self.assertAlmostEqual(result.item(), 1.0, places=5)
+
+    def test_min_along_dim(self):
+        """Test min along a dimension."""
+        x = mlx_compat.tensor([[1.0, 5.0], [3.0, 2.0]])
+        values, indices = mlx_compat.min(x, dim=1)
+        np.testing.assert_array_almost_equal(values.numpy(), np.array([1.0, 2.0]))
+        np.testing.assert_array_equal(indices.numpy(), np.array([0, 1]))
+
+    def test_min_keepdim(self):
+        """Test min with keepdim."""
+        x = mlx_compat.tensor([[1.0, 5.0], [3.0, 2.0]])
+        values, indices = mlx_compat.min(x, dim=1, keepdim=True)
+        self.assert_shape_equal(values.shape, (2, 1))
+
+
+@skipIfNoMLX
+class TestArgmax(TestCase):
+    """Test argmax reduction."""
+
+    def test_argmax_all(self):
+        """Test argmax of flattened tensor."""
+        x = mlx_compat.tensor([[1.0, 5.0], [3.0, 2.0]])
+        result = mlx_compat.argmax(x)
+        # Should be index 1 in flattened array
+        self.assertEqual(result.item(), 1)
+
+    def test_argmax_along_dim(self):
+        """Test argmax along a dimension."""
+        x = mlx_compat.tensor([[1.0, 5.0, 3.0], [4.0, 2.0, 6.0]])
+        result = mlx_compat.argmax(x, dim=1)
+        np.testing.assert_array_equal(result.numpy(), np.array([1, 2]))
+
+    def test_argmax_keepdim(self):
+        """Test argmax with keepdim."""
+        x = mlx_compat.tensor([[1.0, 5.0], [3.0, 2.0]])
+        result = mlx_compat.argmax(x, dim=1, keepdim=True)
+        self.assert_shape_equal(result.shape, (2, 1))
+
+
+@skipIfNoMLX
+class TestArgmin(TestCase):
+    """Test argmin reduction."""
+
+    def test_argmin_all(self):
+        """Test argmin of flattened tensor."""
+        x = mlx_compat.tensor([[5.0, 1.0], [3.0, 2.0]])
+        result = mlx_compat.argmin(x)
+        # Should be index 1 in flattened array
+        self.assertEqual(result.item(), 1)
+
+    def test_argmin_along_dim(self):
+        """Test argmin along a dimension."""
+        x = mlx_compat.tensor([[5.0, 1.0, 3.0], [4.0, 6.0, 2.0]])
+        result = mlx_compat.argmin(x, dim=1)
+        np.testing.assert_array_equal(result.numpy(), np.array([1, 2]))
+
+    def test_argmin_keepdim(self):
+        """Test argmin with keepdim."""
+        x = mlx_compat.tensor([[5.0, 1.0], [3.0, 2.0]])
+        result = mlx_compat.argmin(x, dim=1, keepdim=True)
+        self.assert_shape_equal(result.shape, (2, 1))
+
+
+@skipIfNoMLX
+class TestVar(TestCase):
+    """Test variance reduction."""
+
+    def test_var_all(self):
+        """Test variance of all elements."""
+        x = mlx_compat.tensor([1.0, 2.0, 3.0, 4.0])
+        result = mlx_compat.var(x)
+        # Variance with Bessel's correction: 1.666...
+        expected = np.var([1.0, 2.0, 3.0, 4.0], ddof=1)
+        self.assertAlmostEqual(result.item(), expected, places=4)
+
+    def test_var_biased(self):
+        """Test biased variance."""
+        x = mlx_compat.tensor([1.0, 2.0, 3.0, 4.0])
+        result = mlx_compat.var(x, unbiased=False)
+        expected = np.var([1.0, 2.0, 3.0, 4.0], ddof=0)
+        self.assertAlmostEqual(result.item(), expected, places=5)
+
+    def test_var_along_dim(self):
+        """Test variance along a dimension."""
+        x = mlx_compat.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+        result = mlx_compat.var(x, dim=1)
+        expected = np.var([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], axis=1, ddof=1)
+        np.testing.assert_array_almost_equal(result.numpy(), expected, decimal=4)
+
+
+@skipIfNoMLX
+class TestStd(TestCase):
+    """Test standard deviation reduction."""
+
+    def test_std_all(self):
+        """Test std of all elements."""
+        x = mlx_compat.tensor([1.0, 2.0, 3.0, 4.0])
+        result = mlx_compat.std(x)
+        expected = np.std([1.0, 2.0, 3.0, 4.0], ddof=1)
+        self.assertAlmostEqual(result.item(), expected, places=4)
+
+    def test_std_biased(self):
+        """Test biased std."""
+        x = mlx_compat.tensor([1.0, 2.0, 3.0, 4.0])
+        result = mlx_compat.std(x, unbiased=False)
+        expected = np.std([1.0, 2.0, 3.0, 4.0], ddof=0)
+        self.assertAlmostEqual(result.item(), expected, places=5)
+
+    def test_std_along_dim(self):
+        """Test std along a dimension."""
+        x = mlx_compat.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+        result = mlx_compat.std(x, dim=1)
+        expected = np.std([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], axis=1, ddof=1)
+        np.testing.assert_array_almost_equal(result.numpy(), expected, decimal=4)
+
+
+@skipIfNoMLX
+class TestProd(TestCase):
+    """Test product reduction."""
+
+    def test_prod_all(self):
+        """Test product of all elements."""
+        x = mlx_compat.tensor([2.0, 3.0, 4.0])
+        result = mlx_compat.prod(x)
+        self.assertAlmostEqual(result.item(), 24.0, places=5)
+
+    def test_prod_along_dim(self):
+        """Test product along a dimension."""
+        x = mlx_compat.tensor([[1.0, 2.0], [3.0, 4.0]])
+        result = mlx_compat.prod(x, dim=1)
+        np.testing.assert_array_almost_equal(result.numpy(), np.array([2.0, 12.0]))
+
+
+@skipIfNoMLX
+class TestAll(TestCase):
+    """Test all reduction."""
+
+    def test_all_true(self):
+        """Test all with all True values."""
+        x = mlx_compat.tensor([True, True, True])
+        result = mlx_compat.all(x)
+        self.assertTrue(result.item())
+
+    def test_all_false(self):
+        """Test all with some False values."""
+        x = mlx_compat.tensor([True, False, True])
+        result = mlx_compat.all(x)
+        self.assertFalse(result.item())
+
+    def test_all_along_dim(self):
+        """Test all along a dimension."""
+        x = mlx_compat.tensor([[True, True], [True, False]])
+        result = mlx_compat.all(x, dim=1)
+        np.testing.assert_array_equal(result.numpy(), np.array([True, False]))
+
+
+@skipIfNoMLX
+class TestAny(TestCase):
+    """Test any reduction."""
+
+    def test_any_true(self):
+        """Test any with some True values."""
+        x = mlx_compat.tensor([False, True, False])
+        result = mlx_compat.any(x)
+        self.assertTrue(result.item())
+
+    def test_any_false(self):
+        """Test any with all False values."""
+        x = mlx_compat.tensor([False, False, False])
+        result = mlx_compat.any(x)
+        self.assertFalse(result.item())
+
+    def test_any_along_dim(self):
+        """Test any along a dimension."""
+        x = mlx_compat.tensor([[False, False], [True, False]])
+        result = mlx_compat.any(x, dim=1)
+        np.testing.assert_array_equal(result.numpy(), np.array([False, True]))
+
+
+if __name__ == '__main__':
+    from tests.common_utils import run_tests
+    run_tests()
