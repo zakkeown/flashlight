@@ -286,6 +286,141 @@ class TestAny(TestCase):
         np.testing.assert_array_equal(result.numpy(), np.array([False, True]))
 
 
+@skipIfNoMLX
+class TestTensorMethods(TestCase):
+    """Test tensor instance methods for reductions (tensor.sum() vs mlx_compat.sum(tensor))."""
+
+    def test_tensor_sum(self):
+        """Test tensor.sum() method."""
+        x = mlx_compat.tensor([1.0, 2.0, 3.0, 4.0])
+        result = x.sum()
+        self.assertAlmostEqual(result.item(), 10.0, places=5)
+
+    def test_tensor_sum_dim(self):
+        """Test tensor.sum(dim) method."""
+        x = mlx_compat.tensor([[1.0, 2.0], [3.0, 4.0]])
+        result = x.sum(dim=0)
+        np.testing.assert_array_almost_equal(result.numpy(), np.array([4.0, 6.0]))
+
+    def test_tensor_sum_keepdim(self):
+        """Test tensor.sum(keepdim=True) method."""
+        x = mlx_compat.tensor([[1.0, 2.0], [3.0, 4.0]])
+        result = x.sum(dim=1, keepdim=True)
+        self.assert_shape_equal(result.shape, (2, 1))
+
+    def test_tensor_prod(self):
+        """Test tensor.prod() method."""
+        x = mlx_compat.tensor([2.0, 3.0, 4.0])
+        result = x.prod()
+        self.assertAlmostEqual(result.item(), 24.0, places=5)
+
+    def test_tensor_prod_dim(self):
+        """Test tensor.prod(dim) method."""
+        x = mlx_compat.tensor([[1.0, 2.0], [3.0, 4.0]])
+        result = x.prod(dim=1)
+        np.testing.assert_array_almost_equal(result.numpy(), np.array([2.0, 12.0]))
+
+    def test_tensor_max_no_dim(self):
+        """Test tensor.max() returns single tensor."""
+        x = mlx_compat.tensor([1.0, 5.0, 3.0])
+        result = x.max()
+        self.assertAlmostEqual(result.item(), 5.0, places=5)
+
+    def test_tensor_max_with_dim(self):
+        """Test tensor.max(dim) returns tuple."""
+        x = mlx_compat.tensor([[1.0, 5.0], [3.0, 2.0]])
+        values, indices = x.max(dim=1)
+        np.testing.assert_array_almost_equal(values.numpy(), np.array([5.0, 3.0]))
+        np.testing.assert_array_equal(indices.numpy(), np.array([1, 0]))
+
+    def test_tensor_min_no_dim(self):
+        """Test tensor.min() returns single tensor."""
+        x = mlx_compat.tensor([1.0, 5.0, 3.0])
+        result = x.min()
+        self.assertAlmostEqual(result.item(), 1.0, places=5)
+
+    def test_tensor_min_with_dim(self):
+        """Test tensor.min(dim) returns tuple."""
+        x = mlx_compat.tensor([[1.0, 5.0], [3.0, 2.0]])
+        values, indices = x.min(dim=1)
+        np.testing.assert_array_almost_equal(values.numpy(), np.array([1.0, 2.0]))
+        np.testing.assert_array_equal(indices.numpy(), np.array([0, 1]))
+
+    def test_tensor_argmax(self):
+        """Test tensor.argmax() method."""
+        x = mlx_compat.tensor([[1.0, 5.0], [3.0, 2.0]])
+        result = x.argmax()
+        self.assertEqual(result.item(), 1)
+
+    def test_tensor_argmax_dim(self):
+        """Test tensor.argmax(dim) method."""
+        x = mlx_compat.tensor([[1.0, 5.0], [3.0, 2.0]])
+        result = x.argmax(dim=1)
+        np.testing.assert_array_equal(result.numpy(), np.array([1, 0]))
+
+    def test_tensor_argmin(self):
+        """Test tensor.argmin() method."""
+        x = mlx_compat.tensor([[5.0, 1.0], [3.0, 2.0]])
+        result = x.argmin()
+        self.assertEqual(result.item(), 1)
+
+    def test_tensor_argmin_dim(self):
+        """Test tensor.argmin(dim) method."""
+        x = mlx_compat.tensor([[5.0, 1.0], [3.0, 2.0]])
+        result = x.argmin(dim=1)
+        np.testing.assert_array_equal(result.numpy(), np.array([1, 1]))
+
+    def test_tensor_all(self):
+        """Test tensor.all() method."""
+        x = mlx_compat.tensor([True, True, True])
+        self.assertTrue(x.all().item())
+        y = mlx_compat.tensor([True, False, True])
+        self.assertFalse(y.all().item())
+
+    def test_tensor_all_dim(self):
+        """Test tensor.all(dim) method."""
+        x = mlx_compat.tensor([[True, True], [True, False]])
+        result = x.all(dim=1)
+        np.testing.assert_array_equal(result.numpy(), np.array([True, False]))
+
+    def test_tensor_any(self):
+        """Test tensor.any() method."""
+        x = mlx_compat.tensor([False, True, False])
+        self.assertTrue(x.any().item())
+        y = mlx_compat.tensor([False, False, False])
+        self.assertFalse(y.any().item())
+
+    def test_tensor_any_dim(self):
+        """Test tensor.any(dim) method."""
+        x = mlx_compat.tensor([[False, False], [True, False]])
+        result = x.any(dim=1)
+        np.testing.assert_array_equal(result.numpy(), np.array([False, True]))
+
+    def test_tensor_abs(self):
+        """Test tensor.abs() method."""
+        x = mlx_compat.tensor([-1.0, 2.0, -3.0])
+        result = x.abs()
+        np.testing.assert_array_almost_equal(result.numpy(), np.array([1.0, 2.0, 3.0]))
+
+    def test_tensor_clamp(self):
+        """Test tensor.clamp() method."""
+        x = mlx_compat.tensor([-1.0, 0.5, 2.0])
+        result = x.clamp(min=0.0, max=1.0)
+        np.testing.assert_array_almost_equal(result.numpy(), np.array([0.0, 0.5, 1.0]))
+
+    def test_tensor_clamp_min_only(self):
+        """Test tensor.clamp(min=...) method."""
+        x = mlx_compat.tensor([-1.0, 0.5, 2.0])
+        result = x.clamp(min=0.0)
+        np.testing.assert_array_almost_equal(result.numpy(), np.array([0.0, 0.5, 2.0]))
+
+    def test_tensor_clamp_max_only(self):
+        """Test tensor.clamp(max=...) method."""
+        x = mlx_compat.tensor([-1.0, 0.5, 2.0])
+        result = x.clamp(max=1.0)
+        np.testing.assert_array_almost_equal(result.numpy(), np.array([-1.0, 0.5, 1.0]))
+
+
 if __name__ == '__main__':
     from tests.common_utils import run_tests
     run_tests()

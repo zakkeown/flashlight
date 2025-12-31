@@ -29,7 +29,7 @@ def conv2d(
     2D convolution operation.
 
     Args:
-        input: Input tensor of shape [N, C, H, W] (PyTorch format)
+        input: Input tensor of shape [N, C, H, W] (PyTorch format) or [N, H, W, C] in nhwc_mode
         weight: Weight tensor of shape [out_channels, in_channels, kH, kW]
         bias: Optional bias tensor of shape [out_channels]
         stride: Stride for convolution
@@ -38,17 +38,29 @@ def conv2d(
         groups: Number of groups for grouped convolution
 
     Returns:
-        Output tensor of shape [N, out_channels, H_out, W_out]
+        Output tensor of shape [N, out_channels, H_out, W_out] or [N, H_out, W_out, out_channels] in nhwc_mode
 
     Note:
-        MLX uses NHWC format, so we need to transpose from PyTorch's NCHW.
+        MLX uses NHWC format internally. When nhwc_mode() is enabled, input/output
+        stay in NHWC format to avoid redundant layout conversions.
     """
-    # Convert input from NCHW to NHWC
-    # input: [N, C, H, W] -> [N, H, W, C]
-    input_nhwc = mx.transpose(input._mlx_array, [0, 2, 3, 1])
+    from ..layout import is_nhwc_mode, Layout
+
+    # Check if we're in NHWC-native mode
+    nhwc_native = is_nhwc_mode()
+
+    # Get input in NHWC format (required by MLX)
+    if nhwc_native and input._layout == Layout.NHWC:
+        # Input is already in NHWC - no conversion needed
+        input_nhwc = input._mlx_array
+    else:
+        # Convert input from NCHW to NHWC
+        # input: [N, C, H, W] -> [N, H, W, C]
+        input_nhwc = mx.transpose(input._mlx_array, [0, 2, 3, 1])
 
     # Convert weight from [out, in, kH, kW] to [out, kH, kW, in]
     # MLX expects: [C_out, KH, KW, C_in]
+    # Weight conversion is always needed regardless of layout mode
     weight_mlx = mx.transpose(weight._mlx_array, [0, 2, 3, 1])
 
     # Convert parameters to tuples
@@ -71,11 +83,15 @@ def conv2d(
         # bias shape: [out_channels] -> need to broadcast to [N, H, W, out_channels]
         output_nhwc = output_nhwc + bias._mlx_array
 
-    # Convert back from NHWC to NCHW
-    # [N, H, W, C] -> [N, C, H, W]
-    output_nchw = mx.transpose(output_nhwc, [0, 3, 1, 2])
-
-    result = Tensor._from_mlx_array(output_nchw)
+    # Determine output layout based on mode
+    if nhwc_native:
+        # Stay in NHWC - no conversion back
+        result = Tensor._from_mlx_array(output_nhwc, layout=Layout.NHWC)
+    else:
+        # Convert back from NHWC to NCHW
+        # [N, H, W, C] -> [N, C, H, W]
+        output_nchw = mx.transpose(output_nhwc, [0, 3, 1, 2])
+        result = Tensor._from_mlx_array(output_nchw, layout=Layout.NCHW)
 
     # Handle autograd
     from ..autograd.context import is_grad_enabled

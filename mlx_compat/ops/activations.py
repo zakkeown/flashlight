@@ -189,15 +189,10 @@ def log_softmax(input: Tensor, dim: Optional[int] = None, _stacklevel: int = 3, 
         mlx_dtype = to_mlx_dtype(dtype)
         input_array = input_array.astype(mlx_dtype)
 
-    # MLX doesn't have log_softmax, so implement it manually
-    # log_softmax(x) = x - log(sum(exp(x)))
-    # This is more numerically stable than log(softmax(x))
-    max_val = mx.max(input_array, axis=dim, keepdims=True)
-    shifted = mx.subtract(input_array, max_val)
-    exp_shifted = mx.exp(shifted)
-    sum_exp = mx.sum(exp_shifted, axis=dim, keepdims=True)
-    log_sum_exp = mx.log(sum_exp)
-    mlx_result = mx.subtract(shifted, log_sum_exp)
+    # Optimized: use MLX's fused logsumexp (2 ops instead of 6)
+    # log_softmax(x) = x - logsumexp(x)
+    # logsumexp is numerically stable and fused for performance
+    mlx_result = input_array - mx.logsumexp(input_array, axis=dim, keepdims=True)
 
     result = Tensor._from_mlx_array(mlx_result)
 

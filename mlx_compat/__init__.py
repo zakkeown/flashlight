@@ -791,6 +791,17 @@ from .autograd import (
     is_grad_enabled,
 )
 
+# Layout optimization for NHWC-native mode
+from .layout import (
+    Layout,
+    nhwc_mode,
+    nchw_mode,
+    is_nhwc_mode,
+    convert_layout,
+    ensure_nhwc,
+    ensure_nchw,
+)
+
 # Phase 4: Neural networks
 from . import nn
 

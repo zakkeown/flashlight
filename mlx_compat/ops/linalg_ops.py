@@ -5,11 +5,42 @@ Implements PyTorch-compatible linear algebra operations with MLX backend.
 These are the torch.* level ops (einsum, tensordot, diag, etc.)
 """
 
-from typing import Optional, Tuple, Union, Sequence
+from typing import Optional, Tuple, Union, Sequence, List
+import re
 import mlx.core as mx
 
 from ..tensor import Tensor
 from ..autograd.context import is_grad_enabled
+
+
+def _parse_transpose_pattern(equation: str) -> Optional[List[int]]:
+    """
+    Check if einsum equation is a simple transpose pattern.
+
+    Args:
+        equation: Einsum equation string (e.g., "ij->ji", "abc->cba")
+
+    Returns:
+        Permutation list if it's a transpose, None otherwise
+    """
+    # Match patterns like "ij->ji", "ijk->kji", "abcd->dcba"
+    match = re.match(r'^([a-zA-Z]+)->([a-zA-Z]+)$', equation.replace(' ', ''))
+    if not match:
+        return None
+
+    input_indices, output_indices = match.groups()
+
+    # Must have same set of indices (pure permutation)
+    if set(input_indices) != set(output_indices):
+        return None
+
+    # No repeated indices (that would be trace/contraction)
+    if len(input_indices) != len(set(input_indices)):
+        return None
+
+    # Build permutation
+    perm = [input_indices.index(c) for c in output_indices]
+    return perm
 
 
 def einsum(*args) -> Tensor:
@@ -39,6 +70,18 @@ def einsum(*args) -> Tensor:
         # Sublist format: operands with subscripts embedded
         raise NotImplementedError("Sublist format for einsum not yet supported")
 
+    # Optimization: detect simple transpose patterns and use mx.transpose()
+    # This avoids the overhead of the full einsum contraction engine
+    if len(operands) == 1:
+        perm = _parse_transpose_pattern(equation)
+        if perm is not None:
+            result_array = mx.transpose(operands[0]._mlx_array, perm)
+            result = Tensor._from_mlx_array(result_array)
+            if is_grad_enabled() and operands[0].requires_grad:
+                result.requires_grad = True
+            return result
+
+    # General case: use MLX einsum
     mlx_arrays = [op._mlx_array for op in operands]
     result_array = mx.einsum(equation, *mlx_arrays)
     result = Tensor._from_mlx_array(result_array)

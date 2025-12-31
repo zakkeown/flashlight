@@ -75,17 +75,33 @@ class BatchNorm2d(Module):
         Apply batch normalization.
 
         Args:
-            input: Input tensor of shape [N, C, H, W]
+            input: Input tensor of shape [N, C, H, W] (NCHW) or [N, H, W, C] (NHWC)
 
         Returns:
-            Normalized tensor of shape [N, C, H, W]
+            Normalized tensor of same shape as input
         """
+        from ...layout import is_nhwc_mode, Layout
+
+        # Check if input is in NHWC layout
+        is_nhwc = (
+            is_nhwc_mode() and
+            hasattr(input, '_layout') and
+            input._layout == Layout.NHWC
+        )
+
+        if is_nhwc:
+            # NHWC: [N, H, W, C] - normalize over N, H, W (dims 0, 1, 2)
+            reduce_dims = [0, 1, 2]
+            broadcast_shape = (1, 1, 1, -1)  # [1, 1, 1, C]
+        else:
+            # NCHW: [N, C, H, W] - normalize over N, H, W (dims 0, 2, 3)
+            reduce_dims = [0, 2, 3]
+            broadcast_shape = (1, -1, 1, 1)  # [1, C, 1, 1]
+
         if self.training:
             # Compute batch statistics
-            # input: [N, C, H, W]
-            # Compute mean and var over N, H, W dimensions (keep C)
-            batch_mean = input.mean(dim=[0, 2, 3], keepdim=False)  # [C]
-            batch_var = input.var(dim=[0, 2, 3], keepdim=False, unbiased=False)  # [C]
+            batch_mean = input.mean(dim=reduce_dims, keepdim=False)  # [C]
+            batch_var = input.var(dim=reduce_dims, keepdim=False, unbiased=False)  # [C]
 
             # Update running statistics
             if self.track_running_stats:
@@ -109,13 +125,13 @@ class BatchNorm2d(Module):
                 var = self.running_var
             else:
                 # If not tracking, compute batch stats even in eval mode
-                mean = input.mean(dim=[0, 2, 3], keepdim=False)
-                var = input.var(dim=[0, 2, 3], keepdim=False, unbiased=False)
+                mean = input.mean(dim=reduce_dims, keepdim=False)
+                var = input.var(dim=reduce_dims, keepdim=False, unbiased=False)
 
         # Normalize: (x - mean) / sqrt(var + eps)
-        # Reshape mean and var to [1, C, 1, 1] for broadcasting
-        mean_reshaped = mean.reshape(1, -1, 1, 1)
-        var_reshaped = var.reshape(1, -1, 1, 1)
+        # Reshape mean and var for broadcasting
+        mean_reshaped = mean.reshape(*broadcast_shape)
+        var_reshaped = var.reshape(*broadcast_shape)
 
         normalized = (input - mean_reshaped) / Tensor._from_mlx_array(
             mx.sqrt(var_reshaped._mlx_array + self.eps)
@@ -123,11 +139,15 @@ class BatchNorm2d(Module):
 
         # Apply affine transformation
         if self.affine:
-            weight_reshaped = self.weight.reshape(1, -1, 1, 1)
-            bias_reshaped = self.bias.reshape(1, -1, 1, 1)
+            weight_reshaped = self.weight.reshape(*broadcast_shape)
+            bias_reshaped = self.bias.reshape(*broadcast_shape)
             output = normalized * weight_reshaped + bias_reshaped
         else:
             output = normalized
+
+        # Preserve layout in output
+        if is_nhwc:
+            output._layout = Layout.NHWC
 
         return output
 

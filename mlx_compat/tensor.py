@@ -126,17 +126,27 @@ class Tensor:
         self._base = None  # Base tensor if this is a view
         self._is_view = False
 
+        # Layout tracking for NHWC optimization
+        self._layout = None  # None = infer from shape and mode
+
     @classmethod
     def _from_mlx_array(
         cls,
         mlx_array,
         requires_grad: bool = False,
         grad_fn=None,
+        layout=None,
     ) -> 'Tensor':
         """
         Internal: Create tensor directly from MLX array.
 
         Used by operators to create output tensors efficiently.
+
+        Args:
+            mlx_array: The MLX array to wrap
+            requires_grad: Whether to track gradients
+            grad_fn: Backward function for autograd
+            layout: Optional layout hint (Layout enum from layout.py)
         """
         tensor = cls.__new__(cls)
         tensor._mlx_array = mlx_array
@@ -147,6 +157,7 @@ class Tensor:
         tensor._grad_fn = grad_fn
         tensor._base = None
         tensor._is_view = False
+        tensor._layout = layout
         return tensor
 
     def _infer_dtype(self, mlx_array) -> DType:
@@ -251,6 +262,50 @@ class Tensor:
     def is_view(self) -> bool:
         """Check if this tensor is a view of another tensor."""
         return self._is_view
+
+    @property
+    def layout(self):
+        """
+        Get the memory layout of this tensor.
+
+        Returns:
+            Layout enum value (NCHW, NHWC, etc.) or None for non-spatial tensors.
+        """
+        from .layout import infer_layout
+        return infer_layout(self)
+
+    def to_nhwc(self) -> 'Tensor':
+        """
+        Convert 4D tensor to NHWC layout if not already.
+
+        Returns:
+            Tensor in NHWC layout.
+        """
+        from .layout import ensure_nhwc
+        return ensure_nhwc(self)
+
+    def to_nchw(self) -> 'Tensor':
+        """
+        Convert 4D tensor to NCHW layout if not already.
+
+        Returns:
+            Tensor in NCHW layout.
+        """
+        from .layout import ensure_nchw
+        return ensure_nchw(self)
+
+    def to_layout(self, target_layout) -> 'Tensor':
+        """
+        Convert tensor to specified layout.
+
+        Args:
+            target_layout: Target Layout enum value
+
+        Returns:
+            Tensor in target layout.
+        """
+        from .layout import convert_layout
+        return convert_layout(self, target_layout)
 
     # ==================== Type Conversion ====================
 
@@ -706,6 +761,144 @@ class Tensor:
         """
         from . import ops
         return ops.std(self, dim=dim, unbiased=unbiased, keepdim=keepdim)
+
+    def sum(self, dim=None, keepdim=False):
+        """
+        Sum of elements.
+
+        Args:
+            dim: Dimension(s) to reduce. If None, compute over all dimensions.
+            keepdim: If True, keep reduced dimensions.
+
+        Returns:
+            Sum tensor.
+        """
+        from . import ops
+        return ops.sum(self, dim=dim, keepdim=keepdim)
+
+    def prod(self, dim=None, keepdim=False):
+        """
+        Product of elements.
+
+        Args:
+            dim: Dimension to reduce. If None, compute over all dimensions.
+            keepdim: If True, keep reduced dimensions.
+
+        Returns:
+            Product tensor.
+        """
+        from . import ops
+        return ops.prod(self, dim=dim, keepdim=keepdim)
+
+    def max(self, dim=None, keepdim=False):
+        """
+        Maximum value(s) of tensor.
+
+        Args:
+            dim: Dimension to reduce. If None, compute over all dimensions.
+            keepdim: If True, keep reduced dimensions.
+
+        Returns:
+            If dim is None: single tensor with max value.
+            If dim is specified: tuple of (values, indices).
+        """
+        from . import ops
+        return ops.max(self, dim=dim, keepdim=keepdim)
+
+    def min(self, dim=None, keepdim=False):
+        """
+        Minimum value(s) of tensor.
+
+        Args:
+            dim: Dimension to reduce. If None, compute over all dimensions.
+            keepdim: If True, keep reduced dimensions.
+
+        Returns:
+            If dim is None: single tensor with min value.
+            If dim is specified: tuple of (values, indices).
+        """
+        from . import ops
+        return ops.min(self, dim=dim, keepdim=keepdim)
+
+    def argmax(self, dim=None, keepdim=False):
+        """
+        Indices of maximum values.
+
+        Args:
+            dim: Dimension to reduce. If None, flatten first.
+            keepdim: If True, keep reduced dimensions.
+
+        Returns:
+            Tensor of indices.
+        """
+        from . import ops
+        return ops.argmax(self, dim=dim, keepdim=keepdim)
+
+    def argmin(self, dim=None, keepdim=False):
+        """
+        Indices of minimum values.
+
+        Args:
+            dim: Dimension to reduce. If None, flatten first.
+            keepdim: If True, keep reduced dimensions.
+
+        Returns:
+            Tensor of indices.
+        """
+        from . import ops
+        return ops.argmin(self, dim=dim, keepdim=keepdim)
+
+    def all(self, dim=None, keepdim=False):
+        """
+        Test if all elements are True.
+
+        Args:
+            dim: Dimension to reduce. If None, compute over all dimensions.
+            keepdim: If True, keep reduced dimensions.
+
+        Returns:
+            Boolean tensor.
+        """
+        from . import ops
+        return ops.all(self, dim=dim, keepdim=keepdim)
+
+    def any(self, dim=None, keepdim=False):
+        """
+        Test if any element is True.
+
+        Args:
+            dim: Dimension to reduce. If None, compute over all dimensions.
+            keepdim: If True, keep reduced dimensions.
+
+        Returns:
+            Boolean tensor.
+        """
+        from . import ops
+        return ops.any(self, dim=dim, keepdim=keepdim)
+
+    def abs(self):
+        """
+        Compute absolute value element-wise.
+
+        Returns:
+            Tensor with absolute values.
+        """
+        from . import ops
+        return ops.abs(self)
+
+    def clamp(self, min=None, max=None):
+        """
+        Clamp tensor values to a range.
+
+        Args:
+            min: Minimum value (None means no lower bound).
+            max: Maximum value (None means no upper bound).
+
+        Returns:
+            Clamped tensor.
+        """
+        from . import ops
+        return ops.clamp(self, min=min, max=max)
 
     def zero_(self):
         """

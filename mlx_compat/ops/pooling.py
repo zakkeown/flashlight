@@ -6,6 +6,7 @@ Implements pooling operations with PyTorch-compatible API.
 
 import mlx.core as mx
 import mlx.nn as mxnn
+from functools import lru_cache
 from ..tensor import Tensor
 from typing import Union, Tuple, Optional
 
@@ -15,6 +16,31 @@ def _pair(x):
     if isinstance(x, (list, tuple)):
         return tuple(x)
     return (x, x)
+
+
+# Cached pool object getters to avoid allocation overhead on every call
+@lru_cache(maxsize=64)
+def _get_max_pool2d(kernel_size: Tuple[int, int], stride: Tuple[int, int], padding: Tuple[int, int]):
+    """Get or create a cached MaxPool2d layer."""
+    return mxnn.MaxPool2d(kernel_size=kernel_size, stride=stride, padding=padding)
+
+
+@lru_cache(maxsize=64)
+def _get_avg_pool2d(kernel_size: Tuple[int, int], stride: Tuple[int, int], padding: Tuple[int, int]):
+    """Get or create a cached AvgPool2d layer."""
+    return mxnn.AvgPool2d(kernel_size=kernel_size, stride=stride, padding=padding)
+
+
+@lru_cache(maxsize=64)
+def _get_max_pool1d(kernel_size: int, stride: int, padding: int):
+    """Get or create a cached MaxPool1d layer."""
+    return mxnn.MaxPool1d(kernel_size=kernel_size, stride=stride, padding=padding)
+
+
+@lru_cache(maxsize=64)
+def _get_avg_pool1d(kernel_size: int, stride: int, padding: int):
+    """Get or create a cached AvgPool1d layer."""
+    return mxnn.AvgPool1d(kernel_size=kernel_size, stride=stride, padding=padding)
 
 
 def max_pool2d(
@@ -30,7 +56,7 @@ def max_pool2d(
     2D max pooling operation.
 
     Args:
-        input: Input tensor of shape [N, C, H, W] (PyTorch format)
+        input: Input tensor of shape [N, C, H, W] (PyTorch format) or [N, H, W, C] in nhwc_mode
         kernel_size: Size of pooling window
         stride: Stride for pooling (default: kernel_size)
         padding: Padding to apply
@@ -39,11 +65,12 @@ def max_pool2d(
         ceil_mode: Whether to use ceil for output size calculation
 
     Returns:
-        Output tensor of shape [N, C, H_out, W_out]
+        Output tensor of shape [N, C, H_out, W_out] or [N, H_out, W_out, C] in nhwc_mode
         If return_indices is True, returns tuple of (output, indices)
 
     Note:
-        MLX uses NHWC format, so we need to transpose from PyTorch's NCHW.
+        MLX uses NHWC format internally. When nhwc_mode() is enabled, input/output
+        stay in NHWC format to avoid redundant layout conversions.
     """
     if return_indices:
         from ..nn.functional import max_pool2d_with_indices
@@ -51,6 +78,11 @@ def max_pool2d(
             input, kernel_size=kernel_size, stride=stride, padding=padding,
             dilation=dilation, ceil_mode=ceil_mode
         )
+
+    from ..layout import is_nhwc_mode, Layout
+
+    # Check if we're in NHWC-native mode
+    nhwc_native = is_nhwc_mode()
 
     # Convert parameters
     kernel_size = _pair(kernel_size)
@@ -60,19 +92,28 @@ def max_pool2d(
         stride = _pair(stride)
     padding = _pair(padding)
 
-    # Convert input from NCHW to NHWC
-    # input: [N, C, H, W] -> [N, H, W, C]
-    input_nhwc = mx.transpose(input._mlx_array, [0, 2, 3, 1])
+    # Get input in NHWC format (required by MLX)
+    if nhwc_native and input._layout == Layout.NHWC:
+        # Input is already in NHWC - no conversion needed
+        input_nhwc = input._mlx_array
+    else:
+        # Convert input from NCHW to NHWC
+        # input: [N, C, H, W] -> [N, H, W, C]
+        input_nhwc = mx.transpose(input._mlx_array, [0, 2, 3, 1])
 
-    # Create MLX pooling layer and apply
-    pool = mxnn.MaxPool2d(kernel_size=kernel_size, stride=stride, padding=padding)
+    # Get cached MLX pooling layer and apply
+    pool = _get_max_pool2d(kernel_size, stride, padding)
     output_nhwc = pool(input_nhwc)
 
-    # Convert back from NHWC to NCHW
-    # [N, H, W, C] -> [N, C, H, W]
-    output_nchw = mx.transpose(output_nhwc, [0, 3, 1, 2])
-
-    result = Tensor._from_mlx_array(output_nchw)
+    # Determine output layout based on mode
+    if nhwc_native:
+        # Stay in NHWC - no conversion back
+        result = Tensor._from_mlx_array(output_nhwc, layout=Layout.NHWC)
+    else:
+        # Convert back from NHWC to NCHW
+        # [N, H, W, C] -> [N, C, H, W]
+        output_nchw = mx.transpose(output_nhwc, [0, 3, 1, 2])
+        result = Tensor._from_mlx_array(output_nchw, layout=Layout.NCHW)
 
     # Handle autograd
     from ..autograd.context import is_grad_enabled
@@ -96,7 +137,7 @@ def avg_pool2d(
     2D average pooling operation.
 
     Args:
-        input: Input tensor of shape [N, C, H, W] (PyTorch format)
+        input: Input tensor of shape [N, C, H, W] (PyTorch format) or [N, H, W, C] in nhwc_mode
         kernel_size: Size of pooling window
         stride: Stride for pooling (default: kernel_size)
         padding: Padding to apply
@@ -105,11 +146,17 @@ def avg_pool2d(
         divisor_override: If specified, use this as the divisor instead of kernel area
 
     Returns:
-        Output tensor of shape [N, C, H_out, W_out]
+        Output tensor of shape [N, C, H_out, W_out] or [N, H_out, W_out, C] in nhwc_mode
 
     Note:
-        MLX uses NHWC format, so we need to transpose from PyTorch's NCHW.
+        MLX uses NHWC format internally. When nhwc_mode() is enabled, input/output
+        stay in NHWC format to avoid redundant layout conversions.
     """
+    from ..layout import is_nhwc_mode, Layout
+
+    # Check if we're in NHWC-native mode
+    nhwc_native = is_nhwc_mode()
+
     # Convert parameters
     kernel_size = _pair(kernel_size)
     if stride is None:
@@ -118,28 +165,34 @@ def avg_pool2d(
         stride = _pair(stride)
     padding = _pair(padding)
 
-    # Convert input from NCHW to NHWC
-    # input: [N, C, H, W] -> [N, H, W, C]
-    input_nhwc = mx.transpose(input._mlx_array, [0, 2, 3, 1])
+    # Get input in NHWC format (required by MLX)
+    if nhwc_native and input._layout == Layout.NHWC:
+        # Input is already in NHWC - no conversion needed
+        input_nhwc = input._mlx_array
+    else:
+        # Convert input from NCHW to NHWC
+        # input: [N, C, H, W] -> [N, H, W, C]
+        input_nhwc = mx.transpose(input._mlx_array, [0, 2, 3, 1])
+
+    # Get cached MLX pooling layer and apply
+    pool = _get_avg_pool2d(kernel_size, stride, padding)
+    output_nhwc = pool(input_nhwc)
 
     if divisor_override is not None:
-        # When divisor_override is set, compute sum pooling and divide by the override
+        # When divisor_override is set, adjust for custom divisor
         # MLX AvgPool2d divides by kernel_size, so we need to undo that and apply override
-        pool = mxnn.AvgPool2d(kernel_size=kernel_size, stride=stride, padding=padding)
-        output_nhwc = pool(input_nhwc)
-        # Multiply by kernel area to get sum, then divide by override
         kernel_area = kernel_size[0] * kernel_size[1]
         output_nhwc = output_nhwc * (kernel_area / divisor_override)
+
+    # Determine output layout based on mode
+    if nhwc_native:
+        # Stay in NHWC - no conversion back
+        result = Tensor._from_mlx_array(output_nhwc, layout=Layout.NHWC)
     else:
-        # Create MLX pooling layer and apply
-        pool = mxnn.AvgPool2d(kernel_size=kernel_size, stride=stride, padding=padding)
-        output_nhwc = pool(input_nhwc)
-
-    # Convert back from NHWC to NCHW
-    # [N, H, W, C] -> [N, C, H, W]
-    output_nchw = mx.transpose(output_nhwc, [0, 3, 1, 2])
-
-    result = Tensor._from_mlx_array(output_nchw)
+        # Convert back from NHWC to NCHW
+        # [N, H, W, C] -> [N, C, H, W]
+        output_nchw = mx.transpose(output_nhwc, [0, 3, 1, 2])
+        result = Tensor._from_mlx_array(output_nchw, layout=Layout.NCHW)
 
     # Handle autograd
     from ..autograd.context import is_grad_enabled

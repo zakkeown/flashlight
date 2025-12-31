@@ -75,19 +75,22 @@ def mean(input: Tensor, dim: Optional[Union[int, Tuple[int, ...]]] = None,
     return result
 
 
-def max(input: Tensor, dim: Optional[int] = None, keepdim: bool = False) -> Union[Tensor, Tuple[Tensor, Tensor]]:
+def max(input: Tensor, dim: Optional[Union[int, Tuple[int, ...]]] = None, keepdim: bool = False) -> Union[Tensor, 'MaxResult']:
     """
     Maximum value(s) of tensor.
 
     Args:
         input: Input tensor
-        dim: Dimension to reduce (None = all dimensions)
+        dim: Dimension(s) to reduce (None = all dimensions)
         keepdim: Whether to keep reduced dimensions
 
     Returns:
         If dim is None: single tensor with max value
-        If dim is specified: tuple of (values, indices)
+        If dim is a tuple: single tensor with max values (no indices for multi-axis)
+        If dim is a single int: MaxResult with lazy .values and .indices properties
     """
+    from ._reduction_results import MaxResult
+
     if dim is None:
         # Return single max value
         mlx_result = mx.max(input._mlx_array, keepdims=keepdim)
@@ -97,33 +100,37 @@ def max(input: Tensor, dim: Optional[int] = None, keepdim: bool = False) -> Unio
             result.requires_grad = True
 
         return result
-    else:
-        # Return max values and indices
-        mlx_values = mx.max(input._mlx_array, axis=dim, keepdims=keepdim)
-        mlx_indices = mx.argmax(input._mlx_array, axis=dim, keepdims=keepdim)
 
-        values = Tensor._from_mlx_array(mlx_values)
-        indices = Tensor._from_mlx_array(mlx_indices)
+    # Handle tuple axis - MLX argmax only supports single int axis
+    if isinstance(dim, (tuple, list)):
+        mlx_values = mx.max(input._mlx_array, axis=dim, keepdims=keepdim)
+        result = Tensor._from_mlx_array(mlx_values)
 
         if input.requires_grad:
-            values.requires_grad = True
+            result.requires_grad = True
 
-        return values, indices
+        return result
+
+    # Single axis - return lazy (values, indices) result
+    return MaxResult(input._mlx_array, dim, keepdim)
 
 
-def min(input: Tensor, dim: Optional[int] = None, keepdim: bool = False) -> Union[Tensor, Tuple[Tensor, Tensor]]:
+def min(input: Tensor, dim: Optional[Union[int, Tuple[int, ...]]] = None, keepdim: bool = False) -> Union[Tensor, 'MinResult']:
     """
     Minimum value(s) of tensor.
 
     Args:
         input: Input tensor
-        dim: Dimension to reduce (None = all dimensions)
+        dim: Dimension(s) to reduce (None = all dimensions)
         keepdim: Whether to keep reduced dimensions
 
     Returns:
         If dim is None: single tensor with min value
-        If dim is specified: tuple of (values, indices)
+        If dim is a tuple: single tensor with min values (no indices for multi-axis)
+        If dim is a single int: MinResult with lazy .values and .indices properties
     """
+    from ._reduction_results import MinResult
+
     if dim is None:
         # Return single min value
         mlx_result = mx.min(input._mlx_array, keepdims=keepdim)
@@ -133,18 +140,19 @@ def min(input: Tensor, dim: Optional[int] = None, keepdim: bool = False) -> Unio
             result.requires_grad = True
 
         return result
-    else:
-        # Return min values and indices
-        mlx_values = mx.min(input._mlx_array, axis=dim, keepdims=keepdim)
-        mlx_indices = mx.argmin(input._mlx_array, axis=dim, keepdims=keepdim)
 
-        values = Tensor._from_mlx_array(mlx_values)
-        indices = Tensor._from_mlx_array(mlx_indices)
+    # Handle tuple axis - MLX argmin only supports single int axis
+    if isinstance(dim, (tuple, list)):
+        mlx_values = mx.min(input._mlx_array, axis=dim, keepdims=keepdim)
+        result = Tensor._from_mlx_array(mlx_values)
 
         if input.requires_grad:
-            values.requires_grad = True
+            result.requires_grad = True
 
-        return values, indices
+        return result
+
+    # Single axis - return lazy (values, indices) result
+    return MinResult(input._mlx_array, dim, keepdim)
 
 
 def argmax(input: Tensor, dim: Optional[int] = None, keepdim: bool = False) -> Tensor:
@@ -235,10 +243,16 @@ def std(input: Tensor, dim: Optional[Union[int, Tuple[int, ...]]] = None,
     Returns:
         Result tensor
     """
-    # std = sqrt(var)
-    variance = var(input, dim=dim, keepdim=keepdim, unbiased=unbiased)
-    mlx_result = mx.sqrt(variance._mlx_array)
+    # Optimized: compute sqrt(var) directly on MLX arrays without intermediate Tensor
+    ddof = 1 if unbiased else 0
 
+    if dim is not None:
+        axis = dim if isinstance(dim, (tuple, list)) else dim
+        variance = mx.var(input._mlx_array, axis=axis, keepdims=keepdim, ddof=ddof)
+    else:
+        variance = mx.var(input._mlx_array, keepdims=keepdim, ddof=ddof)
+
+    mlx_result = mx.sqrt(variance)
     result = Tensor._from_mlx_array(mlx_result)
 
     if input.requires_grad:
