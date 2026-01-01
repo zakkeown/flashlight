@@ -7,6 +7,7 @@ from ..tensor import Tensor
 from ..ops.special import lgamma
 from .exp_family import ExponentialFamily
 from . import constraints
+from ._constants import xlogy, safe_log
 
 
 class Poisson(ExponentialFamily):
@@ -60,11 +61,12 @@ class Poisson(ExponentialFamily):
     def log_prob(self, value: Tensor) -> Tensor:
         data = value._mlx_array if isinstance(value, Tensor) else value
         log_factorial = lgamma(data + 1)
-        return Tensor(data * mx.log(self.rate + 1e-10) - self.rate - log_factorial)
+        # Use xlogy for numerical stability when k=0
+        return Tensor(xlogy(data, self.rate) - self.rate - log_factorial)
 
     @property
     def _natural_params(self) -> Tuple[Tensor, ...]:
-        return (Tensor(mx.log(self.rate + 1e-10)),)
+        return (Tensor(safe_log(self.rate)),)
 
     def _log_normalizer(self, x) -> Tensor:
         x_data = x._mlx_array if isinstance(x, Tensor) else x

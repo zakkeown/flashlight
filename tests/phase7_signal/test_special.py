@@ -163,7 +163,8 @@ class TestBesselFunctions:
         x = mlx_compat.tensor([0.5, 1.0, 2.0, 5.0, 10.0])
         result = mlx_compat.special.bessel_y1(x)
         expected = sp.y1(np.array([0.5, 1.0, 2.0, 5.0, 10.0]))
-        # Y1 has slightly lower precision at some points
+        # Y1 has lower precision at some points due to polynomial approximation
+        # The implementation has ~1% max relative error which is acceptable for this function
         np.testing.assert_allclose(
             np.array(result._mlx_array), expected, rtol=1e-2, atol=1e-3
         )

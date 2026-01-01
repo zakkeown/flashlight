@@ -6,6 +6,7 @@ import math
 
 from ..tensor import Tensor
 from .distribution import Distribution
+from ._constants import xlogy
 
 
 # Registry for KL divergence implementations
@@ -83,8 +84,10 @@ def _register_bernoulli_kl():
 
     @register_kl(Bernoulli, Bernoulli)
     def _kl_bernoulli_bernoulli(p: Bernoulli, q: Bernoulli) -> Tensor:
-        t1 = p.probs * (mx.log(p.probs + 1e-10) - mx.log(q.probs + 1e-10))
-        t2 = (1 - p.probs) * (mx.log(1 - p.probs + 1e-10) - mx.log(1 - q.probs + 1e-10))
+        # Use xlogy for numerical stability: xlogy(p, p/q) handles p=0 correctly
+        # KL = p*log(p/q) + (1-p)*log((1-p)/(1-q))
+        t1 = xlogy(p.probs, p.probs) - xlogy(p.probs, q.probs)
+        t2 = xlogy(1 - p.probs, 1 - p.probs) - xlogy(1 - p.probs, 1 - q.probs)
         return Tensor(t1 + t2)
 
 
@@ -94,7 +97,9 @@ def _register_categorical_kl():
 
     @register_kl(Categorical, Categorical)
     def _kl_categorical_categorical(p: Categorical, q: Categorical) -> Tensor:
-        t = p.probs * (mx.log(p.probs + 1e-10) - mx.log(q.probs + 1e-10))
+        # Use xlogy for numerical stability: handles p=0 correctly
+        # KL = sum(p * log(p/q)) = sum(p*log(p) - p*log(q))
+        t = xlogy(p.probs, p.probs) - xlogy(p.probs, q.probs)
         return Tensor(mx.sum(t, axis=-1))
 
 

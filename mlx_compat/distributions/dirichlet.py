@@ -8,6 +8,7 @@ from ..ops.special import lgamma, digamma
 from .exp_family import ExponentialFamily
 from .gamma import Gamma
 from . import constraints
+from ._constants import xlogy
 
 
 class Dirichlet(ExponentialFamily):
@@ -61,7 +62,8 @@ class Dirichlet(ExponentialFamily):
         log_gamma_sum = lgamma(mx.sum(self.concentration, axis=-1))
         log_gamma_each = lgamma(self.concentration)
         log_beta = mx.sum(log_gamma_each, axis=-1) - log_gamma_sum
-        log_prob = -log_beta + mx.sum((self.concentration - 1) * mx.log(data + 1e-10), axis=-1)
+        # Use xlogy for numerical stability when concentration=1 (which makes coeff=0)
+        log_prob = -log_beta + mx.sum(xlogy(self.concentration - 1, data), axis=-1)
         return Tensor(log_prob)
 
     def entropy(self) -> Tensor:

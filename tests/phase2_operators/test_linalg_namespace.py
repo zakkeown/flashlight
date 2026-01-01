@@ -227,7 +227,7 @@ class TestLinalgInv(TestCase):
         product = mlx_compat.matmul(m, m_inv)
         expected = np.eye(4, dtype=np.float32)
         np.testing.assert_allclose(
-            product.numpy(), expected, rtol=1e-3, atol=1e-3
+            product.numpy(), expected, rtol=1e-4, atol=1e-5
         )
 
 
@@ -261,7 +261,7 @@ class TestLinalgSolve(TestCase):
 
         result = mlx_compat.matmul(A, x)
         np.testing.assert_allclose(
-            result.numpy(), b_data, rtol=1e-3, atol=1e-3
+            result.numpy(), b_data, rtol=1e-4, atol=1e-5
         )
 
 
@@ -361,7 +361,7 @@ class TestLinalgPinv(TestCase):
         product = mlx_compat.matmul(m, m_pinv)
         expected = np.eye(2, dtype=np.float32)
         np.testing.assert_allclose(
-            product.numpy(), expected, rtol=1e-3, atol=1e-3
+            product.numpy(), expected, rtol=1e-4, atol=1e-5
         )
 
     def test_pinv_tall(self):
@@ -375,7 +375,7 @@ class TestLinalgPinv(TestCase):
         product = mlx_compat.matmul(m_pinv, m)
         expected = np.eye(3, dtype=np.float32)
         np.testing.assert_allclose(
-            product.numpy(), expected, rtol=1e-3, atol=1e-3
+            product.numpy(), expected, rtol=1e-4, atol=1e-5
         )
 
     def test_pinv_wide(self):
@@ -389,7 +389,7 @@ class TestLinalgPinv(TestCase):
         product = mlx_compat.matmul(m, m_pinv)
         expected = np.eye(3, dtype=np.float32)
         np.testing.assert_allclose(
-            product.numpy(), expected, rtol=1e-3, atol=1e-3
+            product.numpy(), expected, rtol=1e-4, atol=1e-5
         )
 
     def test_pinv_reconstruction(self):
@@ -401,7 +401,7 @@ class TestLinalgPinv(TestCase):
 
         reconstructed = mlx_compat.matmul(mlx_compat.matmul(m, m_pinv), m)
         np.testing.assert_allclose(
-            reconstructed.numpy(), data, rtol=1e-3, atol=1e-3
+            reconstructed.numpy(), data, rtol=1e-4, atol=1e-5
         )
 
 

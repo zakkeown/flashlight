@@ -102,12 +102,38 @@ class MemoryStats:
 
 
 @dataclass
+class AccuracyStats:
+    """Detailed numerical accuracy statistics."""
+    max_abs_diff: float
+    mean_abs_diff: float
+    max_rel_diff: float
+    mean_rel_diff: float
+    tolerance_tier: str  # 'STRICT', 'STANDARD', 'RELAXED', 'LOOSE'
+    passed: bool
+    rtol_used: float
+    atol_used: float
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "max_abs_diff": self.max_abs_diff,
+            "mean_abs_diff": self.mean_abs_diff,
+            "max_rel_diff": self.max_rel_diff,
+            "mean_rel_diff": self.mean_rel_diff,
+            "tolerance_tier": self.tolerance_tier,
+            "passed": self.passed,
+            "rtol_used": self.rtol_used,
+            "atol_used": self.atol_used,
+        }
+
+
+@dataclass
 class ComparisonStats:
     """Comparison statistics between frameworks."""
     speedup: float  # pytorch_time / mlx_time (>1 = mlx faster)
     relative_performance: str  # "1.5x faster" or "0.8x (20% slower)"
     numerical_match: bool
     max_abs_diff: float
+    accuracy: Optional[AccuracyStats] = None  # Detailed accuracy metrics
 
 
 @dataclass
@@ -170,12 +196,15 @@ class BenchmarkResult:
             }
 
         if self.comparison is not None:
-            result["comparison"] = {
+            comparison_dict = {
                 "speedup": self.comparison.speedup,
                 "relative_performance": self.comparison.relative_performance,
                 "numerical_match": self.comparison.numerical_match,
                 "max_abs_diff": self.comparison.max_abs_diff,
             }
+            if self.comparison.accuracy is not None:
+                comparison_dict["accuracy"] = self.comparison.accuracy.to_dict()
+            result["comparison"] = comparison_dict
 
         if self.mlx_memory is not None:
             result["mlx_memory"] = {

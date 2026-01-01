@@ -36,6 +36,200 @@ def _triple(x):
     return (x, x, x)
 
 
+def _apply_padding_mode_1d(input_array, padding: int, padding_mode: str):
+    """
+    Apply padding to 1D input using the specified padding mode.
+
+    Args:
+        input_array: MLX array of shape [N, C, L]
+        padding: Amount of padding to apply on each side
+        padding_mode: One of 'zeros', 'reflect', 'replicate', 'circular'
+
+    Returns:
+        Padded MLX array of shape [N, C, L + 2*padding]
+    """
+    if padding == 0:
+        return input_array
+
+    if padding_mode == 'zeros':
+        # Zero padding is handled by the conv operation itself
+        return input_array
+    elif padding_mode == 'reflect':
+        # Reflect padding: [a, b, c, d] with pad=2 -> [c, b, a, b, c, d, c, b]
+        # Use slicing to reflect
+        N, C, L = input_array.shape
+        if padding >= L:
+            raise ValueError(f"Padding size {padding} should be less than input size {L} for reflect mode")
+        left_pad = mx.flip(input_array[:, :, 1:padding+1], axis=2)
+        right_pad = mx.flip(input_array[:, :, -(padding+1):-1], axis=2)
+        return mx.concatenate([left_pad, input_array, right_pad], axis=2)
+    elif padding_mode == 'replicate':
+        # Replicate padding: [a, b, c, d] with pad=2 -> [a, a, a, b, c, d, d, d]
+        N, C, L = input_array.shape
+        left_pad = mx.broadcast_to(input_array[:, :, :1], (N, C, padding))
+        right_pad = mx.broadcast_to(input_array[:, :, -1:], (N, C, padding))
+        return mx.concatenate([left_pad, input_array, right_pad], axis=2)
+    elif padding_mode == 'circular':
+        # Circular padding: [a, b, c, d] with pad=2 -> [c, d, a, b, c, d, a, b]
+        N, C, L = input_array.shape
+        left_pad = input_array[:, :, -padding:]
+        right_pad = input_array[:, :, :padding]
+        return mx.concatenate([left_pad, input_array, right_pad], axis=2)
+    else:
+        raise ValueError(f"Unknown padding mode: {padding_mode}")
+
+
+def _apply_padding_mode_2d(input_array, padding: Tuple[int, int], padding_mode: str):
+    """
+    Apply padding to 2D input using the specified padding mode.
+
+    Args:
+        input_array: MLX array of shape [N, C, H, W]
+        padding: Tuple of (pad_h, pad_w) for padding on each side
+        padding_mode: One of 'zeros', 'reflect', 'replicate', 'circular'
+
+    Returns:
+        Padded MLX array of shape [N, C, H + 2*pad_h, W + 2*pad_w]
+    """
+    pad_h, pad_w = padding
+    if pad_h == 0 and pad_w == 0:
+        return input_array
+
+    if padding_mode == 'zeros':
+        return input_array
+    elif padding_mode == 'reflect':
+        N, C, H, W = input_array.shape
+        if pad_h >= H or pad_w >= W:
+            raise ValueError(f"Padding ({pad_h}, {pad_w}) should be less than input size ({H}, {W}) for reflect mode")
+        result = input_array
+        # Pad height dimension
+        if pad_h > 0:
+            top_pad = mx.flip(result[:, :, 1:pad_h+1, :], axis=2)
+            bottom_pad = mx.flip(result[:, :, -(pad_h+1):-1, :], axis=2)
+            result = mx.concatenate([top_pad, result, bottom_pad], axis=2)
+        # Pad width dimension
+        if pad_w > 0:
+            left_pad = mx.flip(result[:, :, :, 1:pad_w+1], axis=3)
+            right_pad = mx.flip(result[:, :, :, -(pad_w+1):-1], axis=3)
+            result = mx.concatenate([left_pad, result, right_pad], axis=3)
+        return result
+    elif padding_mode == 'replicate':
+        N, C, H, W = input_array.shape
+        result = input_array
+        # Pad height dimension
+        if pad_h > 0:
+            top_pad = mx.broadcast_to(result[:, :, :1, :], (N, C, pad_h, W))
+            bottom_pad = mx.broadcast_to(result[:, :, -1:, :], (N, C, pad_h, W))
+            result = mx.concatenate([top_pad, result, bottom_pad], axis=2)
+        # Pad width dimension (now with updated H dimension)
+        if pad_w > 0:
+            new_H = H + 2 * pad_h if pad_h > 0 else H
+            left_pad = mx.broadcast_to(result[:, :, :, :1], (N, C, new_H, pad_w))
+            right_pad = mx.broadcast_to(result[:, :, :, -1:], (N, C, new_H, pad_w))
+            result = mx.concatenate([left_pad, result, right_pad], axis=3)
+        return result
+    elif padding_mode == 'circular':
+        N, C, H, W = input_array.shape
+        result = input_array
+        # Pad height dimension
+        if pad_h > 0:
+            top_pad = result[:, :, -pad_h:, :]
+            bottom_pad = result[:, :, :pad_h, :]
+            result = mx.concatenate([top_pad, result, bottom_pad], axis=2)
+        # Pad width dimension
+        if pad_w > 0:
+            left_pad = result[:, :, :, -pad_w:]
+            right_pad = result[:, :, :, :pad_w]
+            result = mx.concatenate([left_pad, result, right_pad], axis=3)
+        return result
+    else:
+        raise ValueError(f"Unknown padding mode: {padding_mode}")
+
+
+def _apply_padding_mode_3d(input_array, padding: Tuple[int, int, int], padding_mode: str):
+    """
+    Apply padding to 3D input using the specified padding mode.
+
+    Args:
+        input_array: MLX array of shape [N, C, D, H, W]
+        padding: Tuple of (pad_d, pad_h, pad_w) for padding on each side
+        padding_mode: One of 'zeros', 'reflect', 'replicate', 'circular'
+
+    Returns:
+        Padded MLX array of shape [N, C, D + 2*pad_d, H + 2*pad_h, W + 2*pad_w]
+    """
+    pad_d, pad_h, pad_w = padding
+    if pad_d == 0 and pad_h == 0 and pad_w == 0:
+        return input_array
+
+    if padding_mode == 'zeros':
+        return input_array
+    elif padding_mode == 'reflect':
+        N, C, D, H, W = input_array.shape
+        if pad_d >= D or pad_h >= H or pad_w >= W:
+            raise ValueError(f"Padding ({pad_d}, {pad_h}, {pad_w}) should be less than input size ({D}, {H}, {W}) for reflect mode")
+        result = input_array
+        # Pad depth dimension
+        if pad_d > 0:
+            front_pad = mx.flip(result[:, :, 1:pad_d+1, :, :], axis=2)
+            back_pad = mx.flip(result[:, :, -(pad_d+1):-1, :, :], axis=2)
+            result = mx.concatenate([front_pad, result, back_pad], axis=2)
+        # Pad height dimension
+        if pad_h > 0:
+            top_pad = mx.flip(result[:, :, :, 1:pad_h+1, :], axis=3)
+            bottom_pad = mx.flip(result[:, :, :, -(pad_h+1):-1, :], axis=3)
+            result = mx.concatenate([top_pad, result, bottom_pad], axis=3)
+        # Pad width dimension
+        if pad_w > 0:
+            left_pad = mx.flip(result[:, :, :, :, 1:pad_w+1], axis=4)
+            right_pad = mx.flip(result[:, :, :, :, -(pad_w+1):-1], axis=4)
+            result = mx.concatenate([left_pad, result, right_pad], axis=4)
+        return result
+    elif padding_mode == 'replicate':
+        N, C, D, H, W = input_array.shape
+        result = input_array
+        # Pad depth dimension
+        if pad_d > 0:
+            front_pad = mx.broadcast_to(result[:, :, :1, :, :], (N, C, pad_d, H, W))
+            back_pad = mx.broadcast_to(result[:, :, -1:, :, :], (N, C, pad_d, H, W))
+            result = mx.concatenate([front_pad, result, back_pad], axis=2)
+        # Pad height dimension
+        if pad_h > 0:
+            new_D = D + 2 * pad_d if pad_d > 0 else D
+            top_pad = mx.broadcast_to(result[:, :, :, :1, :], (N, C, new_D, pad_h, W))
+            bottom_pad = mx.broadcast_to(result[:, :, :, -1:, :], (N, C, new_D, pad_h, W))
+            result = mx.concatenate([top_pad, result, bottom_pad], axis=3)
+        # Pad width dimension
+        if pad_w > 0:
+            new_D = D + 2 * pad_d if pad_d > 0 else D
+            new_H = H + 2 * pad_h if pad_h > 0 else H
+            left_pad = mx.broadcast_to(result[:, :, :, :, :1], (N, C, new_D, new_H, pad_w))
+            right_pad = mx.broadcast_to(result[:, :, :, :, -1:], (N, C, new_D, new_H, pad_w))
+            result = mx.concatenate([left_pad, result, right_pad], axis=4)
+        return result
+    elif padding_mode == 'circular':
+        N, C, D, H, W = input_array.shape
+        result = input_array
+        # Pad depth dimension
+        if pad_d > 0:
+            front_pad = result[:, :, -pad_d:, :, :]
+            back_pad = result[:, :, :pad_d, :, :]
+            result = mx.concatenate([front_pad, result, back_pad], axis=2)
+        # Pad height dimension
+        if pad_h > 0:
+            top_pad = result[:, :, :, -pad_h:, :]
+            bottom_pad = result[:, :, :, :pad_h, :]
+            result = mx.concatenate([top_pad, result, bottom_pad], axis=3)
+        # Pad width dimension
+        if pad_w > 0:
+            left_pad = result[:, :, :, :, -pad_w:]
+            right_pad = result[:, :, :, :, :pad_w]
+            result = mx.concatenate([left_pad, result, right_pad], axis=4)
+        return result
+    else:
+        raise ValueError(f"Unknown padding mode: {padding_mode}")
+
+
 class Conv1d(Module):
     """
     1D Convolutional layer.
@@ -76,11 +270,9 @@ class Conv1d(Module):
         device: Optional[Any] = None,
         dtype: Optional[Any] = None
     ):
-        # device, dtype, and padding_mode are accepted for PyTorch compatibility
-        # padding_mode other than 'zeros' is not currently supported
-        if padding_mode != 'zeros':
-            import warnings
-            warnings.warn(f"padding_mode='{padding_mode}' is not supported in MLX, using 'zeros'")
+        # device and dtype are accepted for PyTorch compatibility
+        if padding_mode not in ('zeros', 'reflect', 'replicate', 'circular'):
+            raise ValueError(f"padding_mode must be one of 'zeros', 'reflect', 'replicate', 'circular', got '{padding_mode}'")
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -136,24 +328,44 @@ class Conv1d(Module):
         Returns:
             Output tensor of shape [N, out_channels, L_out]
         """
-        return conv1d(
-            input,
-            self.weight,
-            self.bias,
-            stride=self.stride,
-            padding=self.padding,
-            dilation=self.dilation,
-            groups=self.groups
-        )
+        # Apply non-zero padding mode if needed
+        if self.padding_mode != 'zeros' and self.padding > 0:
+            # Manually pad the input and use padding=0 for convolution
+            padded_input = Tensor._from_mlx_array(
+                _apply_padding_mode_1d(input._mlx_array, self.padding, self.padding_mode)
+            )
+            padded_input.requires_grad = input.requires_grad
+            return conv1d(
+                padded_input,
+                self.weight,
+                self.bias,
+                stride=self.stride,
+                padding=0,  # Padding already applied
+                dilation=self.dilation,
+                groups=self.groups
+            )
+        else:
+            return conv1d(
+                input,
+                self.weight,
+                self.bias,
+                stride=self.stride,
+                padding=self.padding,
+                dilation=self.dilation,
+                groups=self.groups
+            )
 
     def extra_repr(self) -> str:
-        return (
+        s = (
             f'in_channels={self.in_channels}, '
             f'out_channels={self.out_channels}, '
             f'kernel_size={self.kernel_size}, '
             f'stride={self.stride}, '
             f'padding={self.padding}'
         )
+        if self.padding_mode != 'zeros':
+            s += f', padding_mode={self.padding_mode}'
+        return s
 
 
 class Conv2d(Module):
@@ -196,11 +408,9 @@ class Conv2d(Module):
         device: Optional[Any] = None,
         dtype: Optional[Any] = None
     ):
-        # device, dtype, and padding_mode are accepted for PyTorch compatibility
-        # padding_mode other than 'zeros' is not currently supported
-        if padding_mode != 'zeros':
-            import warnings
-            warnings.warn(f"padding_mode='{padding_mode}' is not supported in MLX, using 'zeros'")
+        # device and dtype are accepted for PyTorch compatibility
+        if padding_mode not in ('zeros', 'reflect', 'replicate', 'circular'):
+            raise ValueError(f"padding_mode must be one of 'zeros', 'reflect', 'replicate', 'circular', got '{padding_mode}'")
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -274,25 +484,46 @@ class Conv2d(Module):
         Returns:
             Output tensor of shape [N, out_channels, H_out, W_out]
         """
-        return conv2d(
-            input,
-            self.weight,
-            self.bias,
-            stride=self.stride,
-            padding=self.padding,
-            dilation=self.dilation,
-            groups=self.groups,
-            _cached_weight_mlx=self._get_weight_mlx()
-        )
+        # Apply non-zero padding mode if needed
+        if self.padding_mode != 'zeros' and (self.padding[0] > 0 or self.padding[1] > 0):
+            # Manually pad the input and use padding=0 for convolution
+            padded_input = Tensor._from_mlx_array(
+                _apply_padding_mode_2d(input._mlx_array, self.padding, self.padding_mode)
+            )
+            padded_input.requires_grad = input.requires_grad
+            return conv2d(
+                padded_input,
+                self.weight,
+                self.bias,
+                stride=self.stride,
+                padding=(0, 0),  # Padding already applied
+                dilation=self.dilation,
+                groups=self.groups,
+                _cached_weight_mlx=self._get_weight_mlx()
+            )
+        else:
+            return conv2d(
+                input,
+                self.weight,
+                self.bias,
+                stride=self.stride,
+                padding=self.padding,
+                dilation=self.dilation,
+                groups=self.groups,
+                _cached_weight_mlx=self._get_weight_mlx()
+            )
 
     def extra_repr(self) -> str:
-        return (
+        s = (
             f'in_channels={self.in_channels}, '
             f'out_channels={self.out_channels}, '
             f'kernel_size={self.kernel_size}, '
             f'stride={self.stride}, '
             f'padding={self.padding}'
         )
+        if self.padding_mode != 'zeros':
+            s += f', padding_mode={self.padding_mode}'
+        return s
 
 
 class Conv3d(Module):
@@ -335,11 +566,9 @@ class Conv3d(Module):
         device: Optional[Any] = None,
         dtype: Optional[Any] = None
     ):
-        # device, dtype, and padding_mode are accepted for PyTorch compatibility
-        # padding_mode other than 'zeros' is not currently supported
-        if padding_mode != 'zeros':
-            import warnings
-            warnings.warn(f"padding_mode='{padding_mode}' is not supported in MLX, using 'zeros'")
+        # device and dtype are accepted for PyTorch compatibility
+        if padding_mode not in ('zeros', 'reflect', 'replicate', 'circular'):
+            raise ValueError(f"padding_mode must be one of 'zeros', 'reflect', 'replicate', 'circular', got '{padding_mode}'")
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -396,24 +625,44 @@ class Conv3d(Module):
         Returns:
             Output tensor of shape [N, out_channels, D_out, H_out, W_out]
         """
-        return conv3d(
-            input,
-            self.weight,
-            self.bias,
-            stride=self.stride,
-            padding=self.padding,
-            dilation=self.dilation,
-            groups=self.groups
-        )
+        # Apply non-zero padding mode if needed
+        if self.padding_mode != 'zeros' and (self.padding[0] > 0 or self.padding[1] > 0 or self.padding[2] > 0):
+            # Manually pad the input and use padding=0 for convolution
+            padded_input = Tensor._from_mlx_array(
+                _apply_padding_mode_3d(input._mlx_array, self.padding, self.padding_mode)
+            )
+            padded_input.requires_grad = input.requires_grad
+            return conv3d(
+                padded_input,
+                self.weight,
+                self.bias,
+                stride=self.stride,
+                padding=(0, 0, 0),  # Padding already applied
+                dilation=self.dilation,
+                groups=self.groups
+            )
+        else:
+            return conv3d(
+                input,
+                self.weight,
+                self.bias,
+                stride=self.stride,
+                padding=self.padding,
+                dilation=self.dilation,
+                groups=self.groups
+            )
 
     def extra_repr(self) -> str:
-        return (
+        s = (
             f'in_channels={self.in_channels}, '
             f'out_channels={self.out_channels}, '
             f'kernel_size={self.kernel_size}, '
             f'stride={self.stride}, '
             f'padding={self.padding}'
         )
+        if self.padding_mode != 'zeros':
+            s += f', padding_mode={self.padding_mode}'
+        return s
 
 
 class ConvTranspose1d(Module):
@@ -453,9 +702,9 @@ class ConvTranspose1d(Module):
         device: Optional[Any] = None,
         dtype: Optional[Any] = None
     ):
+        # Only 'zeros' is supported for transposed convolutions (same as PyTorch)
         if padding_mode != 'zeros':
-            import warnings
-            warnings.warn(f"padding_mode='{padding_mode}' is not supported in MLX, using 'zeros'")
+            raise ValueError("Only 'zeros' padding mode is supported for ConvTranspose1d")
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -509,6 +758,10 @@ class ConvTranspose1d(Module):
 
         Returns:
             Output tensor of shape [N, out_channels, L_out]
+
+        Note:
+            Output size is computed as:
+            L_out = (L_in - 1) * stride - 2 * padding + dilation * (K - 1) + output_padding + 1
         """
         # Convert to 2D for processing: [N, C, L] -> [N, C, 1, L]
         input_4d = mx.expand_dims(input._mlx_array, axis=2)
@@ -521,12 +774,13 @@ class ConvTranspose1d(Module):
         weight_4d = mx.expand_dims(self.weight._mlx_array, axis=2)  # [in, out/g, 1, k]
         weight_transposed = mx.transpose(weight_4d, [1, 2, 3, 0])  # [out/g, 1, k, in]
 
-        # Perform transposed convolution
+        # Perform transposed convolution with dilation support
         output_nhwc = mx.conv_transpose2d(
             input_nhwc,
             weight_transposed,
             stride=(1, self.stride),
             padding=(0, self.padding),
+            dilation=(1, self.dilation),
             groups=self.groups
         )
 
@@ -552,13 +806,16 @@ class ConvTranspose1d(Module):
         return result
 
     def extra_repr(self) -> str:
-        return (
+        s = (
             f'in_channels={self.in_channels}, '
             f'out_channels={self.out_channels}, '
             f'kernel_size={self.kernel_size}, '
             f'stride={self.stride}, '
             f'padding={self.padding}'
         )
+        if self.dilation != 1:
+            s += f', dilation={self.dilation}'
+        return s
 
 
 class ConvTranspose2d(Module):
@@ -598,11 +855,9 @@ class ConvTranspose2d(Module):
         device: Optional[Any] = None,
         dtype: Optional[Any] = None
     ):
-        # device, dtype, and padding_mode are accepted for PyTorch compatibility
-        # padding_mode other than 'zeros' is not currently supported
+        # Only 'zeros' is supported for transposed convolutions (same as PyTorch)
         if padding_mode != 'zeros':
-            import warnings
-            warnings.warn(f"padding_mode='{padding_mode}' is not supported in MLX, using 'zeros'")
+            raise ValueError("Only 'zeros' padding mode is supported for ConvTranspose2d")
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -748,9 +1003,9 @@ class ConvTranspose3d(Module):
         device: Optional[Any] = None,
         dtype: Optional[Any] = None
     ):
+        # Only 'zeros' is supported for transposed convolutions (same as PyTorch)
         if padding_mode != 'zeros':
-            import warnings
-            warnings.warn(f"padding_mode='{padding_mode}' is not supported in MLX, using 'zeros'")
+            raise ValueError("Only 'zeros' padding mode is supported for ConvTranspose3d")
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels

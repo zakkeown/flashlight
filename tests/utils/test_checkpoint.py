@@ -1,9 +1,15 @@
 """
 Tests for mlx_compat.utils.checkpoint module.
 
-Tests gradient checkpointing functionality.
+Tests gradient checkpointing functionality including:
+- Basic checkpointing (reentrant mode)
+- Non-reentrant checkpointing
+- context_fn parameter
+- determinism_check parameter
+- checkpoint_sequential
 """
 
+import contextlib
 import unittest
 import warnings
 
@@ -13,6 +19,7 @@ from mlx_compat.utils.checkpoint import (
     checkpoint,
     checkpoint_sequential,
     check_backward_validity,
+    noop_context_fn,
 )
 
 
@@ -25,7 +32,7 @@ class TestCheckpointBasic(unittest.TestCase):
             return x * 2 + 1
 
         x = mlx_compat.tensor([1.0, 2.0, 3.0], requires_grad=True)
-        result = checkpoint(simple_fn, x)
+        result = checkpoint(simple_fn, x, use_reentrant=True)
 
         self.assertIsNotNone(result)
         expected = mlx_compat.tensor([3.0, 5.0, 7.0])
@@ -51,7 +58,7 @@ class TestCheckpointBasic(unittest.TestCase):
 
         # Checkpointed
         x2 = mlx_compat.tensor([1.0, 2.0], requires_grad=True)
-        result_checkpointed = checkpoint(fn, x2)
+        result_checkpointed = checkpoint(fn, x2, use_reentrant=True)
         mx.eval(result_checkpointed._mlx_array)
 
         # Compare
@@ -70,7 +77,7 @@ class TestCheckpointBasic(unittest.TestCase):
 
         # When no input requires grad, checkpoint just runs the function normally
         # It produces correct output
-        result = checkpoint(fn, x)
+        result = checkpoint(fn, x, use_reentrant=True)
 
         mx.eval(result._mlx_array)
         expected = [2.0, 4.0]
@@ -85,7 +92,7 @@ class TestCheckpointBasic(unittest.TestCase):
         a = mlx_compat.tensor([1.0, 2.0], requires_grad=True)
         b = mlx_compat.tensor([3.0, 4.0], requires_grad=True)
 
-        result = checkpoint(fn, a, b)
+        result = checkpoint(fn, a, b, use_reentrant=True)
         mx.eval(result._mlx_array)
 
         expected = [4.0, 10.0]  # 1*3+1=4, 2*4+2=10
@@ -98,12 +105,196 @@ class TestCheckpointBasic(unittest.TestCase):
             return x * multiplier
 
         x = mlx_compat.tensor([1.0, 2.0], requires_grad=True)
-        result = checkpoint(fn, x, 3.0)
+        result = checkpoint(fn, x, 3.0, use_reentrant=True)
         mx.eval(result._mlx_array)
 
         expected = [3.0, 6.0]
         for r, e in zip(result._mlx_array.tolist(), expected):
             self.assertAlmostEqual(r, e, places=5)
+
+
+class TestNonReentrantCheckpoint(unittest.TestCase):
+    """Test non-reentrant checkpointing (use_reentrant=False)."""
+
+    def test_non_reentrant_basic(self):
+        """Test basic non-reentrant checkpoint."""
+        def fn(x):
+            return x * 2 + 1
+
+        x = mlx_compat.tensor([1.0, 2.0, 3.0], requires_grad=True)
+        result = checkpoint(fn, x, use_reentrant=False)
+
+        mx.eval(result._mlx_array)
+        expected = [3.0, 5.0, 7.0]
+        for r, e in zip(result._mlx_array.tolist(), expected):
+            self.assertAlmostEqual(r, e, places=5)
+
+    def test_non_reentrant_preserves_output(self):
+        """Test that non-reentrant checkpoint output matches non-checkpointed output."""
+        def fn(x):
+            y = x * 2
+            z = y + 3
+            return z * z
+
+        x = mlx_compat.tensor([1.0, 2.0], requires_grad=True)
+
+        # Non-checkpointed
+        result_normal = fn(x)
+        mx.eval(result_normal._mlx_array)
+
+        # Checkpointed with non-reentrant
+        x2 = mlx_compat.tensor([1.0, 2.0], requires_grad=True)
+        result_checkpointed = checkpoint(fn, x2, use_reentrant=False)
+        mx.eval(result_checkpointed._mlx_array)
+
+        # Compare
+        for r, c in zip(
+            result_normal._mlx_array.tolist(),
+            result_checkpointed._mlx_array.tolist()
+        ):
+            self.assertAlmostEqual(r, c, places=5)
+
+    def test_non_reentrant_multiple_inputs(self):
+        """Test non-reentrant checkpoint with multiple inputs."""
+        def fn(a, b):
+            return a * b + a
+
+        a = mlx_compat.tensor([1.0, 2.0], requires_grad=True)
+        b = mlx_compat.tensor([3.0, 4.0], requires_grad=True)
+
+        result = checkpoint(fn, a, b, use_reentrant=False)
+        mx.eval(result._mlx_array)
+
+        expected = [4.0, 10.0]
+        for r, e in zip(result._mlx_array.tolist(), expected):
+            self.assertAlmostEqual(r, e, places=5)
+
+    def test_non_reentrant_with_non_tensor_args(self):
+        """Test non-reentrant checkpoint with mixed tensor and non-tensor args."""
+        def fn(x, multiplier):
+            return x * multiplier
+
+        x = mlx_compat.tensor([1.0, 2.0], requires_grad=True)
+        result = checkpoint(fn, x, 3.0, use_reentrant=False)
+        mx.eval(result._mlx_array)
+
+        expected = [3.0, 6.0]
+        for r, e in zip(result._mlx_array.tolist(), expected):
+            self.assertAlmostEqual(r, e, places=5)
+
+
+class TestContextFn(unittest.TestCase):
+    """Test context_fn parameter for non-reentrant checkpoint."""
+
+    def test_context_fn_basic(self):
+        """Test that context_fn is called during forward and recomputation."""
+        forward_called = []
+        recompute_called = []
+
+        @contextlib.contextmanager
+        def forward_context():
+            forward_called.append(True)
+            yield
+
+        @contextlib.contextmanager
+        def recompute_context():
+            recompute_called.append(True)
+            yield
+
+        def context_fn():
+            return forward_context(), recompute_context()
+
+        def fn(x):
+            return x * 2
+
+        x = mlx_compat.tensor([1.0, 2.0], requires_grad=True)
+        result = checkpoint(fn, x, use_reentrant=False, context_fn=context_fn)
+        mx.eval(result._mlx_array)
+
+        # Forward context should be called
+        self.assertEqual(len(forward_called), 1)
+
+    def test_context_fn_with_noop(self):
+        """Test that noop_context_fn works correctly."""
+        def fn(x):
+            return x * 2
+
+        x = mlx_compat.tensor([1.0, 2.0], requires_grad=True)
+        result = checkpoint(fn, x, use_reentrant=False, context_fn=noop_context_fn)
+        mx.eval(result._mlx_array)
+
+        expected = [2.0, 4.0]
+        for r, e in zip(result._mlx_array.tolist(), expected):
+            self.assertAlmostEqual(r, e, places=5)
+
+    def test_context_fn_error_with_reentrant(self):
+        """Test that context_fn with use_reentrant=True raises ValueError."""
+        def custom_context_fn():
+            return contextlib.nullcontext(), contextlib.nullcontext()
+
+        def fn(x):
+            return x * 2
+
+        x = mlx_compat.tensor([1.0], requires_grad=True)
+
+        with self.assertRaises(ValueError) as ctx:
+            checkpoint(fn, x, use_reentrant=True, context_fn=custom_context_fn)
+
+        self.assertIn("context_fn", str(ctx.exception))
+
+
+class TestDeterminismCheck(unittest.TestCase):
+    """Test determinism_check parameter for non-reentrant checkpoint."""
+
+    def test_determinism_check_default(self):
+        """Test that determinism_check='default' works for deterministic functions."""
+        def fn(x):
+            return x * 2 + 1
+
+        x = mlx_compat.tensor([1.0, 2.0, 3.0], requires_grad=True)
+        result = checkpoint(fn, x, use_reentrant=False, determinism_check="default")
+        mx.eval(result._mlx_array)
+
+        expected = [3.0, 5.0, 7.0]
+        for r, e in zip(result._mlx_array.tolist(), expected):
+            self.assertAlmostEqual(r, e, places=5)
+
+    def test_determinism_check_none(self):
+        """Test that determinism_check='none' disables checking."""
+        def fn(x):
+            return x * 2
+
+        x = mlx_compat.tensor([1.0, 2.0], requires_grad=True)
+        result = checkpoint(fn, x, use_reentrant=False, determinism_check="none")
+        mx.eval(result._mlx_array)
+
+        expected = [2.0, 4.0]
+        for r, e in zip(result._mlx_array.tolist(), expected):
+            self.assertAlmostEqual(r, e, places=5)
+
+    def test_determinism_check_invalid_value(self):
+        """Test that invalid determinism_check value raises ValueError."""
+        def fn(x):
+            return x * 2
+
+        x = mlx_compat.tensor([1.0], requires_grad=True)
+
+        with self.assertRaises(ValueError) as ctx:
+            checkpoint(fn, x, use_reentrant=False, determinism_check="invalid")
+
+        self.assertIn("determinism_check", str(ctx.exception))
+
+    def test_determinism_check_error_with_reentrant(self):
+        """Test that determinism_check with use_reentrant=True raises ValueError."""
+        def fn(x):
+            return x * 2
+
+        x = mlx_compat.tensor([1.0], requires_grad=True)
+
+        with self.assertRaises(ValueError) as ctx:
+            checkpoint(fn, x, use_reentrant=True, determinism_check="none")
+
+        self.assertIn("determinism_check", str(ctx.exception))
 
 
 class TestCheckpointSequential(unittest.TestCase):
@@ -119,7 +310,7 @@ class TestCheckpointSequential(unittest.TestCase):
         ]
 
         x = mlx_compat.tensor([1.0], requires_grad=True)
-        result = checkpoint_sequential(layers, segments=2, input=x)
+        result = checkpoint_sequential(layers, segments=2, input=x, use_reentrant=True)
         mx.eval(result._mlx_array)
 
         # (1 * 2 + 1) * 3 = 9
@@ -134,7 +325,7 @@ class TestCheckpointSequential(unittest.TestCase):
         ]
 
         x = mlx_compat.tensor([1.0], requires_grad=True)
-        result = checkpoint_sequential(layers, segments=1, input=x)
+        result = checkpoint_sequential(layers, segments=1, input=x, use_reentrant=True)
         mx.eval(result._mlx_array)
 
         # (1 * 2) + 1 = 3
@@ -150,7 +341,7 @@ class TestCheckpointSequential(unittest.TestCase):
 
         x = mlx_compat.tensor([1.0], requires_grad=True)
         # Should handle gracefully (uses num_layers segments)
-        result = checkpoint_sequential(layers, segments=10, input=x)
+        result = checkpoint_sequential(layers, segments=10, input=x, use_reentrant=True)
         mx.eval(result._mlx_array)
 
         expected = 3.0
@@ -169,10 +360,26 @@ class TestCheckpointSequential(unittest.TestCase):
         x = mlx_compat.randn(2, 10)
         x.requires_grad = True
 
-        result = checkpoint_sequential(layers, segments=2, input=x)
+        result = checkpoint_sequential(layers, segments=2, input=x, use_reentrant=True)
         mx.eval(result._mlx_array)
 
         self.assertEqual(result.shape, (2, 5))
+
+    def test_sequential_non_reentrant(self):
+        """Test sequential with non-reentrant mode."""
+        layers = [
+            lambda x: x * 2,
+            lambda x: x + 1,
+            lambda x: x * 3,
+        ]
+
+        x = mlx_compat.tensor([1.0], requires_grad=True)
+        result = checkpoint_sequential(layers, segments=2, input=x, use_reentrant=False)
+        mx.eval(result._mlx_array)
+
+        # (1 * 2 + 1) * 3 = 9
+        expected = 9.0
+        self.assertAlmostEqual(result._mlx_array.tolist()[0], expected, places=5)
 
     def test_sequential_invalid_segments(self):
         """Test that invalid segments raises error."""
@@ -181,14 +388,14 @@ class TestCheckpointSequential(unittest.TestCase):
         x = mlx_compat.tensor([1.0])
 
         with self.assertRaises(ValueError):
-            checkpoint_sequential(layers, segments=0, input=x)
+            checkpoint_sequential(layers, segments=0, input=x, use_reentrant=True)
 
     def test_sequential_invalid_functions_type(self):
         """Test that non-iterable functions raises error."""
         x = mlx_compat.tensor([1.0])
 
         with self.assertRaises(TypeError):
-            checkpoint_sequential(42, segments=1, input=x)
+            checkpoint_sequential(42, segments=1, input=x, use_reentrant=True)
 
 
 class TestCheckpointRNGPreservation(unittest.TestCase):
@@ -205,7 +412,7 @@ class TestCheckpointRNGPreservation(unittest.TestCase):
 
         # With RNG preservation, running twice should give same random values
         # (though this is hard to test directly, we verify no crash)
-        result = checkpoint(fn_with_random, x, preserve_rng_state=True)
+        result = checkpoint(fn_with_random, x, preserve_rng_state=True, use_reentrant=True)
         mx.eval(result._mlx_array)
 
         self.assertEqual(result.shape, (2,))
@@ -217,7 +424,21 @@ class TestCheckpointRNGPreservation(unittest.TestCase):
             return x + noise
 
         x = mlx_compat.tensor([1.0, 2.0], requires_grad=True)
-        result = checkpoint(fn_with_random, x, preserve_rng_state=False)
+        result = checkpoint(fn_with_random, x, preserve_rng_state=False, use_reentrant=True)
+        mx.eval(result._mlx_array)
+
+        self.assertEqual(result.shape, (2,))
+
+    def test_rng_preservation_non_reentrant(self):
+        """Test RNG preservation in non-reentrant mode."""
+        def fn_with_random(x):
+            noise = mlx_compat.randn(x.shape)
+            return x + noise
+
+        mlx_compat.random.manual_seed(42)
+        x = mlx_compat.tensor([1.0, 2.0], requires_grad=True)
+
+        result = checkpoint(fn_with_random, x, preserve_rng_state=True, use_reentrant=False)
         mx.eval(result._mlx_array)
 
         self.assertEqual(result.shape, (2,))
@@ -226,8 +447,8 @@ class TestCheckpointRNGPreservation(unittest.TestCase):
 class TestCheckpointWarnings(unittest.TestCase):
     """Test checkpoint warnings."""
 
-    def test_non_reentrant_warning(self):
-        """Test warning for non-reentrant mode."""
+    def test_use_reentrant_none_warning(self):
+        """Test FutureWarning when use_reentrant is not specified."""
         def fn(x):
             return x * 2
 
@@ -235,42 +456,14 @@ class TestCheckpointWarnings(unittest.TestCase):
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            checkpoint(fn, x, use_reentrant=False)
-            # Should warn about non-reentrant not fully supported
-            warning_messages = [str(warning.message) for warning in w]
-            self.assertTrue(
-                any("Non-reentrant" in msg or "reentrant" in msg.lower() for msg in warning_messages)
-            )
-
-    def test_context_fn_warning(self):
-        """Test warning for context_fn parameter."""
-        def fn(x):
-            return x * 2
-
-        x = mlx_compat.tensor([1.0], requires_grad=True)
-
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            checkpoint(fn, x, context_fn=lambda: None)
-            warning_messages = [str(warning.message) for warning in w]
-            self.assertTrue(
-                any("context_fn" in msg for msg in warning_messages)
-            )
-
-    def test_determinism_check_warning(self):
-        """Test warning for determinism_check parameter."""
-        def fn(x):
-            return x * 2
-
-        x = mlx_compat.tensor([1.0], requires_grad=True)
-
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            checkpoint(fn, x, determinism_check="default")
-            warning_messages = [str(warning.message) for warning in w]
-            self.assertTrue(
-                any("determinism" in msg.lower() for msg in warning_messages)
-            )
+            checkpoint(fn, x)  # use_reentrant not specified
+            # Should warn about use_reentrant needing to be specified
+            future_warnings = [
+                warning for warning in w
+                if issubclass(warning.category, FutureWarning)
+            ]
+            self.assertGreater(len(future_warnings), 0)
+            self.assertIn("use_reentrant", str(future_warnings[0].message))
 
 
 class TestCheckBackwardValidity(unittest.TestCase):
@@ -328,7 +521,7 @@ class TestCheckpointWithModules(unittest.TestCase):
         x = mlx_compat.randn(2, 10)
         x.requires_grad = True
 
-        result = checkpoint(linear, x)
+        result = checkpoint(linear, x, use_reentrant=True)
         mx.eval(result._mlx_array)
 
         self.assertEqual(result.shape, (2, 5))
@@ -349,10 +542,44 @@ class TestCheckpointWithModules(unittest.TestCase):
         x = mlx_compat.randn(2, 10)
         x.requires_grad = True
 
-        result = checkpoint(forward_fn, x)
+        result = checkpoint(forward_fn, x, use_reentrant=True)
         mx.eval(result._mlx_array)
 
         self.assertEqual(result.shape, (2, 5))
+
+    def test_checkpoint_linear_non_reentrant(self):
+        """Test non-reentrant checkpoint with Linear layer."""
+        import mlx_compat.nn as nn
+
+        linear = nn.Linear(10, 5)
+
+        x = mlx_compat.randn(2, 10)
+        x.requires_grad = True
+
+        result = checkpoint(linear, x, use_reentrant=False)
+        mx.eval(result._mlx_array)
+
+        self.assertEqual(result.shape, (2, 5))
+
+
+class TestNoopContextFn(unittest.TestCase):
+    """Test the noop_context_fn helper."""
+
+    def test_noop_context_fn_returns_tuple(self):
+        """Test that noop_context_fn returns a tuple of two context managers."""
+        result = noop_context_fn()
+        self.assertIsInstance(result, tuple)
+        self.assertEqual(len(result), 2)
+
+    def test_noop_context_fn_contexts_are_usable(self):
+        """Test that the returned context managers work."""
+        forward_ctx, recompute_ctx = noop_context_fn()
+
+        with forward_ctx:
+            pass
+
+        with recompute_ctx:
+            pass
 
 
 if __name__ == "__main__":

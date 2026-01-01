@@ -16,6 +16,8 @@ import math
 from typing import Union
 import mlx.core as mx
 
+from ..distributions._constants import CF_TINY
+
 # Lanczos coefficients for lgamma (g=7, n=9)
 # These provide ~15 digit precision for positive real numbers
 _LANCZOS_G = 7.0
@@ -174,7 +176,10 @@ def digamma(x: mx.array) -> mx.array:
     # Apply reflection formula for negative values
     # digamma(x) = digamma(1-x) - pi * cot(pi*x)
     # = digamma(1-x) - pi * cos(pi*x) / sin(pi*x)
-    cot_pix = mx.cos(math.pi * x) / mx.sin(math.pi * x)
+    sin_pix = mx.sin(math.pi * x)
+    # Add epsilon protection when sin is near zero to avoid division by zero
+    safe_sin_pix = mx.where(mx.abs(sin_pix) < CF_TINY, CF_TINY * mx.sign(sin_pix + CF_TINY), sin_pix)
+    cot_pix = mx.cos(math.pi * x) / safe_sin_pix
     reflected = result - math.pi * cot_pix
 
     result = mx.where(needs_reflection, reflected, result)
@@ -259,7 +264,7 @@ def gammainc(a: mx.array, x: mx.array) -> mx.array:
     # = exp(-x + a*ln(x) - lgamma(a+1)) * sum_{n=0}^{inf} x^n / (a+1)(a+2)...(a+n)
 
     # Series computation
-    log_prefactor = -x + a * mx.log(mx.maximum(x, 1e-30)) - lgamma(a + 1)
+    log_prefactor = -x + a * mx.log(mx.maximum(x, CF_TINY)) - lgamma(a + 1)
 
     # Sum the series
     term = mx.ones_like(a)
@@ -276,22 +281,21 @@ def gammainc(a: mx.array, x: mx.array) -> mx.array:
     # Q(a,x) = exp(-x + a*ln(x) - lgamma(a)) * (1/(x+1-a- 1*1/(x+3-a- 2*1/(x+5-a- ...))))
 
     # Simplified continued fraction evaluation using modified Lentz
-    log_prefactor_cf = -x + a * mx.log(mx.maximum(x, 1e-30)) - lgamma(a)
+    log_prefactor_cf = -x + a * mx.log(mx.maximum(x, CF_TINY)) - lgamma(a)
 
     # Use Lentz's algorithm for continued fraction
-    tiny = 1e-30
     b0 = x + 1.0 - a
-    c = 1.0 / tiny
-    d = 1.0 / mx.maximum(b0, tiny)
+    c = 1.0 / CF_TINY
+    d = 1.0 / mx.maximum(b0, CF_TINY)
     h = d
 
     for n in range(1, 100):
         an = -float(n) * (float(n) - a)
         bn = x + 2.0 * float(n) + 1.0 - a
         d = bn + an * d
-        d = mx.where(mx.abs(d) < tiny, tiny * mx.ones_like(d), d)
+        d = mx.where(mx.abs(d) < CF_TINY, CF_TINY * mx.ones_like(d), d)
         c = bn + an / c
-        c = mx.where(mx.abs(c) < tiny, tiny * mx.ones_like(c), c)
+        c = mx.where(mx.abs(c) < CF_TINY, CF_TINY * mx.ones_like(c), c)
         d = 1.0 / d
         delta = c * d
         h = h * delta
@@ -369,8 +373,8 @@ def betainc(a: mx.array, b: mx.array, x: mx.array) -> mx.array:
     b_work = mx.where(use_symmetry, a, b)
 
     # Log of the prefactor: x^a * (1-x)^b / (a * B(a,b))
-    log_prefactor = (a_work * mx.log(mx.maximum(x_work, 1e-30)) +
-                     b_work * mx.log(mx.maximum(1.0 - x_work, 1e-30)) -
+    log_prefactor = (a_work * mx.log(mx.maximum(x_work, CF_TINY)) +
+                     b_work * mx.log(mx.maximum(1.0 - x_work, CF_TINY)) -
                      mx.log(a_work) - betaln(a_work, b_work))
 
     # Continued fraction using Lentz's algorithm
@@ -379,10 +383,8 @@ def betainc(a: mx.array, b: mx.array, x: mx.array) -> mx.array:
     # where d_{2m+1} = -(a+m)(a+b+m)x / ((a+2m)(a+2m+1))
     #       d_{2m} = m(b-m)x / ((a+2m-1)(a+2m))
 
-    tiny = 1e-30
-
     # Initialize Lentz algorithm
-    c = 1.0 / tiny
+    c = 1.0 / CF_TINY
     d = 1.0
     h = 1.0
 
@@ -391,24 +393,24 @@ def betainc(a: mx.array, b: mx.array, x: mx.array) -> mx.array:
         m_float = float(m)
         d_odd_num = -(a_work + m_float - 1.0) * (a_work + b_work + m_float - 1.0) * x_work
         d_odd_den = (a_work + 2.0 * m_float - 2.0) * (a_work + 2.0 * m_float - 1.0)
-        d_odd = d_odd_num / mx.maximum(d_odd_den, tiny)
+        d_odd = d_odd_num / mx.maximum(d_odd_den, CF_TINY)
 
         d = 1.0 + d_odd * d
-        d = mx.where(mx.abs(d) < tiny, tiny * mx.ones_like(d), d)
+        d = mx.where(mx.abs(d) < CF_TINY, CF_TINY * mx.ones_like(d), d)
         c = 1.0 + d_odd / c
-        c = mx.where(mx.abs(c) < tiny, tiny * mx.ones_like(c), c)
+        c = mx.where(mx.abs(c) < CF_TINY, CF_TINY * mx.ones_like(c), c)
         d = 1.0 / d
         h = h * c * d
 
         # d_{2m}
         d_even_num = m_float * (b_work - m_float) * x_work
         d_even_den = (a_work + 2.0 * m_float - 1.0) * (a_work + 2.0 * m_float)
-        d_even = d_even_num / mx.maximum(d_even_den, tiny)
+        d_even = d_even_num / mx.maximum(d_even_den, CF_TINY)
 
         d = 1.0 + d_even * d
-        d = mx.where(mx.abs(d) < tiny, tiny * mx.ones_like(d), d)
+        d = mx.where(mx.abs(d) < CF_TINY, CF_TINY * mx.ones_like(d), d)
         c = 1.0 + d_even / c
-        c = mx.where(mx.abs(c) < tiny, tiny * mx.ones_like(c), c)
+        c = mx.where(mx.abs(c) < CF_TINY, CF_TINY * mx.ones_like(c), c)
         d = 1.0 / d
         h = h * c * d
 

@@ -268,13 +268,25 @@ def _unique_dim(
 
     # If sorted, sort the unique slices lexicographically
     if sorted and len(unique_indices) > 1:
-        # Sort by first element, then second, etc.
-        # For simplicity, we'll sort by the sum of elements (approximate lexicographic)
         flat_unique = unique_slices.reshape(len(unique_indices), -1)
+        num_elements = flat_unique.shape[1]
 
-        # Compute a sortable key - use first few elements
-        sort_keys = flat_unique[:, 0] if flat_unique.shape[1] > 0 else mx.zeros(len(unique_indices))
-        sort_order = mx.argsort(sort_keys)
+        if num_elements == 0:
+            # Empty slices, no sorting needed
+            sort_order = mx.arange(len(unique_indices), dtype=mx.int32)
+        else:
+            # Proper lexicographic sort: sort by columns from last to first
+            # This works because argsort is stable in the sense that we build
+            # up the ordering incrementally
+            sort_order = mx.arange(len(unique_indices), dtype=mx.int32)
+
+            for col in range(num_elements - 1, -1, -1):
+                # Get column values in current order
+                col_values = flat_unique[sort_order, col]
+                # Get indices that would sort this column
+                col_order = mx.argsort(col_values)
+                # Apply to current order
+                sort_order = sort_order[col_order]
 
         unique_slices = unique_slices[sort_order]
 
@@ -416,6 +428,114 @@ def unique(
     return tuple(results)
 
 
+def _unique_consecutive_dim(
+    input: 'Tensor',
+    dim: int,
+    return_inverse: bool = False,
+    return_counts: bool = False
+) -> Union['Tensor', Tuple['Tensor', ...]]:
+    """
+    Find unique consecutive slices along a dimension.
+
+    Args:
+        input: Input tensor
+        dim: Dimension along which to find unique consecutive slices
+        return_inverse: Whether to return inverse indices
+        return_counts: Whether to return counts
+
+    Returns:
+        Unique consecutive slices and optionally inverse indices and counts
+    """
+    from ..tensor import Tensor
+
+    mlx_array = input._mlx_array
+    ndim = len(mlx_array.shape)
+
+    # Handle negative dim
+    if dim < 0:
+        dim = ndim + dim
+
+    # Move the target dimension to the front
+    if dim != 0:
+        axes = [dim] + [i for i in range(ndim) if i != dim]
+        mlx_array = mx.transpose(mlx_array, axes)
+
+    # Now work on dimension 0
+    n_slices = mlx_array.shape[0]
+
+    if n_slices == 0:
+        # Empty tensor, restore original dimension order and return
+        if dim != 0:
+            inv_axes = [0] * ndim
+            axes = [dim] + [i for i in range(ndim) if i != dim]
+            for new_pos, old_pos in enumerate(axes):
+                inv_axes[old_pos] = new_pos
+            mlx_array = mx.transpose(mlx_array, inv_axes)
+        result = Tensor._from_mlx_array(mlx_array)
+        if return_inverse or return_counts:
+            results = [result]
+            if return_inverse:
+                results.append(Tensor._from_mlx_array(mx.array([], dtype=mx.int64)))
+            if return_counts:
+                results.append(Tensor._from_mlx_array(mx.array([], dtype=mx.int64)))
+            return tuple(results)
+        return result
+
+    # Flatten each slice to compare them
+    flat_slices = mlx_array.reshape(n_slices, -1)
+
+    # Find where consecutive slices differ
+    # Compare slice i with slice i-1
+    unique_indices = [0]  # First slice is always unique
+    inverse_mapping = [0]  # First slice maps to index 0
+
+    current_unique_idx = 0
+    for i in range(1, n_slices):
+        # Compare current slice with previous slice
+        slices_equal = mx.all(flat_slices[i] == flat_slices[i-1]).item()
+        if not slices_equal:
+            current_unique_idx += 1
+            unique_indices.append(i)
+        inverse_mapping.append(current_unique_idx)
+
+    # Extract unique consecutive slices
+    unique_slices = mlx_array[mx.array(unique_indices, dtype=mx.int32)]
+
+    # Move dimension back to original position
+    if dim != 0:
+        # Construct reverse permutation
+        inv_axes = [0] * ndim
+        axes = [dim] + [i for i in range(ndim) if i != dim]
+        for new_pos, old_pos in enumerate(axes):
+            inv_axes[old_pos] = new_pos
+        unique_slices = mx.transpose(unique_slices, inv_axes)
+
+    result = Tensor._from_mlx_array(unique_slices)
+
+    if not return_inverse and not return_counts:
+        return result
+
+    results = [result]
+
+    if return_inverse:
+        inverse_arr = mx.array(inverse_mapping, dtype=mx.int64)
+        results.append(Tensor._from_mlx_array(inverse_arr))
+
+    if return_counts:
+        # Count consecutive runs
+        counts = []
+        for i in range(len(unique_indices)):
+            if i < len(unique_indices) - 1:
+                count = unique_indices[i + 1] - unique_indices[i]
+            else:
+                count = n_slices - unique_indices[i]
+            counts.append(count)
+        counts_arr = mx.array(counts, dtype=mx.int64)
+        results.append(Tensor._from_mlx_array(counts_arr))
+
+    return tuple(results)
+
+
 def unique_consecutive(
     *args,
     **kwargs
@@ -447,7 +567,7 @@ def unique_consecutive(
     mlx_array = input._mlx_array
 
     if dim is not None:
-        raise NotImplementedError("unique_consecutive with dim is not yet supported")
+        return _unique_consecutive_dim(input, dim, return_inverse, return_counts)
 
     flat = mlx_array.reshape(-1)
     n = flat.shape[0]

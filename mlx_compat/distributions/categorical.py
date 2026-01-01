@@ -6,6 +6,7 @@ import mlx.core as mx
 from ..tensor import Tensor
 from .distribution import Distribution
 from . import constraints
+from ._constants import UNIFORM_LOW, UNIFORM_HIGH, xlogy
 
 
 class Categorical(Distribution):
@@ -61,21 +62,22 @@ class Categorical(Distribution):
 
     def sample(self, sample_shape: Tuple[int, ...] = ()) -> Tensor:
         shape = sample_shape + self._batch_shape
-        # Use Gumbel-max trick
-        gumbel = -mx.log(-mx.log(mx.random.uniform(shape + (self._num_events,)) + 1e-10) + 1e-10)
+        # Use Gumbel-max trick with proper uniform bounds to avoid log(0)
+        u = mx.random.uniform(low=UNIFORM_LOW, high=UNIFORM_HIGH, shape=shape + (self._num_events,))
+        gumbel = -mx.log(-mx.log(u))
         return Tensor(mx.argmax(self.logits + gumbel, axis=-1))
 
     def log_prob(self, value: Tensor) -> Tensor:
         data = value._mlx_array if isinstance(value, Tensor) else value
         data = data.astype(mx.int32)
-        # Gather log probs at indices
-        log_probs = mx.log(self.probs + 1e-10)
+        # Use pre-computed logits (which are log(probs)) for numerical stability
         # Index into last dimension
-        result = mx.take_along_axis(log_probs, mx.expand_dims(data, -1), axis=-1)
+        result = mx.take_along_axis(self.logits, mx.expand_dims(data, -1), axis=-1)
         return Tensor(mx.squeeze(result, -1))
 
     def entropy(self) -> Tensor:
-        return Tensor(-mx.sum(self.probs * mx.log(self.probs + 1e-10), axis=-1))
+        # Use xlogy for numerical stability: xlogy(p, p) = 0 when p = 0
+        return Tensor(-mx.sum(xlogy(self.probs, self.probs), axis=-1))
 
     def enumerate_support(self, expand: bool = True) -> Tensor:
         values = mx.arange(self._num_events)

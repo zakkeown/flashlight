@@ -9,6 +9,7 @@ import mlx.core as mx
 
 from ..tensor import Tensor
 from ..autograd.context import is_grad_enabled
+from ..distributions._constants import FLOAT32_TINY, PROB_EPSILON, CF_TINY
 
 
 def atleast_1d(*tensors: Tensor) -> Union[Tensor, List[Tensor]]:
@@ -1059,7 +1060,7 @@ def igamma(input: Tensor, other: Tensor) -> Tensor:
 
     # Series expansion (works well for x < a + 1)
     max_iter = 100
-    eps = mx.array(1e-8, dtype=mx.float32)
+    eps = mx.array(PROB_EPSILON, dtype=mx.float32)
 
     # Compute log(x^a * e^-x / Gamma(a)) = a*log(x) - x - lgamma(a)
     from ..ops.arithmetic import lgamma as _lgamma
@@ -1617,21 +1618,40 @@ def logdet(input: Tensor) -> Tensor:
 
     # For positive definite matrices, use Cholesky: det(A) = det(L)^2 = prod(diag(L))^2
     # log(det(A)) = 2 * sum(log(diag(L)))
+    cpu_stream = mx.cpu
+    use_lu = False
     try:
-        cpu_stream = mx.cpu
         L = mx.linalg.cholesky(arr, stream=cpu_stream)
         mx.eval(L)
         diag_L = mx.diag(L) if arr.ndim == 2 else mx.take_along_axis(
             L, mx.arange(L.shape[-1])[None, :, None].broadcast_to(L.shape[:-1] + (1,)), axis=-1
         ).squeeze(-1)
-        log_det = 2.0 * mx.sum(mx.log(diag_L))
+        # Check if Cholesky produced valid results (all positive diagonals)
+        # MLX doesn't throw on non-positive-definite matrices, it produces NaN/negative values
+        if mx.any(diag_L <= 0).item() or mx.any(mx.isnan(diag_L)).item():
+            use_lu = True
+        else:
+            log_det = 2.0 * mx.sum(mx.log(diag_L))
     except:
-        # Fallback: use LU decomposition if not positive definite
+        use_lu = True
+
+    if use_lu:
+        # Fallback: use LU decomposition for non-positive-definite matrices
+        # For A = PLU, det(A) = det(P) * det(L) * det(U) = sign * prod(diag(U))
+        # Since L has 1s on diagonal, det(L) = 1
         # log|det(A)| = sum(log|diag(U)|)
-        # This is a simplified approach
-        n = arr.shape[-1]
-        result = mx.array(float('-inf'), dtype=mx.float32)
-        log_det = result
+        try:
+            P, L, U = mx.linalg.lu(arr, stream=cpu_stream)
+            mx.eval(U)
+            if arr.ndim == 2:
+                diag_U = mx.diag(U)
+            else:
+                # For batched matrices, extract diagonal
+                diag_U = mx.diagonal(U, axis1=-2, axis2=-1)
+            log_det = mx.sum(mx.log(mx.abs(diag_U)))
+        except:
+            # Ultimate fallback for singular matrices
+            log_det = mx.array(float('-inf'), dtype=mx.float32)
 
     result_tensor = Tensor._from_mlx_array(log_det.astype(input._mlx_array.dtype))
     if is_grad_enabled() and input.requires_grad:
@@ -1654,7 +1674,7 @@ def matrix_exp(input: Tensor) -> Tensor:
         # Scaling: find s such that ||A|| / 2^s < 1
         # Use Frobenius norm as estimate
         norm = mx.sqrt(mx.sum(arr * arr))
-        s = int(max(0, mx.ceil(mx.log2(norm + 1e-10)).item()))
+        s = int(max(0, mx.ceil(mx.log2(norm + CF_TINY)).item()))
 
         # Scale matrix
         A = arr / (2.0 ** s)
@@ -1679,7 +1699,7 @@ def matrix_exp(input: Tensor) -> Tensor:
         for b in range(batch_size):
             A_b = arr[b]
             norm = mx.sqrt(mx.sum(A_b * A_b))
-            s = int(max(0, mx.ceil(mx.log2(norm + 1e-10)).item()))
+            s = int(max(0, mx.ceil(mx.log2(norm + CF_TINY)).item()))
             A = A_b / (2.0 ** s)
 
             res = mx.eye(n, dtype=mx.float32)
@@ -2847,7 +2867,7 @@ def sinc_(input: Tensor) -> Tensor:
 
     # sinc(x) = sin(pi*x) / (pi*x), with sinc(0) = 1
     pi_x = pi * arr
-    is_zero = mx.abs(arr) < 1e-10
+    is_zero = mx.abs(arr) < PROB_EPSILON
     # Avoid division by zero
     safe_pi_x = mx.where(is_zero, mx.array(1.0, dtype=mx.float32), pi_x)
     result = mx.where(is_zero, mx.array(1.0, dtype=mx.float32), mx.sin(safe_pi_x) / safe_pi_x)
@@ -2865,7 +2885,7 @@ def xlogy_(input: Tensor, other: Tensor) -> Tensor:
     y = other._mlx_array.astype(mx.float32)
 
     # xlogy(x, y) = x * log(y), but xlogy(0, y) = 0 for any y
-    is_zero_x = mx.abs(x) < 1e-30
+    is_zero_x = mx.abs(x) < CF_TINY
     result = mx.where(is_zero_x, mx.zeros_like(x), x * mx.log(y))
 
     input._mlx_array = result.astype(input._mlx_array.dtype)
@@ -3037,7 +3057,7 @@ def renorm(input: Tensor, p: float, dim: int, maxnorm: float) -> Tensor:
 
     # Compute scale factor: min(1, maxnorm / norm)
     # Add small epsilon to avoid division by zero
-    scale = mx.minimum(mx.array(1.0, dtype=mx.float32), maxnorm / (norms + 1e-7))
+    scale = mx.minimum(mx.array(1.0, dtype=mx.float32), maxnorm / (norms + PROB_EPSILON))
 
     result = arr * scale
     return Tensor._from_mlx_array(result.astype(input._mlx_array.dtype))
@@ -3594,9 +3614,17 @@ def lobpcg(A: Tensor, k: int = None, B: Tensor = None, X: Tensor = None,
         L_inv_T = mx.transpose(L_inv)
         A_arr = mx.matmul(mx.matmul(L_inv, A_arr), L_inv_T)
 
-    # Preconditioner not yet supported
+    # Handle preconditioner
+    # iK should be an approximate inverse of A (or a callable that applies the preconditioner)
+    iK_arr = None
+    iK_is_callable = False
     if iK is not None:
-        raise NotImplementedError("Preconditioner (iK != None) not yet supported")
+        if callable(iK):
+            iK_is_callable = True
+        elif isinstance(iK, Tensor):
+            iK_arr = iK._mlx_array
+        else:
+            raise TypeError(f"Preconditioner iK must be a Tensor or callable, got {type(iK)}")
 
     # Initialize X if not provided
     if X is None:
@@ -3643,7 +3671,7 @@ def lobpcg(A: Tensor, k: int = None, B: Tensor = None, X: Tensor = None,
             # Use relative tolerance: norm should be significant relative to original
             # This properly detects when a vector is in the span of previous vectors
             rel_tol = 1e-6
-            if norm > rel_tol * max(orig_norm, 1e-10):
+            if norm > rel_tol * max(orig_norm, CF_TINY):
                 cols.append(v / norm)
 
         # Stack columns into matrix
@@ -3651,7 +3679,7 @@ def lobpcg(A: Tensor, k: int = None, B: Tensor = None, X: Tensor = None,
             # Fallback: return first column normalized
             v = V[:, 0]
             norm = mx.sqrt(mx.sum(v * v))
-            return (v / mx.maximum(norm, mx.array(1e-10))).reshape(-1, 1)
+            return (v / mx.maximum(norm, mx.array(CF_TINY))).reshape(-1, 1)
         return mx.stack(cols, axis=1)
 
     # Helper for Rayleigh-Ritz procedure
@@ -3701,6 +3729,21 @@ def lobpcg(A: Tensor, k: int = None, B: Tensor = None, X: Tensor = None,
         if max_residual < tol:
             break
 
+        # Apply preconditioner to residual: W = iK @ W
+        # The preconditioner should approximate inv(A), so iK @ W ≈ inv(A) @ W
+        # This accelerates convergence by approximately solving A @ x = W
+        if iK_is_callable:
+            # Apply callable preconditioner column by column
+            W_cols = []
+            for i in range(k):
+                w_col = Tensor._from_mlx_array(W_arr[:, i])
+                precond_w = iK(w_col)
+                W_cols.append(precond_w._mlx_array)
+            W_arr = mx.stack(W_cols, axis=1)
+        elif iK_arr is not None:
+            # Apply matrix preconditioner
+            W_arr = mx.matmul(iK_arr, W_arr)
+
         # Orthogonalize W against X using modified Gram-Schmidt
         for i in range(k):
             for j in range(k):
@@ -3710,7 +3753,7 @@ def lobpcg(A: Tensor, k: int = None, B: Tensor = None, X: Tensor = None,
         # Normalize W columns
         for i in range(k):
             norm = mx.sqrt(mx.sum(W_arr[:, i] * W_arr[:, i]))
-            norm = mx.maximum(norm, mx.array(1e-10))
+            norm = mx.maximum(norm, mx.array(CF_TINY))
             W_arr = W_arr.at[:, i].multiply(1.0 / norm)
 
         # Build search subspace S = [X, W, P]
@@ -3763,7 +3806,7 @@ def lobpcg(A: Tensor, k: int = None, B: Tensor = None, X: Tensor = None,
             norm = mx.sqrt(mx.sum(X_arr[:, i:i+1] * Bx))
         else:
             norm = mx.sqrt(mx.sum(X_arr[:, i] * X_arr[:, i]))
-        norm = mx.maximum(norm, mx.array(1e-10))
+        norm = mx.maximum(norm, mx.array(CF_TINY))
         X_arr = X_arr.at[:, i].multiply(1.0 / norm)
 
     return (Tensor._from_mlx_array(eigenvalues[:k]),

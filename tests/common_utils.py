@@ -112,6 +112,115 @@ class TestCase(unittest.TestCase):
         self.assertEqual(tuple(actual_shape), tuple(expected_shape), msg)
 
 
+class ToleranceTier:
+    """
+    Standard tolerance tiers for mlx_compat testing.
+
+    These tiers provide consistent tolerance settings across the test suite.
+    Use these instead of hardcoding tolerance values in individual tests.
+
+    Tiers:
+        STRICT: For simple element-wise operations (add, sub, mul, activations)
+        STANDARD: For most operations (default for forward pass parity)
+        RELAXED: For operations with accumulated errors (conv, matmul chains, attention)
+        LOOSE: For complex approximations (special functions, distributions)
+        IMPL_DIFF: For known implementation differences between MLX and PyTorch
+        GRADIENT: For gradient parity testing
+
+    Usage:
+        np.testing.assert_allclose(actual, expected, **ToleranceTier.STANDARD)
+
+        # Or use the helper function:
+        assert_close(actual, expected, tier='STANDARD')
+    """
+    # Simple element-wise operations - highest precision expected
+    STRICT = {"rtol": 1e-5, "atol": 1e-8}
+
+    # Most operations - default for forward pass parity testing
+    STANDARD = {"rtol": 1e-5, "atol": 1e-6}
+
+    # Operations with accumulated floating-point errors
+    # (convolutions, multi-head attention, RNNs, optimizer steps)
+    RELAXED = {"rtol": 1e-4, "atol": 1e-5}
+
+    # Complex approximations and special functions
+    # (erfcx, gammaln, distributions with numerical edge cases)
+    LOOSE = {"rtol": 1e-3, "atol": 1e-4}
+
+    # For operations with known implementation differences between frameworks
+    # (e.g., erf, erfinv where MLX and PyTorch use different algorithms)
+    IMPL_DIFF = {"rtol": 1e-4, "atol": 1e-6}
+
+    # Gradient parity testing (inherently less precise due to accumulation)
+    GRADIENT = {"rtol": 1e-4, "atol": 1e-4}
+
+    @classmethod
+    def get(cls, name: str) -> dict:
+        """Get tolerance tier by name."""
+        tiers = {
+            'STRICT': cls.STRICT,
+            'STANDARD': cls.STANDARD,
+            'RELAXED': cls.RELAXED,
+            'LOOSE': cls.LOOSE,
+            'IMPL_DIFF': cls.IMPL_DIFF,
+            'GRADIENT': cls.GRADIENT,
+        }
+        if name not in tiers:
+            raise ValueError(f"Unknown tolerance tier: {name}. Valid: {list(tiers.keys())}")
+        return tiers[name]
+
+
+def assert_close(
+    actual,
+    expected,
+    tier: str = 'STANDARD',
+    rtol: Optional[float] = None,
+    atol: Optional[float] = None,
+    msg: Optional[str] = None
+):
+    """
+    Assert arrays are close with named tolerance tier.
+
+    Args:
+        actual: Actual values (numpy array, MLX tensor, or PyTorch tensor)
+        expected: Expected values
+        tier: Tolerance tier name ('STRICT', 'STANDARD', 'RELAXED', 'LOOSE', 'IMPL_DIFF', 'GRADIENT')
+        rtol: Override relative tolerance (optional)
+        atol: Override absolute tolerance (optional)
+        msg: Optional message on failure
+
+    Example:
+        assert_close(mlx_result, torch_result, tier='RELAXED')
+        assert_close(gradient, expected_grad, tier='GRADIENT')
+    """
+    tol = ToleranceTier.get(tier)
+    final_rtol = rtol if rtol is not None else tol['rtol']
+    final_atol = atol if atol is not None else tol['atol']
+
+    # Convert to numpy arrays
+    if hasattr(actual, '_mlx_array'):
+        actual_np = np.array(actual._mlx_array)
+    elif hasattr(actual, 'numpy'):
+        actual_np = actual.numpy() if callable(actual.numpy) else np.array(actual)
+    elif hasattr(actual, 'detach'):
+        actual_np = actual.detach().cpu().numpy()
+    else:
+        actual_np = np.array(actual)
+
+    if hasattr(expected, '_mlx_array'):
+        expected_np = np.array(expected._mlx_array)
+    elif hasattr(expected, 'numpy'):
+        expected_np = expected.numpy() if callable(expected.numpy) else np.array(expected)
+    elif hasattr(expected, 'detach'):
+        expected_np = expected.detach().cpu().numpy()
+    else:
+        expected_np = np.array(expected)
+
+    np.testing.assert_allclose(
+        actual_np, expected_np, rtol=final_rtol, atol=final_atol, err_msg=msg
+    )
+
+
 def run_tests():
     """
     Run all tests in the current module.

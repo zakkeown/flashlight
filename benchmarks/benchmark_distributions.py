@@ -140,6 +140,103 @@ def benchmark_entropy(distribution_class, dist_params, num_iterations=1000, warm
     return avg_time_ms
 
 
+def validate_accuracy(mlx_dist_cls, torch_dist_cls, params, mlx_params=None, torch_params=None,
+                       sample_size=10000, rtol=1e-4, atol=1e-5):
+    """
+    Validate numerical accuracy of MLX distribution against PyTorch.
+
+    Args:
+        mlx_dist_cls: MLX distribution class
+        torch_dist_cls: PyTorch distribution class
+        params: Common parameters (used if mlx_params/torch_params not specified)
+        mlx_params: MLX-specific parameters (optional)
+        torch_params: PyTorch-specific parameters (optional)
+        sample_size: Number of samples for statistical validation
+        rtol: Relative tolerance for log_prob comparison
+        atol: Absolute tolerance for log_prob comparison
+
+    Returns:
+        dict with accuracy metrics
+    """
+    if not MLX_AVAILABLE or not TORCH_AVAILABLE:
+        return {"status": "skipped", "reason": "Missing framework"}
+
+    mlx_p = mlx_params if mlx_params else params
+    torch_p = torch_params if torch_params else params
+
+    try:
+        mlx_d = mlx_dist_cls(**mlx_p)
+        torch_d = torch_dist_cls(**torch_p)
+
+        # Compare log_prob on fixed values
+        # Use values from the torch distribution's domain
+        torch_samples = torch_d.sample((sample_size,))
+
+        # Convert to MLX
+        if hasattr(torch_samples, 'numpy'):
+            sample_np = torch_samples.numpy()
+        else:
+            sample_np = torch_samples.detach().cpu().numpy()
+
+        mlx_samples = mlx_compat.tensor(sample_np)
+
+        # Compute log_prob
+        mlx_logp = mlx_d.log_prob(mlx_samples)
+        torch_logp = torch_d.log_prob(torch_samples)
+
+        # Convert to numpy for comparison
+        mlx_logp_np = mlx_logp.numpy() if hasattr(mlx_logp, 'numpy') else np.array(mlx_logp._mlx_array)
+        torch_logp_np = torch_logp.numpy() if hasattr(torch_logp, 'numpy') else torch_logp.detach().cpu().numpy()
+
+        # Filter out inf/nan for comparison
+        valid_mask = np.isfinite(mlx_logp_np) & np.isfinite(torch_logp_np)
+        if not np.any(valid_mask):
+            return {"status": "error", "reason": "No valid log_prob values"}
+
+        mlx_valid = mlx_logp_np[valid_mask]
+        torch_valid = torch_logp_np[valid_mask]
+
+        # Compute accuracy metrics
+        abs_diff = np.abs(mlx_valid - torch_valid)
+        max_abs_diff = np.max(abs_diff)
+        mean_abs_diff = np.mean(abs_diff)
+
+        rel_diff = abs_diff / (np.abs(torch_valid) + 1e-10)
+        max_rel_diff = np.max(rel_diff)
+        mean_rel_diff = np.mean(rel_diff)
+
+        # Check if within tolerance
+        within_tol = np.allclose(mlx_valid, torch_valid, rtol=rtol, atol=atol)
+
+        return {
+            "status": "pass" if within_tol else "fail",
+            "max_abs_diff": max_abs_diff,
+            "mean_abs_diff": mean_abs_diff,
+            "max_rel_diff": max_rel_diff,
+            "mean_rel_diff": mean_rel_diff,
+            "num_samples": int(np.sum(valid_mask)),
+            "rtol": rtol,
+            "atol": atol
+        }
+    except Exception as e:
+        return {"status": "error", "reason": str(e)}
+
+
+def print_accuracy_result(name, result):
+    """Print accuracy validation result."""
+    if result["status"] == "skipped":
+        print(f"  {name:25s} SKIPPED: {result.get('reason', 'Unknown')}")
+    elif result["status"] == "error":
+        print(f"  {name:25s} ERROR: {result.get('reason', 'Unknown')}")
+    elif result["status"] == "pass":
+        print(f"  {name:25s} PASS (max_diff: {result['max_abs_diff']:.2e}, "
+              f"mean_diff: {result['mean_abs_diff']:.2e})")
+    else:
+        print(f"  {name:25s} FAIL (max_diff: {result['max_abs_diff']:.2e}, "
+              f"mean_diff: {result['mean_abs_diff']:.2e}, "
+              f"rtol={result['rtol']}, atol={result['atol']})")
+
+
 def format_speedup(mlx_val, torch_val):
     """Format speedup ratio."""
     if torch_val == 0:
@@ -497,6 +594,56 @@ def benchmark_large_batch():
         print(f"    Throughput: MLX {mlx_rate/1e6:.2f}M/s, PyTorch {torch_rate/1e6:.2f}M/s")
 
 
+def benchmark_accuracy():
+    """Validate numerical accuracy of distributions against PyTorch."""
+    print("\n" + "=" * 80)
+    print("Accuracy Validation (log_prob comparison)")
+    print("=" * 80)
+
+    if not MLX_AVAILABLE or not TORCH_AVAILABLE:
+        print("\nSkipping accuracy validation: both MLX and PyTorch required")
+        return
+
+    print("\nValidating log_prob accuracy against PyTorch (rtol=1e-4, atol=1e-5):\n")
+
+    # Normal distribution
+    result = validate_accuracy(
+        mlx_dist.Normal, torch_dist.Normal,
+        {'loc': 0.0, 'scale': 1.0}
+    )
+    print_accuracy_result("Normal", result)
+
+    # Gamma distribution
+    result = validate_accuracy(
+        mlx_dist.Gamma, torch_dist.Gamma,
+        {'concentration': 2.0, 'rate': 1.0}
+    )
+    print_accuracy_result("Gamma", result)
+
+    # Beta distribution
+    result = validate_accuracy(
+        mlx_dist.Beta, torch_dist.Beta,
+        {'concentration1': 2.0, 'concentration0': 5.0}
+    )
+    print_accuracy_result("Beta", result)
+
+    # Poisson distribution
+    result = validate_accuracy(
+        mlx_dist.Poisson, torch_dist.Poisson,
+        {'rate': 5.0}
+    )
+    print_accuracy_result("Poisson", result)
+
+    # Dirichlet distribution (needs tensor params)
+    result = validate_accuracy(
+        mlx_dist.Dirichlet, torch_dist.Dirichlet,
+        params=None,
+        mlx_params={'concentration': mlx_compat.tensor([2.0, 3.0, 5.0])},
+        torch_params={'concentration': torch.tensor([2.0, 3.0, 5.0])}
+    )
+    print_accuracy_result("Dirichlet", result)
+
+
 def print_summary():
     """Print benchmark summary."""
     print("\n" + "=" * 80)
@@ -540,6 +687,7 @@ def main():
         benchmark_dirichlet()
         benchmark_poisson()
         benchmark_large_batch()
+        benchmark_accuracy()
         print_summary()
     except KeyboardInterrupt:
         print("\n\nBenchmarking interrupted by user.")

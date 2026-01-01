@@ -203,6 +203,80 @@ def benchmark_transformer():
     print("\n  (Training benchmark skipped - requires specialized setup)")
 
 
+def validate_mlp_accuracy():
+    """
+    Validate MLP forward pass accuracy against PyTorch.
+
+    Creates identical MLX and PyTorch models with same weights and compares outputs.
+    """
+    print("\n" + "=" * 70)
+    print("MLP Accuracy Validation")
+    print("=" * 70)
+
+    try:
+        import torch
+        import torch.nn as torch_nn
+    except ImportError:
+        print("\n  SKIPPED: PyTorch not available for comparison")
+        return
+
+    # Fixed input for reproducibility
+    np.random.seed(42)
+    input_data = np.random.randn(4, 784).astype(np.float32)
+
+    # Create MLX model
+    mlx_model = nn.Sequential(
+        nn.Linear(784, 256),
+        nn.ReLU(),
+        nn.Linear(256, 128),
+        nn.ReLU(),
+        nn.Linear(128, 10)
+    )
+    mlx_model.eval()
+
+    # Create PyTorch model with same weights
+    torch_model = torch_nn.Sequential(
+        torch_nn.Linear(784, 256),
+        torch_nn.ReLU(),
+        torch_nn.Linear(256, 128),
+        torch_nn.ReLU(),
+        torch_nn.Linear(128, 10)
+    )
+    torch_model.eval()
+
+    # Copy weights from MLX to PyTorch
+    mlx_layers = [m for m in mlx_model.modules() if isinstance(m, nn.Linear)]
+    torch_layers = [m for m in torch_model.modules() if isinstance(m, torch_nn.Linear)]
+
+    for mlx_layer, torch_layer in zip(mlx_layers, torch_layers):
+        # Get MLX weights and copy to PyTorch
+        mlx_weight = mlx_layer.weight.numpy()
+        mlx_bias = mlx_layer.bias.numpy()
+        torch_layer.weight.data = torch.from_numpy(mlx_weight)
+        torch_layer.bias.data = torch.from_numpy(mlx_bias)
+
+    # Forward pass
+    mlx_input = mlx_compat.tensor(input_data)
+    torch_input = torch.from_numpy(input_data)
+
+    with torch.no_grad():
+        mlx_output = mlx_model(mlx_input).numpy()
+        torch_output = torch_model(torch_input).numpy()
+
+    # Compare outputs
+    max_diff = np.max(np.abs(mlx_output - torch_output))
+    mean_diff = np.mean(np.abs(mlx_output - torch_output))
+
+    rtol, atol = 1e-4, 1e-5
+    within_tol = np.allclose(mlx_output, torch_output, rtol=rtol, atol=atol)
+
+    status = "PASS" if within_tol else "FAIL"
+    print(f"\n  {status}: MLP forward pass accuracy")
+    print(f"    Max absolute difference: {max_diff:.2e}")
+    print(f"    Mean absolute difference: {mean_diff:.2e}")
+    print(f"    Tolerance: rtol={rtol}, atol={atol}")
+
+
 def print_summary():
     """Print benchmark summary and notes."""
     print("\n" + "=" * 70)
@@ -235,6 +309,7 @@ def main():
         benchmark_cnn()
         benchmark_resnet()
         benchmark_transformer()
+        validate_mlp_accuracy()
         print_summary()
     except KeyboardInterrupt:
         print("\n\nBenchmarking interrupted by user.")

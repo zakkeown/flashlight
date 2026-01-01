@@ -59,7 +59,10 @@ def norm(
         # Frobenius norm: sqrt(sum of squares)
         result_array = mx.sqrt(mx.sum(mx.square(mlx_array), axis=axis, keepdims=keepdim))
     elif ord == 'nuc':
-        raise NotImplementedError("Nuclear norm is not supported")
+        # Nuclear norm is the sum of singular values: ||A||_* = sum(svd(A).S)
+        # SVD requires CPU stream in MLX
+        _, S, _ = mx.linalg.svd(mlx_array, stream=mx.cpu)
+        result_array = mx.sum(S, axis=-1, keepdims=keepdim)
     elif ord == float('inf'):
         # Max absolute value
         result_array = mx.max(mx.abs(mlx_array), axis=axis, keepdims=keepdim)

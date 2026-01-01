@@ -102,12 +102,17 @@ class AdamW(Optimizer):
             eps = group['eps']
             weight_decay = group['weight_decay']
             amsgrad = group['amsgrad']
+            maximize = group.get('maximize', False)
 
             for p in group['params']:
                 if p.grad is None:
                     continue
 
                 grad = p.grad
+
+                # Negate gradient for gradient ascent (maximize=True)
+                if maximize:
+                    grad = Tensor._from_mlx_array(-grad._mlx_array)
 
                 param_state = self.state[id(p)]
 

@@ -32,8 +32,12 @@ class Embedding(Module):
                    (default: 2.0)
         scale_grad_by_freq: If True, scale gradients by the inverse of frequency
                             of the words in the mini-batch. (default: False)
-        sparse: If True, gradient w.r.t. weight matrix will be a sparse tensor.
-                Note: this is not currently supported in MLX. (default: False)
+        sparse: If True, use a more memory-efficient gradient computation that
+                only computes gradients for accessed indices. Note: MLX doesn't
+                have native sparse tensor support, so the final gradient is still
+                dense, but the computation avoids creating a large intermediate
+                one-hot matrix. This is beneficial for large vocabularies with
+                sparse access patterns. (default: False)
 
     Shape:
         - Input: (*) containing indices in range [0, num_embeddings)
@@ -96,8 +100,12 @@ class Embedding(Module):
         self.sparse = sparse
         self._freeze = _freeze
 
-        # sparse=True is now supported via simulated sparse gradients
-        # (gradients are computed only for accessed indices and scattered to the weight matrix)
+        # sparse=True is supported via simulated sparse gradients
+        # When sparse=True, gradient computation avoids creating a large
+        # (num_lookups x num_embeddings) one-hot matrix. Instead, it computes
+        # gradients only for unique accessed indices and scatters them to the
+        # weight matrix. The final gradient is still dense, but the computation
+        # is more memory-efficient for large vocabularies with sparse access.
 
         if _weight is None:
             # Initialize embedding weight

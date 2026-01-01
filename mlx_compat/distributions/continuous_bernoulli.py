@@ -6,6 +6,7 @@ import mlx.core as mx
 from ..tensor import Tensor
 from .distribution import Distribution
 from . import constraints
+from ._constants import PROB_EPSILON
 
 
 class ContinuousBernoulli(Distribution):
@@ -42,7 +43,7 @@ class ContinuousBernoulli(Distribution):
         is_unstable = (self.probs < self._lims[0]) | (self.probs > self._lims[1])
         log_norm = mx.where(
             is_unstable,
-            mx.log(mx.abs(2 * mx.arctanh(1 - 2 * self.probs)) + 1e-10) - mx.log(mx.abs(1 - 2 * self.probs) + 1e-10),
+            mx.log(mx.abs(2 * mx.arctanh(1 - 2 * self.probs)) + PROB_EPSILON) - mx.log(mx.abs(1 - 2 * self.probs) + PROB_EPSILON),
             mx.log(mx.array(2.0))  # Approximation near 0.5
         )
         return log_norm
@@ -53,7 +54,7 @@ class ContinuousBernoulli(Distribution):
         is_unstable = (p < self._lims[0]) | (p > self._lims[1])
         mean = mx.where(
             is_unstable,
-            p / (2 * p - 1) + 1 / (2 * mx.arctanh(1 - 2 * p) + 1e-10),
+            p / (2 * p - 1) + 1 / (2 * mx.arctanh(1 - 2 * p) + PROB_EPSILON),
             mx.array(0.5)
         )
         return Tensor(mean)
@@ -73,7 +74,7 @@ class ContinuousBernoulli(Distribution):
         samples = mx.where(
             is_unstable,
             mx.log(1 + (2 * p - 1) / (1 - p) * (mx.exp(mx.log(1 - p) - mx.log(p) * u) - 1)) /
-            (2 * mx.arctanh(1 - 2 * p) + 1e-10),
+            (2 * mx.arctanh(1 - 2 * p) + PROB_EPSILON),
             u  # Uniform approximation near 0.5
         )
         return Tensor(mx.clip(samples, 0, 1))

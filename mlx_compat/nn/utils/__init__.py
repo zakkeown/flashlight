@@ -175,23 +175,26 @@ def weight_norm(module: Module, name: str = 'weight', dim: int = 0) -> Module:
     """
     Apply weight normalization to a parameter in the given module.
 
-    Note: This is a simplified stub. Full weight normalization requires
-    hooks which are not fully implemented in MLX.
+    Weight normalization is a reparametrization that decouples the magnitude
+    of weight vectors from their direction:
+        weight = g * (v / ||v||)
+
+    This can accelerate convergence of stochastic gradient descent.
 
     Args:
         module: Module containing the parameter to apply weight norm to
-        name: Name of the weight parameter
-        dim: Dimension over which to compute the norm
+        name: Name of the weight parameter (default: 'weight')
+        dim: Dimension over which to compute the norm (default: 0)
 
     Returns:
         The module with weight normalization applied
+
+    Example:
+        >>> layer = nn.Linear(20, 40)
+        >>> layer = nn.utils.weight_norm(layer)
     """
-    import warnings
-    warnings.warn(
-        "weight_norm is a stub in MLX - weight normalization is not fully supported",
-        UserWarning
-    )
-    return module
+    from .parametrizations import weight_norm as _weight_norm
+    return _weight_norm(module, name, dim)
 
 
 def remove_weight_norm(module: Module, name: str = 'weight') -> Module:
@@ -200,37 +203,39 @@ def remove_weight_norm(module: Module, name: str = 'weight') -> Module:
 
     Args:
         module: Module to remove weight normalization from
-        name: Name of the weight parameter
+        name: Name of the weight parameter (default: 'weight')
 
     Returns:
         The module with weight normalization removed
     """
-    return module
+    from .parametrizations import remove_weight_norm as _remove_weight_norm
+    return _remove_weight_norm(module, name)
 
 
 def spectral_norm(module: Module, name: str = 'weight', n_power_iterations: int = 1, eps: float = 1e-12, dim: Optional[int] = None) -> Module:
     """
     Apply spectral normalization to a parameter in the given module.
 
-    Note: This is a simplified stub. Full spectral normalization requires
-    hooks which are not fully implemented in MLX.
+    Spectral normalization stabilizes the training of GANs by constraining
+    the Lipschitz constant of the discriminator. It normalizes the weight
+    matrix by its spectral norm (largest singular value).
 
     Args:
         module: Module containing the parameter to apply spectral norm to
-        name: Name of the weight parameter
-        n_power_iterations: Number of power iterations for estimation
-        eps: Epsilon for numerical stability
-        dim: Dimension over which to compute spectral norm
+        name: Name of the weight parameter (default: 'weight')
+        n_power_iterations: Number of power iterations for estimation (default: 1)
+        eps: Epsilon for numerical stability (default: 1e-12)
+        dim: Dimension over which to compute spectral norm (default: 0)
 
     Returns:
         The module with spectral normalization applied
+
+    Example:
+        >>> layer = nn.Linear(20, 40)
+        >>> layer = nn.utils.spectral_norm(layer)
     """
-    import warnings
-    warnings.warn(
-        "spectral_norm is a stub in MLX - spectral normalization is not fully supported",
-        UserWarning
-    )
-    return module
+    from .parametrizations import spectral_norm as _spectral_norm
+    return _spectral_norm(module, name, n_power_iterations, eps, dim)
 
 
 def remove_spectral_norm(module: Module, name: str = 'weight') -> Module:
@@ -239,12 +244,13 @@ def remove_spectral_norm(module: Module, name: str = 'weight') -> Module:
 
     Args:
         module: Module to remove spectral normalization from
-        name: Name of the weight parameter
+        name: Name of the weight parameter (default: 'weight')
 
     Returns:
         The module with spectral normalization removed
     """
-    return module
+    from .parametrizations import remove_spectral_norm as _remove_spectral_norm
+    return _remove_spectral_norm(module, name)
 
 
 def skip_init(module_cls, *args, **kwargs):
@@ -330,77 +336,256 @@ def fuse_conv_bn_eval(conv: Module, bn: Module, transpose: bool = False) -> Modu
     """
     Fuse Conv and BatchNorm modules for evaluation.
 
-    Note: This is a stub in MLX. Returns the conv module unchanged.
+    This combines the convolution weights with BatchNorm parameters for more
+    efficient inference. The fused convolution produces the same output as
+    running conv followed by bn in eval mode.
 
     Args:
-        conv: Convolution module
-        bn: BatchNorm module
+        conv: Convolution module (Conv1d, Conv2d, or Conv3d)
+        bn: BatchNorm module (BatchNorm1d, BatchNorm2d, or BatchNorm3d)
         transpose: Whether this is a transposed convolution
 
     Returns:
-        Fused module (conv unchanged in MLX)
+        Fused convolution module with updated weights and bias
+
+    Note:
+        The BatchNorm must be in eval mode (bn.training = False) for correct results.
+        After fusion, the BatchNorm layer should be removed from the model.
+
+    Formula:
+        W_fused = W * (gamma / sqrt(running_var + eps))
+        b_fused = gamma * (b - running_mean) / sqrt(running_var + eps) + beta
     """
-    import warnings
-    warnings.warn(
-        "fuse_conv_bn_eval is a stub in MLX - conv-bn fusion is not implemented",
-        UserWarning
+    import mlx.core as mx
+    import copy
+
+    # Get conv parameters
+    conv_w = conv.weight._mlx_array
+    conv_b = conv.bias._mlx_array if conv.bias is not None else None
+
+    # Get bn parameters
+    bn_rm = bn.running_mean._mlx_array if bn.running_mean is not None else mx.zeros(bn.num_features)
+    bn_rv = bn.running_var._mlx_array if bn.running_var is not None else mx.ones(bn.num_features)
+    bn_eps = bn.eps
+    bn_w = bn.weight._mlx_array if bn.weight is not None else mx.ones(bn.num_features)
+    bn_b = bn.bias._mlx_array if bn.bias is not None else mx.zeros(bn.num_features)
+
+    # Fuse the weights
+    fused_w, fused_b = fuse_conv_bn_weights(
+        conv_w, conv_b, bn_rm, bn_rv, bn_eps, bn_w, bn_b, transpose=transpose
     )
-    return conv
+
+    # Create a copy of the conv layer with fused weights
+    fused_conv = copy.deepcopy(conv)
+    fused_conv.weight._mlx_array = fused_w
+
+    # Set the bias (create one if it didn't exist)
+    if fused_conv.bias is None:
+        from ..parameter import Parameter
+        fused_conv.bias = Parameter(Tensor._from_mlx_array(fused_b))
+    else:
+        fused_conv.bias._mlx_array = fused_b
+
+    # Invalidate any weight cache in the conv layer
+    if hasattr(fused_conv, '_cached_weight_mlx'):
+        fused_conv._cached_weight_mlx = None
+        fused_conv._cached_weight_id = None
+
+    return fused_conv
 
 
 def fuse_conv_bn_weights(conv_w, conv_b, bn_rm, bn_rv, bn_eps, bn_w, bn_b, transpose: bool = False):
     """
     Fuse Conv and BatchNorm weights.
 
-    Note: This is a stub in MLX.
+    Combines convolution weights with BatchNorm parameters to produce fused
+    weights and bias that give equivalent output.
+
+    Args:
+        conv_w: Convolution weight tensor (MLX array)
+                Shape: [out_channels, in_channels/groups, *kernel_size] for normal conv
+                Shape: [in_channels, out_channels/groups, *kernel_size] for transpose conv
+        conv_b: Convolution bias tensor or None (MLX array)
+                Shape: [out_channels]
+        bn_rm: BatchNorm running mean (MLX array)
+               Shape: [num_features]
+        bn_rv: BatchNorm running variance (MLX array)
+               Shape: [num_features]
+        bn_eps: BatchNorm epsilon value (float)
+        bn_w: BatchNorm weight (gamma) or None (MLX array)
+              Shape: [num_features]
+        bn_b: BatchNorm bias (beta) or None (MLX array)
+              Shape: [num_features]
+        transpose: Whether this is a transposed convolution
 
     Returns:
-        Original conv weights and bias unchanged
+        Tuple of (fused_weight, fused_bias) as MLX arrays
+
+    Formula:
+        W_fused = W * (gamma / sqrt(running_var + eps))
+        b_fused = gamma * (b - running_mean) / sqrt(running_var + eps) + beta
     """
-    import warnings
-    warnings.warn(
-        "fuse_conv_bn_weights is a stub in MLX - conv-bn fusion is not implemented",
-        UserWarning
-    )
-    return conv_w, conv_b
+    import mlx.core as mx
+
+    # Compute the scale factor: gamma / sqrt(var + eps)
+    # Shape: [out_channels] for normal conv, [in_channels] for transpose
+    std = mx.sqrt(bn_rv + bn_eps)
+    scale = bn_w / std
+
+    # Handle missing conv bias
+    if conv_b is None:
+        conv_b = mx.zeros(bn_rm.shape)
+
+    if transpose:
+        # For transposed conv: weight shape is [in_channels, out_channels/groups, *kernel_size]
+        # The output channels are at dimension 1, but BN normalizes over in_channels (dim 0)
+        # Actually, for ConvTranspose, output channels = weight.shape[1] * groups
+        # BN is applied to output, so we scale by output channels
+
+        # Reshape scale for broadcasting: [1, out_channels, 1, 1, ...]
+        # Number of spatial dims = weight.ndim - 2
+        num_spatial_dims = conv_w.ndim - 2
+        scale_shape = (1, -1) + (1,) * num_spatial_dims
+        scale_reshaped = mx.reshape(scale, scale_shape)
+
+        # Fuse weight: multiply each output channel by its scale
+        fused_w = conv_w * scale_reshaped
+    else:
+        # For normal conv: weight shape is [out_channels, in_channels/groups, *kernel_size]
+        # Reshape scale for broadcasting: [out_channels, 1, 1, 1, ...]
+        num_spatial_dims = conv_w.ndim - 2
+        scale_shape = (-1,) + (1,) * (num_spatial_dims + 1)
+        scale_reshaped = mx.reshape(scale, scale_shape)
+
+        # Fuse weight: multiply each output channel by its scale
+        fused_w = conv_w * scale_reshaped
+
+    # Fuse bias: gamma * (b - mean) / std + beta
+    # = gamma * b / std - gamma * mean / std + beta
+    # = b * scale - mean * scale + beta
+    fused_b = (conv_b - bn_rm) * scale + bn_b
+
+    return fused_w, fused_b
 
 
 def fuse_linear_bn_eval(linear: Module, bn: Module) -> Module:
     """
     Fuse Linear and BatchNorm modules for evaluation.
 
-    Note: This is a stub in MLX. Returns the linear module unchanged.
+    This combines the linear layer weights with BatchNorm parameters for more
+    efficient inference. The fused linear layer produces the same output as
+    running linear followed by bn in eval mode.
 
     Args:
         linear: Linear module
-        bn: BatchNorm module
+        bn: BatchNorm module (BatchNorm1d)
 
     Returns:
-        Fused module (linear unchanged in MLX)
+        Fused linear module with updated weights and bias
+
+    Note:
+        The BatchNorm must be in eval mode (bn.training = False) for correct results.
+        After fusion, the BatchNorm layer should be removed from the model.
+        This is typically used when Linear is followed by BatchNorm1d.
+
+    Formula:
+        W_fused = W * (gamma / sqrt(running_var + eps))
+        b_fused = gamma * (b - running_mean) / sqrt(running_var + eps) + beta
     """
-    import warnings
-    warnings.warn(
-        "fuse_linear_bn_eval is a stub in MLX - linear-bn fusion is not implemented",
-        UserWarning
+    import mlx.core as mx
+    import copy
+
+    # Get linear parameters
+    linear_w = linear.weight._mlx_array
+    linear_b = linear.bias._mlx_array if linear.bias is not None else None
+
+    # Get bn parameters
+    bn_rm = bn.running_mean._mlx_array if bn.running_mean is not None else mx.zeros(bn.num_features)
+    bn_rv = bn.running_var._mlx_array if bn.running_var is not None else mx.ones(bn.num_features)
+    bn_eps = bn.eps
+    bn_w = bn.weight._mlx_array if bn.weight is not None else mx.ones(bn.num_features)
+    bn_b = bn.bias._mlx_array if bn.bias is not None else mx.zeros(bn.num_features)
+
+    # Fuse the weights
+    fused_w, fused_b = fuse_linear_bn_weights(
+        linear_w, linear_b, bn_rm, bn_rv, bn_eps, bn_w, bn_b
     )
-    return linear
+
+    # Create a copy of the linear layer with fused weights
+    fused_linear = copy.deepcopy(linear)
+    fused_linear.weight._mlx_array = fused_w
+
+    # Set the bias (create one if it didn't exist)
+    if fused_linear.bias is None:
+        from ..parameter import Parameter
+        fused_linear.bias = Parameter(Tensor._from_mlx_array(fused_b))
+    else:
+        fused_linear.bias._mlx_array = fused_b
+
+    # Invalidate any weight cache in the linear layer
+    if hasattr(fused_linear, '_weight_cache'):
+        fused_linear._weight_cache = {}
+
+    return fused_linear
 
 
 def fuse_linear_bn_weights(linear_w, linear_b, bn_rm, bn_rv, bn_eps, bn_w, bn_b):
     """
     Fuse Linear and BatchNorm weights.
 
-    Note: This is a stub in MLX.
+    Combines linear layer weights with BatchNorm parameters to produce fused
+    weights and bias that give equivalent output.
+
+    Args:
+        linear_w: Linear weight tensor (MLX array)
+                  Shape: [out_features, in_features]
+        linear_b: Linear bias tensor or None (MLX array)
+                  Shape: [out_features]
+        bn_rm: BatchNorm running mean (MLX array)
+               Shape: [num_features] (should equal out_features)
+        bn_rv: BatchNorm running variance (MLX array)
+               Shape: [num_features]
+        bn_eps: BatchNorm epsilon value (float)
+        bn_w: BatchNorm weight (gamma) or None (MLX array)
+              Shape: [num_features]
+        bn_b: BatchNorm bias (beta) or None (MLX array)
+              Shape: [num_features]
 
     Returns:
-        Original linear weights and bias unchanged
+        Tuple of (fused_weight, fused_bias) as MLX arrays
+
+    Formula:
+        W_fused = W * (gamma / sqrt(running_var + eps)).reshape(-1, 1)
+        b_fused = gamma * (b - running_mean) / sqrt(running_var + eps) + beta
+
+    Note:
+        For Linear layer with weight [out_features, in_features]:
+        - Each row corresponds to one output feature
+        - BatchNorm normalizes each output feature independently
+        - So we scale each row of weights by the corresponding scale factor
     """
-    import warnings
-    warnings.warn(
-        "fuse_linear_bn_weights is a stub in MLX - linear-bn fusion is not implemented",
-        UserWarning
-    )
-    return linear_w, linear_b
+    import mlx.core as mx
+
+    # Compute the scale factor: gamma / sqrt(var + eps)
+    # Shape: [out_features]
+    std = mx.sqrt(bn_rv + bn_eps)
+    scale = bn_w / std
+
+    # Handle missing linear bias
+    if linear_b is None:
+        linear_b = mx.zeros(bn_rm.shape)
+
+    # Fuse weight: multiply each output feature (row) by its scale
+    # Linear weight shape: [out_features, in_features]
+    # scale shape: [out_features] -> reshape to [out_features, 1] for broadcasting
+    scale_reshaped = mx.reshape(scale, (-1, 1))
+    fused_w = linear_w * scale_reshaped
+
+    # Fuse bias: gamma * (b - mean) / std + beta
+    # = (b - mean) * scale + beta
+    fused_b = (linear_b - bn_rm) * scale + bn_b
+
+    return fused_w, fused_b
 
 
 # Import submodules

@@ -574,7 +574,10 @@ class KLDivLoss(Module):
         if self.log_target:
             loss = mx.exp(target._mlx_array) * (target._mlx_array - input._mlx_array)
         else:
-            loss = target._mlx_array * (mx.log(target._mlx_array + 1e-10) - input._mlx_array)
+            # Use xlogy for numerical stability: xlogy(p, p) returns 0 when p=0
+            # This avoids the need for epsilon and handles 0*log(0) correctly
+            xlogy_term = ops.xlogy(target, target)._mlx_array
+            loss = xlogy_term - target._mlx_array * input._mlx_array
         result = Tensor._from_mlx_array(loss)
 
         if self.reduction == 'none':
@@ -766,7 +769,13 @@ class SoftMarginLoss(Module):
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
         import mlx.core as mx
-        loss = mx.log1p(mx.exp(-target._mlx_array * input._mlx_array))
+        # Numerically stable implementation of log(1 + exp(-y*x))
+        # For large positive y*x: use exp(-y*x) directly (avoiding overflow in exp)
+        # For large negative y*x: use -y*x + log(1 + exp(y*x)) ~ -y*x
+        yx = target._mlx_array * input._mlx_array
+        # log(1 + exp(-z)) = log(1 + exp(-|z|)) + max(-z, 0)
+        #                  = log1p(exp(-|z|)) + relu(-z)
+        loss = mx.log1p(mx.exp(-mx.abs(yx))) + mx.maximum(-yx, 0)
         result = Tensor._from_mlx_array(loss)
 
         if self.reduction == 'none':
@@ -1101,9 +1110,11 @@ class MultiLabelSoftMarginLoss(Module):
         x = input._mlx_array
         y = target._mlx_array
 
-        # Binary cross entropy for each class
-        loss = -(y * mx.log(mx.sigmoid(x) + 1e-10) +
-                 (1 - y) * mx.log(1 - mx.sigmoid(x) + 1e-10))
+        # Numerically stable binary cross entropy (same as BCEWithLogitsLoss)
+        # Instead of: -(y * log(sigmoid(x)) + (1-y) * log(1-sigmoid(x)))
+        # Use: max(x, 0) - x*y + log(1 + exp(-|x|))
+        # This avoids log(0) issues and is more numerically stable
+        loss = mx.maximum(x, 0) - x * y + mx.log1p(mx.exp(-mx.abs(x)))
 
         if self.weight is not None:
             loss = loss * self.weight._mlx_array

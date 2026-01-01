@@ -7,6 +7,7 @@ import mlx.core as mx
 from ..tensor import Tensor
 from .distribution import Distribution
 from . import constraints
+from ._constants import UNIFORM_LOW, UNIFORM_HIGH
 
 
 class Gumbel(Distribution):
@@ -41,8 +42,9 @@ class Gumbel(Distribution):
 
     def sample(self, sample_shape: Tuple[int, ...] = ()) -> Tensor:
         shape = sample_shape + self._batch_shape
-        u = mx.random.uniform(shape)
-        return Tensor(self.loc - self.scale * mx.log(-mx.log(u + 1e-10) + 1e-10))
+        # Use proper uniform bounds to avoid log(0)
+        u = mx.random.uniform(low=UNIFORM_LOW, high=UNIFORM_HIGH, shape=shape)
+        return Tensor(self.loc - self.scale * mx.log(-mx.log(u)))
 
     def rsample(self, sample_shape: Tuple[int, ...] = ()) -> Tensor:
         return self.sample(sample_shape)

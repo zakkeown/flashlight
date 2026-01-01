@@ -8,6 +8,7 @@ from ..tensor import Tensor
 from .distribution import Distribution
 from . import constraints
 from ..ops.special import i0, i1
+from ._constants import PROB_EPSILON
 
 
 class VonMises(Distribution):
@@ -65,7 +66,7 @@ class VonMises(Distribution):
         r = (1.0 + rho * rho) / (2.0 * rho)
 
         # Handle kappa = 0 case (uniform distribution)
-        kappa_is_zero = kappa < 1e-10
+        kappa_is_zero = kappa < PROB_EPSILON
 
         # Initialize samples
         samples = mx.zeros(shape)

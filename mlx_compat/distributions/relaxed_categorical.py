@@ -6,6 +6,7 @@ import mlx.core as mx
 from ..tensor import Tensor
 from .distribution import Distribution
 from . import constraints
+from ._constants import UNIFORM_LOW, UNIFORM_HIGH, safe_log
 
 
 class RelaxedOneHotCategorical(Distribution):
@@ -41,9 +42,10 @@ class RelaxedOneHotCategorical(Distribution):
 
     def sample(self, sample_shape: Tuple[int, ...] = ()) -> Tensor:
         shape = sample_shape + self._batch_shape + self._event_shape
-        u = mx.random.uniform(shape)
+        # Use proper uniform bounds to avoid log(0)
+        u = mx.random.uniform(low=UNIFORM_LOW, high=UNIFORM_HIGH, shape=shape)
         # Gumbel noise
-        gumbel = -mx.log(-mx.log(u + 1e-10) + 1e-10)
+        gumbel = -mx.log(-mx.log(u))
         # Softmax with temperature
         return Tensor(mx.softmax((self.logits + gumbel) / self.temperature, axis=-1))
 
@@ -54,9 +56,10 @@ class RelaxedOneHotCategorical(Distribution):
         data = value._mlx_array if isinstance(value, Tensor) else value
         K = self._event_shape[0]
         log_scale = (K - 1) * mx.log(self.temperature)
-        score = self.logits - self.temperature * mx.log(data + 1e-10)
+        # Use safe_log for numerical stability
+        score = self.logits - self.temperature * safe_log(data)
         score = score - mx.logsumexp(score, axis=-1, keepdims=True)
-        log_prob = log_scale + mx.sum(score - mx.log(data + 1e-10), axis=-1)
+        log_prob = log_scale + mx.sum(score - safe_log(data), axis=-1)
         return Tensor(log_prob)
 
 

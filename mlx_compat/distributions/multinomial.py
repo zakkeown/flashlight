@@ -7,6 +7,7 @@ from ..tensor import Tensor
 from ..ops.special import lgamma
 from .distribution import Distribution
 from . import constraints
+from ._constants import UNIFORM_LOW, UNIFORM_HIGH, xlogy
 
 
 class Multinomial(Distribution):
@@ -67,9 +68,11 @@ class Multinomial(Distribution):
 
         for _ in range(self.total_count):
             # Sample from categorical distribution using Gumbel-max trick
-            u = mx.random.uniform(shape=full_shape)
-            gumbel = -mx.log(-mx.log(u + 1e-10) + 1e-10)
-            logits = mx.log(probs_expanded + 1e-10) + gumbel
+            # Use proper uniform bounds to avoid log(0)
+            u = mx.random.uniform(low=UNIFORM_LOW, high=UNIFORM_HIGH, shape=full_shape)
+            gumbel = -mx.log(-mx.log(u))
+            # Use pre-computed logits for numerical stability
+            logits = mx.broadcast_to(self.logits, full_shape) + gumbel
 
             # One-hot encode the selected category
             indices = mx.argmax(logits, axis=-1, keepdims=True)
@@ -90,7 +93,8 @@ class Multinomial(Distribution):
         log_factorial_n = lgamma(mx.array(self.total_count + 1, dtype=mx.float32))
         log_factorial_k = lgamma(data + 1)
         log_coeff = log_factorial_n - mx.sum(log_factorial_k, axis=-1)
-        log_probs = mx.sum(data * mx.log(self.probs + 1e-10), axis=-1)
+        # Use xlogy for numerical stability: xlogy(k, p) = 0 when k = 0
+        log_probs = mx.sum(xlogy(data, self.probs), axis=-1)
         return Tensor(log_coeff + log_probs)
 
 

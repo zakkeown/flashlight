@@ -628,10 +628,11 @@ class LSTM(Module):
         dtype = kwargs.pop('dtype', None)
 
         # device and dtype are accepted for PyTorch compatibility but ignored
-        # proj_size is accepted for compatibility but not implemented
-        if proj_size != 0:
-            import warnings
-            warnings.warn("proj_size is not implemented in MLX, ignoring")
+        if proj_size < 0:
+            raise ValueError(f"proj_size should be a non-negative integer, got {proj_size}")
+        if proj_size >= hidden_size:
+            raise ValueError(f"proj_size ({proj_size}) must be smaller than hidden_size ({hidden_size})")
+
         super().__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -643,9 +644,23 @@ class LSTM(Module):
         self.proj_size = proj_size
         self.num_directions = 2 if bidirectional else 1
 
+        # When proj_size > 0, the output hidden state is projected to proj_size
+        # The real hidden state size used in recurrence is still hidden_size
+        # but the output h is projected to proj_size before being used for:
+        # 1. The next layer's input
+        # 2. The recurrent connection (weight_hh connects from proj_size, not hidden_size)
+        self._real_hidden_size = proj_size if proj_size > 0 else hidden_size
+
         # Create weights directly with PyTorch-compatible names
         for layer in range(num_layers):
-            layer_input_size = input_size if layer == 0 else hidden_size * self.num_directions
+            # Input size for this layer
+            if layer == 0:
+                layer_input_size = input_size
+            else:
+                # After first layer, input comes from previous layer's output
+                # which has size (proj_size if proj_size > 0 else hidden_size) * num_directions
+                layer_input_size = self._real_hidden_size * self.num_directions
+
             for direction in range(self.num_directions):
                 suffix = f'_l{layer}' if direction == 0 else f'_l{layer}_reverse'
 
@@ -654,8 +669,9 @@ class LSTM(Module):
                 weight_ih = Parameter(Tensor._from_mlx_array(
                     mx.random.uniform(-stdv, stdv, (4 * hidden_size, layer_input_size))
                 ))
+                # weight_hh connects from projected hidden state (or full hidden if no projection)
                 weight_hh = Parameter(Tensor._from_mlx_array(
-                    mx.random.uniform(-stdv, stdv, (4 * hidden_size, hidden_size))
+                    mx.random.uniform(-stdv, stdv, (4 * hidden_size, self._real_hidden_size))
                 ))
                 setattr(self, f'weight_ih{suffix}', weight_ih)
                 setattr(self, f'weight_hh{suffix}', weight_hh)
@@ -665,6 +681,13 @@ class LSTM(Module):
                     bias_hh = Parameter(Tensor._from_mlx_array(mx.zeros(4 * hidden_size)))
                     setattr(self, f'bias_ih{suffix}', bias_ih)
                     setattr(self, f'bias_hh{suffix}', bias_hh)
+
+                # Projection weight: projects hidden_size -> proj_size
+                if proj_size > 0:
+                    weight_hr = Parameter(Tensor._from_mlx_array(
+                        mx.random.uniform(-stdv, stdv, (proj_size, hidden_size))
+                    ))
+                    setattr(self, f'weight_hr{suffix}', weight_hr)
 
     def _get_weights(self, layer: int, direction: int):
         """Get weights for a specific layer and direction."""
@@ -677,18 +700,30 @@ class LSTM(Module):
         else:
             bias_ih = None
             bias_hh = None
-        return weight_ih, weight_hh, bias_ih, bias_hh
+        # Get projection weight if proj_size > 0
+        if self.proj_size > 0:
+            weight_hr = getattr(self, f'weight_hr{suffix}')
+        else:
+            weight_hr = None
+        return weight_ih, weight_hh, bias_ih, bias_hh, weight_hr
 
-    def _lstm_cell_forward(self, input, h, c, weight_ih, weight_hh, bias_ih, bias_hh):
-        """Single LSTM cell forward pass."""
+    def _lstm_cell_forward(self, input, h, c, weight_ih, weight_hh, bias_ih, bias_hh, weight_hr=None):
+        """Single LSTM cell forward pass with optional projection."""
         # Use compiled version for better performance
-        return _lstm_cell_compiled(
+        h_new, c_new = _lstm_cell_compiled(
             input, h, c,
             weight_ih._mlx_array, weight_hh._mlx_array,
             bias_ih._mlx_array if bias_ih is not None else None,
             bias_hh._mlx_array if bias_hh is not None else None,
             self.bias
         )
+
+        # Apply projection if proj_size > 0
+        if weight_hr is not None:
+            # Project h from hidden_size to proj_size
+            h_new = mx.matmul(h_new, weight_hr._mlx_array.T)
+
+        return h_new, c_new
 
     def forward(
         self,
@@ -704,8 +739,12 @@ class LSTM(Module):
 
         if hx is None:
             num_directions = self.num_directions
-            zeros = mx.zeros((self.num_layers * num_directions, batch_size, self.hidden_size))
-            hx = (Tensor._from_mlx_array(zeros), Tensor._from_mlx_array(zeros))
+            # h has shape [num_layers * num_directions, batch, real_hidden_size]
+            # where real_hidden_size = proj_size if proj_size > 0 else hidden_size
+            h_zeros = mx.zeros((self.num_layers * num_directions, batch_size, self._real_hidden_size))
+            # c always has shape [num_layers * num_directions, batch, hidden_size]
+            c_zeros = mx.zeros((self.num_layers * num_directions, batch_size, self.hidden_size))
+            hx = (Tensor._from_mlx_array(h_zeros), Tensor._from_mlx_array(c_zeros))
 
         h0, c0 = hx
         output = input._mlx_array
@@ -713,8 +752,8 @@ class LSTM(Module):
         c_states = []
 
         for layer in range(self.num_layers):
-            # Get weights for forward direction
-            weight_ih, weight_hh, bias_ih, bias_hh = self._get_weights(layer, 0)
+            # Get weights for forward direction (now includes weight_hr)
+            weight_ih, weight_hh, bias_ih, bias_hh, weight_hr = self._get_weights(layer, 0)
 
             layer_output_fwd = []
             h_fwd = h0._mlx_array[layer * self.num_directions]
@@ -722,15 +761,15 @@ class LSTM(Module):
 
             for t in range(seq_len):
                 x_t = output[t]
-                h_fwd, c_fwd = self._lstm_cell_forward(x_t, h_fwd, c_fwd, weight_ih, weight_hh, bias_ih, bias_hh)
+                h_fwd, c_fwd = self._lstm_cell_forward(x_t, h_fwd, c_fwd, weight_ih, weight_hh, bias_ih, bias_hh, weight_hr)
                 layer_output_fwd.append(h_fwd)
 
             h_states.append(h_fwd)
             c_states.append(c_fwd)
 
             if self.bidirectional:
-                # Get weights for backward direction
-                weight_ih_r, weight_hh_r, bias_ih_r, bias_hh_r = self._get_weights(layer, 1)
+                # Get weights for backward direction (now includes weight_hr)
+                weight_ih_r, weight_hh_r, bias_ih_r, bias_hh_r, weight_hr_r = self._get_weights(layer, 1)
 
                 layer_output_bwd = []
                 h_bwd = h0._mlx_array[layer * self.num_directions + 1]
@@ -738,7 +777,7 @@ class LSTM(Module):
 
                 for t in range(seq_len - 1, -1, -1):
                     x_t = output[t]
-                    h_bwd, c_bwd = self._lstm_cell_forward(x_t, h_bwd, c_bwd, weight_ih_r, weight_hh_r, bias_ih_r, bias_hh_r)
+                    h_bwd, c_bwd = self._lstm_cell_forward(x_t, h_bwd, c_bwd, weight_ih_r, weight_hh_r, bias_ih_r, bias_hh_r, weight_hr_r)
                     layer_output_bwd.insert(0, h_bwd)
 
                 h_states.append(h_bwd)
@@ -761,10 +800,11 @@ class LSTM(Module):
         return output, (h_n, c_n)
 
     def extra_repr(self) -> str:
-        return (
-            f'{self.input_size}, {self.hidden_size}, num_layers={self.num_layers}, '
-            f'batch_first={self.batch_first}, bidirectional={self.bidirectional}'
-        )
+        s = (f'{self.input_size}, {self.hidden_size}, num_layers={self.num_layers}, '
+             f'batch_first={self.batch_first}, bidirectional={self.bidirectional}')
+        if self.proj_size > 0:
+            s += f', proj_size={self.proj_size}'
+        return s
 
 
 class GRU(Module):

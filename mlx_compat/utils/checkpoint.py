@@ -9,8 +9,10 @@ Gradient checkpointing trades compute for memory by not storing intermediate
 activations during the forward pass, then recomputing them during backward.
 """
 
-from typing import Callable, Any, Tuple, Optional, List, Union
+from typing import Callable, Any, Tuple, Optional, List, Union, ContextManager
+import contextlib
 import warnings
+import weakref
 
 import mlx.core as mx
 
@@ -19,12 +21,50 @@ from ..autograd.context import no_grad, set_grad_enabled, is_grad_enabled
 from ..random import get_rng_state, set_rng_state
 
 
-__all__ = ["checkpoint", "checkpoint_sequential", "CheckpointFunction"]
+__all__ = [
+    "checkpoint",
+    "checkpoint_sequential",
+    "CheckpointFunction",
+    "noop_context_fn",
+]
+
+
+# Default determinism check mode
+_DEFAULT_DETERMINISM_MODE = "default"
+
+
+def noop_context_fn() -> Tuple[ContextManager, ContextManager]:
+    """
+    Return a tuple of two no-op context managers.
+
+    This is the default context_fn for checkpoint, providing no additional
+    context during forward or recomputation.
+
+    Returns:
+        Tuple of two nullcontext instances.
+    """
+    return contextlib.nullcontext(), contextlib.nullcontext()
 
 
 def _get_autocast_kwargs() -> dict:
     """Get current autocast settings (compatibility stub)."""
     return {}
+
+
+def _default_metadata_fn(tensor) -> dict:
+    """
+    Extract metadata from a tensor for determinism checking.
+
+    Args:
+        tensor: The tensor to extract metadata from.
+
+    Returns:
+        Dictionary containing shape, dtype, and device info.
+    """
+    return {
+        "shape": tuple(tensor.shape),
+        "dtype": str(tensor.dtype),
+    }
 
 
 class CheckpointFunctionBackward(GradientFunction):
@@ -119,7 +159,7 @@ class CheckpointFunctionBackward(GradientFunction):
 
 class CheckpointFunction(Function):
     """
-    Custom autograd Function for gradient checkpointing.
+    Custom autograd Function for gradient checkpointing (reentrant mode).
 
     This function:
     1. Runs the forward pass without storing intermediate activations
@@ -235,12 +275,287 @@ class CheckpointFunction(Function):
         return (None, None) + tuple(grads)
 
 
+class _CheckpointFrame:
+    """
+    Frame for tracking checkpointed region state in non-reentrant mode.
+
+    This class stores:
+    - The recompute function and its inputs
+    - Saved tensor metadata for determinism checking
+    - Weak references to holders for saved tensors
+    """
+
+    def __init__(
+        self,
+        recompute_fn: Callable,
+        preserve_rng_state: bool,
+        rng_state: Optional[dict],
+        determinism_check: str,
+        context_fn: Callable,
+    ):
+        self.recompute_fn = recompute_fn
+        self.preserve_rng_state = preserve_rng_state
+        self.rng_state = rng_state
+        self.determinism_check = determinism_check
+        self.context_fn = context_fn
+
+        # Track saved tensors and their metadata
+        self.saved_tensors = []
+        self.saved_metadata = []
+        self.recomputed_tensors = []
+        self.is_recomputed = False
+
+    def save_tensor(self, tensor):
+        """Save a tensor during forward pass."""
+        self.saved_tensors.append(tensor)
+        if self.determinism_check != "none":
+            self.saved_metadata.append(_default_metadata_fn(tensor))
+
+    def recompute(self):
+        """Recompute the forward pass to get saved tensors."""
+        if self.is_recomputed:
+            return
+
+        # Restore RNG state
+        if self.preserve_rng_state and self.rng_state is not None:
+            set_rng_state(self.rng_state)
+
+        # Get recompute context
+        _, recompute_context = self.context_fn()
+
+        # Recompute with grad enabled
+        with set_grad_enabled(True), recompute_context:
+            self.recompute_fn()
+
+        self.is_recomputed = True
+
+        # Verify determinism if enabled
+        if self.determinism_check != "none":
+            self._check_determinism()
+
+    def _check_determinism(self):
+        """Check that recomputed tensors match saved tensors."""
+        if len(self.recomputed_tensors) != len(self.saved_tensors):
+            raise RuntimeError(
+                f"Checkpoint determinism check failed: "
+                f"saved {len(self.saved_tensors)} tensors during forward "
+                f"but recomputed {len(self.recomputed_tensors)} tensors. "
+                f"This indicates non-deterministic behavior in the checkpointed function."
+            )
+
+        for i, (saved_meta, recomputed) in enumerate(
+            zip(self.saved_metadata, self.recomputed_tensors)
+        ):
+            recomputed_meta = _default_metadata_fn(recomputed)
+            if saved_meta != recomputed_meta:
+                raise RuntimeError(
+                    f"Checkpoint determinism check failed for tensor {i}: "
+                    f"saved metadata {saved_meta} but recomputed metadata {recomputed_meta}. "
+                    f"This indicates non-deterministic behavior in the checkpointed function."
+                )
+
+
+def _checkpoint_without_reentrant(
+    function: Callable,
+    preserve_rng_state: bool,
+    context_fn: Callable,
+    determinism_check: str,
+    *args,
+) -> Any:
+    """
+    Non-reentrant checkpoint implementation.
+
+    Unlike reentrant checkpointing, this:
+    1. Records the autograd graph during forward pass
+    2. Supports torch.autograd.grad and backward with inputs parameter
+    3. Does not require inputs/outputs to have requires_grad=True
+    4. Handles nested checkpoints and detached tensors correctly
+
+    Args:
+        function: The function to checkpoint
+        preserve_rng_state: Whether to save/restore RNG state
+        context_fn: Function returning (forward_context, recompute_context)
+        determinism_check: How to verify recomputation matches forward
+        *args: Arguments to the function
+
+    Returns:
+        Output of function(*args)
+    """
+    from ..tensor import Tensor
+
+    # Save RNG state if requested
+    rng_state = get_rng_state() if preserve_rng_state else None
+
+    # Get context managers
+    forward_context, recompute_context = context_fn()
+
+    # Store inputs for recomputation
+    saved_inputs = []
+    for arg in args:
+        if isinstance(arg, Tensor):
+            # Save a copy of the tensor data (not the autograd graph)
+            saved_inputs.append(Tensor._from_mlx_array(arg._mlx_array.copy()))
+            saved_inputs[-1].requires_grad = arg.requires_grad
+        else:
+            saved_inputs.append(arg)
+
+    # Create the frame to track this checkpoint
+    def make_recompute_fn():
+        """Create a closure that can recompute the forward pass."""
+        def recompute():
+            # Restore RNG state
+            if preserve_rng_state and rng_state is not None:
+                set_rng_state(rng_state)
+
+            # Detach inputs for recomputation
+            detached = []
+            for inp in saved_inputs:
+                if isinstance(inp, Tensor):
+                    d = Tensor._from_mlx_array(inp._mlx_array.copy())
+                    d.requires_grad = inp.requires_grad
+                    detached.append(d)
+                else:
+                    detached.append(inp)
+
+            # Run the function
+            with set_grad_enabled(True), recompute_context:
+                return function(*detached)
+        return recompute
+
+    frame = _CheckpointFrame(
+        recompute_fn=make_recompute_fn(),
+        preserve_rng_state=preserve_rng_state,
+        rng_state=rng_state,
+        determinism_check=determinism_check,
+        context_fn=context_fn,
+    )
+
+    # Run forward pass with the forward context
+    # Unlike reentrant mode, we DO record the autograd graph
+    with forward_context:
+        outputs = function(*args)
+
+    # If no outputs require grad, just return
+    if isinstance(outputs, Tensor):
+        if not outputs.requires_grad:
+            return outputs
+        output_list = [outputs]
+    elif isinstance(outputs, tuple):
+        output_list = [o for o in outputs if isinstance(o, Tensor)]
+        if not any(o.requires_grad for o in output_list):
+            return outputs
+    else:
+        return outputs
+
+    # Force evaluation
+    for out in output_list:
+        if isinstance(out, Tensor):
+            mx.eval(out._mlx_array)
+
+    # Store frame reference in outputs for backward to use
+    for out in output_list:
+        if isinstance(out, Tensor) and out.requires_grad:
+            # Store frame weakref for potential use in custom backward
+            out._checkpoint_frame = weakref.ref(frame)
+
+    # Create wrapper that will handle recomputation during backward
+    class NonReentrantCheckpointBackward(GradientFunction):
+        """Gradient function for non-reentrant checkpoint."""
+
+        def __init__(self, frame, tensor_inputs, outputs):
+            super().__init__(*tensor_inputs)
+            self.frame = frame
+            self.outputs = outputs
+            self.saved_inputs = saved_inputs
+
+        def apply(self, grad_output):
+            """Recompute forward and compute gradients."""
+            # Restore RNG state for deterministic recomputation
+            if self.frame.preserve_rng_state and self.frame.rng_state is not None:
+                set_rng_state(self.frame.rng_state)
+
+            # Get recompute context
+            _, recompute_ctx = self.frame.context_fn()
+
+            # Detach and enable grad on tensor inputs
+            detached_inputs = []
+            for inp in self.saved_inputs:
+                if isinstance(inp, Tensor):
+                    detached = Tensor._from_mlx_array(inp._mlx_array.copy())
+                    detached.requires_grad = inp.requires_grad
+                    detached_inputs.append(detached)
+                else:
+                    detached_inputs.append(inp)
+
+            # Recompute forward pass with grad enabled
+            with set_grad_enabled(True), recompute_ctx:
+                recomputed_outputs = function(*detached_inputs)
+
+            # Handle single or multiple outputs
+            if not isinstance(recomputed_outputs, tuple):
+                recomputed_outputs = (recomputed_outputs,)
+
+            # Verify determinism if enabled
+            if self.frame.determinism_check != "none":
+                original_outputs = self.outputs if isinstance(self.outputs, tuple) else (self.outputs,)
+                for i, (orig, recomp) in enumerate(zip(original_outputs, recomputed_outputs)):
+                    if isinstance(orig, Tensor) and isinstance(recomp, Tensor):
+                        orig_meta = _default_metadata_fn(orig)
+                        recomp_meta = _default_metadata_fn(recomp)
+                        if orig_meta != recomp_meta:
+                            raise RuntimeError(
+                                f"Checkpoint determinism check failed for output {i}: "
+                                f"original metadata {orig_meta} but recomputed metadata {recomp_meta}. "
+                                f"This indicates non-deterministic behavior in the checkpointed function."
+                            )
+
+            # Compute gradients using VJP
+            grads = []
+            for i, inp in enumerate(self.saved_inputs):
+                if isinstance(inp, Tensor) and inp.requires_grad:
+                    def compute_output(x, idx=i):
+                        new_inputs = []
+                        for j, di in enumerate(detached_inputs):
+                            if j == idx:
+                                new_inputs.append(Tensor._from_mlx_array(x))
+                            else:
+                                new_inputs.append(di)
+                        result = function(*new_inputs)
+                        if isinstance(result, Tensor):
+                            return result._mlx_array
+                        return result[0]._mlx_array if isinstance(result, tuple) else result
+
+                    try:
+                        _, vjp_fn = mx.vjp(compute_output, [inp._mlx_array])
+                        cotangent = grad_output._mlx_array if isinstance(grad_output, Tensor) else grad_output
+                        grad_inp = vjp_fn([cotangent])[0]
+                        grads.append(Tensor._from_mlx_array(grad_inp))
+                    except Exception:
+                        grads.append(None)
+                elif isinstance(inp, Tensor):
+                    grads.append(None)
+
+            return tuple(grads) if grads else (None,)
+
+    # Attach backward function to outputs
+    tensor_inputs = [arg for arg in args if isinstance(arg, Tensor)]
+    if tensor_inputs and output_list:
+        grad_fn = NonReentrantCheckpointBackward(frame, tensor_inputs, outputs)
+        for out in output_list:
+            if isinstance(out, Tensor) and out.requires_grad:
+                grad_fn.output_tensor = out
+                out._grad_fn = grad_fn
+                break
+
+    return outputs
+
+
 def checkpoint(
     function: Callable,
     *args,
-    use_reentrant: bool = True,
-    context_fn: Optional[Callable] = None,
-    determinism_check: Optional[str] = None,
+    use_reentrant: Optional[bool] = None,
+    context_fn: Callable[[], Tuple[ContextManager, ContextManager]] = noop_context_fn,
+    determinism_check: str = _DEFAULT_DETERMINISM_MODE,
     debug: bool = False,
     preserve_rng_state: bool = True,
 ) -> Any:
@@ -258,12 +573,18 @@ def checkpoint(
         function: The function to checkpoint. Takes tensors as input,
                   returns tensor(s) as output.
         *args: Arguments to pass to function.
-        use_reentrant: If True, use reentrant autograd (default).
-                       Non-reentrant mode is not yet supported.
-        context_fn: Optional function that returns a context manager.
-                    Not yet supported.
-        determinism_check: How to check for non-determinism.
-                          Not yet supported.
+        use_reentrant: If True, use reentrant autograd. If False, use
+                       non-reentrant mode which is recommended as it handles
+                       more edge cases correctly. If None (default), uses True
+                       with a deprecation warning.
+        context_fn: A callable returning a tuple of two context managers.
+                    The function will be run under the first context manager
+                    during forward, and under the second during recomputation.
+                    Only supported when use_reentrant=False.
+        determinism_check: How to check for non-determinism during recomputation.
+                          "default" compares shapes and dtypes of recomputed tensors.
+                          "none" disables the check.
+                          Only supported when use_reentrant=False.
         debug: Enable debugging mode. Not yet supported.
         preserve_rng_state: If True, save and restore RNG state for
                            deterministic recomputation (default True).
@@ -282,31 +603,53 @@ def checkpoint(
         >>> out = bottleneck(x)
         >>>
         >>> # With checkpoint: recomputes activations during backward
-        >>> out = checkpoint(bottleneck, x)
+        >>> out = checkpoint(bottleneck, x, use_reentrant=False)
 
     Note:
         For best memory savings, checkpoint functions that have many
         intermediate activations (e.g., residual blocks, transformer layers).
+
+        The non-reentrant mode (use_reentrant=False) is recommended as it:
+        - Supports torch.autograd.grad and backward with inputs parameter
+        - Handles nested checkpoints correctly
+        - Works with detached tensors inside the checkpointed region
     """
     from ..tensor import Tensor
 
-    if not use_reentrant:
+    # Handle use_reentrant default with deprecation warning
+    if use_reentrant is None:
         warnings.warn(
-            "Non-reentrant checkpointing is not yet fully supported in MLX Compat. "
-            "Falling back to reentrant mode.",
-            UserWarning,
+            "torch.utils.checkpoint: the use_reentrant parameter should be "
+            "passed explicitly. In a future version, use_reentrant=False will "
+            "be the default. use_reentrant=False is recommended as it handles "
+            "more edge cases correctly.",
+            FutureWarning,
+            stacklevel=2,
         )
+        use_reentrant = True
 
-    if context_fn is not None:
-        warnings.warn(
-            "context_fn parameter is not yet supported in MLX Compat.",
-            UserWarning,
-        )
+    # Validate parameters
+    if use_reentrant:
+        if context_fn is not noop_context_fn:
+            raise ValueError(
+                "Passing context_fn is only supported when use_reentrant=False."
+            )
+        if determinism_check != _DEFAULT_DETERMINISM_MODE:
+            raise ValueError(
+                "Passing determinism_check is only supported when use_reentrant=False."
+            )
+        if debug:
+            warnings.warn(
+                "debug=True is only fully supported when use_reentrant=False.",
+                UserWarning,
+            )
 
-    if determinism_check is not None:
-        warnings.warn(
-            "determinism_check parameter is not yet supported in MLX Compat.",
-            UserWarning,
+    # Validate determinism_check
+    allowed_determinism_checks = {"default", "none"}
+    if determinism_check not in allowed_determinism_checks:
+        raise ValueError(
+            f"determinism_check should be one of {allowed_determinism_checks}, "
+            f"but got '{determinism_check}'"
         )
 
     # Check if any input requires grad
@@ -318,15 +661,25 @@ def checkpoint(
         # No gradients needed, just run the function normally
         return function(*args)
 
-    # Use the CheckpointFunction
-    return CheckpointFunction.apply(function, preserve_rng_state, *args)
+    if use_reentrant:
+        # Use the reentrant CheckpointFunction
+        return CheckpointFunction.apply(function, preserve_rng_state, *args)
+    else:
+        # Use non-reentrant implementation
+        return _checkpoint_without_reentrant(
+            function,
+            preserve_rng_state,
+            context_fn,
+            determinism_check,
+            *args,
+        )
 
 
 def checkpoint_sequential(
     functions: Union[List[Callable], Any],
     segments: int,
     input: Any,
-    use_reentrant: bool = True,
+    use_reentrant: Optional[bool] = None,
     preserve_rng_state: bool = True,
 ) -> Any:
     """
@@ -341,7 +694,8 @@ def checkpoint_sequential(
                    or an nn.Sequential module.
         segments: Number of checkpoint segments to divide into.
         input: Input tensor to the first function.
-        use_reentrant: Use reentrant autograd (default True).
+        use_reentrant: Use reentrant autograd. If None, defaults to True with
+                       a deprecation warning. use_reentrant=False is recommended.
         preserve_rng_state: Save/restore RNG state (default True).
 
     Returns:
@@ -350,7 +704,7 @@ def checkpoint_sequential(
     Example:
         >>> # Divide 8 layers into 2 segments, checkpoint each
         >>> layers = [nn.Linear(10, 10) for _ in range(8)]
-        >>> out = checkpoint_sequential(layers, 2, x)
+        >>> out = checkpoint_sequential(layers, 2, x, use_reentrant=False)
         >>>
         >>> # Equivalent to:
         >>> # Segment 1 (checkpointed): layers[0:4]

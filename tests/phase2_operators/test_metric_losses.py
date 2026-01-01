@@ -80,7 +80,7 @@ class TestTripletMarginLoss(TestCase):
         torch_result = torch_F.triplet_margin_loss(torch_anchor, torch_positive, torch_negative, margin=1.0)
 
         np.testing.assert_allclose(
-            mlx_result.numpy(), torch_result.numpy(), rtol=1e-3, atol=1e-3
+            mlx_result.numpy(), torch_result.numpy(), rtol=1e-4, atol=1e-5
         )
 
 

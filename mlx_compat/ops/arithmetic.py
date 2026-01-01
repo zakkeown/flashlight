@@ -9,6 +9,7 @@ from typing import Union, Optional
 import mlx.core as mx
 
 from ..tensor import Tensor
+from ..distributions._constants import FLOAT32_TINY
 from ..dtype import get_dtype
 from ..autograd.function import (
     AddBackward, SubBackward, MulBackward, DivBackward,
@@ -882,7 +883,7 @@ def lgamma(input: Tensor) -> Tensor:
     # lgamma(x) = log(pi) - log(|sin(pi * x)|) - lgamma(1 - x)
     log_pi = mx.array(1.1447298858494002, dtype=mx.float32)  # log(pi)
     sin_pi_x = mx.sin(mx.array(3.141592653589793, dtype=mx.float32) * x)
-    log_sin_pi_x = mx.log(mx.abs(sin_pi_x) + mx.array(1e-38, dtype=mx.float32))
+    log_sin_pi_x = mx.log(mx.abs(sin_pi_x) + mx.array(FLOAT32_TINY, dtype=mx.float32))
 
     lgamma_negative = log_pi - log_sin_pi_x - lgamma_positive
 
@@ -959,7 +960,7 @@ def digamma(input: Tensor) -> Tensor:
     pi = mx.array(3.141592653589793, dtype=mx.float32)
     sin_pi_x = mx.sin(pi * x)
     cos_pi_x = mx.cos(pi * x)
-    cot_pi_x = cos_pi_x / (sin_pi_x + mx.array(1e-38, dtype=mx.float32))
+    cot_pi_x = cos_pi_x / (sin_pi_x + mx.array(FLOAT32_TINY, dtype=mx.float32))
 
     # Compute digamma(1-x) using the same shifted approach
     x_neg = 1.0 - x
@@ -1242,8 +1243,7 @@ def frexp(input: Tensor):
     abs_arr = mx.abs(arr)
 
     # Compute log2 for non-zero values (add tiny to avoid log(0))
-    tiny = mx.array(1e-45, dtype=mx.float32)
-    log2_val = mx.log2(mx.maximum(abs_arr, tiny))
+    log2_val = mx.log2(mx.maximum(abs_arr, mx.array(FLOAT32_TINY, dtype=mx.float32)))
 
     # Exponent: floor(log2(|x|)) + 1
     exponent = mx.floor(log2_val).astype(mx.int32) + 1

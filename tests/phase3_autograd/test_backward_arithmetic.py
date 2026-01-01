@@ -90,10 +90,8 @@ class TestSubBackward(TestCase):
         loss.backward()
 
         np.testing.assert_array_almost_equal(x.grad.numpy(), np.ones((2, 2)))
-        # Note: SubBackward doesn't properly handle unbroadcast - this is a known limitation
-        # The correct gradient should be [-2, -2] but current impl returns [[-1,-1],[-1,-1]]
-        # Skipping this assertion for now as it requires fixing SubBackward
-        # np.testing.assert_array_almost_equal(y.grad.numpy(), np.array([-2.0, -2.0]))
+        # SubBackward now properly handles unbroadcast - gradient for y is summed over broadcast dim
+        np.testing.assert_array_almost_equal(y.grad.numpy(), np.array([-2.0, -2.0]))
 
 
 @skipIfNoMLX

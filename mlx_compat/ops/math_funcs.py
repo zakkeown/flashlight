@@ -8,6 +8,7 @@ from typing import Optional, Union
 import mlx.core as mx
 from ..tensor import Tensor
 from ..autograd.context import is_grad_enabled
+from ..distributions._constants import FLOAT32_MAX
 
 
 def clamp(input: Tensor, min: Optional[float] = None, max: Optional[float] = None) -> Tensor:
@@ -719,18 +720,18 @@ def nan_to_num(input: Tensor, nan: float = 0.0, posinf: Optional[float] = None, 
     # Replace NaN
     result_array = mx.where(mx.isnan(result_array), nan, result_array)
 
-    # Replace positive infinity (float32 max ~= 3.4e38)
+    # Replace positive infinity with float32 max
     if posinf is None:
-        posinf = 3.4028235e+38
+        posinf = FLOAT32_MAX
     result_array = mx.where(
         mx.logical_and(mx.isinf(result_array), result_array > 0),
         posinf,
         result_array
     )
 
-    # Replace negative infinity (float32 min ~= -3.4e38)
+    # Replace negative infinity with negative float32 max
     if neginf is None:
-        neginf = -3.4028235e+38
+        neginf = -FLOAT32_MAX
     result_array = mx.where(
         mx.logical_and(mx.isinf(result_array), result_array < 0),
         neginf,
@@ -844,13 +845,13 @@ def nan_to_num_(input: Tensor, nan: float = 0.0, posinf: Optional[float] = None,
     result_array = input._mlx_array
     result_array = mx.where(mx.isnan(result_array), nan, result_array)
     if posinf is None:
-        posinf = 3.4028235e+38  # float32 max
+        posinf = FLOAT32_MAX
     result_array = mx.where(
         mx.logical_and(mx.isinf(result_array), result_array > 0),
         posinf, result_array
     )
     if neginf is None:
-        neginf = -3.4028235e+38  # float32 min
+        neginf = -FLOAT32_MAX
     result_array = mx.where(
         mx.logical_and(mx.isinf(result_array), result_array < 0),
         neginf, result_array

@@ -140,12 +140,13 @@ class TestPairwiseDistance(TestCase):
         self.assertEqual(output.shape, (4, 5))
 
     def test_same_vectors_zero_distance(self):
-        """Test PairwiseDistance with identical vectors gives near-zero."""
-        dist = mlx_compat.nn.PairwiseDistance(p=2.0)
+        """Test PairwiseDistance with identical vectors gives sqrt(eps)."""
+        dist = mlx_compat.nn.PairwiseDistance(p=2.0, eps=1e-6)
         x = mlx_compat.randn(4, 10)
         output = dist(x, x)
-        # Due to eps parameter, output won't be exactly zero
-        np.testing.assert_allclose(output.numpy(), np.zeros(4), rtol=1e-2, atol=1e-2)
+        # Due to eps parameter, output is sqrt(eps) = sqrt(1e-6) ≈ 1e-3
+        expected = np.full(4, np.sqrt(1e-6))
+        np.testing.assert_allclose(output.numpy(), expected, rtol=1e-5, atol=1e-6)
 
     def test_l1_distance(self):
         """Test PairwiseDistance with p=1 (Manhattan distance)."""

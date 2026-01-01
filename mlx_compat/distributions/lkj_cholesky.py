@@ -7,6 +7,7 @@ from ..tensor import Tensor
 from .distribution import Distribution
 from . import constraints
 from ..ops.special import betaln
+from ._constants import PROB_EPSILON
 
 
 class LKJCholesky(Distribution):
@@ -42,7 +43,7 @@ class LKJCholesky(Distribution):
             beta_sample = mx.random.beta(mx.array(alpha), mx.array(alpha), shape)
             # Sample uniformly on sphere using normal distribution
             z = mx.random.normal(shape + (i,))
-            z = z / mx.sqrt(mx.sum(z * z, axis=-1, keepdims=True) + 1e-10)
+            z = z / mx.sqrt(mx.sum(z * z, axis=-1, keepdims=True) + PROB_EPSILON)
             L = L.at[..., i, :i].add(z * mx.sqrt(beta_sample)[..., None])
             L = L.at[..., i, i].add(mx.sqrt(1 - beta_sample))
 
@@ -56,7 +57,7 @@ class LKJCholesky(Distribution):
 
         # Log probability of LKJ
         diag = mx.diagonal(data, axis1=-2, axis2=-1)
-        log_diag = mx.log(diag[..., 1:] + 1e-10)
+        log_diag = mx.log(diag[..., 1:] + PROB_EPSILON)
 
         # Sum of (d - i) * log(L_ii) for i = 2, ..., d
         weights = mx.arange(d - 1, 0, -1)

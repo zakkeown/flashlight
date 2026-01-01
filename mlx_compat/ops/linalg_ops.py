@@ -43,12 +43,91 @@ def _parse_transpose_pattern(equation: str) -> Optional[List[int]]:
     return perm
 
 
+def _sublist_to_equation(args) -> Tuple[str, Tuple[Tensor, ...]]:
+    """
+    Convert sublist format to equation string format.
+
+    Sublist format: einsum(op1, sublist1, op2, sublist2, ..., [output_sublist])
+    where sublists are lists of integers representing subscript indices.
+    Ellipsis (...) can be used for broadcasting dimensions.
+
+    Args:
+        args: Tuple of operands and sublists interleaved
+
+    Returns:
+        Tuple of (equation_string, operands_tuple)
+    """
+    # Parse alternating operands and sublists
+    operands = []
+    subscript_lists = []
+
+    i = 0
+    while i < len(args):
+        if isinstance(args[i], Tensor):
+            operands.append(args[i])
+            i += 1
+            # Next should be a subscript list
+            if i < len(args) and isinstance(args[i], (list, tuple)):
+                subscript_lists.append(args[i])
+                i += 1
+            else:
+                raise ValueError(f"Expected subscript list after operand at position {i-1}")
+        elif isinstance(args[i], (list, tuple)):
+            # This might be the output subscript list
+            subscript_lists.append(args[i])
+            i += 1
+        else:
+            raise ValueError(f"Unexpected argument type at position {i}: {type(args[i])}")
+
+    # Number of operand subscripts should be len(operands)
+    # If there's one extra subscript list, it's the output
+    if len(subscript_lists) == len(operands):
+        output_subscripts = None
+    elif len(subscript_lists) == len(operands) + 1:
+        output_subscripts = subscript_lists[-1]
+        subscript_lists = subscript_lists[:-1]
+    else:
+        raise ValueError(f"Got {len(subscript_lists)} subscript lists for {len(operands)} operands")
+
+    # Convert integer subscripts to letters
+    # Integers 0-25 map to a-z, 26-51 map to A-Z
+    def int_to_letter(n: int) -> str:
+        if n < 0 or n >= 52:
+            raise ValueError(f"Subscript index {n} out of range [0, 52)")
+        if n < 26:
+            return chr(ord('a') + n)
+        else:
+            return chr(ord('A') + n - 26)
+
+    def subscripts_to_str(subscripts) -> str:
+        """Convert a subscript list to a string, handling ellipsis."""
+        result = []
+        for s in subscripts:
+            if s is Ellipsis or s is ...:
+                result.append('...')
+            elif isinstance(s, int):
+                result.append(int_to_letter(s))
+            else:
+                raise ValueError(f"Invalid subscript element: {s}")
+        return ''.join(result)
+
+    # Build equation string
+    input_parts = [subscripts_to_str(sl) for sl in subscript_lists]
+    equation = ','.join(input_parts)
+
+    if output_subscripts is not None:
+        equation += '->' + subscripts_to_str(output_subscripts)
+
+    return equation, tuple(operands)
+
+
 def einsum(*args) -> Tensor:
     """
     Evaluates the Einstein summation convention on the operands.
 
     Args:
-        *args: Either (equation, *operands) or (*operands) with equation from sublist
+        *args: Either (equation, *operands) for string format, or
+               (op1, sublist1, op2, sublist2, ..., [output_sublist]) for sublist format
 
     Returns:
         The calculated tensor
@@ -56,7 +135,10 @@ def einsum(*args) -> Tensor:
     Example:
         >>> a = mlx_compat.randn(3, 4)
         >>> b = mlx_compat.randn(4, 5)
+        >>> # String format
         >>> c = mlx_compat.einsum('ij,jk->ik', a, b)  # matrix multiplication
+        >>> # Sublist format
+        >>> c = mlx_compat.einsum(a, [0, 1], b, [1, 2], [0, 2])  # same operation
     """
     # Parse args - first arg is either equation or a tensor
     if len(args) == 0:
@@ -68,7 +150,7 @@ def einsum(*args) -> Tensor:
         operands = args[1:]
     else:
         # Sublist format: operands with subscripts embedded
-        raise NotImplementedError("Sublist format for einsum not yet supported")
+        equation, operands = _sublist_to_equation(args)
 
     # Optimization: detect simple transpose patterns and use mx.transpose()
     # This avoids the overhead of the full einsum contraction engine

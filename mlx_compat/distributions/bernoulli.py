@@ -6,6 +6,7 @@ import mlx.core as mx
 from ..tensor import Tensor
 from .exp_family import ExponentialFamily
 from . import constraints
+from ._constants import xlogy
 
 
 class Bernoulli(ExponentialFamily):
@@ -63,7 +64,9 @@ class Bernoulli(ExponentialFamily):
         return Tensor(log_prob)
 
     def entropy(self) -> Tensor:
-        return Tensor(-self.probs * mx.log(self.probs + 1e-8) - (1 - self.probs) * mx.log(1 - self.probs + 1e-8))
+        # Use xlogy for numerical stability: xlogy(p, p) = 0 when p = 0
+        p = self.probs
+        return Tensor(-xlogy(p, p) - xlogy(1 - p, 1 - p))
 
     def enumerate_support(self, expand: bool = True) -> Tensor:
         values = mx.array([0.0, 1.0])

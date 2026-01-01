@@ -50,6 +50,9 @@ def erfc(input: Tensor, *, out: Optional[Tensor] = None) -> Tensor:
     """
     Compute the complementary error function.
 
+    Uses asymptotic expansion for large positive x to avoid precision loss
+    from computing 1 - erf(x) when erf(x) is very close to 1.
+
     Args:
         input: Input tensor
         out: Output tensor (ignored in MLX)
@@ -58,7 +61,40 @@ def erfc(input: Tensor, *, out: Optional[Tensor] = None) -> Tensor:
         Complementary error function values (1 - erf(x))
     """
     data = _to_mlx(input)
-    result = mx.array(1.0) - mx.erf(data)
+
+    # For small |x|, direct computation works well
+    # For large positive x, use asymptotic: erfc(x) ~ exp(-x^2) / (x * sqrt(pi)) * series
+    # For large negative x, use erfc(-x) = 2 - erfc(x)
+    # Threshold of 3.5 is chosen because MLX's erf saturates to 1.0 around x=4
+    # causing 1-erf(x) to return 0. Asymptotic is accurate for x > 3.
+    threshold = 3.5
+
+    # Direct computation for moderate values
+    direct_result = mx.array(1.0) - mx.erf(data)
+
+    # Asymptotic expansion for large positive x
+    # erfc(x) ~ exp(-x^2) / (sqrt(pi) * x) * (1 - 1/(2x^2) + 3/(2x^2)^2 - ...)
+    x = mx.maximum(mx.abs(data), 1e-10)  # Avoid division by zero
+    x2 = x * x
+    inv_2x2 = 0.5 / x2
+
+    # Asymptotic series coefficients: (-1)^n * (2n-1)!! / (2x^2)^n
+    inv_sqrt_pi = 0.5641895835477563  # 1/sqrt(pi)
+    series = (1.0
+              - inv_2x2 * (1.0
+              - inv_2x2 * (3.0
+              - inv_2x2 * (15.0
+              - inv_2x2 * (105.0
+              - inv_2x2 * (945.0
+              - inv_2x2 * 10395.0))))))
+
+    # erfc(x) = exp(-x^2) * (1/(sqrt(pi)*x)) * series
+    asymptotic_result = mx.exp(-x2) * inv_sqrt_pi / x * series
+
+    # Use asymptotic only for large positive x
+    use_asymptotic = (data > threshold)
+    result = mx.where(use_asymptotic, asymptotic_result, direct_result)
+
     return _to_tensor(result)
 
 
@@ -77,34 +113,40 @@ def erfcx(input: Tensor, *, out: Optional[Tensor] = None) -> Tensor:
     """
     data = _to_mlx(input)
 
-    # For small x, use direct computation
-    # For large x, use asymptotic expansion to avoid overflow/underflow
-    # erfcx(x) ~ 1/(sqrt(pi) * x) * (1 - 1/(2*x^2) + 3/(4*x^4) - ...)
+    # For small |x|, use direct computation
+    # For large positive x, use asymptotic expansion to avoid overflow
+    # For negative x, use reflection: erfcx(-x) = 2*exp(x^2) - erfcx(x)
 
+    # Threshold where asymptotic expansion becomes accurate (|x| > 4)
     threshold = 4.0
     small_x = mx.abs(data) < threshold
 
-    # Direct computation for small x
+    # Direct computation for small |x| - this works well in the range [-4, 4]
     direct_result = mx.exp(data * data) * (mx.array(1.0) - mx.erf(data))
 
     # Asymptotic expansion for large positive x
-    # erfcx(x) ~ 1/(sqrt(pi) * x) * sum_{n=0}^{inf} (-1)^n * (2n-1)!! / (2*x^2)^n
+    # erfcx(x) ~ 1/(sqrt(pi) * x) * sum_{n=0}^{N} (-1)^n * (2n-1)!! / (2*x^2)^n
+    # Coefficients: 1, -1/2, 3/4, -15/8, 105/16, -945/32, 10395/64, ...
     x = mx.abs(data)
     x2 = x * x
-    inv_x2 = 1.0 / (x2 + 1e-10)  # avoid division by zero
+    inv_2x2 = 0.5 / x2  # 1/(2*x^2)
 
-    # Compute asymptotic series: 1/(sqrt(pi) * x) * (1 - 0.5/x^2 + 0.75/x^4 - ...)
-    sqrt_pi = 1.7724538509055159
+    # More terms in the asymptotic series for better accuracy
+    # (2n-1)!! = 1, 1, 3, 15, 105, 945, 10395, 135135, ...
+    inv_sqrt_pi = 0.5641895835477563  # 1/sqrt(pi)
     series = (1.0
-              - 0.5 * inv_x2
-              + 0.75 * inv_x2 * inv_x2
-              - 1.875 * inv_x2 * inv_x2 * inv_x2
-              + 6.5625 * inv_x2 * inv_x2 * inv_x2 * inv_x2)
-    asymptotic_result = series / (sqrt_pi * x + 1e-10)
+              - inv_2x2 * (1.0
+              - inv_2x2 * (3.0
+              - inv_2x2 * (15.0
+              - inv_2x2 * (105.0
+              - inv_2x2 * (945.0
+              - inv_2x2 * 10395.0))))))
+    asymptotic_result = inv_sqrt_pi / x * series
 
     result = mx.where(small_x, direct_result, asymptotic_result)
-    # For negative x, erfcx(-x) = 2*exp(x^2) - erfcx(x), but this overflows
-    # Just use direct computation for negative x since erfc(-x) = 2 - erfc(x) ≈ 2
+
+    # For negative x, use the direct computation which handles this correctly
+    # (erfc(-x) = 2 - erfc(x), and exp(x^2) grows, but the product is stable)
     result = mx.where(data < 0, direct_result, result)
 
     return _to_tensor(result)
@@ -198,8 +240,9 @@ def _digamma_mlx(x: mx.array) -> mx.array:
     Uses asymptotic expansion for large x and recurrence relation for small x.
     psi(x) = psi(x+n) - sum_{k=0}^{n-1} 1/(x+k) for shifting to large x region.
     """
-    # Shift x to be >= 6 for better convergence of asymptotic expansion
-    min_x = 6.0
+    # Shift x to be >= 10 for better convergence of asymptotic expansion
+    # Higher threshold gives better accuracy (was 8, now 10)
+    min_x = 10.0
 
     # Calculate how much we need to shift
     n = mx.maximum(mx.ceil(min_x - x), mx.zeros_like(x))
@@ -207,14 +250,26 @@ def _digamma_mlx(x: mx.array) -> mx.array:
     x_shifted = x + n.astype(mx.float32)
 
     # Asymptotic expansion for large x:
-    # psi(x) ~ ln(x) - 1/(2x) - 1/(12x^2) + 1/(120x^4) - 1/(252x^6) + ...
-    # Bernoulli numbers: B2=1/6, B4=-1/30, B6=1/42, B8=-1/30, ...
+    # psi(x) ~ ln(x) - 1/(2x) - sum_{k=1}^{N} B_{2k}/(2k * x^{2k})
+    # where B_{2k} are Bernoulli numbers:
+    # B2=1/6, B4=-1/30, B6=1/42, B8=-1/30, B10=5/66, B12=-691/2730, B14=7/6
     inv_x = 1.0 / x_shifted
     inv_x2 = inv_x * inv_x
 
-    # Use first few terms of asymptotic expansion
+    # Extended asymptotic expansion with 7 Bernoulli terms for improved accuracy
+    # Coefficients: B_{2k}/(2k) for k=1..7
+    # B2/2=1/12, B4/4=-1/120, B6/6=1/252, B8/8=-1/240, B10/10=1/132,
+    # B12/12=-691/32760, B14/14=1/12
     result = mx.log(x_shifted) - 0.5 * inv_x
-    result = result - inv_x2 * (1.0/12.0 - inv_x2 * (1.0/120.0 - inv_x2 * (1.0/252.0)))
+    result = result - inv_x2 * (
+        1.0/12.0
+        - inv_x2 * (1.0/120.0
+        - inv_x2 * (1.0/252.0
+        - inv_x2 * (1.0/240.0
+        - inv_x2 * (1.0/132.0
+        - inv_x2 * (691.0/32760.0
+        - inv_x2 * (1.0/12.0))))))
+    )
 
     # Apply recurrence relation to shift back: psi(x) = psi(x+n) - sum 1/(x+k)
     # We need to subtract sum_{k=0}^{n-1} 1/(x+k)
@@ -343,11 +398,13 @@ def multigammaln(input: Tensor, p: int, *, out: Optional[Tensor] = None) -> Tens
     return _to_tensor(result)
 
 
-def _gammainc_series(a: mx.array, x: mx.array, max_iter: int = 200) -> mx.array:
+def _gammainc_series(a: mx.array, x: mx.array, max_iter: int = 300) -> mx.array:
     """
     Compute lower incomplete gamma using series expansion.
     P(a,x) = (x^a * e^-x / Gamma(a)) * sum_{n=0}^{inf} x^n / (a+1)...(a+n)
     Good for x < a + 1.
+
+    Increased max_iter from 200 to 300 for better convergence with large a.
     """
     # Series: sum_{n=0}^{inf} x^n / [(a+1)(a+2)...(a+n)]
     term = mx.ones_like(x)
@@ -356,11 +413,12 @@ def _gammainc_series(a: mx.array, x: mx.array, max_iter: int = 200) -> mx.array:
     for n in range(1, max_iter):
         term = term * x / (a + float(n))
         sum_val = sum_val + term
-        # Early termination check would go here in a more sophisticated implementation
 
     # P(a,x) = x^a * exp(-x) * sum / Gamma(a+1)
     # But Gamma(a+1) = a * Gamma(a), so we use exp(a*log(x) - x - lgamma(a+1))
-    log_prefix = a * mx.log(x) - x - _gammaln_mlx(a + 1.0)
+    # Use mx.maximum to avoid log(0) for very small x
+    safe_x = mx.maximum(x, 1e-38)
+    log_prefix = a * mx.log(safe_x) - x - _gammaln_mlx(a + 1.0)
     result = mx.exp(log_prefix) * sum_val
 
     # Handle x = 0 case
@@ -369,22 +427,25 @@ def _gammainc_series(a: mx.array, x: mx.array, max_iter: int = 200) -> mx.array:
     return result
 
 
-def _gammainc_cf(a: mx.array, x: mx.array, max_iter: int = 200) -> mx.array:
+def _gammainc_cf(a: mx.array, x: mx.array, max_iter: int = 300) -> mx.array:
     """
-    Compute upper incomplete gamma using continued fraction.
+    Compute upper incomplete gamma using continued fraction (Lentz's algorithm).
     Q(a,x) = (x^a * e^-x / Gamma(a)) * CF
     Good for x >= a + 1.
     Returns 1 - P(a,x).
-    """
-    # Lentz's algorithm for continued fraction
-    # Q(a,x) = x^a * e^-x / Gamma(a) * 1/(x + (1-a)/(1 + 1/(x + (2-a)/(1 + 2/(x + ...
 
+    Increased max_iter from 200 to 300 for better convergence.
+    Uses modified Lentz's algorithm with underflow protection.
+    """
+    # Modified Lentz's algorithm for continued fraction
     tiny = 1e-30
+    eps = 1e-10  # Convergence threshold
 
     # Initialize
     b = x + 1.0 - a
     c = 1.0 / tiny
-    d = 1.0 / b
+    d = 1.0 / mx.maximum(mx.abs(b), tiny)
+    d = mx.where(b < 0, -d, d)  # Preserve sign
     h = d
 
     for i in range(1, max_iter):
@@ -1066,7 +1127,10 @@ def softmax(input: Tensor, dim: int, *, dtype=None) -> Tensor:
 
 def log_softmax(input: Tensor, dim: int, *, dtype=None) -> Tensor:
     """
-    Compute log softmax.
+    Compute log softmax in a numerically stable way.
+
+    Uses MLX's fused logsumexp for better numerical stability and performance.
+    log_softmax(x) = x - logsumexp(x)
 
     Args:
         input: Input tensor
@@ -1077,11 +1141,8 @@ def log_softmax(input: Tensor, dim: int, *, dtype=None) -> Tensor:
         Log softmax values
     """
     data = _to_mlx(input)
-    # log_softmax = x - logsumexp(x)
-    max_val = mx.max(data, axis=dim, keepdims=True)
-    exp_data = mx.exp(data - max_val)
-    sum_exp = mx.sum(exp_data, axis=dim, keepdims=True)
-    result = data - max_val - mx.log(sum_exp)
+    # Use MLX's fused logsumexp (numerically stable and efficient)
+    result = data - mx.logsumexp(data, axis=dim, keepdims=True)
     return _to_tensor(result)
 
 

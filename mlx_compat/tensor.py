@@ -134,9 +134,26 @@ class Tensor:
             if dtype is None:
                 dtype = data.dtype
         elif isinstance(data, np.ndarray):
+            # Warn if numpy float64 is being silently downgraded to float32
+            if data.dtype == np.float64 and dtype is None:
+                warnings.warn(
+                    "numpy float64 array is being converted to float32 because MLX "
+                    "does not support float64. This may result in reduced precision.",
+                    UserWarning,
+                    stacklevel=2
+                )
             self._mlx_array = mx.array(data)
         elif hasattr(data, '__array__'):  # NumPy-like array interface
-            self._mlx_array = mx.array(np.array(data))
+            np_data = np.array(data)
+            # Warn if float64 is being silently downgraded to float32
+            if np_data.dtype == np.float64 and dtype is None:
+                warnings.warn(
+                    "float64 array is being converted to float32 because MLX "
+                    "does not support float64. This may result in reduced precision.",
+                    UserWarning,
+                    stacklevel=2
+                )
+            self._mlx_array = mx.array(np_data)
         else:
             # List, tuple, scalar, or MLX array
             self._mlx_array = mx.array(data)

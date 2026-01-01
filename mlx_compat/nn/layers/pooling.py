@@ -663,11 +663,12 @@ class AdaptiveMaxPool1d(Module):
 
     Args:
         output_size: Target output size
-        return_indices: Whether to return indices (not supported)
+        return_indices: Whether to return indices of max values
 
     Shape:
         - Input: [N, C, L]
         - Output: [N, C, output_size]
+        - Indices (if return_indices=True): [N, C, output_size]
     """
 
     def __init__(self, output_size: int, return_indices: bool = False):
@@ -675,37 +676,67 @@ class AdaptiveMaxPool1d(Module):
         self.output_size = _single(output_size)
         self.return_indices = return_indices
 
-        if return_indices:
-            raise NotImplementedError("return_indices is not supported")
+    def forward(self, input: Tensor):
+        """Apply adaptive max pooling.
 
-    def forward(self, input: Tensor) -> Tensor:
-        """Apply adaptive max pooling."""
+        Returns:
+            If return_indices is False: Output tensor of shape [N, C, output_size]
+            If return_indices is True: Tuple of (output, indices)
+        """
         x = input._mlx_array
         N, C, L = x.shape
         out_size = self.output_size
 
         if out_size == L:
+            # Identity case
+            if self.return_indices:
+                indices_array = mx.broadcast_to(
+                    mx.arange(L).reshape(1, 1, L),
+                    (N, C, L)
+                )
+                return input, Tensor._from_mlx_array(indices_array.astype(mx.int64))
             return input
         elif out_size == 1:
             result = mx.max(x, axis=2, keepdims=True)
+            if self.return_indices:
+                indices = mx.argmax(x, axis=2, keepdims=True)
+                return Tensor._from_mlx_array(result), Tensor._from_mlx_array(indices.astype(mx.int64))
+            return Tensor._from_mlx_array(result)
         else:
-            stride = L // out_size
-            kernel_size = L - (out_size - 1) * stride
+            # Compute adaptive pooling regions
+            outputs = []
+            indices_list = []
 
-            # Convert NCL to NLC (channel last) for MLX
-            x_nlc = mx.transpose(x, [0, 2, 1])
+            for i in range(out_size):
+                # Compute start and end indices for this output position
+                start = (i * L) // out_size
+                end = ((i + 1) * L) // out_size
 
-            # Use MLX MaxPool1d
-            pool = mxnn.MaxPool1d(kernel_size=kernel_size, stride=stride, padding=0)
-            result = pool(x_nlc)
+                # Extract the region and find max
+                region = x[:, :, start:end]  # [N, C, region_size]
+                max_vals = mx.max(region, axis=2, keepdims=True)  # [N, C, 1]
+                outputs.append(max_vals)
 
-            # Convert back to NCL
-            result = mx.transpose(result, [0, 2, 1])
+                if self.return_indices:
+                    # Find the indices of max values (relative to region)
+                    region_argmax = mx.argmax(region, axis=2, keepdims=True)  # [N, C, 1]
+                    # Convert to absolute indices in the input
+                    abs_indices = region_argmax + start
+                    indices_list.append(abs_indices)
 
-        return Tensor._from_mlx_array(result)
+            # Concatenate outputs
+            output_array = mx.concatenate(outputs, axis=2)  # [N, C, output_size]
+            result = Tensor._from_mlx_array(output_array)
+
+            if self.return_indices:
+                indices_array = mx.concatenate(indices_list, axis=2)  # [N, C, output_size]
+                indices = Tensor._from_mlx_array(indices_array.astype(mx.int64))
+                return result, indices
+
+            return result
 
     def extra_repr(self) -> str:
-        return f'output_size={self.output_size}'
+        return f'output_size={self.output_size}, return_indices={self.return_indices}'
 
 
 class AdaptiveMaxPool2d(Module):
@@ -716,11 +747,12 @@ class AdaptiveMaxPool2d(Module):
 
     Args:
         output_size: Target output size (H, W) or single int for square
-        return_indices: Whether to return indices (not supported)
+        return_indices: Whether to return indices of max values
 
     Shape:
         - Input: [N, C, H, W]
         - Output: [N, C, output_size[0], output_size[1]]
+        - Indices (if return_indices=True): [N, C, output_size[0], output_size[1]]
     """
 
     def __init__(
@@ -732,39 +764,94 @@ class AdaptiveMaxPool2d(Module):
         self.output_size = _pair(output_size)
         self.return_indices = return_indices
 
-        if return_indices:
-            raise NotImplementedError("return_indices is not supported")
+    def forward(self, input: Tensor):
+        """Apply adaptive max pooling.
 
-    def forward(self, input: Tensor) -> Tensor:
-        """Apply adaptive max pooling."""
+        Returns:
+            If return_indices is False: Output tensor of shape [N, C, out_H, out_W]
+            If return_indices is True: Tuple of (output, indices)
+        """
         x = input._mlx_array
         N, C, H, W = x.shape
         out_H, out_W = self.output_size
 
         if out_H == H and out_W == W:
+            # Identity case
+            if self.return_indices:
+                # Create indices grid: flattened H*W indices
+                h_indices = mx.arange(H).reshape(1, 1, H, 1)
+                w_indices = mx.arange(W).reshape(1, 1, 1, W)
+                indices_array = h_indices * W + w_indices
+                indices_array = mx.broadcast_to(indices_array, (N, C, H, W))
+                return input, Tensor._from_mlx_array(indices_array.astype(mx.int64))
             return input
         elif out_H == 1 and out_W == 1:
             result = mx.max(x, axis=(2, 3), keepdims=True)
+            if self.return_indices:
+                # Flatten spatial dims and find argmax
+                x_flat = mx.reshape(x, (N, C, -1))  # [N, C, H*W]
+                indices = mx.argmax(x_flat, axis=2, keepdims=True)  # [N, C, 1]
+                indices = mx.reshape(indices, (N, C, 1, 1))  # [N, C, 1, 1]
+                return Tensor._from_mlx_array(result), Tensor._from_mlx_array(indices.astype(mx.int64))
+            return Tensor._from_mlx_array(result)
         else:
-            stride_h = H // out_H
-            stride_w = W // out_W
-            kernel_h = H - (out_H - 1) * stride_h
-            kernel_w = W - (out_W - 1) * stride_w
+            # Compute adaptive pooling regions
+            outputs = []
+            indices_list = []
 
-            # Convert NCHW to NHWC
-            x_nhwc = mx.transpose(x, [0, 2, 3, 1])
+            for i in range(out_H):
+                h_start = (i * H) // out_H
+                h_end = ((i + 1) * H) // out_H
+                row_outputs = []
+                row_indices = []
 
-            # Use MLX MaxPool2d
-            pool = mxnn.MaxPool2d(kernel_size=(kernel_h, kernel_w), stride=(stride_h, stride_w), padding=0)
-            result = pool(x_nhwc)
+                for j in range(out_W):
+                    w_start = (j * W) // out_W
+                    w_end = ((j + 1) * W) // out_W
 
-            # Convert back to NCHW
-            result = mx.transpose(result, [0, 3, 1, 2])
+                    # Extract the region and find max
+                    region = x[:, :, h_start:h_end, w_start:w_end]  # [N, C, region_h, region_w]
+                    max_vals = mx.max(region, axis=(2, 3), keepdims=True)  # [N, C, 1, 1]
+                    row_outputs.append(max_vals)
 
-        return Tensor._from_mlx_array(result)
+                    if self.return_indices:
+                        # Flatten region and find argmax
+                        region_h = h_end - h_start
+                        region_w = w_end - w_start
+                        region_flat = mx.reshape(region, (N, C, -1))  # [N, C, region_h * region_w]
+                        local_argmax = mx.argmax(region_flat, axis=2)  # [N, C]
+
+                        # Convert local index to (local_h, local_w)
+                        local_h = local_argmax // region_w
+                        local_w = local_argmax % region_w
+
+                        # Convert to global flat index in original H*W space
+                        global_h = h_start + local_h
+                        global_w = w_start + local_w
+                        global_idx = global_h * W + global_w  # [N, C]
+                        global_idx = mx.reshape(global_idx, (N, C, 1, 1))
+                        row_indices.append(global_idx)
+
+                # Concatenate along width dimension
+                row_output = mx.concatenate(row_outputs, axis=3)  # [N, C, 1, out_W]
+                outputs.append(row_output)
+                if self.return_indices:
+                    row_idx = mx.concatenate(row_indices, axis=3)  # [N, C, 1, out_W]
+                    indices_list.append(row_idx)
+
+            # Concatenate along height dimension
+            output_array = mx.concatenate(outputs, axis=2)  # [N, C, out_H, out_W]
+            result = Tensor._from_mlx_array(output_array)
+
+            if self.return_indices:
+                indices_array = mx.concatenate(indices_list, axis=2)  # [N, C, out_H, out_W]
+                indices = Tensor._from_mlx_array(indices_array.astype(mx.int64))
+                return result, indices
+
+            return result
 
     def extra_repr(self) -> str:
-        return f'output_size={self.output_size}'
+        return f'output_size={self.output_size}, return_indices={self.return_indices}'
 
 
 class AdaptiveMaxPool3d(Module):
@@ -775,11 +862,12 @@ class AdaptiveMaxPool3d(Module):
 
     Args:
         output_size: Target output size (D, H, W) or single int for cube
-        return_indices: Whether to return indices (not supported)
+        return_indices: Whether to return indices of max values
 
     Shape:
         - Input: [N, C, D, H, W]
         - Output: [N, C, output_size[0], output_size[1], output_size[2]]
+        - Indices (if return_indices=True): [N, C, output_size[0], output_size[1], output_size[2]]
     """
 
     def __init__(
@@ -791,49 +879,112 @@ class AdaptiveMaxPool3d(Module):
         self.output_size = _triple(output_size)
         self.return_indices = return_indices
 
-        if return_indices:
-            raise NotImplementedError("return_indices is not supported")
+    def forward(self, input: Tensor):
+        """Apply adaptive max pooling.
 
-    def forward(self, input: Tensor) -> Tensor:
-        """Apply adaptive max pooling."""
+        Returns:
+            If return_indices is False: Output tensor of shape [N, C, out_D, out_H, out_W]
+            If return_indices is True: Tuple of (output, indices)
+        """
         x = input._mlx_array
         N, C, D, H, W = x.shape
         out_D, out_H, out_W = self.output_size
 
         if out_D == D and out_H == H and out_W == W:
+            # Identity case
+            if self.return_indices:
+                # Create indices grid: flattened D*H*W indices
+                d_indices = mx.arange(D).reshape(1, 1, D, 1, 1)
+                h_indices = mx.arange(H).reshape(1, 1, 1, H, 1)
+                w_indices = mx.arange(W).reshape(1, 1, 1, 1, W)
+                indices_array = d_indices * (H * W) + h_indices * W + w_indices
+                indices_array = mx.broadcast_to(indices_array, (N, C, D, H, W))
+                return input, Tensor._from_mlx_array(indices_array.astype(mx.int64))
             return input
         elif out_D == 1 and out_H == 1 and out_W == 1:
             result = mx.max(x, axis=(2, 3, 4), keepdims=True)
+            if self.return_indices:
+                # Flatten spatial dims and find argmax
+                x_flat = mx.reshape(x, (N, C, -1))  # [N, C, D*H*W]
+                indices = mx.argmax(x_flat, axis=2, keepdims=True)  # [N, C, 1]
+                indices = mx.reshape(indices, (N, C, 1, 1, 1))  # [N, C, 1, 1, 1]
+                return Tensor._from_mlx_array(result), Tensor._from_mlx_array(indices.astype(mx.int64))
+            return Tensor._from_mlx_array(result)
         else:
-            x_ndhwc = mx.transpose(x, [0, 2, 3, 4, 1])
-
-            stride_d = D // out_D
-            stride_h = H // out_H
-            stride_w = W // out_W
-            kernel_h = H - (out_H - 1) * stride_h
-            kernel_w = W - (out_W - 1) * stride_w
-
-            # Create MLX 2D max pool for H,W pooling
-            pool_2d = mxnn.MaxPool2d(kernel_size=(kernel_h, kernel_w), stride=(stride_h, stride_w), padding=0)
-
+            # Compute adaptive pooling regions
             outputs = []
-            for d in range(out_D):
-                d_start = d * stride_d
-                d_end = D if d == out_D - 1 else (d + 1) * stride_d
-                slice_d = x_ndhwc[:, d_start:d_end, :, :, :]
-                pooled_d = mx.max(slice_d, axis=1, keepdims=True)
+            indices_list = []
 
-                # Pool H and W using mxnn.MaxPool2d
-                pooled_hw = pool_2d(mx.squeeze(pooled_d, axis=1))
-                outputs.append(mx.expand_dims(pooled_hw, axis=1))
+            for di in range(out_D):
+                d_start = (di * D) // out_D
+                d_end = ((di + 1) * D) // out_D
+                depth_outputs = []
+                depth_indices = []
 
-            result = mx.concatenate(outputs, axis=1)
-            result = mx.transpose(result, [0, 4, 1, 2, 3])
+                for hi in range(out_H):
+                    h_start = (hi * H) // out_H
+                    h_end = ((hi + 1) * H) // out_H
+                    row_outputs = []
+                    row_indices = []
 
-        return Tensor._from_mlx_array(result)
+                    for wi in range(out_W):
+                        w_start = (wi * W) // out_W
+                        w_end = ((wi + 1) * W) // out_W
+
+                        # Extract the region and find max
+                        region = x[:, :, d_start:d_end, h_start:h_end, w_start:w_end]
+                        max_vals = mx.max(region, axis=(2, 3, 4), keepdims=True)  # [N, C, 1, 1, 1]
+                        row_outputs.append(max_vals)
+
+                        if self.return_indices:
+                            # Flatten region and find argmax
+                            region_d = d_end - d_start
+                            region_h = h_end - h_start
+                            region_w = w_end - w_start
+                            region_flat = mx.reshape(region, (N, C, -1))  # [N, C, region_d * region_h * region_w]
+                            local_argmax = mx.argmax(region_flat, axis=2)  # [N, C]
+
+                            # Convert local index to (local_d, local_h, local_w)
+                            local_d = local_argmax // (region_h * region_w)
+                            remainder = local_argmax % (region_h * region_w)
+                            local_h = remainder // region_w
+                            local_w = remainder % region_w
+
+                            # Convert to global flat index in original D*H*W space
+                            global_d = d_start + local_d
+                            global_h = h_start + local_h
+                            global_w = w_start + local_w
+                            global_idx = global_d * (H * W) + global_h * W + global_w  # [N, C]
+                            global_idx = mx.reshape(global_idx, (N, C, 1, 1, 1))
+                            row_indices.append(global_idx)
+
+                    # Concatenate along width dimension
+                    row_output = mx.concatenate(row_outputs, axis=4)  # [N, C, 1, 1, out_W]
+                    depth_outputs.append(row_output)
+                    if self.return_indices:
+                        row_idx = mx.concatenate(row_indices, axis=4)  # [N, C, 1, 1, out_W]
+                        depth_indices.append(row_idx)
+
+                # Concatenate along height dimension
+                depth_output = mx.concatenate(depth_outputs, axis=3)  # [N, C, 1, out_H, out_W]
+                outputs.append(depth_output)
+                if self.return_indices:
+                    depth_idx = mx.concatenate(depth_indices, axis=3)  # [N, C, 1, out_H, out_W]
+                    indices_list.append(depth_idx)
+
+            # Concatenate along depth dimension
+            output_array = mx.concatenate(outputs, axis=2)  # [N, C, out_D, out_H, out_W]
+            result = Tensor._from_mlx_array(output_array)
+
+            if self.return_indices:
+                indices_array = mx.concatenate(indices_list, axis=2)  # [N, C, out_D, out_H, out_W]
+                indices = Tensor._from_mlx_array(indices_array.astype(mx.int64))
+                return result, indices
+
+            return result
 
     def extra_repr(self) -> str:
-        return f'output_size={self.output_size}'
+        return f'output_size={self.output_size}, return_indices={self.return_indices}'
 
 
 class LPPool1d(Module):

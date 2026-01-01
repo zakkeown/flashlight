@@ -889,5 +889,522 @@ class TestGridSample3DParity:
         np.testing.assert_allclose(out_torch.numpy(), 0.0, atol=1e-6)
 
 
+@pytest.mark.skipif(not TORCH_AVAILABLE, reason="PyTorch required for parity tests")
+class TestInterpolateParity:
+    """Parity tests for interpolation functions."""
+
+    # =====================================================
+    # Nearest Interpolation Tests (3D, 4D, 5D)
+    # =====================================================
+
+    def test_nearest_3d_upsample(self):
+        """Test nearest interpolation upsampling for 3D input (NCL)."""
+        x_np = np.random.randn(2, 3, 8).astype(np.float32)
+        x_torch = torch.tensor(x_np)
+        x_mlx = mlx_compat.tensor(x_np)
+
+        out_torch = F_torch.interpolate(x_torch, size=(16,), mode='nearest')
+        out_mlx = F_mlx.interpolate(x_mlx, size=(16,), mode='nearest')
+
+        assert out_mlx.shape == (2, 3, 16)
+        np.testing.assert_allclose(
+            out_torch.numpy(),
+            out_mlx.numpy(),
+            rtol=1e-5, atol=1e-6
+        )
+
+    def test_nearest_3d_downsample(self):
+        """Test nearest interpolation downsampling for 3D input (NCL)."""
+        x_np = np.random.randn(2, 3, 16).astype(np.float32)
+        x_torch = torch.tensor(x_np)
+        x_mlx = mlx_compat.tensor(x_np)
+
+        out_torch = F_torch.interpolate(x_torch, size=(8,), mode='nearest')
+        out_mlx = F_mlx.interpolate(x_mlx, size=(8,), mode='nearest')
+
+        assert out_mlx.shape == (2, 3, 8)
+        np.testing.assert_allclose(
+            out_torch.numpy(),
+            out_mlx.numpy(),
+            rtol=1e-5, atol=1e-6
+        )
+
+    def test_nearest_4d_upsample(self):
+        """Test nearest interpolation upsampling for 4D input (NCHW)."""
+        x_np = np.random.randn(2, 3, 8, 8).astype(np.float32)
+        x_torch = torch.tensor(x_np)
+        x_mlx = mlx_compat.tensor(x_np)
+
+        out_torch = F_torch.interpolate(x_torch, size=(16, 16), mode='nearest')
+        out_mlx = F_mlx.interpolate(x_mlx, size=(16, 16), mode='nearest')
+
+        assert out_mlx.shape == (2, 3, 16, 16)
+        np.testing.assert_allclose(
+            out_torch.numpy(),
+            out_mlx.numpy(),
+            rtol=1e-5, atol=1e-6
+        )
+
+    def test_nearest_4d_downsample(self):
+        """Test nearest interpolation downsampling for 4D input (NCHW)."""
+        x_np = np.random.randn(2, 3, 16, 16).astype(np.float32)
+        x_torch = torch.tensor(x_np)
+        x_mlx = mlx_compat.tensor(x_np)
+
+        out_torch = F_torch.interpolate(x_torch, size=(8, 8), mode='nearest')
+        out_mlx = F_mlx.interpolate(x_mlx, size=(8, 8), mode='nearest')
+
+        assert out_mlx.shape == (2, 3, 8, 8)
+        np.testing.assert_allclose(
+            out_torch.numpy(),
+            out_mlx.numpy(),
+            rtol=1e-5, atol=1e-6
+        )
+
+    def test_nearest_5d_upsample(self):
+        """Test nearest interpolation upsampling for 5D input (NCDHW)."""
+        x_np = np.random.randn(2, 3, 4, 8, 8).astype(np.float32)
+        x_torch = torch.tensor(x_np)
+        x_mlx = mlx_compat.tensor(x_np)
+
+        out_torch = F_torch.interpolate(x_torch, size=(8, 16, 16), mode='nearest')
+        out_mlx = F_mlx.interpolate(x_mlx, size=(8, 16, 16), mode='nearest')
+
+        assert out_mlx.shape == (2, 3, 8, 16, 16)
+        np.testing.assert_allclose(
+            out_torch.numpy(),
+            out_mlx.numpy(),
+            rtol=1e-5, atol=1e-6
+        )
+
+    def test_nearest_5d_downsample(self):
+        """Test nearest interpolation downsampling for 5D input (NCDHW)."""
+        x_np = np.random.randn(2, 3, 8, 16, 16).astype(np.float32)
+        x_torch = torch.tensor(x_np)
+        x_mlx = mlx_compat.tensor(x_np)
+
+        out_torch = F_torch.interpolate(x_torch, size=(4, 8, 8), mode='nearest')
+        out_mlx = F_mlx.interpolate(x_mlx, size=(4, 8, 8), mode='nearest')
+
+        assert out_mlx.shape == (2, 3, 4, 8, 8)
+        np.testing.assert_allclose(
+            out_torch.numpy(),
+            out_mlx.numpy(),
+            rtol=1e-5, atol=1e-6
+        )
+
+    # =====================================================
+    # Nearest-Exact Interpolation Tests (3D, 4D, 5D)
+    # =====================================================
+
+    def test_nearest_exact_3d_upsample(self):
+        """Test nearest-exact interpolation upsampling for 3D input (NCL)."""
+        x_np = np.random.randn(2, 3, 8).astype(np.float32)
+        x_torch = torch.tensor(x_np)
+        x_mlx = mlx_compat.tensor(x_np)
+
+        out_torch = F_torch.interpolate(x_torch, size=(16,), mode='nearest-exact')
+        out_mlx = F_mlx.interpolate(x_mlx, size=(16,), mode='nearest-exact')
+
+        assert out_mlx.shape == (2, 3, 16)
+        np.testing.assert_allclose(
+            out_torch.numpy(),
+            out_mlx.numpy(),
+            rtol=1e-5, atol=1e-6
+        )
+
+    def test_nearest_exact_3d_downsample(self):
+        """Test nearest-exact interpolation downsampling for 3D input (NCL)."""
+        x_np = np.random.randn(2, 3, 16).astype(np.float32)
+        x_torch = torch.tensor(x_np)
+        x_mlx = mlx_compat.tensor(x_np)
+
+        out_torch = F_torch.interpolate(x_torch, size=(8,), mode='nearest-exact')
+        out_mlx = F_mlx.interpolate(x_mlx, size=(8,), mode='nearest-exact')
+
+        assert out_mlx.shape == (2, 3, 8)
+        np.testing.assert_allclose(
+            out_torch.numpy(),
+            out_mlx.numpy(),
+            rtol=1e-5, atol=1e-6
+        )
+
+    def test_nearest_exact_4d_upsample(self):
+        """Test nearest-exact interpolation upsampling for 4D input (NCHW)."""
+        x_np = np.random.randn(2, 3, 8, 8).astype(np.float32)
+        x_torch = torch.tensor(x_np)
+        x_mlx = mlx_compat.tensor(x_np)
+
+        out_torch = F_torch.interpolate(x_torch, size=(16, 16), mode='nearest-exact')
+        out_mlx = F_mlx.interpolate(x_mlx, size=(16, 16), mode='nearest-exact')
+
+        assert out_mlx.shape == (2, 3, 16, 16)
+        np.testing.assert_allclose(
+            out_torch.numpy(),
+            out_mlx.numpy(),
+            rtol=1e-5, atol=1e-6
+        )
+
+    def test_nearest_exact_4d_downsample(self):
+        """Test nearest-exact interpolation downsampling for 4D input (NCHW)."""
+        x_np = np.random.randn(2, 3, 16, 16).astype(np.float32)
+        x_torch = torch.tensor(x_np)
+        x_mlx = mlx_compat.tensor(x_np)
+
+        out_torch = F_torch.interpolate(x_torch, size=(8, 8), mode='nearest-exact')
+        out_mlx = F_mlx.interpolate(x_mlx, size=(8, 8), mode='nearest-exact')
+
+        assert out_mlx.shape == (2, 3, 8, 8)
+        np.testing.assert_allclose(
+            out_torch.numpy(),
+            out_mlx.numpy(),
+            rtol=1e-5, atol=1e-6
+        )
+
+    def test_nearest_exact_5d_upsample(self):
+        """Test nearest-exact interpolation upsampling for 5D input (NCDHW)."""
+        x_np = np.random.randn(2, 3, 4, 8, 8).astype(np.float32)
+        x_torch = torch.tensor(x_np)
+        x_mlx = mlx_compat.tensor(x_np)
+
+        out_torch = F_torch.interpolate(x_torch, size=(8, 16, 16), mode='nearest-exact')
+        out_mlx = F_mlx.interpolate(x_mlx, size=(8, 16, 16), mode='nearest-exact')
+
+        assert out_mlx.shape == (2, 3, 8, 16, 16)
+        np.testing.assert_allclose(
+            out_torch.numpy(),
+            out_mlx.numpy(),
+            rtol=1e-5, atol=1e-6
+        )
+
+    def test_nearest_exact_5d_downsample(self):
+        """Test nearest-exact interpolation downsampling for 5D input (NCDHW)."""
+        x_np = np.random.randn(2, 3, 8, 16, 16).astype(np.float32)
+        x_torch = torch.tensor(x_np)
+        x_mlx = mlx_compat.tensor(x_np)
+
+        out_torch = F_torch.interpolate(x_torch, size=(4, 8, 8), mode='nearest-exact')
+        out_mlx = F_mlx.interpolate(x_mlx, size=(4, 8, 8), mode='nearest-exact')
+
+        assert out_mlx.shape == (2, 3, 4, 8, 8)
+        np.testing.assert_allclose(
+            out_torch.numpy(),
+            out_mlx.numpy(),
+            rtol=1e-5, atol=1e-6
+        )
+
+    # =====================================================
+    # Linear Interpolation Tests (3D only)
+    # =====================================================
+
+    def test_linear_3d_upsample(self):
+        """Test linear interpolation upsampling for 3D input (NCL)."""
+        x_np = np.random.randn(2, 3, 8).astype(np.float32)
+        x_torch = torch.tensor(x_np)
+        x_mlx = mlx_compat.tensor(x_np)
+
+        out_torch = F_torch.interpolate(x_torch, size=(16,), mode='linear', align_corners=False)
+        out_mlx = F_mlx.interpolate(x_mlx, size=(16,), mode='linear', align_corners=False)
+
+        assert out_mlx.shape == (2, 3, 16)
+        np.testing.assert_allclose(
+            out_torch.numpy(),
+            out_mlx.numpy(),
+            rtol=1e-5, atol=1e-5
+        )
+
+    def test_linear_3d_align_corners(self):
+        """Test linear interpolation with align_corners=True for 3D input."""
+        x_np = np.random.randn(2, 3, 8).astype(np.float32)
+        x_torch = torch.tensor(x_np)
+        x_mlx = mlx_compat.tensor(x_np)
+
+        out_torch = F_torch.interpolate(x_torch, size=(16,), mode='linear', align_corners=True)
+        out_mlx = F_mlx.interpolate(x_mlx, size=(16,), mode='linear', align_corners=True)
+
+        assert out_mlx.shape == (2, 3, 16)
+        np.testing.assert_allclose(
+            out_torch.numpy(),
+            out_mlx.numpy(),
+            rtol=1e-5, atol=1e-5
+        )
+
+    def test_linear_3d_downsample(self):
+        """Test linear interpolation downsampling for 3D input (NCL)."""
+        x_np = np.random.randn(2, 3, 16).astype(np.float32)
+        x_torch = torch.tensor(x_np)
+        x_mlx = mlx_compat.tensor(x_np)
+
+        out_torch = F_torch.interpolate(x_torch, size=(8,), mode='linear', align_corners=False)
+        out_mlx = F_mlx.interpolate(x_mlx, size=(8,), mode='linear', align_corners=False)
+
+        assert out_mlx.shape == (2, 3, 8)
+        np.testing.assert_allclose(
+            out_torch.numpy(),
+            out_mlx.numpy(),
+            rtol=1e-5, atol=1e-5
+        )
+
+    # =====================================================
+    # Bilinear Interpolation Tests (4D only)
+    # =====================================================
+
+    def test_bilinear_4d_upsample(self):
+        """Test bilinear interpolation upsampling for 4D input (NCHW)."""
+        x_np = np.random.randn(2, 3, 8, 8).astype(np.float32)
+        x_torch = torch.tensor(x_np)
+        x_mlx = mlx_compat.tensor(x_np)
+
+        out_torch = F_torch.interpolate(x_torch, size=(16, 16), mode='bilinear', align_corners=False)
+        out_mlx = F_mlx.interpolate(x_mlx, size=(16, 16), mode='bilinear', align_corners=False)
+
+        assert out_mlx.shape == (2, 3, 16, 16)
+        np.testing.assert_allclose(
+            out_torch.numpy(),
+            out_mlx.numpy(),
+            rtol=1e-5, atol=1e-5
+        )
+
+    def test_bilinear_4d_align_corners(self):
+        """Test bilinear interpolation with align_corners=True for 4D input."""
+        x_np = np.random.randn(2, 3, 8, 8).astype(np.float32)
+        x_torch = torch.tensor(x_np)
+        x_mlx = mlx_compat.tensor(x_np)
+
+        out_torch = F_torch.interpolate(x_torch, size=(16, 16), mode='bilinear', align_corners=True)
+        out_mlx = F_mlx.interpolate(x_mlx, size=(16, 16), mode='bilinear', align_corners=True)
+
+        assert out_mlx.shape == (2, 3, 16, 16)
+        np.testing.assert_allclose(
+            out_torch.numpy(),
+            out_mlx.numpy(),
+            rtol=1e-5, atol=1e-5
+        )
+
+    def test_bilinear_4d_downsample(self):
+        """Test bilinear interpolation downsampling for 4D input (NCHW)."""
+        x_np = np.random.randn(2, 3, 16, 16).astype(np.float32)
+        x_torch = torch.tensor(x_np)
+        x_mlx = mlx_compat.tensor(x_np)
+
+        out_torch = F_torch.interpolate(x_torch, size=(8, 8), mode='bilinear', align_corners=False)
+        out_mlx = F_mlx.interpolate(x_mlx, size=(8, 8), mode='bilinear', align_corners=False)
+
+        assert out_mlx.shape == (2, 3, 8, 8)
+        np.testing.assert_allclose(
+            out_torch.numpy(),
+            out_mlx.numpy(),
+            rtol=1e-5, atol=1e-5
+        )
+
+    # =====================================================
+    # Bicubic Interpolation Tests (4D only)
+    # =====================================================
+
+    def test_bicubic_4d_upsample(self):
+        """Test bicubic interpolation upsampling for 4D input (NCHW)."""
+        x_np = np.random.randn(2, 3, 8, 8).astype(np.float32)
+        x_torch = torch.tensor(x_np)
+        x_mlx = mlx_compat.tensor(x_np)
+
+        out_torch = F_torch.interpolate(x_torch, size=(16, 16), mode='bicubic', align_corners=False)
+        out_mlx = F_mlx.interpolate(x_mlx, size=(16, 16), mode='bicubic', align_corners=False)
+
+        assert out_mlx.shape == (2, 3, 16, 16)
+        np.testing.assert_allclose(
+            out_torch.numpy(),
+            out_mlx.numpy(),
+            rtol=1e-4, atol=1e-4
+        )
+
+    def test_bicubic_4d_align_corners(self):
+        """Test bicubic interpolation with align_corners=True for 4D input."""
+        x_np = np.random.randn(2, 3, 8, 8).astype(np.float32)
+        x_torch = torch.tensor(x_np)
+        x_mlx = mlx_compat.tensor(x_np)
+
+        out_torch = F_torch.interpolate(x_torch, size=(16, 16), mode='bicubic', align_corners=True)
+        out_mlx = F_mlx.interpolate(x_mlx, size=(16, 16), mode='bicubic', align_corners=True)
+
+        assert out_mlx.shape == (2, 3, 16, 16)
+        np.testing.assert_allclose(
+            out_torch.numpy(),
+            out_mlx.numpy(),
+            rtol=1e-4, atol=1e-4
+        )
+
+    def test_bicubic_4d_downsample(self):
+        """Test bicubic interpolation downsampling for 4D input (NCHW)."""
+        x_np = np.random.randn(2, 3, 16, 16).astype(np.float32)
+        x_torch = torch.tensor(x_np)
+        x_mlx = mlx_compat.tensor(x_np)
+
+        out_torch = F_torch.interpolate(x_torch, size=(8, 8), mode='bicubic', align_corners=False)
+        out_mlx = F_mlx.interpolate(x_mlx, size=(8, 8), mode='bicubic', align_corners=False)
+
+        assert out_mlx.shape == (2, 3, 8, 8)
+        np.testing.assert_allclose(
+            out_torch.numpy(),
+            out_mlx.numpy(),
+            rtol=1e-4, atol=1e-4
+        )
+
+    # =====================================================
+    # Trilinear Interpolation Tests (5D only)
+    # =====================================================
+
+    def test_trilinear_5d_upsample(self):
+        """Test trilinear interpolation upsampling for 5D input (NCDHW)."""
+        x_np = np.random.randn(2, 3, 4, 8, 8).astype(np.float32)
+        x_torch = torch.tensor(x_np)
+        x_mlx = mlx_compat.tensor(x_np)
+
+        out_torch = F_torch.interpolate(x_torch, size=(8, 16, 16), mode='trilinear', align_corners=False)
+        out_mlx = F_mlx.interpolate(x_mlx, size=(8, 16, 16), mode='trilinear', align_corners=False)
+
+        assert out_mlx.shape == (2, 3, 8, 16, 16)
+        np.testing.assert_allclose(
+            out_torch.numpy(),
+            out_mlx.numpy(),
+            rtol=1e-5, atol=1e-5
+        )
+
+    def test_trilinear_5d_align_corners(self):
+        """Test trilinear interpolation with align_corners=True for 5D input."""
+        x_np = np.random.randn(2, 3, 4, 8, 8).astype(np.float32)
+        x_torch = torch.tensor(x_np)
+        x_mlx = mlx_compat.tensor(x_np)
+
+        out_torch = F_torch.interpolate(x_torch, size=(8, 16, 16), mode='trilinear', align_corners=True)
+        out_mlx = F_mlx.interpolate(x_mlx, size=(8, 16, 16), mode='trilinear', align_corners=True)
+
+        assert out_mlx.shape == (2, 3, 8, 16, 16)
+        np.testing.assert_allclose(
+            out_torch.numpy(),
+            out_mlx.numpy(),
+            rtol=1e-5, atol=1e-5
+        )
+
+    def test_trilinear_5d_downsample(self):
+        """Test trilinear interpolation downsampling for 5D input (NCDHW)."""
+        x_np = np.random.randn(2, 3, 8, 16, 16).astype(np.float32)
+        x_torch = torch.tensor(x_np)
+        x_mlx = mlx_compat.tensor(x_np)
+
+        out_torch = F_torch.interpolate(x_torch, size=(4, 8, 8), mode='trilinear', align_corners=False)
+        out_mlx = F_mlx.interpolate(x_mlx, size=(4, 8, 8), mode='trilinear', align_corners=False)
+
+        assert out_mlx.shape == (2, 3, 4, 8, 8)
+        np.testing.assert_allclose(
+            out_torch.numpy(),
+            out_mlx.numpy(),
+            rtol=1e-5, atol=1e-5
+        )
+
+    # =====================================================
+    # Area Interpolation Tests (3D, 4D, 5D)
+    # =====================================================
+
+    def test_area_3d_downsample(self):
+        """Test area interpolation downsampling for 3D input (NCL)."""
+        x_np = np.random.randn(2, 3, 16).astype(np.float32)
+        x_torch = torch.tensor(x_np)
+        x_mlx = mlx_compat.tensor(x_np)
+
+        out_torch = F_torch.interpolate(x_torch, size=(8,), mode='area')
+        out_mlx = F_mlx.interpolate(x_mlx, size=(8,), mode='area')
+
+        assert out_mlx.shape == (2, 3, 8)
+        np.testing.assert_allclose(
+            out_torch.numpy(),
+            out_mlx.numpy(),
+            rtol=1e-5, atol=1e-5
+        )
+
+    def test_area_4d_downsample(self):
+        """Test area interpolation downsampling for 4D input (NCHW)."""
+        x_np = np.random.randn(2, 3, 16, 16).astype(np.float32)
+        x_torch = torch.tensor(x_np)
+        x_mlx = mlx_compat.tensor(x_np)
+
+        out_torch = F_torch.interpolate(x_torch, size=(8, 8), mode='area')
+        out_mlx = F_mlx.interpolate(x_mlx, size=(8, 8), mode='area')
+
+        assert out_mlx.shape == (2, 3, 8, 8)
+        np.testing.assert_allclose(
+            out_torch.numpy(),
+            out_mlx.numpy(),
+            rtol=1e-5, atol=1e-5
+        )
+
+    def test_area_5d_downsample(self):
+        """Test area interpolation downsampling for 5D input (NCDHW)."""
+        x_np = np.random.randn(2, 3, 8, 16, 16).astype(np.float32)
+        x_torch = torch.tensor(x_np)
+        x_mlx = mlx_compat.tensor(x_np)
+
+        out_torch = F_torch.interpolate(x_torch, size=(4, 8, 8), mode='area')
+        out_mlx = F_mlx.interpolate(x_mlx, size=(4, 8, 8), mode='area')
+
+        assert out_mlx.shape == (2, 3, 4, 8, 8)
+        np.testing.assert_allclose(
+            out_torch.numpy(),
+            out_mlx.numpy(),
+            rtol=1e-5, atol=1e-5
+        )
+
+    # =====================================================
+    # Scale Factor Tests
+    # =====================================================
+
+    def test_interpolate_scale_factor_3d(self):
+        """Test interpolation with scale_factor for 3D input."""
+        x_np = np.random.randn(2, 3, 8).astype(np.float32)
+        x_torch = torch.tensor(x_np)
+        x_mlx = mlx_compat.tensor(x_np)
+
+        out_torch = F_torch.interpolate(x_torch, scale_factor=2.0, mode='nearest')
+        out_mlx = F_mlx.interpolate(x_mlx, scale_factor=2.0, mode='nearest')
+
+        assert out_mlx.shape == (2, 3, 16)
+        np.testing.assert_allclose(
+            out_torch.numpy(),
+            out_mlx.numpy(),
+            rtol=1e-5, atol=1e-6
+        )
+
+    def test_interpolate_scale_factor_4d(self):
+        """Test interpolation with scale_factor for 4D input."""
+        x_np = np.random.randn(2, 3, 8, 8).astype(np.float32)
+        x_torch = torch.tensor(x_np)
+        x_mlx = mlx_compat.tensor(x_np)
+
+        out_torch = F_torch.interpolate(x_torch, scale_factor=2.0, mode='nearest')
+        out_mlx = F_mlx.interpolate(x_mlx, scale_factor=2.0, mode='nearest')
+
+        assert out_mlx.shape == (2, 3, 16, 16)
+        np.testing.assert_allclose(
+            out_torch.numpy(),
+            out_mlx.numpy(),
+            rtol=1e-5, atol=1e-6
+        )
+
+    def test_interpolate_scale_factor_5d(self):
+        """Test interpolation with scale_factor for 5D input."""
+        x_np = np.random.randn(2, 3, 4, 8, 8).astype(np.float32)
+        x_torch = torch.tensor(x_np)
+        x_mlx = mlx_compat.tensor(x_np)
+
+        out_torch = F_torch.interpolate(x_torch, scale_factor=2.0, mode='nearest')
+        out_mlx = F_mlx.interpolate(x_mlx, scale_factor=2.0, mode='nearest')
+
+        assert out_mlx.shape == (2, 3, 8, 16, 16)
+        np.testing.assert_allclose(
+            out_torch.numpy(),
+            out_mlx.numpy(),
+            rtol=1e-5, atol=1e-6
+        )
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

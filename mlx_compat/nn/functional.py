@@ -14,6 +14,7 @@ import mlx.nn as mxnn
 
 from ..tensor import Tensor
 from ..autograd.context import is_grad_enabled
+from ..distributions._constants import PROB_EPSILON
 
 
 # =============================================================================
@@ -254,10 +255,11 @@ def conv_transpose1d(
 
     Returns:
         Output tensor of shape [N, C_out, L_out]
-    """
-    if dilation != 1:
-        raise NotImplementedError("dilation != 1 not supported for conv_transpose1d")
 
+    Note:
+        Output size is computed as:
+        L_out = (L_in - 1) * stride - 2 * padding + dilation * (K - 1) + output_padding + 1
+    """
     # Convert to 2D for processing: [N, C, L] -> [N, C, 1, L]
     input_4d = mx.expand_dims(input._mlx_array, axis=2)
 
@@ -268,12 +270,14 @@ def conv_transpose1d(
     weight_4d = mx.expand_dims(weight._mlx_array, axis=2)  # [C_in, C_out/g, 1, K]
     weight_transposed = mx.transpose(weight_4d, [1, 2, 3, 0])  # [C_out/g, 1, K, C_in]
 
-    # Perform transposed convolution
+    # Perform transposed convolution with dilation support
+    # MLX conv_transpose2d supports dilation parameter
     output_nhwc = mx.conv_transpose2d(
         input_nhwc,
         weight_transposed,
         stride=(1, stride),
         padding=(0, padding),
+        dilation=(1, dilation),
         groups=groups
     )
 
@@ -1480,8 +1484,7 @@ def binary_cross_entropy(
         Loss tensor
     """
     reduction = _get_legacy_reduction(size_average, reduce, reduction)
-    eps = 1e-7
-    input_clamped = mx.clip(input._mlx_array, eps, 1.0 - eps)
+    input_clamped = mx.clip(input._mlx_array, PROB_EPSILON, 1.0 - PROB_EPSILON)
 
     loss = -target._mlx_array * mx.log(input_clamped) - (1 - target._mlx_array) * mx.log(1 - input_clamped)
 
@@ -1856,7 +1859,11 @@ def embedding_bag(
         norm_type: Norm type for max_norm
         scale_grad_by_freq: Scale gradients by frequency (not supported)
         mode: 'sum', 'mean', or 'max'
-        sparse: Use sparse gradients (not supported)
+        sparse: Use sparse gradients. When True, gradients are computed only for
+                accessed indices, which is more memory-efficient for large vocabularies.
+                Note: MLX doesn't have native sparse tensor support, so this uses a
+                simulated sparse approach that still produces dense gradient tensors
+                but computes them more efficiently for sparse access patterns.
         per_sample_weights: Weights for weighted aggregation
         include_last_offset: If True, offsets includes the size of indices as last element
         padding_idx: Index to ignore in aggregation
@@ -1870,8 +1877,6 @@ def embedding_bag(
         >>> offsets = torch.tensor([0, 4])
         >>> F.embedding_bag(input, weight, offsets)  # shape: (2, 3)
     """
-    if sparse:
-        raise NotImplementedError("Sparse embedding_bag not supported")
     if scale_grad_by_freq:
         warnings.warn("scale_grad_by_freq is not supported in MLX")
     if mode not in ['sum', 'mean', 'max']:
@@ -1925,6 +1930,9 @@ def embedding_bag(
                 result_data = mx.mean(embeddings, axis=1)
         else:  # max
             result_data = mx.max(embeddings, axis=1)
+
+        is_2d_input = True
+        # bag_size is already set from indices.shape
 
     else:
         # 1D input with offsets
@@ -1985,11 +1993,31 @@ def embedding_bag(
                     results.append(mx.max(bag_embeddings, axis=0))
 
         result_data = mx.stack(results, axis=0)
+        is_2d_input = False
+        bag_size = None
 
     result = Tensor._from_mlx_array(result_data)
 
     if is_grad_enabled() and weight.requires_grad:
+        from ..autograd.function import EmbeddingBagBackward
+        num_embeddings, embedding_dim = weight.shape
         result.requires_grad = True
+
+        # Store indices and offsets for backward pass
+        indices_for_backward = input._mlx_array
+        offsets_for_backward = offsets._mlx_array if offsets is not None else None
+        psw_for_backward = per_sample_weights._mlx_array if per_sample_weights is not None else None
+
+        grad_fn = EmbeddingBagBackward(
+            weight, indices_for_backward, offsets_for_backward,
+            num_embeddings, embedding_dim,
+            mode=mode, padding_idx=padding_idx, sparse=sparse,
+            per_sample_weights=psw_for_backward,
+            include_last_offset=include_last_offset,
+            is_2d_input=is_2d_input, bag_size=bag_size
+        )
+        grad_fn.output_tensor = result
+        result._grad_fn = grad_fn
 
     return result
 
@@ -2350,7 +2378,7 @@ def interpolate(
         input: Input tensor of shape (N, C, ...) where ... is spatial dimensions
         size: Output spatial size
         scale_factor: Multiplier for spatial size
-        mode: 'nearest', 'linear', 'bilinear', 'bicubic', 'trilinear', 'area'
+        mode: 'nearest', 'nearest-exact', 'linear', 'bilinear', 'bicubic', 'trilinear', 'area'
         align_corners: Alignment mode for certain modes
         recompute_scale_factor: Recompute scale factor
         antialias: Apply antialiasing when downsampling (not implemented)
@@ -2413,6 +2441,9 @@ def interpolate(
     elif mode == 'area':
         # Area-based interpolation (adaptive average pooling approach)
         result_array = _area_interpolate(input._mlx_array, target_size)
+    elif mode == 'nearest-exact':
+        # Nearest-exact uses more mathematically consistent indexing
+        result_array = _nearest_exact_interpolate(input._mlx_array, target_size)
     else:
         raise ValueError(f"Unknown interpolation mode '{mode}'")
 
@@ -2426,8 +2457,21 @@ def interpolate(
 
 def _nearest_interpolate(x, target_size):
     """Helper for nearest neighbor interpolation."""
-    # Simple implementation for 2D (most common case)
-    if len(x.shape) == 4:  # NCHW
+    ndim = len(x.shape)
+
+    if ndim == 3:  # NCL (1D)
+        N, C, L = x.shape
+        target_l = target_size[0]
+
+        # Create coordinate grid
+        l_indices = mx.floor(mx.arange(target_l) * (L / target_l)).astype(mx.int32)
+
+        # Gather values
+        result = x[:, :, l_indices]
+
+        return result
+
+    elif ndim == 4:  # NCHW (2D)
         N, C, H, W = x.shape
         target_h, target_w = target_size
 
@@ -2440,8 +2484,93 @@ def _nearest_interpolate(x, target_size):
         result = x_h[:, :, :, w_indices]
 
         return result
+
+    elif ndim == 5:  # NCDHW (3D)
+        N, C, D, H, W = x.shape
+        target_d, target_h, target_w = target_size
+
+        # Create coordinate grids
+        d_indices = mx.floor(mx.arange(target_d) * (D / target_d)).astype(mx.int32)
+        h_indices = mx.floor(mx.arange(target_h) * (H / target_h)).astype(mx.int32)
+        w_indices = mx.floor(mx.arange(target_w) * (W / target_w)).astype(mx.int32)
+
+        # Gather values - index each dimension sequentially
+        x_d = x[:, :, d_indices, :, :]
+        x_dh = x_d[:, :, :, h_indices, :]
+        result = x_dh[:, :, :, :, w_indices]
+
+        return result
+
     else:
-        raise NotImplementedError("Only 4D tensors supported for interpolation")
+        raise NotImplementedError(f"Nearest interpolation not supported for {ndim}D tensors")
+
+
+def _nearest_exact_interpolate(x, target_size):
+    """Helper for nearest-exact interpolation.
+
+    Uses more mathematically consistent indexing than standard nearest:
+    index = floor((i + 0.5) * (input_size / output_size))
+
+    This matches PyTorch's 'nearest-exact' mode.
+    """
+    ndim = len(x.shape)
+
+    if ndim == 3:  # NCL (1D)
+        N, C, L = x.shape
+        target_l = target_size[0]
+
+        # Create coordinate grid with 0.5 offset for exact nearest
+        scale = L / target_l
+        l_indices = mx.floor((mx.arange(target_l) + 0.5) * scale).astype(mx.int32)
+        l_indices = mx.clip(l_indices, 0, L - 1)
+
+        # Gather values
+        result = x[:, :, l_indices]
+
+        return result
+
+    elif ndim == 4:  # NCHW (2D)
+        N, C, H, W = x.shape
+        target_h, target_w = target_size
+
+        # Create coordinate grids with 0.5 offset
+        h_scale = H / target_h
+        w_scale = W / target_w
+        h_indices = mx.floor((mx.arange(target_h) + 0.5) * h_scale).astype(mx.int32)
+        w_indices = mx.floor((mx.arange(target_w) + 0.5) * w_scale).astype(mx.int32)
+        h_indices = mx.clip(h_indices, 0, H - 1)
+        w_indices = mx.clip(w_indices, 0, W - 1)
+
+        # Gather values
+        x_h = x[:, :, h_indices, :]
+        result = x_h[:, :, :, w_indices]
+
+        return result
+
+    elif ndim == 5:  # NCDHW (3D)
+        N, C, D, H, W = x.shape
+        target_d, target_h, target_w = target_size
+
+        # Create coordinate grids with 0.5 offset
+        d_scale = D / target_d
+        h_scale = H / target_h
+        w_scale = W / target_w
+        d_indices = mx.floor((mx.arange(target_d) + 0.5) * d_scale).astype(mx.int32)
+        h_indices = mx.floor((mx.arange(target_h) + 0.5) * h_scale).astype(mx.int32)
+        w_indices = mx.floor((mx.arange(target_w) + 0.5) * w_scale).astype(mx.int32)
+        d_indices = mx.clip(d_indices, 0, D - 1)
+        h_indices = mx.clip(h_indices, 0, H - 1)
+        w_indices = mx.clip(w_indices, 0, W - 1)
+
+        # Gather values - index each dimension sequentially
+        x_d = x[:, :, d_indices, :, :]
+        x_dh = x_d[:, :, :, h_indices, :]
+        result = x_dh[:, :, :, :, w_indices]
+
+        return result
+
+    else:
+        raise NotImplementedError(f"Nearest-exact interpolation not supported for {ndim}D tensors")
 
 
 def _bilinear_interpolate(x, target_size, align_corners=False):
@@ -2758,6 +2887,43 @@ def _area_interpolate(x, target_size):
             mean_val = mx.mean(region, axis=2, keepdims=True)
             cols.append(mean_val)
         result = mx.concatenate(cols, axis=2)
+        return result
+
+    elif ndim == 5:  # 5D: NCDHW
+        N, C, D, H, W = x.shape
+        target_d, target_h, target_w = target_size
+
+        # Collect all mean values and stack at the end
+        depth_slices = []
+        for d in range(target_d):
+            d_start = int(d * D / target_d)
+            d_end = int((d + 1) * D / target_d)
+            if d_end <= d_start:
+                d_end = d_start + 1
+
+            rows = []
+            for i in range(target_h):
+                row = []
+                for j in range(target_w):
+                    # Compute source region boundaries
+                    h_start = int(i * H / target_h)
+                    h_end = int((i + 1) * H / target_h)
+                    w_start = int(j * W / target_w)
+                    w_end = int((j + 1) * W / target_w)
+
+                    # Handle edge case where start == end
+                    if h_end <= h_start:
+                        h_end = h_start + 1
+                    if w_end <= w_start:
+                        w_end = w_start + 1
+
+                    # Extract region and compute mean
+                    region = x[:, :, d_start:d_end, h_start:h_end, w_start:w_end]
+                    mean_val = mx.mean(region, axis=(2, 3, 4), keepdims=True)
+                    row.append(mean_val)
+                rows.append(mx.concatenate(row, axis=4))
+            depth_slices.append(mx.concatenate(rows, axis=3))
+        result = mx.concatenate(depth_slices, axis=2)
         return result
 
     else:
@@ -3373,9 +3539,10 @@ def kl_div(
         loss = mx.exp(target._mlx_array) * (target._mlx_array - input._mlx_array)
     else:
         # target is probabilities
-        # Avoid log(0) by using where
+        # Use xlogy pattern: x * log(x) returns 0 when x=0, avoiding log(0) issues
         target_arr = target._mlx_array
-        loss = target_arr * (mx.log(mx.maximum(target_arr, 1e-10)) - input._mlx_array)
+        xlogy_term = mx.where(target_arr == 0, mx.zeros_like(target_arr), target_arr * mx.log(target_arr))
+        loss = xlogy_term - target_arr * input._mlx_array
 
     if reduction == 'mean':
         loss = mx.mean(loss)
@@ -4838,6 +5005,99 @@ def _bilinear_sample(x, grid_x, grid_y, padding_mode, align_corners=False):
     return output
 
 
+def _bicubic_sample(x, grid_x, grid_y, padding_mode, align_corners=False):
+    """Perform bicubic sampling using functional operations.
+
+    Uses cubic convolution algorithm with a 4x4 neighborhood of pixels.
+    Based on Keys' cubic kernel with a=-0.5 (matches PyTorch default).
+
+    Args:
+        x: Input tensor (N, C, H_in, W_in)
+        grid_x: X coordinates (N, H_out, W_out) - already unnormalized to pixel space
+        grid_y: Y coordinates (N, H_out, W_out) - already unnormalized to pixel space
+        padding_mode: Padding mode string
+        align_corners: Whether align_corners is True
+
+    Returns:
+        Sampled tensor (N, C, H_out, W_out)
+    """
+    N, C, H_in, W_in = x.shape
+    H_out, W_out = grid_x.shape[1], grid_x.shape[2]
+
+    # For reflection mode, reflect the floating-point coordinates first
+    if padding_mode == 'reflection':
+        grid_x = _reflect_coord(grid_x, W_in, align_corners)
+        grid_y = _reflect_coord(grid_y, H_in, align_corners)
+
+    # Get base integer coordinates (floor)
+    ix_base = mx.floor(grid_x).astype(mx.int32)
+    iy_base = mx.floor(grid_y).astype(mx.int32)
+
+    # Get fractional parts for kernel weights
+    fx = grid_x - mx.floor(grid_x)
+    fy = grid_y - mx.floor(grid_y)
+
+    # Reshape x to (N, C, H_in * W_in) for gather operations
+    x_flat = mx.reshape(x, (N, C, H_in * W_in))
+
+    # Helper for gathering values at a flat index
+    def gather_batch(x_flat, idx_flat):
+        output_list = []
+        for n in range(N):
+            gathered = mx.take(x_flat[n], idx_flat[n], axis=1)
+            output_list.append(gathered)
+        return mx.stack(output_list, axis=0)
+
+    # Helper for handling boundary conditions
+    def get_valid_and_clipped(idx, dim_size):
+        if padding_mode == 'zeros':
+            valid = (idx >= 0) & (idx < dim_size)
+            clipped = mx.clip(idx, 0, dim_size - 1)
+            return valid.astype(mx.float32), clipped
+        else:  # border or reflection (reflection already handled above)
+            return mx.ones(idx.shape, dtype=mx.float32), mx.clip(idx, 0, dim_size - 1)
+
+    # Initialize output accumulator
+    output = mx.zeros((N, C, H_out, W_out), dtype=x.dtype)
+
+    # Bicubic uses 4x4 neighborhood: offsets -1, 0, 1, 2 relative to base
+    for dy in range(-1, 3):
+        for dx in range(-1, 3):
+            # Compute indices for this offset
+            ix = ix_base + dx
+            iy = iy_base + dy
+
+            # Get validity mask and clipped indices
+            v_x, ix_c = get_valid_and_clipped(ix, W_in)
+            v_y, iy_c = get_valid_and_clipped(iy, H_in)
+
+            # Compute flat indices
+            idx_flat = iy_c * W_in + ix_c
+            idx_flat = mx.reshape(idx_flat, (N, H_out * W_out))
+
+            # Gather values
+            val = gather_batch(x_flat, idx_flat)
+            val = mx.reshape(val, (N, C, H_out, W_out))
+
+            # Compute bicubic kernel weights
+            # Keys' cubic with a=-0.5
+            wx = _bicubic_kernel(fx - dx)
+            wy = _bicubic_kernel(fy - dy)
+
+            # Expand weights for broadcasting
+            wx = mx.expand_dims(wx, axis=1)  # (N, 1, H_out, W_out)
+            wy = mx.expand_dims(wy, axis=1)  # (N, 1, H_out, W_out)
+
+            # Validity mask
+            mask = v_x * v_y
+            mask = mx.expand_dims(mask, axis=1)  # (N, 1, H_out, W_out)
+
+            # Accumulate weighted contribution
+            output = output + val * wx * wy * mask
+
+    return output
+
+
 def grid_sample(
     input: Tensor,
     grid: Tensor,
@@ -4907,8 +5167,8 @@ def grid_sample(
             output = _bilinear_sample(x, grid_x, grid_y, padding_mode, align_corners)
 
         else:  # bicubic
-            # For bicubic, fall back to bilinear for now (could be extended later)
-            output = _bilinear_sample(x, grid_x, grid_y, padding_mode, align_corners)
+            # Use proper bicubic sampling with 4x4 neighborhood
+            output = _bicubic_sample(x, grid_x, grid_y, padding_mode, align_corners)
 
     else:
         # 3D case

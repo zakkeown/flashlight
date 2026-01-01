@@ -49,14 +49,17 @@ class Adam(Optimizer):
         fused: Optional[bool] = None,
         decoupled_weight_decay: bool = False
     ):
-        # foreach, maximize, capturable, differentiable, fused are accepted for
-        # PyTorch compatibility but are either not supported or ignored in MLX
-        if maximize:
+        # foreach, capturable, differentiable, fused are accepted for PyTorch
+        # compatibility but are either not applicable or ignored in MLX.
+        # maximize is now supported.
+        if foreach is not None:
             import warnings
-            warnings.warn("maximize=True is not supported in MLX, will be ignored")
-        if foreach:
-            import warnings
-            warnings.warn("foreach is not supported in MLX, will be ignored")
+            warnings.warn(
+                "foreach parameter is ignored in MLX. MLX uses a different "
+                "computational model (lazy evaluation with unified memory) that "
+                "doesn't benefit from the same batched update optimizations as CUDA.",
+                UserWarning
+            )
         if capturable:
             import warnings
             warnings.warn("capturable=True is not supported in MLX, will be ignored")
@@ -116,6 +119,7 @@ class Adam(Optimizer):
             eps = group['eps']
             weight_decay = group['weight_decay']
             amsgrad = group['amsgrad']
+            maximize = group.get('maximize', False)
 
             for p in group['params']:
                 if p.grad is None:
@@ -124,6 +128,10 @@ class Adam(Optimizer):
                 # Work directly with raw MLX arrays for performance
                 param = p._mlx_array
                 grad = p.grad._mlx_array
+
+                # Negate gradient for gradient ascent (maximize=True)
+                if maximize:
+                    grad = -grad
 
                 # Apply weight decay (L2 regularization)
                 if weight_decay != 0:

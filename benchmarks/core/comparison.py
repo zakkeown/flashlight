@@ -9,8 +9,76 @@ from typing import Callable, Optional, Tuple, Any, Dict
 from dataclasses import dataclass
 import numpy as np
 
-from benchmarks.core.config import TimingStats, ComparisonStats
+from benchmarks.core.config import TimingStats, ComparisonStats, AccuracyStats
 from benchmarks.core.timing import Timer, sync_mlx, sync_pytorch
+
+
+# Standard tolerance tiers for benchmark accuracy assessment
+TOLERANCE_TIERS = {
+    'STRICT': {'rtol': 1e-5, 'atol': 1e-8},
+    'STANDARD': {'rtol': 1e-5, 'atol': 1e-6},
+    'RELAXED': {'rtol': 1e-4, 'atol': 1e-5},
+    'LOOSE': {'rtol': 1e-3, 'atol': 1e-4},
+}
+
+
+def compute_accuracy_stats(
+    mlx_np: np.ndarray,
+    pytorch_np: np.ndarray,
+    rtol: float = 1e-5,
+    atol: float = 1e-6,
+) -> AccuracyStats:
+    """
+    Compute detailed accuracy statistics between two arrays.
+
+    Args:
+        mlx_np: MLX output as numpy array
+        pytorch_np: PyTorch output as numpy array
+        rtol: Relative tolerance used for pass/fail
+        atol: Absolute tolerance used for pass/fail
+
+    Returns:
+        AccuracyStats with detailed metrics
+    """
+    # Absolute differences
+    abs_diff = np.abs(mlx_np - pytorch_np)
+    max_abs_diff = float(np.max(abs_diff))
+    mean_abs_diff = float(np.mean(abs_diff))
+
+    # Relative differences (avoid division by zero)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        rel_diff = abs_diff / (np.abs(pytorch_np) + 1e-38)
+        rel_diff = np.where(np.isfinite(rel_diff), rel_diff, 0.0)
+    max_rel_diff = float(np.max(rel_diff))
+    mean_rel_diff = float(np.mean(rel_diff))
+
+    # Determine which tolerance tier the result would pass
+    tolerance_tier = 'FAILED'
+    for tier_name, tol in TOLERANCE_TIERS.items():
+        try:
+            np.testing.assert_allclose(mlx_np, pytorch_np, rtol=tol['rtol'], atol=tol['atol'])
+            tolerance_tier = tier_name
+            break
+        except AssertionError:
+            continue
+
+    # Check if it passes with the specified tolerances
+    try:
+        np.testing.assert_allclose(mlx_np, pytorch_np, rtol=rtol, atol=atol)
+        passed = True
+    except AssertionError:
+        passed = False
+
+    return AccuracyStats(
+        max_abs_diff=max_abs_diff,
+        mean_abs_diff=mean_abs_diff,
+        max_rel_diff=max_rel_diff,
+        mean_rel_diff=mean_rel_diff,
+        tolerance_tier=tolerance_tier,
+        passed=passed,
+        rtol_used=rtol,
+        atol_used=atol,
+    )
 
 
 @dataclass
@@ -206,12 +274,13 @@ class FrameworkComparator:
             pct_slower = (1.0 - speedup) * 100
             relative_perf = f"{speedup:.2f}x ({pct_slower:.1f}% slower)"
 
-        # Numerical comparison
+        # Numerical comparison with detailed accuracy stats
         numerical_match = True
         max_diff = 0.0
+        accuracy_stats = None
 
         if check_numerical:
-            numerical_match, max_diff = self._check_numerical_parity(
+            numerical_match, max_diff, accuracy_stats = self._check_numerical_parity_detailed(
                 mlx_output, pytorch_output
             )
 
@@ -220,6 +289,7 @@ class FrameworkComparator:
             relative_performance=relative_perf,
             numerical_match=numerical_match,
             max_abs_diff=max_diff,
+            accuracy=accuracy_stats,
         )
 
     def _check_numerical_parity(
@@ -260,6 +330,39 @@ class FrameworkComparator:
 
         except Exception:
             return True, 0.0  # Error during comparison, assume match
+
+    def _check_numerical_parity_detailed(
+        self,
+        mlx_output: Any,
+        pytorch_output: Any,
+    ) -> Tuple[bool, float, Optional[AccuracyStats]]:
+        """
+        Check numerical parity with detailed accuracy statistics.
+
+        Returns:
+            Tuple of (match: bool, max_abs_diff: float, accuracy_stats: AccuracyStats)
+        """
+        try:
+            # Convert to numpy
+            mlx_np = self._to_numpy(mlx_output)
+            pytorch_np = self._to_numpy(pytorch_output)
+
+            if mlx_np is None or pytorch_np is None:
+                return True, 0.0, None  # Can't compare, assume match
+
+            # Check shapes match
+            if mlx_np.shape != pytorch_np.shape:
+                return False, float('inf'), None
+
+            # Compute detailed accuracy stats
+            accuracy = compute_accuracy_stats(
+                mlx_np, pytorch_np, rtol=self.rtol, atol=self.atol
+            )
+
+            return accuracy.passed, accuracy.max_abs_diff, accuracy
+
+        except Exception:
+            return True, 0.0, None  # Error during comparison, assume match
 
     def _to_numpy(self, tensor: Any) -> Optional[np.ndarray]:
         """Convert tensor to numpy array."""

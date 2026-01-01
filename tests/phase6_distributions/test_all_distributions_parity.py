@@ -473,7 +473,7 @@ class TestBinomialParity(TestCase):
             dist.Binomial(10, probs=0.4),
             td.Binomial(10, probs=0.4),
             [0, 2, 4, 6, 10],
-            rtol=1e-3  # Slightly relaxed for lgamma differences
+            rtol=1e-4  # lgamma differences may require slight relaxation
         )
 
 
@@ -500,7 +500,7 @@ class TestNegativeBinomialParity(TestCase):
             dist.NegativeBinomial(5.0, probs=0.4),
             td.NegativeBinomial(5.0, probs=0.4),
             [0, 1, 2, 5, 10],
-            rtol=1e-3
+            rtol=1e-4
         )
 
 

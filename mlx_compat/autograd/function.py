@@ -236,10 +236,27 @@ class SubBackward(GradientFunction):
     def __init__(self, input_a, input_b, alpha=1):
         super().__init__(input_a, input_b)
         self.alpha = alpha
+        self.input_a_shape = input_a.shape
+        self.input_b_shape = input_b.shape
 
     def apply(self, grad_output):
-        grad_a = grad_output if self.inputs[0].requires_grad else None
-        grad_b = -grad_output * self.alpha if self.inputs[1].requires_grad else None
+        from ..tensor import Tensor
+
+        grad_a = None
+        grad_b = None
+
+        if self.inputs[0].requires_grad:
+            grad_a = grad_output
+            # Handle broadcasting: sum out dimensions that were broadcast
+            if grad_a.shape != self.input_a_shape:
+                grad_a = _unbroadcast(grad_a, self.input_a_shape)
+
+        if self.inputs[1].requires_grad:
+            grad_b = Tensor._from_mlx_array(-grad_output._mlx_array * self.alpha)
+            # Handle broadcasting: sum out dimensions that were broadcast
+            if grad_b.shape != self.input_b_shape:
+                grad_b = _unbroadcast(grad_b, self.input_b_shape)
+
         return grad_a, grad_b
 
 
@@ -1086,9 +1103,13 @@ class EmbeddingBackward(GradientFunction):
     The gradient for the weight matrix is computed by scattering the output
     gradients back to the appropriate rows of the weight matrix.
 
-    When sparse=True (simulated), we use index_put_ style update which only
-    touches the accessed rows, achieving similar memory efficiency to true
-    sparse gradients without requiring sparse tensor support.
+    When sparse=True (simulated), we use a more memory-efficient approach that
+    only computes gradients for the unique accessed indices. This avoids
+    creating a full (num_lookups x num_embeddings) one-hot matrix, which can
+    be very large for big vocabularies.
+
+    Note: MLX doesn't have native sparse tensor support, so the final gradient
+    is still a dense tensor, but the computation is more memory-efficient.
     """
 
     def __init__(self, weight, indices, num_embeddings, embedding_dim, padding_idx=None, sparse=False):
@@ -1115,19 +1136,216 @@ class EmbeddingBackward(GradientFunction):
         # grad_out_arr: (*batch, embedding_dim) -> (num_lookups, embedding_dim)
         num_lookups = indices_arr.size
         grad_flat = grad_out_arr.reshape((num_lookups, self.embedding_dim))
-        indices_flat = indices_arr.flatten()
+        indices_flat = indices_arr.flatten().astype(mx.int32)
 
-        # Use vectorized one-hot matrix approach for efficient gradient accumulation
-        # This is much faster than Python loops
-        # Create one-hot via identity matrix indexing: one_hot[i] = eye[indices[i]]
-        eye = mx.eye(self.num_embeddings, dtype=grad_out_arr.dtype)
-        one_hot = eye[indices_flat.astype(mx.int32)]  # (num_lookups, num_embeddings)
+        if self.sparse:
+            # Sparse mode: only compute gradients for unique accessed indices
+            # This is more memory efficient for large vocabularies with sparse access
+            unique_indices, inverse_indices = mx.unique(indices_flat, return_inverse=True)
+            num_unique = unique_indices.size
 
-        # grad_weight = one_hot.T @ grad_flat
-        # This accumulates gradients for duplicate indices automatically via matrix multiply
-        grad_weight = mx.matmul(mx.transpose(one_hot), grad_flat)
+            # Initialize gradient weight matrix
+            grad_weight = mx.zeros((self.num_embeddings, self.embedding_dim), dtype=grad_out_arr.dtype)
+
+            # Accumulate gradients for each unique index
+            # Using scatter_add style operation
+            for i in range(num_unique):
+                target_idx = int(unique_indices[i])
+                # Find all positions that map to this index
+                mask = (inverse_indices == i).astype(grad_flat.dtype)
+                mask = mx.expand_dims(mask, axis=-1)
+                accumulated_grad = mx.sum(grad_flat * mask, axis=0)
+                grad_weight = grad_weight.at[target_idx].add(accumulated_grad)
+        else:
+            # Dense mode: use vectorized one-hot matrix approach
+            # This is faster but uses more memory: O(num_lookups * num_embeddings)
+            # Create one-hot via identity matrix indexing: one_hot[i] = eye[indices[i]]
+            eye = mx.eye(self.num_embeddings, dtype=grad_out_arr.dtype)
+            one_hot = eye[indices_flat]  # (num_lookups, num_embeddings)
+
+            # grad_weight = one_hot.T @ grad_flat
+            # This accumulates gradients for duplicate indices automatically via matrix multiply
+            grad_weight = mx.matmul(mx.transpose(one_hot), grad_flat)
 
         # Zero out gradient for padding_idx if specified
+        if self.padding_idx is not None:
+            grad_weight = grad_weight.at[self.padding_idx, :].add(
+                -grad_weight[self.padding_idx, :]
+            )
+
+        return (Tensor._from_mlx_array(grad_weight),)
+
+
+class EmbeddingBagBackward(GradientFunction):
+    """
+    Gradient for embedding_bag operation.
+
+    The gradient for the weight matrix is computed by scattering the aggregated
+    gradients back to the appropriate rows of the weight matrix, accounting for
+    the bag structure (sum, mean, or max aggregation).
+
+    When sparse=True (simulated), we use a more memory-efficient approach that
+    only computes and stores gradients for the accessed indices, rather than
+    creating a full gradient matrix for the entire vocabulary.
+    """
+
+    def __init__(self, weight, indices, offsets, num_embeddings, embedding_dim,
+                 mode='mean', padding_idx=None, sparse=False, per_sample_weights=None,
+                 include_last_offset=False, is_2d_input=False, bag_size=None):
+        super().__init__(weight)
+        self.indices = indices  # MLX array of indices
+        self.offsets = offsets  # MLX array of offsets (or None for 2D input)
+        self.num_embeddings = num_embeddings
+        self.embedding_dim = embedding_dim
+        self.mode = mode
+        self.padding_idx = padding_idx
+        self.sparse = sparse
+        self.per_sample_weights = per_sample_weights  # MLX array or None
+        self.include_last_offset = include_last_offset
+        self.is_2d_input = is_2d_input
+        self.bag_size = bag_size  # For 2D input, the size of each bag
+
+    def apply(self, grad_output):
+        from ..tensor import Tensor
+
+        if not self.inputs[0].requires_grad:
+            return (None,)
+
+        grad_out_arr = grad_output._mlx_array  # Shape: (num_bags, embedding_dim)
+        indices_arr = self.indices
+
+        if self.is_2d_input:
+            # 2D input: indices shape is (num_bags, bag_size)
+            num_bags, bag_size = indices_arr.shape
+
+            # Expand grad_output to match bag structure
+            # grad_out_arr: (num_bags, embedding_dim) -> (num_bags, bag_size, embedding_dim)
+            grad_expanded = mx.broadcast_to(
+                mx.expand_dims(grad_out_arr, axis=1),
+                (num_bags, bag_size, self.embedding_dim)
+            )
+
+            # Apply per_sample_weights scaling if present
+            if self.per_sample_weights is not None:
+                psw = mx.expand_dims(self.per_sample_weights, axis=-1)  # (num_bags, bag_size, 1)
+                grad_expanded = grad_expanded * psw
+
+            # For mean mode, divide by bag size (or count of non-padding)
+            if self.mode == 'mean':
+                if self.padding_idx is not None:
+                    # Count non-padding elements per bag
+                    mask = (indices_arr != self.padding_idx).astype(mx.float32)
+                    count = mx.maximum(mx.sum(mask, axis=1, keepdims=True), 1.0)
+                    count = mx.expand_dims(count, axis=-1)  # (num_bags, 1, 1)
+                    grad_expanded = grad_expanded / count
+                else:
+                    grad_expanded = grad_expanded / bag_size
+
+            # Handle padding_idx - zero out gradient for padding indices
+            if self.padding_idx is not None:
+                mask = (indices_arr != self.padding_idx).astype(mx.float32)
+                mask = mx.expand_dims(mask, axis=-1)  # (num_bags, bag_size, 1)
+                grad_expanded = grad_expanded * mask
+
+            # Flatten for scatter operation
+            indices_flat = indices_arr.flatten().astype(mx.int32)
+            grad_flat = grad_expanded.reshape((-1, self.embedding_dim))
+
+        else:
+            # 1D input with offsets
+            offsets_arr = self.offsets.astype(mx.int32)
+            indices_arr = indices_arr.astype(mx.int32)
+
+            # Determine bag boundaries
+            if self.include_last_offset:
+                bag_boundaries = offsets_arr
+                num_bags = len(offsets_arr) - 1
+            else:
+                bag_boundaries = mx.concatenate([
+                    offsets_arr,
+                    mx.array([indices_arr.size])
+                ])
+                num_bags = len(offsets_arr)
+
+            # Build gradient for each index
+            grad_list = []
+            for i in range(num_bags):
+                start = int(bag_boundaries[i])
+                end = int(bag_boundaries[i + 1])
+                bag_len = end - start
+
+                if bag_len == 0:
+                    continue
+
+                # Gradient for this bag's output
+                bag_grad = grad_out_arr[i]  # (embedding_dim,)
+
+                # Expand to match bag size
+                bag_grad_expanded = mx.broadcast_to(
+                    mx.expand_dims(bag_grad, axis=0),
+                    (bag_len, self.embedding_dim)
+                )
+
+                # Apply per_sample_weights scaling if present
+                if self.per_sample_weights is not None:
+                    psw = self.per_sample_weights[start:end]
+                    psw = mx.expand_dims(psw, axis=-1)
+                    bag_grad_expanded = bag_grad_expanded * psw
+
+                # For mean mode, divide by bag size
+                if self.mode == 'mean':
+                    if self.padding_idx is not None:
+                        bag_indices = indices_arr[start:end]
+                        mask = (bag_indices != self.padding_idx).astype(mx.float32)
+                        count = mx.maximum(mx.sum(mask), 1.0)
+                        bag_grad_expanded = bag_grad_expanded / count
+                        # Also apply mask
+                        mask = mx.expand_dims(mask, axis=-1)
+                        bag_grad_expanded = bag_grad_expanded * mask
+                    else:
+                        bag_grad_expanded = bag_grad_expanded / bag_len
+                elif self.padding_idx is not None:
+                    # Zero out padding indices for non-mean modes too
+                    bag_indices = indices_arr[start:end]
+                    mask = (bag_indices != self.padding_idx).astype(mx.float32)
+                    mask = mx.expand_dims(mask, axis=-1)
+                    bag_grad_expanded = bag_grad_expanded * mask
+
+                grad_list.append(bag_grad_expanded)
+
+            if len(grad_list) == 0:
+                # No non-empty bags, return zero gradient
+                grad_weight = mx.zeros((self.num_embeddings, self.embedding_dim), dtype=grad_out_arr.dtype)
+                return (Tensor._from_mlx_array(grad_weight),)
+
+            grad_flat = mx.concatenate(grad_list, axis=0)
+            indices_flat = indices_arr
+
+        # Scatter gradients to weight matrix using one-hot approach
+        if self.sparse:
+            # Sparse mode: only compute gradients for unique accessed indices
+            # This is more memory efficient for large vocabularies
+            unique_indices = mx.unique(indices_flat)[0]
+            num_unique = unique_indices.size
+
+            # Create mapping from unique indices to their positions
+            # and accumulate gradients for each unique index
+            grad_weight = mx.zeros((self.num_embeddings, self.embedding_dim), dtype=grad_out_arr.dtype)
+
+            # For each unique index, sum up all gradients that go to it
+            for idx in range(num_unique):
+                target_idx = int(unique_indices[idx])
+                mask = (indices_flat == target_idx).astype(grad_flat.dtype)
+                mask = mx.expand_dims(mask, axis=-1)
+                accumulated_grad = mx.sum(grad_flat * mask, axis=0)
+                grad_weight = grad_weight.at[target_idx].add(accumulated_grad)
+        else:
+            # Dense mode: use vectorized one-hot approach (faster but more memory)
+            eye = mx.eye(self.num_embeddings, dtype=grad_out_arr.dtype)
+            one_hot = eye[indices_flat]  # (num_lookups, num_embeddings)
+            grad_weight = mx.matmul(mx.transpose(one_hot), grad_flat)
+
+        # Zero out gradient for padding_idx
         if self.padding_idx is not None:
             grad_weight = grad_weight.at[self.padding_idx, :].add(
                 -grad_weight[self.padding_idx, :]

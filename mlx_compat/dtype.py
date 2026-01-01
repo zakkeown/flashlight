@@ -325,7 +325,7 @@ def torch_dtype_to_numpy(dtype):
     raise ValueError(f"Cannot convert {dtype} to numpy dtype")
 
 
-def numpy_to_mlx_dtype(np_dtype, return_raw=True):
+def numpy_to_mlx_dtype(np_dtype, return_raw=True, warn_on_downgrade=True):
     """
     Convert a numpy dtype to MLX dtype.
 
@@ -333,11 +333,17 @@ def numpy_to_mlx_dtype(np_dtype, return_raw=True):
         np_dtype: A numpy dtype
         return_raw: If True, return the raw MLX dtype (mx.float32, etc.)
                    If False, return the DType wrapper
+        warn_on_downgrade: If True, emit a warning when float64 is downgraded to float32
 
     Returns:
         Corresponding MLX dtype (raw or wrapped based on return_raw)
     """
     import numpy as np
+
+    # Handle numpy dtype objects first to get the type
+    original_dtype = np_dtype
+    if hasattr(np_dtype, 'type'):
+        np_dtype = np_dtype.type
 
     dtype_map = {
         np.float32: float32,
@@ -354,13 +360,18 @@ def numpy_to_mlx_dtype(np_dtype, return_raw=True):
         np.bool_: bool,
     }
 
-    # Handle numpy dtype objects
-    if hasattr(np_dtype, 'type'):
-        np_dtype = np_dtype.type
-
     result = dtype_map.get(np_dtype)
     if result is None:
-        raise ValueError(f"Cannot convert {np_dtype} to MLX dtype")
+        raise ValueError(f"Cannot convert {original_dtype} to MLX dtype")
+
+    # Warn when float64 is silently downgraded to float32
+    if warn_on_downgrade and np_dtype == np.float64:
+        warnings.warn(
+            "float64 is not supported in MLX. Automatically converting to float32. "
+            "This may result in reduced precision.",
+            UserWarning,
+            stacklevel=3
+        )
 
     # Return raw MLX dtype or wrapped DType
     if return_raw and hasattr(result, '_mlx_dtype'):

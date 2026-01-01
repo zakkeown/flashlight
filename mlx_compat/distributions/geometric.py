@@ -6,6 +6,7 @@ import mlx.core as mx
 from ..tensor import Tensor
 from .distribution import Distribution
 from . import constraints
+from ._constants import xlogy, safe_log
 
 
 class Geometric(Distribution):
@@ -54,7 +55,11 @@ class Geometric(Distribution):
         return Tensor(data * mx.log(1 - self.probs) + mx.log(self.probs))
 
     def entropy(self) -> Tensor:
-        return Tensor(-(1 - self.probs) * mx.log(1 - self.probs + 1e-10) / self.probs - mx.log(self.probs + 1e-10))
+        # Use xlogy and safe_log for numerical stability
+        q = 1 - self.probs  # probability of failure
+        p = self.probs       # probability of success
+        # Entropy = -q * log(q) / p - log(p)
+        return Tensor(-xlogy(q, q) / p - safe_log(p))
 
 
 __all__ = ['Geometric']

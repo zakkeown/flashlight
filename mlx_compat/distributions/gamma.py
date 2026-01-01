@@ -49,53 +49,25 @@ class Gamma(ExponentialFamily):
         return Tensor(self.concentration / self.rate ** 2)
 
     def sample(self, sample_shape: Tuple[int, ...] = ()) -> Tensor:
+        """Sample from Gamma distribution using MLX's native gamma sampler.
+
+        MLX's mx.random.gamma uses shape parameterization (scale=1), so we need
+        to divide by rate to get proper Gamma(concentration, rate) samples.
+
+        Gamma(shape, rate) = Gamma(shape, scale=1) / rate
+        """
         shape = sample_shape + self._batch_shape
-        # Gamma sampling using Marsaglia and Tsang's method for alpha >= 1
-        # For alpha < 1, we use the relation: gamma(alpha) = gamma(alpha+1) * U^(1/alpha)
-        alpha = mx.broadcast_to(self.concentration, shape)
+
+        # Broadcast concentration to output shape
+        concentration = mx.broadcast_to(self.concentration, shape)
         rate = mx.broadcast_to(self.rate, shape)
 
-        # Marsaglia and Tsang's method
-        # For alpha >= 1: d = alpha - 1/3, c = 1/sqrt(9*d)
-        # Generate: x = normal(0,1), v = (1 + c*x)^3
-        # Accept if: log(u) < 0.5*x^2 + d - d*v + d*log(v)
+        # Use MLX's native gamma sampling (which uses shape parameterization with scale=1)
+        # mx.random.gamma(shape_param, sample_shape) samples from Gamma(shape_param, scale=1)
+        samples = mx.random.gamma(concentration, shape)
 
-        # For simplicity and to handle all alpha values, we use the
-        # transformation: if alpha < 1, sample gamma(alpha+1) then multiply by U^(1/alpha)
-        needs_boost = alpha < 1.0
-        alpha_work = mx.where(needs_boost, alpha + 1.0, alpha)
-
-        d = alpha_work - 1.0 / 3.0
-        c = 1.0 / mx.sqrt(9.0 * d)
-
-        # Rejection sampling loop (we run a fixed number of iterations and take last valid)
-        # In practice, the method has very high acceptance rate
-        samples = mx.zeros(shape)
-
-        for _ in range(10):  # Usually accepts in 1-2 iterations
-            x = mx.random.normal(shape)
-            v = (1.0 + c * x) ** 3
-            valid_v = v > 0
-
-            u = mx.random.uniform(shape=shape)
-
-            # Acceptance condition
-            accept = (
-                (mx.log(u) < 0.5 * x * x + d - d * v + d * mx.log(v)) &
-                valid_v
-            )
-
-            candidate = d * v
-            samples = mx.where(accept & (samples == 0), candidate, samples)
-
-        # Fallback: if still zero, use a simple approximation
-        samples = mx.where(samples == 0, d, samples)
-
-        # Boost for alpha < 1
-        u_boost = mx.random.uniform(shape=shape)
-        samples = mx.where(needs_boost, samples * (u_boost ** (1.0 / alpha)), samples)
-
-        # Apply rate
+        # Convert from scale=1 parameterization to rate parameterization
+        # Gamma(alpha, rate=beta) = Gamma(alpha, scale=1) / beta
         return Tensor(samples / rate)
 
     def rsample(self, sample_shape: Tuple[int, ...] = ()) -> Tensor:
