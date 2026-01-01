@@ -5,10 +5,22 @@ Implements nn.Module system and layers for building neural networks.
 """
 
 # Submodules that should be accessible as nn.xxx
-from . import attention, common_types
-from . import functional  # PyTorch-style alias
-from . import functional as F
-from . import grad, init, modules, parameter, qat, quantizable, utils
+# isort: off
+from . import (
+    attention,
+    common_types,
+    functional,
+    grad,
+    init,
+    modules,
+    parameter,
+    qat,
+    quantizable,
+    utils,
+)
+from . import functional as F  # PyTorch-style alias
+
+# isort: on
 
 # Container modules
 from .containers import Container, ModuleDict, ModuleList, ParameterDict, ParameterList, Sequential
