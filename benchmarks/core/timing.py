@@ -31,7 +31,7 @@ def _force_eval(result: Any) -> None:
     try:
         import mlx.core as mx
 
-        # Handle mlx_compat tensors (have _mlx_array attribute)
+        # Handle flashlight tensors (have _mlx_array attribute)
         if hasattr(result, '_mlx_array'):
             mx.eval(result._mlx_array)
         # Handle raw MLX arrays

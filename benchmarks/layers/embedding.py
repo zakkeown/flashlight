@@ -28,7 +28,7 @@ class EmbeddingBenchmark(LayerBenchmark):
         ]
 
     def create_mlx_layer(self, config: Dict[str, Any]):
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
         return nn.Embedding(config["num_embeddings"], config["embedding_dim"])
 
     def create_pytorch_layer(self, config: Dict[str, Any], device: str):
@@ -37,9 +37,9 @@ class EmbeddingBenchmark(LayerBenchmark):
         return layer.to(device)
 
     def create_mlx_input(self, config: Dict[str, Any]):
-        import mlx_compat
+        import flashlight
         import mlx.core as mx
-        return mlx_compat.tensor(
+        return flashlight.tensor(
             mx.random.randint(0, config["num_embeddings"], (config["batch"], config["seq_len"]))
         )
 

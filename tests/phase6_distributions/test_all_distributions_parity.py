@@ -1,7 +1,7 @@
 """
 Comprehensive PyTorch Parity Tests for All Distributions
 
-This file tests every distribution in mlx_compat.distributions against
+This file tests every distribution in flashlight.distributions against
 PyTorch's torch.distributions for numerical parity.
 """
 
@@ -21,8 +21,8 @@ except ImportError:
     TORCH_AVAILABLE = False
 
 try:
-    import mlx_compat
-    from mlx_compat import distributions as dist
+    import flashlight
+    from flashlight import distributions as dist
     import mlx.core as mx
     MLX_AVAILABLE = True
 except ImportError:
@@ -40,10 +40,10 @@ def compare_log_prob(mlx_dist, torch_dist, test_values, rtol=1e-4, atol=1e-5):
     """Compare log_prob between MLX and PyTorch distributions."""
     for v in test_values:
         if isinstance(v, list):
-            mlx_v = mlx_compat.tensor(v)
+            mlx_v = flashlight.tensor(v)
             torch_v = torch.tensor(v)
         else:
-            mlx_v = mlx_compat.tensor(float(v))
+            mlx_v = flashlight.tensor(float(v))
             torch_v = torch.tensor(float(v))
 
         mlx_lp = float(mlx_dist.log_prob(mlx_v).numpy())
@@ -440,7 +440,7 @@ class TestCategoricalParity(TestCase):
     def test_log_prob(self):
         probs = [0.2, 0.3, 0.5]
         compare_log_prob(
-            dist.Categorical(probs=mlx_compat.tensor(probs)),
+            dist.Categorical(probs=flashlight.tensor(probs)),
             td.Categorical(probs=torch.tensor(probs)),
             [0, 1, 2]
         )
@@ -449,7 +449,7 @@ class TestCategoricalParity(TestCase):
     def test_entropy(self):
         probs = [0.2, 0.3, 0.5]
         compare_entropy(
-            dist.Categorical(probs=mlx_compat.tensor(probs)),
+            dist.Categorical(probs=flashlight.tensor(probs)),
             td.Categorical(probs=torch.tensor(probs))
         )
 
@@ -513,12 +513,12 @@ class TestDirichletParity(TestCase):
     @skip_if_no_torch
     def test_log_prob(self):
         alpha = [2.0, 3.0, 5.0]
-        mlx_d = dist.Dirichlet(mlx_compat.tensor(alpha))
+        mlx_d = dist.Dirichlet(flashlight.tensor(alpha))
         torch_d = td.Dirichlet(torch.tensor(alpha))
 
         # Test value on simplex
         val = [0.2, 0.3, 0.5]
-        mlx_lp = float(mlx_d.log_prob(mlx_compat.tensor(val)).numpy())
+        mlx_lp = float(mlx_d.log_prob(flashlight.tensor(val)).numpy())
         torch_lp = float(torch_d.log_prob(torch.tensor(val)))
 
         self.assertAlmostEqual(mlx_lp, torch_lp, places=4)
@@ -527,7 +527,7 @@ class TestDirichletParity(TestCase):
     def test_entropy(self):
         alpha = [2.0, 3.0, 5.0]
         compare_entropy(
-            dist.Dirichlet(mlx_compat.tensor(alpha)),
+            dist.Dirichlet(flashlight.tensor(alpha)),
             td.Dirichlet(torch.tensor(alpha))
         )
 
@@ -537,12 +537,12 @@ class TestMultinomialParity(TestCase):
     @skip_if_no_torch
     def test_log_prob(self):
         probs = [0.2, 0.3, 0.5]
-        mlx_m = dist.Multinomial(10, probs=mlx_compat.tensor(probs))
+        mlx_m = dist.Multinomial(10, probs=flashlight.tensor(probs))
         torch_m = td.Multinomial(10, probs=torch.tensor(probs))
 
         # Test value
         val = [2, 3, 5]
-        mlx_lp = float(mlx_m.log_prob(mlx_compat.tensor(val, dtype=mlx_compat.float32)).numpy())
+        mlx_lp = float(mlx_m.log_prob(flashlight.tensor(val, dtype=flashlight.float32)).numpy())
         torch_lp = float(torch_m.log_prob(torch.tensor(val, dtype=torch.float32)))
 
         # Slightly relaxed due to lgamma differences
@@ -557,8 +557,8 @@ class TestMultivariateNormalParity(TestCase):
         cov = [[1.0, 0.5], [0.5, 1.0]]
 
         mlx_mvn = dist.MultivariateNormal(
-            loc=mlx_compat.tensor(loc),
-            covariance_matrix=mlx_compat.tensor(cov)
+            loc=flashlight.tensor(loc),
+            covariance_matrix=flashlight.tensor(cov)
         )
         torch_mvn = td.MultivariateNormal(
             loc=torch.tensor(loc),
@@ -566,7 +566,7 @@ class TestMultivariateNormalParity(TestCase):
         )
 
         val = [0.5, 0.5]
-        mlx_lp = float(mlx_mvn.log_prob(mlx_compat.tensor(val)).numpy())
+        mlx_lp = float(mlx_mvn.log_prob(flashlight.tensor(val)).numpy())
         torch_lp = float(torch_mvn.log_prob(torch.tensor(val)))
 
         self.assertAlmostEqual(mlx_lp, torch_lp, places=4)
@@ -577,8 +577,8 @@ class TestMultivariateNormalParity(TestCase):
         cov = [[1.0, 0.0], [0.0, 1.0]]
         compare_entropy(
             dist.MultivariateNormal(
-                loc=mlx_compat.tensor(loc),
-                covariance_matrix=mlx_compat.tensor(cov)
+                loc=flashlight.tensor(loc),
+                covariance_matrix=flashlight.tensor(cov)
             ),
             td.MultivariateNormal(
                 loc=torch.tensor(loc),
@@ -600,7 +600,7 @@ class TestRelaxedBernoulliParity(TestCase):
         torch_rb = td.RelaxedBernoulli(torch.tensor(0.5), probs=0.3)
 
         for v in [0.1, 0.5, 0.9]:
-            mlx_lp = float(mlx_rb.log_prob(mlx_compat.tensor(v)).numpy())
+            mlx_lp = float(mlx_rb.log_prob(flashlight.tensor(v)).numpy())
             torch_lp = float(torch_rb.log_prob(torch.tensor(v)))
             self.assertAlmostEqual(mlx_lp, torch_lp, places=4)
 
@@ -610,13 +610,13 @@ class TestOneHotCategoricalParity(TestCase):
     @skip_if_no_torch
     def test_log_prob(self):
         probs = [0.2, 0.3, 0.5]
-        mlx_d = dist.OneHotCategorical(probs=mlx_compat.tensor(probs))
+        mlx_d = dist.OneHotCategorical(probs=flashlight.tensor(probs))
         torch_d = td.OneHotCategorical(probs=torch.tensor(probs))
 
         for i in range(3):
             one_hot = [0.0, 0.0, 0.0]
             one_hot[i] = 1.0
-            mlx_lp = float(mlx_d.log_prob(mlx_compat.tensor(one_hot)).numpy())
+            mlx_lp = float(mlx_d.log_prob(flashlight.tensor(one_hot)).numpy())
             torch_lp = float(torch_d.log_prob(torch.tensor(one_hot)))
             self.assertAlmostEqual(mlx_lp, torch_lp, places=4)
 
@@ -624,7 +624,7 @@ class TestOneHotCategoricalParity(TestCase):
     def test_entropy(self):
         probs = [0.2, 0.3, 0.5]
         compare_entropy(
-            dist.OneHotCategorical(probs=mlx_compat.tensor(probs)),
+            dist.OneHotCategorical(probs=flashlight.tensor(probs)),
             td.OneHotCategorical(probs=torch.tensor(probs))
         )
 

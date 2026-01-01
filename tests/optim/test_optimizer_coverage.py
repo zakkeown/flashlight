@@ -15,10 +15,10 @@ import numpy as np
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
-    import mlx_compat
-    import mlx_compat.nn as nn
-    import mlx_compat.optim as optim
-    from mlx_compat.optim import lr_scheduler
+    import flashlight
+    import flashlight.nn as nn
+    import flashlight.optim as optim
+    from flashlight.optim import lr_scheduler
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -35,8 +35,8 @@ class TestOptimizerBase(TestCase):
 
     def test_param_groups_api(self):
         """Test parameter groups with different learning rates."""
-        param1 = nn.Parameter(mlx_compat.tensor(np.zeros((3, 3), dtype=np.float32)))
-        param2 = nn.Parameter(mlx_compat.tensor(np.zeros((2, 2), dtype=np.float32)))
+        param1 = nn.Parameter(flashlight.tensor(np.zeros((3, 3), dtype=np.float32)))
+        param2 = nn.Parameter(flashlight.tensor(np.zeros((2, 2), dtype=np.float32)))
 
         opt = optim.SGD([
             {'params': [param1], 'lr': 0.1},
@@ -49,7 +49,7 @@ class TestOptimizerBase(TestCase):
 
     def test_duplicate_params_in_groups_raises(self):
         """Test that duplicate parameters across groups raise ValueError."""
-        param = nn.Parameter(mlx_compat.tensor(np.zeros((3, 3), dtype=np.float32)))
+        param = nn.Parameter(flashlight.tensor(np.zeros((3, 3), dtype=np.float32)))
         opt = optim.SGD([param], lr=0.01)
         # Adding the same param again should raise
         with self.assertRaises(ValueError):
@@ -57,8 +57,8 @@ class TestOptimizerBase(TestCase):
 
     def test_add_param_group(self):
         """Test add_param_group method."""
-        param1 = nn.Parameter(mlx_compat.tensor(np.zeros((3, 3), dtype=np.float32)))
-        param2 = nn.Parameter(mlx_compat.tensor(np.zeros((2, 2), dtype=np.float32)))
+        param1 = nn.Parameter(flashlight.tensor(np.zeros((3, 3), dtype=np.float32)))
+        param2 = nn.Parameter(flashlight.tensor(np.zeros((2, 2), dtype=np.float32)))
 
         opt = optim.SGD([param1], lr=0.1)
         opt.add_param_group({'params': [param2], 'lr': 0.01})
@@ -73,11 +73,11 @@ class TestZeroGrad(TestCase):
 
     def test_zero_grad_set_to_none_true(self):
         """Test zero_grad with set_to_none=True (default)."""
-        param = nn.Parameter(mlx_compat.tensor(np.ones((3, 3), dtype=np.float32)))
+        param = nn.Parameter(flashlight.tensor(np.ones((3, 3), dtype=np.float32)))
         opt = optim.SGD([param], lr=0.01)
 
         # Set gradient
-        param.grad = mlx_compat.tensor(np.ones((3, 3), dtype=np.float32))
+        param.grad = flashlight.tensor(np.ones((3, 3), dtype=np.float32))
         self.assertIsNotNone(param.grad)
 
         # Zero grad
@@ -86,11 +86,11 @@ class TestZeroGrad(TestCase):
 
     def test_zero_grad_set_to_none_false(self):
         """Test zero_grad with set_to_none=False."""
-        param = nn.Parameter(mlx_compat.tensor(np.ones((3, 3), dtype=np.float32)))
+        param = nn.Parameter(flashlight.tensor(np.ones((3, 3), dtype=np.float32)))
         opt = optim.SGD([param], lr=0.01)
 
         # Set gradient
-        param.grad = mlx_compat.tensor(np.ones((3, 3), dtype=np.float32))
+        param.grad = flashlight.tensor(np.ones((3, 3), dtype=np.float32))
 
         # Zero grad with set_to_none=False
         opt.zero_grad(set_to_none=False)
@@ -104,19 +104,19 @@ class TestStateDictSaveLoad(TestCase):
 
     def test_sgd_state_dict_roundtrip(self):
         """Test SGD state dict save and load."""
-        param = nn.Parameter(mlx_compat.tensor(np.random.randn(3, 3).astype(np.float32)))
+        param = nn.Parameter(flashlight.tensor(np.random.randn(3, 3).astype(np.float32)))
         opt = optim.SGD([param], lr=0.01, momentum=0.9)
 
         # Run a few steps to build state
         for _ in range(3):
-            param.grad = mlx_compat.tensor(np.random.randn(3, 3).astype(np.float32))
+            param.grad = flashlight.tensor(np.random.randn(3, 3).astype(np.float32))
             opt.step()
 
         # Save state
         state = opt.state_dict()
 
         # Create new optimizer and load state
-        param2 = nn.Parameter(mlx_compat.tensor(param.numpy()))
+        param2 = nn.Parameter(flashlight.tensor(param.numpy()))
         opt2 = optim.SGD([param2], lr=0.01, momentum=0.9)
         opt2.load_state_dict(state)
 
@@ -125,17 +125,17 @@ class TestStateDictSaveLoad(TestCase):
 
     def test_adam_state_dict_roundtrip(self):
         """Test Adam state dict save and load."""
-        param = nn.Parameter(mlx_compat.tensor(np.random.randn(3, 3).astype(np.float32)))
+        param = nn.Parameter(flashlight.tensor(np.random.randn(3, 3).astype(np.float32)))
         opt = optim.Adam([param], lr=0.001)
 
         # Run a few steps
         for _ in range(3):
-            param.grad = mlx_compat.tensor(np.random.randn(3, 3).astype(np.float32))
+            param.grad = flashlight.tensor(np.random.randn(3, 3).astype(np.float32))
             opt.step()
 
         # Save and load
         state = opt.state_dict()
-        param2 = nn.Parameter(mlx_compat.tensor(param.numpy()))
+        param2 = nn.Parameter(flashlight.tensor(param.numpy()))
         opt2 = optim.Adam([param2], lr=0.001)
         opt2.load_state_dict(state)
 
@@ -148,14 +148,14 @@ class TestClosureSupport(TestCase):
 
     def _test_closure(self, optimizer_class, **kwargs):
         """Helper to test closure support for an optimizer."""
-        param = nn.Parameter(mlx_compat.tensor(np.random.randn(3, 3).astype(np.float32)))
+        param = nn.Parameter(flashlight.tensor(np.random.randn(3, 3).astype(np.float32)))
         opt = optimizer_class([param], **kwargs)
 
         loss_value = [0.0]
 
         def closure():
             loss_value[0] = 1.5
-            param.grad = mlx_compat.tensor(np.random.randn(3, 3).astype(np.float32))
+            param.grad = flashlight.tensor(np.random.randn(3, 3).astype(np.float32))
             return loss_value[0]
 
         result = opt.step(closure)
@@ -192,7 +192,7 @@ class TestOptimizerRepr(TestCase):
 
     def test_sgd_repr(self):
         """Test SGD repr."""
-        param = nn.Parameter(mlx_compat.tensor(np.zeros((3, 3), dtype=np.float32)))
+        param = nn.Parameter(flashlight.tensor(np.zeros((3, 3), dtype=np.float32)))
         opt = optim.SGD([param], lr=0.01, momentum=0.9)
         repr_str = repr(opt)
         self.assertIn("SGD", repr_str)
@@ -200,7 +200,7 @@ class TestOptimizerRepr(TestCase):
 
     def test_adam_repr(self):
         """Test Adam repr."""
-        param = nn.Parameter(mlx_compat.tensor(np.zeros((3, 3), dtype=np.float32)))
+        param = nn.Parameter(flashlight.tensor(np.zeros((3, 3), dtype=np.float32)))
         opt = optim.Adam([param], lr=0.001)
         repr_str = repr(opt)
         self.assertIn("Adam", repr_str)
@@ -212,25 +212,25 @@ class TestOptimizerValidation(TestCase):
 
     def test_sgd_negative_lr_raises(self):
         """Test that negative learning rate raises ValueError."""
-        param = nn.Parameter(mlx_compat.tensor(np.zeros((3, 3), dtype=np.float32)))
+        param = nn.Parameter(flashlight.tensor(np.zeros((3, 3), dtype=np.float32)))
         with self.assertRaises(ValueError):
             optim.SGD([param], lr=-0.01)
 
     def test_adam_negative_eps_raises(self):
         """Test that negative epsilon raises ValueError."""
-        param = nn.Parameter(mlx_compat.tensor(np.zeros((3, 3), dtype=np.float32)))
+        param = nn.Parameter(flashlight.tensor(np.zeros((3, 3), dtype=np.float32)))
         with self.assertRaises(ValueError):
             optim.Adam([param], lr=0.001, eps=-1e-8)
 
     def test_adam_invalid_betas_raises(self):
         """Test that invalid betas raise ValueError."""
-        param = nn.Parameter(mlx_compat.tensor(np.zeros((3, 3), dtype=np.float32)))
+        param = nn.Parameter(flashlight.tensor(np.zeros((3, 3), dtype=np.float32)))
         with self.assertRaises(ValueError):
             optim.Adam([param], lr=0.001, betas=(1.5, 0.999))
 
     def test_rmsprop_invalid_alpha_raises(self):
         """Test that invalid alpha raises ValueError."""
-        param = nn.Parameter(mlx_compat.tensor(np.zeros((3, 3), dtype=np.float32)))
+        param = nn.Parameter(flashlight.tensor(np.zeros((3, 3), dtype=np.float32)))
         with self.assertRaises(ValueError):
             optim.RMSprop([param], lr=0.01, alpha=-0.1)
 
@@ -241,12 +241,12 @@ class TestNoGradSkip(TestCase):
 
     def test_sgd_skips_no_grad(self):
         """Test SGD skips parameters with no gradient."""
-        param1 = nn.Parameter(mlx_compat.tensor(np.ones((3, 3), dtype=np.float32)))
-        param2 = nn.Parameter(mlx_compat.tensor(np.ones((3, 3), dtype=np.float32)))
+        param1 = nn.Parameter(flashlight.tensor(np.ones((3, 3), dtype=np.float32)))
+        param2 = nn.Parameter(flashlight.tensor(np.ones((3, 3), dtype=np.float32)))
         opt = optim.SGD([param1, param2], lr=0.1)
 
         # Only set gradient for param1
-        param1.grad = mlx_compat.tensor(np.ones((3, 3), dtype=np.float32))
+        param1.grad = flashlight.tensor(np.ones((3, 3), dtype=np.float32))
 
         initial_param2 = param2.numpy().copy()
         opt.step()
@@ -264,7 +264,7 @@ class TestLRSchedulerEdgeCases(TestCase):
 
     def test_reduce_lr_on_plateau_max_mode(self):
         """Test ReduceLROnPlateau in max mode."""
-        param = nn.Parameter(mlx_compat.tensor(np.zeros((3, 3), dtype=np.float32)))
+        param = nn.Parameter(flashlight.tensor(np.zeros((3, 3), dtype=np.float32)))
         opt = optim.SGD([param], lr=0.1)
         sched = lr_scheduler.ReduceLROnPlateau(opt, mode='max', factor=0.5, patience=2)
 
@@ -282,7 +282,7 @@ class TestLRSchedulerEdgeCases(TestCase):
 
     def test_step_lr_boundary(self):
         """Test StepLR at step size boundary."""
-        param = nn.Parameter(mlx_compat.tensor(np.zeros((3, 3), dtype=np.float32)))
+        param = nn.Parameter(flashlight.tensor(np.zeros((3, 3), dtype=np.float32)))
         opt = optim.SGD([param], lr=0.1)
         sched = lr_scheduler.StepLR(opt, step_size=3, gamma=0.1)
 
@@ -301,16 +301,16 @@ class TestMultipleParamGroups(TestCase):
 
     def test_sgd_multiple_groups(self):
         """Test SGD with multiple param groups and different LRs."""
-        param1 = nn.Parameter(mlx_compat.tensor(np.ones((3, 3), dtype=np.float32)))
-        param2 = nn.Parameter(mlx_compat.tensor(np.ones((3, 3), dtype=np.float32)))
+        param1 = nn.Parameter(flashlight.tensor(np.ones((3, 3), dtype=np.float32)))
+        param2 = nn.Parameter(flashlight.tensor(np.ones((3, 3), dtype=np.float32)))
 
         opt = optim.SGD([
             {'params': [param1], 'lr': 0.1},
             {'params': [param2], 'lr': 0.01}
         ])
 
-        param1.grad = mlx_compat.tensor(np.ones((3, 3), dtype=np.float32))
-        param2.grad = mlx_compat.tensor(np.ones((3, 3), dtype=np.float32))
+        param1.grad = flashlight.tensor(np.ones((3, 3), dtype=np.float32))
+        param2.grad = flashlight.tensor(np.ones((3, 3), dtype=np.float32))
 
         opt.step()
 
@@ -321,16 +321,16 @@ class TestMultipleParamGroups(TestCase):
 
     def test_adam_multiple_groups(self):
         """Test Adam with multiple param groups."""
-        param1 = nn.Parameter(mlx_compat.tensor(np.ones((2, 2), dtype=np.float32)))
-        param2 = nn.Parameter(mlx_compat.tensor(np.ones((2, 2), dtype=np.float32)))
+        param1 = nn.Parameter(flashlight.tensor(np.ones((2, 2), dtype=np.float32)))
+        param2 = nn.Parameter(flashlight.tensor(np.ones((2, 2), dtype=np.float32)))
 
         opt = optim.Adam([
             {'params': [param1], 'lr': 0.01},
             {'params': [param2], 'lr': 0.001}
         ])
 
-        param1.grad = mlx_compat.tensor(np.ones((2, 2), dtype=np.float32))
-        param2.grad = mlx_compat.tensor(np.ones((2, 2), dtype=np.float32))
+        param1.grad = flashlight.tensor(np.ones((2, 2), dtype=np.float32))
+        param2.grad = flashlight.tensor(np.ones((2, 2), dtype=np.float32))
 
         opt.step()
 
@@ -344,41 +344,41 @@ class TestAdditionalOptimizers(TestCase):
 
     def test_adamax_step(self):
         """Test Adamax basic step."""
-        param = nn.Parameter(mlx_compat.tensor(np.ones((3, 3), dtype=np.float32)))
+        param = nn.Parameter(flashlight.tensor(np.ones((3, 3), dtype=np.float32)))
         opt = optim.Adamax([param], lr=0.002)
-        param.grad = mlx_compat.tensor(np.ones((3, 3), dtype=np.float32))
+        param.grad = flashlight.tensor(np.ones((3, 3), dtype=np.float32))
         opt.step()
         self.assertTrue(param.numpy().mean() < 1.0)
 
     def test_radam_step(self):
         """Test RAdam basic step."""
-        param = nn.Parameter(mlx_compat.tensor(np.ones((3, 3), dtype=np.float32)))
+        param = nn.Parameter(flashlight.tensor(np.ones((3, 3), dtype=np.float32)))
         opt = optim.RAdam([param], lr=0.001)
-        param.grad = mlx_compat.tensor(np.ones((3, 3), dtype=np.float32))
+        param.grad = flashlight.tensor(np.ones((3, 3), dtype=np.float32))
         opt.step()
         self.assertTrue(param.numpy().mean() < 1.0)
 
     def test_nadam_step(self):
         """Test NAdam basic step."""
-        param = nn.Parameter(mlx_compat.tensor(np.ones((3, 3), dtype=np.float32)))
+        param = nn.Parameter(flashlight.tensor(np.ones((3, 3), dtype=np.float32)))
         opt = optim.NAdam([param], lr=0.002)
-        param.grad = mlx_compat.tensor(np.ones((3, 3), dtype=np.float32))
+        param.grad = flashlight.tensor(np.ones((3, 3), dtype=np.float32))
         opt.step()
         self.assertTrue(param.numpy().mean() < 1.0)
 
     def test_asgd_step(self):
         """Test ASGD basic step."""
-        param = nn.Parameter(mlx_compat.tensor(np.ones((3, 3), dtype=np.float32)))
+        param = nn.Parameter(flashlight.tensor(np.ones((3, 3), dtype=np.float32)))
         opt = optim.ASGD([param], lr=0.01)
-        param.grad = mlx_compat.tensor(np.ones((3, 3), dtype=np.float32))
+        param.grad = flashlight.tensor(np.ones((3, 3), dtype=np.float32))
         opt.step()
         self.assertTrue(param.numpy().mean() < 1.0)
 
     def test_rprop_step(self):
         """Test Rprop basic step."""
-        param = nn.Parameter(mlx_compat.tensor(np.ones((3, 3), dtype=np.float32)))
+        param = nn.Parameter(flashlight.tensor(np.ones((3, 3), dtype=np.float32)))
         opt = optim.Rprop([param], lr=0.01)
-        param.grad = mlx_compat.tensor(np.ones((3, 3), dtype=np.float32))
+        param.grad = flashlight.tensor(np.ones((3, 3), dtype=np.float32))
         opt.step()
         self.assertTrue(param.numpy().mean() < 1.0)
 

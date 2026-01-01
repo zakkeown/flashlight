@@ -103,7 +103,7 @@ class BaseBenchmark:
 
     Subclasses should implement:
     - get_input_configs(): Return list of input configurations
-    - create_mlx_inputs(config): Create mlx_compat inputs
+    - create_mlx_inputs(config): Create flashlight inputs
     - create_pytorch_inputs(config, device): Create PyTorch inputs
     - mlx_operation(*inputs): The MLX operation to benchmark
     - pytorch_operation(*inputs): The PyTorch operation to benchmark
@@ -120,7 +120,7 @@ class BaseBenchmark:
         raise NotImplementedError
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> tuple:
-        """Create mlx_compat inputs for this config."""
+        """Create flashlight inputs for this config."""
         raise NotImplementedError
 
     def create_pytorch_inputs(

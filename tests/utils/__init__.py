@@ -1,1 +1,1 @@
-"""Tests for mlx_compat.utils module."""
+"""Tests for flashlight.utils module."""

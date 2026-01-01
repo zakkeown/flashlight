@@ -33,11 +33,11 @@ class Conv2dBenchmark(OperatorBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
-        import mlx_compat.nn.functional as F
+        import flashlight
+        import flashlight.nn.functional as F
 
-        x = mlx_compat.randn(config["batch"], config["c_in"], config["h"], config["w"])
-        weight = mlx_compat.randn(config["c_out"], config["c_in"], config["k"], config["k"])
+        x = flashlight.randn(config["batch"], config["c_in"], config["h"], config["w"])
+        weight = flashlight.randn(config["c_out"], config["c_in"], config["k"], config["k"])
 
         return (x, weight, config["stride"], config["padding"])
 
@@ -50,7 +50,7 @@ class Conv2dBenchmark(OperatorBenchmark):
         return (x, weight, config["stride"], config["padding"])
 
     def mlx_operation(self, x, weight, stride, padding):
-        import mlx_compat.nn.functional as F
+        import flashlight.nn.functional as F
         return F.conv2d(x, weight, stride=stride, padding=padding)
 
     def pytorch_operation(self, x, weight, stride, padding):
@@ -105,10 +105,10 @@ class Conv1dBenchmark(OperatorBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
+        import flashlight
 
-        x = mlx_compat.randn(config["batch"], config["c_in"], config["length"])
-        weight = mlx_compat.randn(config["c_out"], config["c_in"], config["k"])
+        x = flashlight.randn(config["batch"], config["c_in"], config["length"])
+        weight = flashlight.randn(config["c_out"], config["c_in"], config["k"])
 
         return (x, weight, config["stride"], config["padding"])
 
@@ -121,7 +121,7 @@ class Conv1dBenchmark(OperatorBenchmark):
         return (x, weight, config["stride"], config["padding"])
 
     def mlx_operation(self, x, weight, stride, padding):
-        import mlx_compat.nn.functional as F
+        import flashlight.nn.functional as F
         return F.conv1d(x, weight, stride=stride, padding=padding)
 
     def pytorch_operation(self, x, weight, stride, padding):
@@ -142,10 +142,10 @@ class Conv3dBenchmark(OperatorBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
+        import flashlight
 
-        x = mlx_compat.randn(config["batch"], config["c_in"], config["d"], config["h"], config["w"])
-        weight = mlx_compat.randn(config["c_out"], config["c_in"], config["k"], config["k"], config["k"])
+        x = flashlight.randn(config["batch"], config["c_in"], config["d"], config["h"], config["w"])
+        weight = flashlight.randn(config["c_out"], config["c_in"], config["k"], config["k"], config["k"])
 
         return (x, weight, config["stride"], config["padding"])
 
@@ -158,7 +158,7 @@ class Conv3dBenchmark(OperatorBenchmark):
         return (x, weight, config["stride"], config["padding"])
 
     def mlx_operation(self, x, weight, stride, padding):
-        import mlx_compat.nn.functional as F
+        import flashlight.nn.functional as F
         return F.conv3d(x, weight, stride=stride, padding=padding)
 
     def pytorch_operation(self, x, weight, stride, padding):

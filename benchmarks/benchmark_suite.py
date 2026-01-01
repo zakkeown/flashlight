@@ -8,9 +8,9 @@ import sys
 sys.path.insert(0, '..')
 
 import time
-import mlx_compat
-import mlx_compat.nn as nn
-import mlx_compat.optim as optim
+import flashlight
+import flashlight.nn as nn
+import flashlight.optim as optim
 import numpy as np
 
 
@@ -31,7 +31,7 @@ def benchmark_forward_pass(model, input_shape, num_iterations=100, warmup=10):
 
     # Warmup
     for _ in range(warmup):
-        x = mlx_compat.randn(*input_shape)
+        x = flashlight.randn(*input_shape)
         _ = model(x)
 
     # Benchmark
@@ -39,7 +39,7 @@ def benchmark_forward_pass(model, input_shape, num_iterations=100, warmup=10):
     start_time = time.time()
 
     for _ in range(num_iterations):
-        x = mlx_compat.randn(*input_shape)
+        x = flashlight.randn(*input_shape)
         _ = model(x)
 
     end_time = time.time()
@@ -70,8 +70,8 @@ def benchmark_training_step(model, input_shape, num_classes, num_iterations=50, 
 
     # Warmup
     for _ in range(warmup):
-        x = mlx_compat.randn(*input_shape)
-        y = mlx_compat.tensor(np.random.randint(0, num_classes, input_shape[0]))
+        x = flashlight.randn(*input_shape)
+        y = flashlight.tensor(np.random.randint(0, num_classes, input_shape[0]))
         optimizer.zero_grad()
         outputs = model(x)
         loss = criterion(outputs, y)
@@ -83,8 +83,8 @@ def benchmark_training_step(model, input_shape, num_classes, num_iterations=50, 
     start_time = time.time()
 
     for _ in range(num_iterations):
-        x = mlx_compat.randn(*input_shape)
-        y = mlx_compat.tensor(np.random.randint(0, num_classes, input_shape[0]))
+        x = flashlight.randn(*input_shape)
+        y = flashlight.tensor(np.random.randint(0, num_classes, input_shape[0]))
 
         optimizer.zero_grad()
         outputs = model(x)
@@ -256,7 +256,7 @@ def validate_mlp_accuracy():
         torch_layer.bias.data = torch.from_numpy(mlx_bias)
 
     # Forward pass
-    mlx_input = mlx_compat.tensor(input_data)
+    mlx_input = flashlight.tensor(input_data)
     torch_input = torch.from_numpy(input_data)
 
     with torch.no_grad():
@@ -300,7 +300,7 @@ def print_summary():
 def main():
     """Run all benchmarks."""
     print("\n" + "=" * 70)
-    print("mlx_compat Performance Benchmarking Suite")
+    print("flashlight Performance Benchmarking Suite")
     print("=" * 70)
     print("\nRunning benchmarks... This may take a few minutes.\n")
 

@@ -1,14 +1,14 @@
 """
 Random Number Generation Tests
 
-Tests for mlx_compat.random module.
+Tests for flashlight.random module.
 """
 
 import pytest
 import numpy as np
 
-import mlx_compat
-from mlx_compat.random import (
+import flashlight
+from flashlight.random import (
     Generator,
     default_generator,
     manual_seed,
@@ -84,8 +84,8 @@ class TestDefaultGenerator:
 
     def test_default_generator_singleton(self):
         """Test default_generator is a singleton-like global."""
-        from mlx_compat.random import default_generator as gen1
-        from mlx_compat.random import default_generator as gen2
+        from flashlight.random import default_generator as gen1
+        from flashlight.random import default_generator as gen2
         assert gen1 is gen2
 
 
@@ -100,10 +100,10 @@ class TestManualSeed:
     def test_manual_seed_reproducibility(self):
         """Test manual_seed produces reproducible random numbers."""
         manual_seed(12345)
-        x1 = mlx_compat.randn(10)
+        x1 = flashlight.randn(10)
 
         manual_seed(12345)
-        x2 = mlx_compat.randn(10)
+        x2 = flashlight.randn(10)
 
         np.testing.assert_allclose(
             np.array(x1._mlx_array),
@@ -114,10 +114,10 @@ class TestManualSeed:
     def test_different_seeds_produce_different_results(self):
         """Test different seeds produce different random numbers."""
         manual_seed(1)
-        x1 = mlx_compat.randn(100)
+        x1 = flashlight.randn(100)
 
         manual_seed(2)
-        x2 = mlx_compat.randn(100)
+        x2 = flashlight.randn(100)
 
         # Should be different
         assert not np.allclose(
@@ -166,13 +166,13 @@ class TestRNGState:
         manual_seed(42)
 
         # Generate some random numbers
-        x1 = mlx_compat.randn(10)
+        x1 = flashlight.randn(10)
 
         # Save state
         state = get_rng_state()
 
         # Generate more random numbers
-        x2 = mlx_compat.randn(10)
+        x2 = flashlight.randn(10)
 
         # Restore state
         set_rng_state(state)
@@ -192,7 +192,7 @@ class TestForkRng:
 
         with fork_rng():
             # Generate random numbers inside fork
-            _ = mlx_compat.randn(10)
+            _ = flashlight.randn(10)
 
         state_after = get_rng_state()
         # State should be restored
@@ -203,7 +203,7 @@ class TestForkRng:
         manual_seed(42)
 
         with fork_rng(enabled=False):
-            _ = mlx_compat.randn(10)
+            _ = flashlight.randn(10)
 
         # Should not error
 
@@ -214,7 +214,7 @@ class TestForkRng:
 
         try:
             with fork_rng():
-                _ = mlx_compat.randn(10)
+                _ = flashlight.randn(10)
                 raise ValueError("test")
         except ValueError:
             pass
@@ -229,10 +229,10 @@ class TestRandomFunctions:
     def test_randn_reproducible(self):
         """Test randn is reproducible with seed."""
         manual_seed(123)
-        a = mlx_compat.randn(5, 5)
+        a = flashlight.randn(5, 5)
 
         manual_seed(123)
-        b = mlx_compat.randn(5, 5)
+        b = flashlight.randn(5, 5)
 
         np.testing.assert_allclose(
             np.array(a._mlx_array),
@@ -243,10 +243,10 @@ class TestRandomFunctions:
     def test_rand_reproducible(self):
         """Test rand is reproducible with seed."""
         manual_seed(456)
-        a = mlx_compat.rand(5, 5)
+        a = flashlight.rand(5, 5)
 
         manual_seed(456)
-        b = mlx_compat.rand(5, 5)
+        b = flashlight.rand(5, 5)
 
         np.testing.assert_allclose(
             np.array(a._mlx_array),
@@ -257,10 +257,10 @@ class TestRandomFunctions:
     def test_randint_reproducible(self):
         """Test randint is reproducible with seed."""
         manual_seed(789)
-        a = mlx_compat.randint(0, 100, (10,))
+        a = flashlight.randint(0, 100, (10,))
 
         manual_seed(789)
-        b = mlx_compat.randint(0, 100, (10,))
+        b = flashlight.randint(0, 100, (10,))
 
         np.testing.assert_array_equal(
             np.array(a._mlx_array),
@@ -270,10 +270,10 @@ class TestRandomFunctions:
     def test_randperm_reproducible(self):
         """Test randperm is reproducible with seed."""
         manual_seed(111)
-        a = mlx_compat.randperm(10)
+        a = flashlight.randperm(10)
 
         manual_seed(111)
-        b = mlx_compat.randperm(10)
+        b = flashlight.randperm(10)
 
         np.testing.assert_array_equal(
             np.array(a._mlx_array),
@@ -287,7 +287,7 @@ class TestRandomStatistics:
     def test_randn_statistics(self):
         """Test randn produces approximately N(0,1) distribution."""
         manual_seed(42)
-        x = mlx_compat.randn(10000)
+        x = flashlight.randn(10000)
         data = np.array(x._mlx_array)
 
         # Mean should be close to 0
@@ -299,7 +299,7 @@ class TestRandomStatistics:
     def test_rand_statistics(self):
         """Test rand produces approximately U(0,1) distribution."""
         manual_seed(42)
-        x = mlx_compat.rand(10000)
+        x = flashlight.rand(10000)
         data = np.array(x._mlx_array)
 
         # Mean should be close to 0.5
@@ -312,7 +312,7 @@ class TestRandomStatistics:
     def test_randint_range(self):
         """Test randint produces values in correct range."""
         manual_seed(42)
-        x = mlx_compat.randint(5, 15, (1000,))
+        x = flashlight.randint(5, 15, (1000,))
         data = np.array(x._mlx_array)
 
         # All values should be in [5, 15)

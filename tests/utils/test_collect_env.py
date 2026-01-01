@@ -1,5 +1,5 @@
 """
-Tests for mlx_compat.utils.collect_env module.
+Tests for flashlight.utils.collect_env module.
 
 Tests environment information collection.
 """
@@ -7,7 +7,7 @@ Tests environment information collection.
 import unittest
 from unittest.mock import patch
 
-from mlx_compat.utils.collect_env import (
+from flashlight.utils.collect_env import (
     get_python_version,
     get_python_platform,
     get_os,
@@ -17,7 +17,7 @@ from mlx_compat.utils.collect_env import (
     get_gpu_info,
     get_metal_available,
     get_mlx_version,
-    get_mlx_compat_version,
+    get_flashlight_version,
     get_numpy_version,
     get_env_info,
     get_pretty_env_info,
@@ -98,9 +98,9 @@ class TestLibraryVersions(unittest.TestCase):
         # Should be a version or "Not installed"
         self.assertGreater(len(version), 0)
 
-    def test_get_mlx_compat_version(self):
-        """Test get_mlx_compat_version returns version string."""
-        version = get_mlx_compat_version()
+    def test_get_flashlight_version(self):
+        """Test get_flashlight_version returns version string."""
+        version = get_flashlight_version()
         self.assertIsInstance(version, str)
 
     def test_get_numpy_version(self):
@@ -123,7 +123,7 @@ class TestGetEnvInfo(unittest.TestCase):
         """Test all fields are present in env info."""
         env = get_env_info()
 
-        self.assertIsNotNone(env.mlx_compat_version)
+        self.assertIsNotNone(env.flashlight_version)
         self.assertIsNotNone(env.mlx_version)
         self.assertIsNotNone(env.python_version)
         self.assertIsNotNone(env.python_platform)
@@ -156,7 +156,7 @@ class TestGetPrettyEnvInfo(unittest.TestCase):
     def test_contains_versions(self):
         """Test output contains version information."""
         info = get_pretty_env_info()
-        self.assertIn("mlx_compat version:", info)
+        self.assertIn("flashlight version:", info)
         self.assertIn("MLX version:", info)
         self.assertIn("Python version:", info)
         self.assertIn("NumPy version:", info)

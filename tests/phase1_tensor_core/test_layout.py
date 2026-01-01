@@ -1,14 +1,14 @@
 """
 Layout Tests
 
-Tests for mlx_compat.layout module - NCHW/NHWC layout management.
+Tests for flashlight.layout module - NCHW/NHWC layout management.
 """
 
 import pytest
 import numpy as np
 
-import mlx_compat
-from mlx_compat.layout import (
+import flashlight
+from flashlight.layout import (
     Layout,
     is_nhwc_mode,
     nhwc_mode,
@@ -122,37 +122,37 @@ class TestInferLayout:
 
     def test_infer_layout_4d_default(self):
         """Test infer_layout for 4D tensor defaults to NCHW."""
-        x = mlx_compat.randn(1, 3, 32, 32)
+        x = flashlight.randn(1, 3, 32, 32)
         layout = infer_layout(x)
         assert layout == Layout.NCHW
 
     def test_infer_layout_3d_default(self):
         """Test infer_layout for 3D tensor defaults to NCL."""
-        x = mlx_compat.randn(1, 3, 32)
+        x = flashlight.randn(1, 3, 32)
         layout = infer_layout(x)
         assert layout == Layout.NCL
 
     def test_infer_layout_5d_default(self):
         """Test infer_layout for 5D tensor defaults to NCDHW."""
-        x = mlx_compat.randn(1, 3, 8, 8, 8)
+        x = flashlight.randn(1, 3, 8, 8, 8)
         layout = infer_layout(x)
         assert layout == Layout.NCDHW
 
     def test_infer_layout_2d_contiguous(self):
         """Test infer_layout for 2D tensor returns CONTIGUOUS."""
-        x = mlx_compat.randn(10, 20)
+        x = flashlight.randn(10, 20)
         layout = infer_layout(x)
         assert layout == Layout.CONTIGUOUS
 
     def test_infer_layout_1d_contiguous(self):
         """Test infer_layout for 1D tensor returns CONTIGUOUS."""
-        x = mlx_compat.randn(100)
+        x = flashlight.randn(100)
         layout = infer_layout(x)
         assert layout == Layout.CONTIGUOUS
 
     def test_infer_layout_explicit(self):
         """Test infer_layout respects explicit _layout attribute."""
-        x = mlx_compat.randn(1, 32, 32, 3)
+        x = flashlight.randn(1, 32, 32, 3)
         x._layout = Layout.NHWC
         layout = infer_layout(x)
         assert layout == Layout.NHWC
@@ -164,7 +164,7 @@ class TestConvertLayout:
     def test_convert_nchw_to_nhwc(self):
         """Test converting NCHW to NHWC."""
         # NCHW: [1, 3, 4, 5]
-        x = mlx_compat.randn(1, 3, 4, 5)
+        x = flashlight.randn(1, 3, 4, 5)
         x._layout = Layout.NCHW
         result = convert_layout(x, Layout.NHWC)
         # Should become NHWC: [1, 4, 5, 3]
@@ -174,7 +174,7 @@ class TestConvertLayout:
     def test_convert_nhwc_to_nchw(self):
         """Test converting NHWC to NCHW."""
         # NHWC: [1, 4, 5, 3]
-        x = mlx_compat.randn(1, 4, 5, 3)
+        x = flashlight.randn(1, 4, 5, 3)
         x._layout = Layout.NHWC
         result = convert_layout(x, Layout.NCHW)
         # Should become NCHW: [1, 3, 4, 5]
@@ -184,7 +184,7 @@ class TestConvertLayout:
     def test_convert_ncl_to_nlc(self):
         """Test converting NCL to NLC."""
         # NCL: [2, 8, 16]
-        x = mlx_compat.randn(2, 8, 16)
+        x = flashlight.randn(2, 8, 16)
         x._layout = Layout.NCL
         result = convert_layout(x, Layout.NLC)
         # Should become NLC: [2, 16, 8]
@@ -194,7 +194,7 @@ class TestConvertLayout:
     def test_convert_nlc_to_ncl(self):
         """Test converting NLC to NCL."""
         # NLC: [2, 16, 8]
-        x = mlx_compat.randn(2, 16, 8)
+        x = flashlight.randn(2, 16, 8)
         x._layout = Layout.NLC
         result = convert_layout(x, Layout.NCL)
         # Should become NCL: [2, 8, 16]
@@ -204,7 +204,7 @@ class TestConvertLayout:
     def test_convert_ncdhw_to_ndhwc(self):
         """Test converting NCDHW to NDHWC."""
         # NCDHW: [1, 3, 4, 5, 6]
-        x = mlx_compat.randn(1, 3, 4, 5, 6)
+        x = flashlight.randn(1, 3, 4, 5, 6)
         x._layout = Layout.NCDHW
         result = convert_layout(x, Layout.NDHWC)
         # Should become NDHWC: [1, 4, 5, 6, 3]
@@ -213,7 +213,7 @@ class TestConvertLayout:
 
     def test_convert_same_layout_returns_same(self):
         """Test that converting to same layout returns same tensor."""
-        x = mlx_compat.randn(1, 3, 4, 5)
+        x = flashlight.randn(1, 3, 4, 5)
         x._layout = Layout.NCHW
         result = convert_layout(x, Layout.NCHW)
         # Should return same tensor
@@ -221,14 +221,14 @@ class TestConvertLayout:
 
     def test_convert_contiguous_returns_same(self):
         """Test that contiguous tensors pass through unchanged."""
-        x = mlx_compat.randn(10, 20)  # 2D - contiguous
+        x = flashlight.randn(10, 20)  # 2D - contiguous
         result = convert_layout(x, Layout.NCHW)
         assert result is x
 
     def test_convert_preserves_data(self):
         """Test that conversion preserves data values."""
         # Create NCHW tensor with known values
-        x = mlx_compat.arange(24).reshape(1, 2, 3, 4).float()
+        x = flashlight.arange(24).reshape(1, 2, 3, 4).float()
         x._layout = Layout.NCHW
         result = convert_layout(x, Layout.NHWC)
         # Convert back
@@ -245,7 +245,7 @@ class TestEnsureLayout:
 
     def test_ensure_layout_converts_if_needed(self):
         """Test ensure_layout converts when necessary."""
-        x = mlx_compat.randn(1, 3, 4, 5)
+        x = flashlight.randn(1, 3, 4, 5)
         x._layout = Layout.NCHW
         result = ensure_layout(x, Layout.NHWC)
         assert result.shape == (1, 4, 5, 3)
@@ -253,14 +253,14 @@ class TestEnsureLayout:
 
     def test_ensure_layout_no_op_if_correct(self):
         """Test ensure_layout is no-op if already correct layout."""
-        x = mlx_compat.randn(1, 3, 4, 5)
+        x = flashlight.randn(1, 3, 4, 5)
         x._layout = Layout.NCHW
         result = ensure_layout(x, Layout.NCHW)
         assert result is x
 
     def test_ensure_nhwc(self):
         """Test ensure_nhwc helper."""
-        x = mlx_compat.randn(1, 3, 4, 5)
+        x = flashlight.randn(1, 3, 4, 5)
         x._layout = Layout.NCHW
         result = ensure_nhwc(x)
         assert result.shape == (1, 4, 5, 3)
@@ -268,7 +268,7 @@ class TestEnsureLayout:
 
     def test_ensure_nchw(self):
         """Test ensure_nchw helper."""
-        x = mlx_compat.randn(1, 4, 5, 3)
+        x = flashlight.randn(1, 4, 5, 3)
         x._layout = Layout.NHWC
         result = ensure_nchw(x)
         assert result.shape == (1, 3, 4, 5)
@@ -311,15 +311,15 @@ class TestLayoutWithConv:
 
     def test_conv2d_default_mode(self):
         """Test Conv2d works in default NCHW mode."""
-        conv = mlx_compat.nn.Conv2d(3, 16, 3, padding=1)
-        x = mlx_compat.randn(1, 3, 32, 32)  # NCHW input
+        conv = flashlight.nn.Conv2d(3, 16, 3, padding=1)
+        x = flashlight.randn(1, 3, 32, 32)  # NCHW input
         output = conv(x)
         assert output.shape == (1, 16, 32, 32)  # NCHW output
 
     def test_conv2d_nhwc_mode(self):
         """Test Conv2d works in NHWC mode."""
-        conv = mlx_compat.nn.Conv2d(3, 16, 3, padding=1)
-        x = mlx_compat.randn(1, 3, 32, 32)  # NCHW input
+        conv = flashlight.nn.Conv2d(3, 16, 3, padding=1)
+        x = flashlight.randn(1, 3, 32, 32)  # NCHW input
 
         with nhwc_mode():
             output = conv(x)

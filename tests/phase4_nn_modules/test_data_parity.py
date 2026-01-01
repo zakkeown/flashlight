@@ -14,8 +14,8 @@ import pytest
 from tests.common_utils import TestCase, skipIfNoMLX, skipIfNoTorch
 
 try:
-    import mlx_compat
-    from mlx_compat.data import (
+    import flashlight
+    from flashlight.data import (
         TensorDataset, ConcatDataset, Subset,
         DataLoader, default_collate
     )
@@ -39,8 +39,8 @@ class TestDataLoaderParity(TestCase):
         batch_size = 16
 
         # MLX version
-        x_mlx = mlx_compat.randn(100, 64)
-        y_mlx = mlx_compat.randint(0, 10, (100,))
+        x_mlx = flashlight.randn(100, 64)
+        y_mlx = flashlight.randint(0, 10, (100,))
         dataset_mlx = TensorDataset(x_mlx, y_mlx)
         loader_mlx = DataLoader(dataset_mlx, batch_size=batch_size, shuffle=False)
 
@@ -73,7 +73,7 @@ class TestDataLoaderParity(TestCase):
             for batch_size in [8, 16, 32]:
                 for drop_last in [True, False]:
                     # MLX version
-                    x_mlx = mlx_compat.randn(dataset_size, 10)
+                    x_mlx = flashlight.randn(dataset_size, 10)
                     dataset_mlx = TensorDataset(x_mlx)
                     loader_mlx = DataLoader(
                         dataset_mlx, batch_size=batch_size, drop_last=drop_last
@@ -102,7 +102,7 @@ class TestDataLoaderParity(TestCase):
         from torch.utils.data import DataLoader as TorchDataLoader
 
         # Create ordered data
-        x_mlx = mlx_compat.arange(100).reshape(100, 1).float()
+        x_mlx = flashlight.arange(100).reshape(100, 1).float()
         dataset_mlx = TensorDataset(x_mlx)
         loader_mlx = DataLoader(dataset_mlx, batch_size=10, shuffle=False)
 
@@ -129,9 +129,9 @@ class TestCollateParity(TestCase):
 
         # MLX tensors
         mlx_samples = [
-            mlx_compat.tensor([1.0, 2.0, 3.0]),
-            mlx_compat.tensor([4.0, 5.0, 6.0]),
-            mlx_compat.tensor([7.0, 8.0, 9.0]),
+            flashlight.tensor([1.0, 2.0, 3.0]),
+            flashlight.tensor([4.0, 5.0, 6.0]),
+            flashlight.tensor([7.0, 8.0, 9.0]),
         ]
         mlx_batch = default_collate(mlx_samples)
 
@@ -158,8 +158,8 @@ class TestCollateParity(TestCase):
 
         # MLX tuples
         mlx_samples = [
-            (mlx_compat.tensor([1.0, 2.0]), mlx_compat.tensor([0])),
-            (mlx_compat.tensor([3.0, 4.0]), mlx_compat.tensor([1])),
+            (flashlight.tensor([1.0, 2.0]), flashlight.tensor([0])),
+            (flashlight.tensor([3.0, 4.0]), flashlight.tensor([1])),
         ]
         mlx_batch = default_collate(mlx_samples)
 
@@ -187,8 +187,8 @@ class TestCollateParity(TestCase):
 
         # MLX dicts
         mlx_samples = [
-            {'x': mlx_compat.tensor([1.0, 2.0]), 'y': mlx_compat.tensor([0])},
-            {'x': mlx_compat.tensor([3.0, 4.0]), 'y': mlx_compat.tensor([1])},
+            {'x': flashlight.tensor([1.0, 2.0]), 'y': flashlight.tensor([0])},
+            {'x': flashlight.tensor([3.0, 4.0]), 'y': flashlight.tensor([1])},
         ]
         mlx_batch = default_collate(mlx_samples)
 
@@ -233,8 +233,8 @@ class TestCollateParity(TestCase):
 
         # MLX nested
         mlx_samples = [
-            {'inputs': (mlx_compat.tensor([1.0]), mlx_compat.tensor([2.0]))},
-            {'inputs': (mlx_compat.tensor([3.0]), mlx_compat.tensor([4.0]))},
+            {'inputs': (flashlight.tensor([1.0]), flashlight.tensor([2.0]))},
+            {'inputs': (flashlight.tensor([3.0]), flashlight.tensor([4.0]))},
         ]
         mlx_batch = default_collate(mlx_samples)
 
@@ -274,8 +274,8 @@ class TestDatasetParity(TestCase):
         np_y = np.random.randint(0, 5, 100)
 
         # MLX
-        x_mlx = mlx_compat.tensor(np_x)
-        y_mlx = mlx_compat.tensor(np_y)
+        x_mlx = flashlight.tensor(np_x)
+        y_mlx = flashlight.tensor(np_y)
         dataset_mlx = TensorDataset(x_mlx, y_mlx)
 
         # PyTorch
@@ -308,8 +308,8 @@ class TestDatasetParity(TestCase):
         np_x2 = np.random.randn(20, 5).astype(np.float32)
 
         # MLX
-        ds1_mlx = TensorDataset(mlx_compat.tensor(np_x1))
-        ds2_mlx = TensorDataset(mlx_compat.tensor(np_x2))
+        ds1_mlx = TensorDataset(flashlight.tensor(np_x1))
+        ds2_mlx = TensorDataset(flashlight.tensor(np_x2))
         concat_mlx = ConcatDataset([ds1_mlx, ds2_mlx])
 
         # PyTorch
@@ -340,7 +340,7 @@ class TestDatasetParity(TestCase):
         indices = [5, 15, 25, 35, 45]
 
         # MLX
-        ds_mlx = TensorDataset(mlx_compat.tensor(np_x))
+        ds_mlx = TensorDataset(flashlight.tensor(np_x))
         subset_mlx = Subset(ds_mlx, indices)
 
         # PyTorch

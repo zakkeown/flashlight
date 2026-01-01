@@ -1,7 +1,7 @@
 """
 Learning Rate Scheduler Parity Tests
 
-Comprehensive tests comparing mlx_compat LR schedulers against PyTorch implementations.
+Comprehensive tests comparing flashlight LR schedulers against PyTorch implementations.
 """
 
 import sys
@@ -14,10 +14,10 @@ import numpy as np
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
-    import mlx_compat
-    import mlx_compat.nn as nn
-    import mlx_compat.optim as optim
-    from mlx_compat.optim import lr_scheduler as mlx_lr_scheduler
+    import flashlight
+    import flashlight.nn as nn
+    import flashlight.optim as optim
+    from flashlight.optim import lr_scheduler as mlx_lr_scheduler
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -76,7 +76,7 @@ def compare_lr_schedules(test_case, mlx_scheduler, torch_scheduler, num_epochs, 
 def create_optimizers(lr=0.1):
     """Create matching MLX and PyTorch optimizers for testing."""
     # MLX setup
-    mlx_param = nn.Parameter(mlx_compat.tensor(np.zeros((3, 3), dtype=np.float32)))
+    mlx_param = nn.Parameter(flashlight.tensor(np.zeros((3, 3), dtype=np.float32)))
     mlx_opt = optim.SGD([mlx_param], lr=lr)
 
     # PyTorch setup

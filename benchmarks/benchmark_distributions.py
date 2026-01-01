@@ -13,8 +13,8 @@ import numpy as np
 
 # Check for MLX
 try:
-    import mlx_compat
-    from mlx_compat import distributions as mlx_dist
+    import flashlight
+    from flashlight import distributions as mlx_dist
     import mlx.core as mx
     MLX_AVAILABLE = True
 except ImportError:
@@ -90,7 +90,7 @@ def benchmark_log_prob(distribution_class, dist_params, value_shape, num_iterati
 
     # Generate random values
     if framework == 'mlx':
-        values = mlx_compat.rand(*value_shape)
+        values = flashlight.rand(*value_shape)
     else:
         values = torch.rand(*value_shape)
 
@@ -178,7 +178,7 @@ def validate_accuracy(mlx_dist_cls, torch_dist_cls, params, mlx_params=None, tor
         else:
             sample_np = torch_samples.detach().cpu().numpy()
 
-        mlx_samples = mlx_compat.tensor(sample_np)
+        mlx_samples = flashlight.tensor(sample_np)
 
         # Compute log_prob
         mlx_logp = mlx_d.log_prob(mlx_samples)
@@ -387,7 +387,7 @@ def benchmark_beta():
         )
 
         # Beta values in (0, 1)
-        values = mlx_compat.rand(*value_shape) * 0.98 + 0.01
+        values = flashlight.rand(*value_shape) * 0.98 + 0.01
         dist = mlx_dist.Beta(concentration1, concentration0)
 
         def bench_mlx_logp():
@@ -451,12 +451,12 @@ def benchmark_dirichlet():
     sample_shape = (10000,)
 
     if MLX_AVAILABLE:
-        mlx_params = {'concentration': mlx_compat.tensor(concentration)}
+        mlx_params = {'concentration': flashlight.tensor(concentration)}
         mlx_sample_time, mlx_sample_rate = benchmark_sampling(
             mlx_dist.Dirichlet, mlx_params, sample_shape
         )
 
-        dist = mlx_dist.Dirichlet(mlx_compat.tensor(concentration))
+        dist = mlx_dist.Dirichlet(flashlight.tensor(concentration))
         values = dist.sample((10000,))
 
         def bench_mlx_logp():
@@ -638,7 +638,7 @@ def benchmark_accuracy():
     result = validate_accuracy(
         mlx_dist.Dirichlet, torch_dist.Dirichlet,
         params=None,
-        mlx_params={'concentration': mlx_compat.tensor([2.0, 3.0, 5.0])},
+        mlx_params={'concentration': flashlight.tensor([2.0, 3.0, 5.0])},
         torch_params={'concentration': torch.tensor([2.0, 3.0, 5.0])}
     )
     print_accuracy_result("Dirichlet", result)
@@ -666,7 +666,7 @@ def print_summary():
 def main():
     """Run all benchmarks."""
     print("=" * 80)
-    print("mlx_compat Distributions Benchmarking Suite")
+    print("flashlight Distributions Benchmarking Suite")
     print("=" * 80)
 
     print(f"\nMLX Available: {MLX_AVAILABLE}")

@@ -18,7 +18,7 @@ import pytest
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
-    import mlx_compat
+    import flashlight
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -36,32 +36,32 @@ class TestRNNCell(TestCase):
 
     def test_creation(self):
         """Test RNNCell creation with default parameters."""
-        cell = mlx_compat.nn.RNNCell(input_size=10, hidden_size=20)
+        cell = flashlight.nn.RNNCell(input_size=10, hidden_size=20)
         self.assertEqual(cell.input_size, 10)
         self.assertEqual(cell.hidden_size, 20)
 
     def test_creation_with_bias(self):
         """Test RNNCell creation with bias."""
-        cell = mlx_compat.nn.RNNCell(input_size=10, hidden_size=20, bias=True)
+        cell = flashlight.nn.RNNCell(input_size=10, hidden_size=20, bias=True)
         self.assertTrue(cell.bias is not None or hasattr(cell, 'bias_ih'))
 
     def test_creation_without_bias(self):
         """Test RNNCell creation without bias."""
-        cell = mlx_compat.nn.RNNCell(input_size=10, hidden_size=20, bias=False)
+        cell = flashlight.nn.RNNCell(input_size=10, hidden_size=20, bias=False)
         # Check bias is False or None
 
     def test_forward_shape(self):
         """Test RNNCell forward pass output shape."""
-        cell = mlx_compat.nn.RNNCell(input_size=10, hidden_size=20)
-        x = mlx_compat.randn(5, 10)  # batch=5, input=10
-        hx = mlx_compat.randn(5, 20)  # batch=5, hidden=20
+        cell = flashlight.nn.RNNCell(input_size=10, hidden_size=20)
+        x = flashlight.randn(5, 10)  # batch=5, input=10
+        hx = flashlight.randn(5, 20)  # batch=5, hidden=20
         output = cell(x, hx)
         self.assertEqual(output.shape, (5, 20))
 
     def test_forward_no_hidden(self):
         """Test RNNCell forward with no initial hidden state."""
-        cell = mlx_compat.nn.RNNCell(input_size=10, hidden_size=20)
-        x = mlx_compat.randn(5, 10)
+        cell = flashlight.nn.RNNCell(input_size=10, hidden_size=20)
+        x = flashlight.randn(5, 10)
         output = cell(x)
         self.assertEqual(output.shape, (5, 20))
 
@@ -86,18 +86,18 @@ class TestRNNCell(TestCase):
         cell_torch.bias_hh.data = torch.tensor(bias_hh)
 
         # MLX
-        cell_mlx = mlx_compat.nn.RNNCell(input_size, hidden_size)
-        cell_mlx.weight_ih._mlx_array = mlx_compat.tensor(weight_ih)._mlx_array
-        cell_mlx.weight_hh._mlx_array = mlx_compat.tensor(weight_hh)._mlx_array
-        cell_mlx.bias_ih._mlx_array = mlx_compat.tensor(bias_ih)._mlx_array
-        cell_mlx.bias_hh._mlx_array = mlx_compat.tensor(bias_hh)._mlx_array
+        cell_mlx = flashlight.nn.RNNCell(input_size, hidden_size)
+        cell_mlx.weight_ih._mlx_array = flashlight.tensor(weight_ih)._mlx_array
+        cell_mlx.weight_hh._mlx_array = flashlight.tensor(weight_hh)._mlx_array
+        cell_mlx.bias_ih._mlx_array = flashlight.tensor(bias_ih)._mlx_array
+        cell_mlx.bias_hh._mlx_array = flashlight.tensor(bias_hh)._mlx_array
 
         # Input
         x_np = np.random.randn(batch_size, input_size).astype(np.float32)
         hx_np = np.random.randn(batch_size, hidden_size).astype(np.float32)
 
         out_torch = cell_torch(torch.tensor(x_np), torch.tensor(hx_np))
-        out_mlx = cell_mlx(mlx_compat.tensor(x_np), mlx_compat.tensor(hx_np))
+        out_mlx = cell_mlx(flashlight.tensor(x_np), flashlight.tensor(hx_np))
 
         np.testing.assert_allclose(
             out_torch.detach().numpy(),
@@ -112,24 +112,24 @@ class TestLSTMCell(TestCase):
 
     def test_creation(self):
         """Test LSTMCell creation with default parameters."""
-        cell = mlx_compat.nn.LSTMCell(input_size=10, hidden_size=20)
+        cell = flashlight.nn.LSTMCell(input_size=10, hidden_size=20)
         self.assertEqual(cell.input_size, 10)
         self.assertEqual(cell.hidden_size, 20)
 
     def test_forward_shape(self):
         """Test LSTMCell forward pass output shape."""
-        cell = mlx_compat.nn.LSTMCell(input_size=10, hidden_size=20)
-        x = mlx_compat.randn(5, 10)
-        hx = mlx_compat.randn(5, 20)
-        cx = mlx_compat.randn(5, 20)
+        cell = flashlight.nn.LSTMCell(input_size=10, hidden_size=20)
+        x = flashlight.randn(5, 10)
+        hx = flashlight.randn(5, 20)
+        cx = flashlight.randn(5, 20)
         h_new, c_new = cell(x, (hx, cx))
         self.assertEqual(h_new.shape, (5, 20))
         self.assertEqual(c_new.shape, (5, 20))
 
     def test_forward_no_hidden(self):
         """Test LSTMCell forward with no initial hidden state."""
-        cell = mlx_compat.nn.LSTMCell(input_size=10, hidden_size=20)
-        x = mlx_compat.randn(5, 10)
+        cell = flashlight.nn.LSTMCell(input_size=10, hidden_size=20)
+        x = flashlight.randn(5, 10)
         h_new, c_new = cell(x)
         self.assertEqual(h_new.shape, (5, 20))
         self.assertEqual(c_new.shape, (5, 20))
@@ -143,12 +143,12 @@ class TestLSTMCell(TestCase):
 
         # Create PyTorch and MLX cells
         cell_torch = torch.nn.LSTMCell(input_size, hidden_size)
-        cell_mlx = mlx_compat.nn.LSTMCell(input_size, hidden_size)
+        cell_mlx = flashlight.nn.LSTMCell(input_size, hidden_size)
 
         # Copy weights
         for name, param in cell_torch.named_parameters():
             mlx_param = getattr(cell_mlx, name)
-            mlx_param._mlx_array = mlx_compat.tensor(param.detach().numpy())._mlx_array
+            mlx_param._mlx_array = flashlight.tensor(param.detach().numpy())._mlx_array
 
         # Input
         x_np = np.random.randn(batch_size, input_size).astype(np.float32)
@@ -160,8 +160,8 @@ class TestLSTMCell(TestCase):
             (torch.tensor(hx_np), torch.tensor(cx_np))
         )
         h_mlx, c_mlx = cell_mlx(
-            mlx_compat.tensor(x_np),
-            (mlx_compat.tensor(hx_np), mlx_compat.tensor(cx_np))
+            flashlight.tensor(x_np),
+            (flashlight.tensor(hx_np), flashlight.tensor(cx_np))
         )
 
         np.testing.assert_allclose(
@@ -178,15 +178,15 @@ class TestGRUCell(TestCase):
 
     def test_creation(self):
         """Test GRUCell creation with default parameters."""
-        cell = mlx_compat.nn.GRUCell(input_size=10, hidden_size=20)
+        cell = flashlight.nn.GRUCell(input_size=10, hidden_size=20)
         self.assertEqual(cell.input_size, 10)
         self.assertEqual(cell.hidden_size, 20)
 
     def test_forward_shape(self):
         """Test GRUCell forward pass output shape."""
-        cell = mlx_compat.nn.GRUCell(input_size=10, hidden_size=20)
-        x = mlx_compat.randn(5, 10)
-        hx = mlx_compat.randn(5, 20)
+        cell = flashlight.nn.GRUCell(input_size=10, hidden_size=20)
+        x = flashlight.randn(5, 10)
+        hx = flashlight.randn(5, 20)
         output = cell(x, hx)
         self.assertEqual(output.shape, (5, 20))
 
@@ -197,30 +197,30 @@ class TestRNN(TestCase):
 
     def test_creation(self):
         """Test RNN creation."""
-        rnn = mlx_compat.nn.RNN(input_size=10, hidden_size=20, num_layers=2)
+        rnn = flashlight.nn.RNN(input_size=10, hidden_size=20, num_layers=2)
         self.assertEqual(rnn.input_size, 10)
         self.assertEqual(rnn.hidden_size, 20)
         self.assertEqual(rnn.num_layers, 2)
 
     def test_forward_shape(self):
         """Test RNN forward pass output shape."""
-        rnn = mlx_compat.nn.RNN(input_size=10, hidden_size=20, num_layers=2)
-        x = mlx_compat.randn(7, 5, 10)  # seq=7, batch=5, input=10
+        rnn = flashlight.nn.RNN(input_size=10, hidden_size=20, num_layers=2)
+        x = flashlight.randn(7, 5, 10)  # seq=7, batch=5, input=10
         output, h_n = rnn(x)
         self.assertEqual(output.shape, (7, 5, 20))
         self.assertEqual(h_n.shape, (2, 5, 20))
 
     def test_batch_first(self):
         """Test RNN with batch_first=True."""
-        rnn = mlx_compat.nn.RNN(input_size=10, hidden_size=20, batch_first=True)
-        x = mlx_compat.randn(5, 7, 10)  # batch=5, seq=7, input=10
+        rnn = flashlight.nn.RNN(input_size=10, hidden_size=20, batch_first=True)
+        x = flashlight.randn(5, 7, 10)  # batch=5, seq=7, input=10
         output, h_n = rnn(x)
         self.assertEqual(output.shape, (5, 7, 20))
 
     def test_bidirectional(self):
         """Test bidirectional RNN."""
-        rnn = mlx_compat.nn.RNN(input_size=10, hidden_size=20, bidirectional=True)
-        x = mlx_compat.randn(7, 5, 10)
+        rnn = flashlight.nn.RNN(input_size=10, hidden_size=20, bidirectional=True)
+        x = flashlight.randn(7, 5, 10)
         output, h_n = rnn(x)
         self.assertEqual(output.shape, (7, 5, 40))  # 2 * hidden_size
         self.assertEqual(h_n.shape, (2, 5, 20))  # num_directions * num_layers
@@ -232,15 +232,15 @@ class TestLSTM(TestCase):
 
     def test_creation(self):
         """Test LSTM creation."""
-        lstm = mlx_compat.nn.LSTM(input_size=10, hidden_size=20, num_layers=2)
+        lstm = flashlight.nn.LSTM(input_size=10, hidden_size=20, num_layers=2)
         self.assertEqual(lstm.input_size, 10)
         self.assertEqual(lstm.hidden_size, 20)
         self.assertEqual(lstm.num_layers, 2)
 
     def test_forward_shape(self):
         """Test LSTM forward pass output shape."""
-        lstm = mlx_compat.nn.LSTM(input_size=10, hidden_size=20, num_layers=2)
-        x = mlx_compat.randn(7, 5, 10)
+        lstm = flashlight.nn.LSTM(input_size=10, hidden_size=20, num_layers=2)
+        x = flashlight.randn(7, 5, 10)
         output, (h_n, c_n) = lstm(x)
         self.assertEqual(output.shape, (7, 5, 20))
         self.assertEqual(h_n.shape, (2, 5, 20))
@@ -248,15 +248,15 @@ class TestLSTM(TestCase):
 
     def test_batch_first(self):
         """Test LSTM with batch_first=True."""
-        lstm = mlx_compat.nn.LSTM(input_size=10, hidden_size=20, batch_first=True)
-        x = mlx_compat.randn(5, 7, 10)
+        lstm = flashlight.nn.LSTM(input_size=10, hidden_size=20, batch_first=True)
+        x = flashlight.randn(5, 7, 10)
         output, (h_n, c_n) = lstm(x)
         self.assertEqual(output.shape, (5, 7, 20))
 
     def test_bidirectional(self):
         """Test bidirectional LSTM."""
-        lstm = mlx_compat.nn.LSTM(input_size=10, hidden_size=20, bidirectional=True)
-        x = mlx_compat.randn(7, 5, 10)
+        lstm = flashlight.nn.LSTM(input_size=10, hidden_size=20, bidirectional=True)
+        x = flashlight.randn(7, 5, 10)
         output, (h_n, c_n) = lstm(x)
         self.assertEqual(output.shape, (7, 5, 40))
 
@@ -267,23 +267,23 @@ class TestGRU(TestCase):
 
     def test_creation(self):
         """Test GRU creation."""
-        gru = mlx_compat.nn.GRU(input_size=10, hidden_size=20, num_layers=2)
+        gru = flashlight.nn.GRU(input_size=10, hidden_size=20, num_layers=2)
         self.assertEqual(gru.input_size, 10)
         self.assertEqual(gru.hidden_size, 20)
         self.assertEqual(gru.num_layers, 2)
 
     def test_forward_shape(self):
         """Test GRU forward pass output shape."""
-        gru = mlx_compat.nn.GRU(input_size=10, hidden_size=20, num_layers=2)
-        x = mlx_compat.randn(7, 5, 10)
+        gru = flashlight.nn.GRU(input_size=10, hidden_size=20, num_layers=2)
+        x = flashlight.randn(7, 5, 10)
         output, h_n = gru(x)
         self.assertEqual(output.shape, (7, 5, 20))
         self.assertEqual(h_n.shape, (2, 5, 20))
 
     def test_batch_first(self):
         """Test GRU with batch_first=True."""
-        gru = mlx_compat.nn.GRU(input_size=10, hidden_size=20, batch_first=True)
-        x = mlx_compat.randn(5, 7, 10)
+        gru = flashlight.nn.GRU(input_size=10, hidden_size=20, batch_first=True)
+        x = flashlight.randn(5, 7, 10)
         output, h_n = gru(x)
         self.assertEqual(output.shape, (5, 7, 20))
 

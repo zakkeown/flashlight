@@ -22,7 +22,7 @@ import numpy as np
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
-    import mlx_compat
+    import flashlight
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -34,9 +34,9 @@ class TestReLUBackward(TestCase):
 
     def test_relu_positive(self):
         """Test ReLU backward for positive values."""
-        x = mlx_compat.tensor([1.0, 2.0, 3.0], requires_grad=True)
-        y = mlx_compat.nn.functional.relu(x)
-        loss = mlx_compat.sum(y)
+        x = flashlight.tensor([1.0, 2.0, 3.0], requires_grad=True)
+        y = flashlight.nn.functional.relu(x)
+        loss = flashlight.sum(y)
         loss.backward()
 
         # d(relu(x))/dx = 1 for x > 0
@@ -44,9 +44,9 @@ class TestReLUBackward(TestCase):
 
     def test_relu_negative(self):
         """Test ReLU backward for negative values."""
-        x = mlx_compat.tensor([-1.0, -2.0, -3.0], requires_grad=True)
-        y = mlx_compat.nn.functional.relu(x)
-        loss = mlx_compat.sum(y)
+        x = flashlight.tensor([-1.0, -2.0, -3.0], requires_grad=True)
+        y = flashlight.nn.functional.relu(x)
+        loss = flashlight.sum(y)
         loss.backward()
 
         # d(relu(x))/dx = 0 for x < 0
@@ -54,9 +54,9 @@ class TestReLUBackward(TestCase):
 
     def test_relu_mixed(self):
         """Test ReLU backward for mixed values."""
-        x = mlx_compat.tensor([-1.0, 2.0, -3.0, 4.0], requires_grad=True)
-        y = mlx_compat.nn.functional.relu(x)
-        loss = mlx_compat.sum(y)
+        x = flashlight.tensor([-1.0, 2.0, -3.0, 4.0], requires_grad=True)
+        y = flashlight.nn.functional.relu(x)
+        loss = flashlight.sum(y)
         loss.backward()
 
         expected = np.array([0.0, 1.0, 0.0, 1.0])
@@ -69,9 +69,9 @@ class TestSigmoidBackward(TestCase):
 
     def test_sigmoid_simple(self):
         """Test sigmoid backward."""
-        x = mlx_compat.tensor([0.0, 1.0, -1.0], requires_grad=True)
-        y = mlx_compat.sigmoid(x)
-        loss = mlx_compat.sum(y)
+        x = flashlight.tensor([0.0, 1.0, -1.0], requires_grad=True)
+        y = flashlight.sigmoid(x)
+        loss = flashlight.sum(y)
         loss.backward()
 
         # d(sigmoid(x))/dx = sigmoid(x) * (1 - sigmoid(x))
@@ -87,9 +87,9 @@ class TestTanhBackward(TestCase):
 
     def test_tanh_simple(self):
         """Test tanh backward."""
-        x = mlx_compat.tensor([0.0, 1.0, -1.0], requires_grad=True)
-        y = mlx_compat.tanh(x)
-        loss = mlx_compat.sum(y)
+        x = flashlight.tensor([0.0, 1.0, -1.0], requires_grad=True)
+        y = flashlight.tanh(x)
+        loss = flashlight.sum(y)
         loss.backward()
 
         # d(tanh(x))/dx = 1 - tanh^2(x)
@@ -105,9 +105,9 @@ class TestSoftmaxBackward(TestCase):
 
     def test_softmax_simple(self):
         """Test softmax backward."""
-        x = mlx_compat.tensor([[1.0, 2.0, 3.0]], requires_grad=True)
-        y = mlx_compat.nn.functional.softmax(x, dim=-1)
-        loss = mlx_compat.sum(y)
+        x = flashlight.tensor([[1.0, 2.0, 3.0]], requires_grad=True)
+        y = flashlight.nn.functional.softmax(x, dim=-1)
+        loss = flashlight.sum(y)
         loss.backward()
 
         # For sum of softmax, gradient should sum to 0 along softmax dim
@@ -116,10 +116,10 @@ class TestSoftmaxBackward(TestCase):
 
     def test_softmax_weighted(self):
         """Test softmax backward with weighted sum."""
-        x = mlx_compat.tensor([[1.0, 2.0, 3.0]], requires_grad=True)
-        y = mlx_compat.nn.functional.softmax(x, dim=-1)
-        weights = mlx_compat.tensor([[1.0, 2.0, 3.0]])
-        loss = mlx_compat.sum(y * weights)
+        x = flashlight.tensor([[1.0, 2.0, 3.0]], requires_grad=True)
+        y = flashlight.nn.functional.softmax(x, dim=-1)
+        weights = flashlight.tensor([[1.0, 2.0, 3.0]])
+        loss = flashlight.sum(y * weights)
         loss.backward()
 
         # Gradient should be non-zero
@@ -132,9 +132,9 @@ class TestLogSoftmaxBackward(TestCase):
 
     def test_log_softmax_simple(self):
         """Test log_softmax backward."""
-        x = mlx_compat.tensor([[1.0, 2.0, 3.0]], requires_grad=True)
-        y = mlx_compat.nn.functional.log_softmax(x, dim=-1)
-        loss = mlx_compat.sum(y)
+        x = flashlight.tensor([[1.0, 2.0, 3.0]], requires_grad=True)
+        y = flashlight.nn.functional.log_softmax(x, dim=-1)
+        loss = flashlight.sum(y)
         loss.backward()
 
         # d(sum(log_softmax))/dx = 1 - n*softmax (where n=3)
@@ -151,9 +151,9 @@ class TestSiLUBackward(TestCase):
 
     def test_silu_simple(self):
         """Test SiLU/Swish backward."""
-        x = mlx_compat.tensor([0.0, 1.0, -1.0], requires_grad=True)
-        y = mlx_compat.nn.functional.silu(x)
-        loss = mlx_compat.sum(y)
+        x = flashlight.tensor([0.0, 1.0, -1.0], requires_grad=True)
+        y = flashlight.nn.functional.silu(x)
+        loss = flashlight.sum(y)
         loss.backward()
 
         # d(x*sigmoid(x))/dx = sigmoid(x) + x*sigmoid(x)*(1-sigmoid(x))
@@ -169,9 +169,9 @@ class TestLeakyReLUBackward(TestCase):
 
     def test_leaky_relu_positive(self):
         """Test leaky ReLU backward for positive values."""
-        x = mlx_compat.tensor([1.0, 2.0, 3.0], requires_grad=True)
-        y = mlx_compat.nn.functional.leaky_relu(x, negative_slope=0.01)
-        loss = mlx_compat.sum(y)
+        x = flashlight.tensor([1.0, 2.0, 3.0], requires_grad=True)
+        y = flashlight.nn.functional.leaky_relu(x, negative_slope=0.01)
+        loss = flashlight.sum(y)
         loss.backward()
 
         # d(leaky_relu(x))/dx = 1 for x > 0
@@ -179,9 +179,9 @@ class TestLeakyReLUBackward(TestCase):
 
     def test_leaky_relu_negative(self):
         """Test leaky ReLU backward for negative values."""
-        x = mlx_compat.tensor([-1.0, -2.0, -3.0], requires_grad=True)
-        y = mlx_compat.nn.functional.leaky_relu(x, negative_slope=0.1)
-        loss = mlx_compat.sum(y)
+        x = flashlight.tensor([-1.0, -2.0, -3.0], requires_grad=True)
+        y = flashlight.nn.functional.leaky_relu(x, negative_slope=0.1)
+        loss = flashlight.sum(y)
         loss.backward()
 
         # d(leaky_relu(x))/dx = negative_slope for x < 0
@@ -194,9 +194,9 @@ class TestELUBackward(TestCase):
 
     def test_elu_positive(self):
         """Test ELU backward for positive values."""
-        x = mlx_compat.tensor([1.0, 2.0, 3.0], requires_grad=True)
-        y = mlx_compat.nn.functional.elu(x, alpha=1.0)
-        loss = mlx_compat.sum(y)
+        x = flashlight.tensor([1.0, 2.0, 3.0], requires_grad=True)
+        y = flashlight.nn.functional.elu(x, alpha=1.0)
+        loss = flashlight.sum(y)
         loss.backward()
 
         # d(elu(x))/dx = 1 for x > 0
@@ -204,9 +204,9 @@ class TestELUBackward(TestCase):
 
     def test_elu_negative(self):
         """Test ELU backward for negative values."""
-        x = mlx_compat.tensor([-1.0, -2.0, -3.0], requires_grad=True)
-        y = mlx_compat.nn.functional.elu(x, alpha=1.0)
-        loss = mlx_compat.sum(y)
+        x = flashlight.tensor([-1.0, -2.0, -3.0], requires_grad=True)
+        y = flashlight.nn.functional.elu(x, alpha=1.0)
+        loss = flashlight.sum(y)
         loss.backward()
 
         # d(elu(x))/dx = alpha * exp(x) for x < 0
@@ -221,9 +221,9 @@ class TestGELUBackward(TestCase):
 
     def test_gelu_simple(self):
         """Test GELU backward."""
-        x = mlx_compat.tensor([0.0, 1.0, -1.0], requires_grad=True)
-        y = mlx_compat.nn.functional.gelu(x)
-        loss = mlx_compat.sum(y)
+        x = flashlight.tensor([0.0, 1.0, -1.0], requires_grad=True)
+        y = flashlight.nn.functional.gelu(x)
+        loss = flashlight.sum(y)
         loss.backward()
 
         # GELU gradient is complex, just verify it's reasonable

@@ -16,8 +16,8 @@ import numpy as np
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
-    import mlx_compat
-    from mlx_compat.data import TensorDataset, ConcatDataset, DataLoader, Subset
+    import flashlight
+    from flashlight.data import TensorDataset, ConcatDataset, DataLoader, Subset
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -29,21 +29,21 @@ class TestTensorDataset(TestCase):
 
     def test_tensor_dataset_creation_single(self):
         """Test TensorDataset creation with single tensor."""
-        x = mlx_compat.randn(100, 10)
+        x = flashlight.randn(100, 10)
         dataset = TensorDataset(x)
         self.assertEqual(len(dataset), 100)
 
     def test_tensor_dataset_creation_multiple(self):
         """Test TensorDataset creation with multiple tensors."""
-        x = mlx_compat.randn(100, 10)
-        y = mlx_compat.randint(0, 2, (100,))
+        x = flashlight.randn(100, 10)
+        y = flashlight.randint(0, 2, (100,))
         dataset = TensorDataset(x, y)
         self.assertEqual(len(dataset), 100)
 
     def test_tensor_dataset_getitem(self):
         """Test TensorDataset __getitem__."""
-        x = mlx_compat.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
-        y = mlx_compat.tensor([0, 1, 0])
+        x = flashlight.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
+        y = flashlight.tensor([0, 1, 0])
         dataset = TensorDataset(x, y)
 
         sample = dataset[0]
@@ -53,8 +53,8 @@ class TestTensorDataset(TestCase):
 
     def test_tensor_dataset_mismatched_lengths(self):
         """Test TensorDataset with mismatched tensor lengths raises error."""
-        x = mlx_compat.randn(100, 10)
-        y = mlx_compat.randn(50, 5)  # Different first dimension
+        x = flashlight.randn(100, 10)
+        y = flashlight.randn(50, 5)  # Different first dimension
         with self.assertRaises(ValueError):
             TensorDataset(x, y)
 
@@ -70,8 +70,8 @@ class TestConcatDataset(TestCase):
 
     def test_concat_two_datasets(self):
         """Test concatenating two datasets."""
-        x1 = mlx_compat.randn(10, 5)
-        x2 = mlx_compat.randn(20, 5)
+        x1 = flashlight.randn(10, 5)
+        x2 = flashlight.randn(20, 5)
         dataset1 = TensorDataset(x1)
         dataset2 = TensorDataset(x2)
 
@@ -80,8 +80,8 @@ class TestConcatDataset(TestCase):
 
     def test_concat_dataset_indexing(self):
         """Test indexing into a concatenated dataset."""
-        x1 = mlx_compat.tensor([[1.0], [2.0]])
-        x2 = mlx_compat.tensor([[3.0], [4.0], [5.0]])
+        x1 = flashlight.tensor([[1.0], [2.0]])
+        x2 = flashlight.tensor([[3.0], [4.0], [5.0]])
         dataset1 = TensorDataset(x1)
         dataset2 = TensorDataset(x2)
 
@@ -97,8 +97,8 @@ class TestConcatDataset(TestCase):
 
     def test_concat_dataset_add_operator(self):
         """Test concatenation using + operator."""
-        x1 = mlx_compat.randn(10, 5)
-        x2 = mlx_compat.randn(20, 5)
+        x1 = flashlight.randn(10, 5)
+        x2 = flashlight.randn(20, 5)
         dataset1 = TensorDataset(x1)
         dataset2 = TensorDataset(x2)
 
@@ -112,7 +112,7 @@ class TestSubset(TestCase):
 
     def test_subset_creation(self):
         """Test Subset creation."""
-        x = mlx_compat.randn(100, 10)
+        x = flashlight.randn(100, 10)
         dataset = TensorDataset(x)
         indices = [0, 5, 10, 15, 20]
 
@@ -121,7 +121,7 @@ class TestSubset(TestCase):
 
     def test_subset_indexing(self):
         """Test Subset indexing."""
-        x = mlx_compat.tensor([[float(i)] for i in range(10)])
+        x = flashlight.tensor([[float(i)] for i in range(10)])
         dataset = TensorDataset(x)
         indices = [2, 5, 8]
 
@@ -139,14 +139,14 @@ class TestDataLoader(TestCase):
 
     def test_dataloader_creation(self):
         """Test DataLoader creation with default parameters."""
-        x = mlx_compat.randn(32, 10)
+        x = flashlight.randn(32, 10)
         dataset = TensorDataset(x)
         loader = DataLoader(dataset)
         self.assertIsNotNone(loader)
 
     def test_dataloader_iteration(self):
         """Test DataLoader iteration."""
-        x = mlx_compat.randn(32, 10)
+        x = flashlight.randn(32, 10)
         dataset = TensorDataset(x)
         loader = DataLoader(dataset, batch_size=8)
 
@@ -155,7 +155,7 @@ class TestDataLoader(TestCase):
 
     def test_dataloader_batch_size(self):
         """Test DataLoader batch size."""
-        x = mlx_compat.randn(32, 10)
+        x = flashlight.randn(32, 10)
         dataset = TensorDataset(x)
         loader = DataLoader(dataset, batch_size=16)
 
@@ -165,7 +165,7 @@ class TestDataLoader(TestCase):
 
     def test_dataloader_drop_last(self):
         """Test DataLoader with drop_last=True."""
-        x = mlx_compat.randn(35, 10)  # 35 not divisible by 8
+        x = flashlight.randn(35, 10)  # 35 not divisible by 8
         dataset = TensorDataset(x)
         loader = DataLoader(dataset, batch_size=8, drop_last=True)
 
@@ -174,7 +174,7 @@ class TestDataLoader(TestCase):
 
     def test_dataloader_no_drop_last(self):
         """Test DataLoader with drop_last=False (default)."""
-        x = mlx_compat.randn(35, 10)  # 35 not divisible by 8
+        x = flashlight.randn(35, 10)  # 35 not divisible by 8
         dataset = TensorDataset(x)
         loader = DataLoader(dataset, batch_size=8, drop_last=False)
 
@@ -183,7 +183,7 @@ class TestDataLoader(TestCase):
 
     def test_dataloader_shuffle(self):
         """Test DataLoader with shuffle=True produces different order."""
-        x = mlx_compat.tensor([[float(i)] for i in range(100)])
+        x = flashlight.tensor([[float(i)] for i in range(100)])
         dataset = TensorDataset(x)
 
         # Get order without shuffle
@@ -200,8 +200,8 @@ class TestDataLoader(TestCase):
 
     def test_dataloader_multiple_tensors(self):
         """Test DataLoader with multiple tensors in dataset."""
-        x = mlx_compat.randn(32, 10)
-        y = mlx_compat.randint(0, 10, (32,))
+        x = flashlight.randn(32, 10)
+        y = flashlight.randint(0, 10, (32,))
         dataset = TensorDataset(x, y)
         loader = DataLoader(dataset, batch_size=8)
 
@@ -217,23 +217,23 @@ class TestDefaultCollate(TestCase):
 
     def test_collate_tensors(self):
         """Test collating tensors."""
-        from mlx_compat.data.dataloader import default_collate
+        from flashlight.data.dataloader import default_collate
 
         samples = [
-            mlx_compat.tensor([1.0, 2.0]),
-            mlx_compat.tensor([3.0, 4.0]),
-            mlx_compat.tensor([5.0, 6.0])
+            flashlight.tensor([1.0, 2.0]),
+            flashlight.tensor([3.0, 4.0]),
+            flashlight.tensor([5.0, 6.0])
         ]
         batch = default_collate(samples)
         self.assertEqual(batch.shape, (3, 2))
 
     def test_collate_tuples(self):
         """Test collating tuples of tensors."""
-        from mlx_compat.data.dataloader import default_collate
+        from flashlight.data.dataloader import default_collate
 
         samples = [
-            (mlx_compat.tensor([1.0]), mlx_compat.tensor([0])),
-            (mlx_compat.tensor([2.0]), mlx_compat.tensor([1])),
+            (flashlight.tensor([1.0]), flashlight.tensor([0])),
+            (flashlight.tensor([2.0]), flashlight.tensor([1])),
         ]
         batch = default_collate(samples)
         self.assertEqual(len(batch), 2)
@@ -242,7 +242,7 @@ class TestDefaultCollate(TestCase):
 
     def test_collate_numbers(self):
         """Test collating numbers."""
-        from mlx_compat.data.dataloader import default_collate
+        from flashlight.data.dataloader import default_collate
 
         samples = [1.0, 2.0, 3.0]
         batch = default_collate(samples)

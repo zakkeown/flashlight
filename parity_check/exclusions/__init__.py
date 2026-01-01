@@ -2,7 +2,7 @@
 Exclusions system for API parity checking.
 
 Provides utilities for loading and applying API exclusions - APIs that are
-intentionally not implemented in mlx_compat (e.g., CUDA-specific APIs).
+intentionally not implemented in flashlight (e.g., CUDA-specific APIs).
 """
 
 from pathlib import Path

@@ -1,5 +1,5 @@
 """
-Tests for mlx_compat.utils.checkpoint module.
+Tests for flashlight.utils.checkpoint module.
 
 Tests gradient checkpointing functionality including:
 - Basic checkpointing (reentrant mode)
@@ -14,8 +14,8 @@ import unittest
 import warnings
 
 import mlx.core as mx
-import mlx_compat
-from mlx_compat.utils.checkpoint import (
+import flashlight
+from flashlight.utils.checkpoint import (
     checkpoint,
     checkpoint_sequential,
     check_backward_validity,
@@ -31,11 +31,11 @@ class TestCheckpointBasic(unittest.TestCase):
         def simple_fn(x):
             return x * 2 + 1
 
-        x = mlx_compat.tensor([1.0, 2.0, 3.0], requires_grad=True)
+        x = flashlight.tensor([1.0, 2.0, 3.0], requires_grad=True)
         result = checkpoint(simple_fn, x, use_reentrant=True)
 
         self.assertIsNotNone(result)
-        expected = mlx_compat.tensor([3.0, 5.0, 7.0])
+        expected = flashlight.tensor([3.0, 5.0, 7.0])
         mx.eval(result._mlx_array)
         mx.eval(expected._mlx_array)
 
@@ -50,14 +50,14 @@ class TestCheckpointBasic(unittest.TestCase):
             z = y + 3
             return z * z
 
-        x = mlx_compat.tensor([1.0, 2.0], requires_grad=True)
+        x = flashlight.tensor([1.0, 2.0], requires_grad=True)
 
         # Non-checkpointed
         result_normal = fn(x)
         mx.eval(result_normal._mlx_array)
 
         # Checkpointed
-        x2 = mlx_compat.tensor([1.0, 2.0], requires_grad=True)
+        x2 = flashlight.tensor([1.0, 2.0], requires_grad=True)
         result_checkpointed = checkpoint(fn, x2, use_reentrant=True)
         mx.eval(result_checkpointed._mlx_array)
 
@@ -73,7 +73,7 @@ class TestCheckpointBasic(unittest.TestCase):
         def fn(x):
             return x * 2
 
-        x = mlx_compat.tensor([1.0, 2.0], requires_grad=False)
+        x = flashlight.tensor([1.0, 2.0], requires_grad=False)
 
         # When no input requires grad, checkpoint just runs the function normally
         # It produces correct output
@@ -89,8 +89,8 @@ class TestCheckpointBasic(unittest.TestCase):
         def fn(a, b):
             return a * b + a
 
-        a = mlx_compat.tensor([1.0, 2.0], requires_grad=True)
-        b = mlx_compat.tensor([3.0, 4.0], requires_grad=True)
+        a = flashlight.tensor([1.0, 2.0], requires_grad=True)
+        b = flashlight.tensor([3.0, 4.0], requires_grad=True)
 
         result = checkpoint(fn, a, b, use_reentrant=True)
         mx.eval(result._mlx_array)
@@ -104,7 +104,7 @@ class TestCheckpointBasic(unittest.TestCase):
         def fn(x, multiplier):
             return x * multiplier
 
-        x = mlx_compat.tensor([1.0, 2.0], requires_grad=True)
+        x = flashlight.tensor([1.0, 2.0], requires_grad=True)
         result = checkpoint(fn, x, 3.0, use_reentrant=True)
         mx.eval(result._mlx_array)
 
@@ -121,7 +121,7 @@ class TestNonReentrantCheckpoint(unittest.TestCase):
         def fn(x):
             return x * 2 + 1
 
-        x = mlx_compat.tensor([1.0, 2.0, 3.0], requires_grad=True)
+        x = flashlight.tensor([1.0, 2.0, 3.0], requires_grad=True)
         result = checkpoint(fn, x, use_reentrant=False)
 
         mx.eval(result._mlx_array)
@@ -136,14 +136,14 @@ class TestNonReentrantCheckpoint(unittest.TestCase):
             z = y + 3
             return z * z
 
-        x = mlx_compat.tensor([1.0, 2.0], requires_grad=True)
+        x = flashlight.tensor([1.0, 2.0], requires_grad=True)
 
         # Non-checkpointed
         result_normal = fn(x)
         mx.eval(result_normal._mlx_array)
 
         # Checkpointed with non-reentrant
-        x2 = mlx_compat.tensor([1.0, 2.0], requires_grad=True)
+        x2 = flashlight.tensor([1.0, 2.0], requires_grad=True)
         result_checkpointed = checkpoint(fn, x2, use_reentrant=False)
         mx.eval(result_checkpointed._mlx_array)
 
@@ -159,8 +159,8 @@ class TestNonReentrantCheckpoint(unittest.TestCase):
         def fn(a, b):
             return a * b + a
 
-        a = mlx_compat.tensor([1.0, 2.0], requires_grad=True)
-        b = mlx_compat.tensor([3.0, 4.0], requires_grad=True)
+        a = flashlight.tensor([1.0, 2.0], requires_grad=True)
+        b = flashlight.tensor([3.0, 4.0], requires_grad=True)
 
         result = checkpoint(fn, a, b, use_reentrant=False)
         mx.eval(result._mlx_array)
@@ -174,7 +174,7 @@ class TestNonReentrantCheckpoint(unittest.TestCase):
         def fn(x, multiplier):
             return x * multiplier
 
-        x = mlx_compat.tensor([1.0, 2.0], requires_grad=True)
+        x = flashlight.tensor([1.0, 2.0], requires_grad=True)
         result = checkpoint(fn, x, 3.0, use_reentrant=False)
         mx.eval(result._mlx_array)
 
@@ -207,7 +207,7 @@ class TestContextFn(unittest.TestCase):
         def fn(x):
             return x * 2
 
-        x = mlx_compat.tensor([1.0, 2.0], requires_grad=True)
+        x = flashlight.tensor([1.0, 2.0], requires_grad=True)
         result = checkpoint(fn, x, use_reentrant=False, context_fn=context_fn)
         mx.eval(result._mlx_array)
 
@@ -219,7 +219,7 @@ class TestContextFn(unittest.TestCase):
         def fn(x):
             return x * 2
 
-        x = mlx_compat.tensor([1.0, 2.0], requires_grad=True)
+        x = flashlight.tensor([1.0, 2.0], requires_grad=True)
         result = checkpoint(fn, x, use_reentrant=False, context_fn=noop_context_fn)
         mx.eval(result._mlx_array)
 
@@ -235,7 +235,7 @@ class TestContextFn(unittest.TestCase):
         def fn(x):
             return x * 2
 
-        x = mlx_compat.tensor([1.0], requires_grad=True)
+        x = flashlight.tensor([1.0], requires_grad=True)
 
         with self.assertRaises(ValueError) as ctx:
             checkpoint(fn, x, use_reentrant=True, context_fn=custom_context_fn)
@@ -251,7 +251,7 @@ class TestDeterminismCheck(unittest.TestCase):
         def fn(x):
             return x * 2 + 1
 
-        x = mlx_compat.tensor([1.0, 2.0, 3.0], requires_grad=True)
+        x = flashlight.tensor([1.0, 2.0, 3.0], requires_grad=True)
         result = checkpoint(fn, x, use_reentrant=False, determinism_check="default")
         mx.eval(result._mlx_array)
 
@@ -264,7 +264,7 @@ class TestDeterminismCheck(unittest.TestCase):
         def fn(x):
             return x * 2
 
-        x = mlx_compat.tensor([1.0, 2.0], requires_grad=True)
+        x = flashlight.tensor([1.0, 2.0], requires_grad=True)
         result = checkpoint(fn, x, use_reentrant=False, determinism_check="none")
         mx.eval(result._mlx_array)
 
@@ -277,7 +277,7 @@ class TestDeterminismCheck(unittest.TestCase):
         def fn(x):
             return x * 2
 
-        x = mlx_compat.tensor([1.0], requires_grad=True)
+        x = flashlight.tensor([1.0], requires_grad=True)
 
         with self.assertRaises(ValueError) as ctx:
             checkpoint(fn, x, use_reentrant=False, determinism_check="invalid")
@@ -289,7 +289,7 @@ class TestDeterminismCheck(unittest.TestCase):
         def fn(x):
             return x * 2
 
-        x = mlx_compat.tensor([1.0], requires_grad=True)
+        x = flashlight.tensor([1.0], requires_grad=True)
 
         with self.assertRaises(ValueError) as ctx:
             checkpoint(fn, x, use_reentrant=True, determinism_check="none")
@@ -309,7 +309,7 @@ class TestCheckpointSequential(unittest.TestCase):
             lambda x: x * 3,
         ]
 
-        x = mlx_compat.tensor([1.0], requires_grad=True)
+        x = flashlight.tensor([1.0], requires_grad=True)
         result = checkpoint_sequential(layers, segments=2, input=x, use_reentrant=True)
         mx.eval(result._mlx_array)
 
@@ -324,7 +324,7 @@ class TestCheckpointSequential(unittest.TestCase):
             lambda x: x + 1,
         ]
 
-        x = mlx_compat.tensor([1.0], requires_grad=True)
+        x = flashlight.tensor([1.0], requires_grad=True)
         result = checkpoint_sequential(layers, segments=1, input=x, use_reentrant=True)
         mx.eval(result._mlx_array)
 
@@ -339,7 +339,7 @@ class TestCheckpointSequential(unittest.TestCase):
             lambda x: x + 1,
         ]
 
-        x = mlx_compat.tensor([1.0], requires_grad=True)
+        x = flashlight.tensor([1.0], requires_grad=True)
         # Should handle gracefully (uses num_layers segments)
         result = checkpoint_sequential(layers, segments=10, input=x, use_reentrant=True)
         mx.eval(result._mlx_array)
@@ -349,7 +349,7 @@ class TestCheckpointSequential(unittest.TestCase):
 
     def test_sequential_with_nn_modules(self):
         """Test sequential with nn.Module layers."""
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
 
         layers = [
             nn.Linear(10, 10),
@@ -357,7 +357,7 @@ class TestCheckpointSequential(unittest.TestCase):
             nn.Linear(10, 5),
         ]
 
-        x = mlx_compat.randn(2, 10)
+        x = flashlight.randn(2, 10)
         x.requires_grad = True
 
         result = checkpoint_sequential(layers, segments=2, input=x, use_reentrant=True)
@@ -373,7 +373,7 @@ class TestCheckpointSequential(unittest.TestCase):
             lambda x: x * 3,
         ]
 
-        x = mlx_compat.tensor([1.0], requires_grad=True)
+        x = flashlight.tensor([1.0], requires_grad=True)
         result = checkpoint_sequential(layers, segments=2, input=x, use_reentrant=False)
         mx.eval(result._mlx_array)
 
@@ -385,14 +385,14 @@ class TestCheckpointSequential(unittest.TestCase):
         """Test that invalid segments raises error."""
         layers = [lambda x: x]
 
-        x = mlx_compat.tensor([1.0])
+        x = flashlight.tensor([1.0])
 
         with self.assertRaises(ValueError):
             checkpoint_sequential(layers, segments=0, input=x, use_reentrant=True)
 
     def test_sequential_invalid_functions_type(self):
         """Test that non-iterable functions raises error."""
-        x = mlx_compat.tensor([1.0])
+        x = flashlight.tensor([1.0])
 
         with self.assertRaises(TypeError):
             checkpoint_sequential(42, segments=1, input=x, use_reentrant=True)
@@ -404,11 +404,11 @@ class TestCheckpointRNGPreservation(unittest.TestCase):
     def test_rng_preservation_enabled(self):
         """Test that RNG state is preserved when enabled."""
         def fn_with_random(x):
-            noise = mlx_compat.randn(x.shape)
+            noise = flashlight.randn(x.shape)
             return x + noise
 
-        mlx_compat.random.manual_seed(42)
-        x = mlx_compat.tensor([1.0, 2.0], requires_grad=True)
+        flashlight.random.manual_seed(42)
+        x = flashlight.tensor([1.0, 2.0], requires_grad=True)
 
         # With RNG preservation, running twice should give same random values
         # (though this is hard to test directly, we verify no crash)
@@ -420,10 +420,10 @@ class TestCheckpointRNGPreservation(unittest.TestCase):
     def test_rng_preservation_disabled(self):
         """Test checkpoint works with RNG preservation disabled."""
         def fn_with_random(x):
-            noise = mlx_compat.randn(x.shape)
+            noise = flashlight.randn(x.shape)
             return x + noise
 
-        x = mlx_compat.tensor([1.0, 2.0], requires_grad=True)
+        x = flashlight.tensor([1.0, 2.0], requires_grad=True)
         result = checkpoint(fn_with_random, x, preserve_rng_state=False, use_reentrant=True)
         mx.eval(result._mlx_array)
 
@@ -432,11 +432,11 @@ class TestCheckpointRNGPreservation(unittest.TestCase):
     def test_rng_preservation_non_reentrant(self):
         """Test RNG preservation in non-reentrant mode."""
         def fn_with_random(x):
-            noise = mlx_compat.randn(x.shape)
+            noise = flashlight.randn(x.shape)
             return x + noise
 
-        mlx_compat.random.manual_seed(42)
-        x = mlx_compat.tensor([1.0, 2.0], requires_grad=True)
+        flashlight.random.manual_seed(42)
+        x = flashlight.tensor([1.0, 2.0], requires_grad=True)
 
         result = checkpoint(fn_with_random, x, preserve_rng_state=True, use_reentrant=False)
         mx.eval(result._mlx_array)
@@ -452,7 +452,7 @@ class TestCheckpointWarnings(unittest.TestCase):
         def fn(x):
             return x * 2
 
-        x = mlx_compat.tensor([1.0], requires_grad=True)
+        x = flashlight.tensor([1.0], requires_grad=True)
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
@@ -471,8 +471,8 @@ class TestCheckBackwardValidity(unittest.TestCase):
 
     def test_warns_when_no_grad(self):
         """Test warning when no input requires grad."""
-        x = mlx_compat.tensor([1.0], requires_grad=False)
-        y = mlx_compat.tensor([2.0], requires_grad=False)
+        x = flashlight.tensor([1.0], requires_grad=False)
+        y = flashlight.tensor([2.0], requires_grad=False)
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
@@ -482,7 +482,7 @@ class TestCheckBackwardValidity(unittest.TestCase):
 
     def test_no_warning_when_has_grad(self):
         """Test no warning when input requires grad."""
-        x = mlx_compat.tensor([1.0], requires_grad=True)
+        x = flashlight.tensor([1.0], requires_grad=True)
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
@@ -495,8 +495,8 @@ class TestCheckBackwardValidity(unittest.TestCase):
 
     def test_mixed_inputs(self):
         """Test with mixed requires_grad inputs."""
-        x = mlx_compat.tensor([1.0], requires_grad=True)
-        y = mlx_compat.tensor([2.0], requires_grad=False)
+        x = flashlight.tensor([1.0], requires_grad=True)
+        y = flashlight.tensor([2.0], requires_grad=False)
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
@@ -514,11 +514,11 @@ class TestCheckpointWithModules(unittest.TestCase):
 
     def test_checkpoint_linear(self):
         """Test checkpoint with Linear layer."""
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
 
         linear = nn.Linear(10, 5)
 
-        x = mlx_compat.randn(2, 10)
+        x = flashlight.randn(2, 10)
         x.requires_grad = True
 
         result = checkpoint(linear, x, use_reentrant=True)
@@ -528,18 +528,18 @@ class TestCheckpointWithModules(unittest.TestCase):
 
     def test_checkpoint_nested_function(self):
         """Test checkpoint with nested function calls."""
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
 
         linear1 = nn.Linear(10, 10)
         linear2 = nn.Linear(10, 5)
 
         def forward_fn(x):
             x = linear1(x)
-            x = mlx_compat.relu(x)
+            x = flashlight.relu(x)
             x = linear2(x)
             return x
 
-        x = mlx_compat.randn(2, 10)
+        x = flashlight.randn(2, 10)
         x.requires_grad = True
 
         result = checkpoint(forward_fn, x, use_reentrant=True)
@@ -549,11 +549,11 @@ class TestCheckpointWithModules(unittest.TestCase):
 
     def test_checkpoint_linear_non_reentrant(self):
         """Test non-reentrant checkpoint with Linear layer."""
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
 
         linear = nn.Linear(10, 5)
 
-        x = mlx_compat.randn(2, 10)
+        x = flashlight.randn(2, 10)
         x.requires_grad = True
 
         result = checkpoint(linear, x, use_reentrant=False)

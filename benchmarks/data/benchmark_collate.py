@@ -11,8 +11,8 @@ sys.path.insert(0, '../..')
 import numpy as np
 
 try:
-    import mlx_compat
-    from mlx_compat.data.dataloader import default_collate as mlx_collate
+    import flashlight
+    from flashlight.data.dataloader import default_collate as mlx_collate
     MLX_AVAILABLE = True
 except ImportError:
     MLX_AVAILABLE = False
@@ -32,7 +32,7 @@ def benchmark_tensor_collate(batch_size, feature_dim, num_iterations=100):
     # MLX
     if MLX_AVAILABLE:
         # Create samples
-        samples = [mlx_compat.randn(feature_dim) for _ in range(batch_size)]
+        samples = [flashlight.randn(feature_dim) for _ in range(batch_size)]
 
         # Warmup
         for _ in range(10):
@@ -82,7 +82,7 @@ def benchmark_tuple_collate(batch_size, num_tensors, feature_dim, num_iterations
     if MLX_AVAILABLE:
         # Create samples
         samples = [
-            tuple(mlx_compat.randn(feature_dim) for _ in range(num_tensors))
+            tuple(flashlight.randn(feature_dim) for _ in range(num_tensors))
             for _ in range(batch_size)
         ]
 
@@ -139,7 +139,7 @@ def benchmark_dict_collate(batch_size, num_keys, feature_dim, num_iterations=100
     if MLX_AVAILABLE:
         # Create samples
         samples = [
-            {k: mlx_compat.randn(feature_dim) for k in keys}
+            {k: flashlight.randn(feature_dim) for k in keys}
             for _ in range(batch_size)
         ]
 

@@ -1,5 +1,5 @@
 """
-Tests for mlx_compat.utils.benchmark module.
+Tests for flashlight.utils.benchmark module.
 
 Tests Timer, Measurement, Compare, and utility functions.
 """
@@ -7,7 +7,7 @@ Tests Timer, Measurement, Compare, and utility functions.
 import unittest
 import time
 
-from mlx_compat.utils.benchmark import (
+from flashlight.utils.benchmark import (
     Timer,
     Measurement,
     Compare,

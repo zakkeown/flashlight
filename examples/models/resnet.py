@@ -7,8 +7,8 @@ Implements ResNet models for image classification.
 import sys
 sys.path.insert(0, '../..')
 
-import mlx_compat
-import mlx_compat.nn as nn
+import flashlight
+import flashlight.nn as nn
 
 
 class BasicBlock(nn.Module):

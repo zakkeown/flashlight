@@ -19,7 +19,7 @@ class ReluBenchmark(UnaryOperatorBenchmark):
     op_name = "relu"
 
     def mlx_operation(self, x):
-        import mlx_compat.nn.functional as F
+        import flashlight.nn.functional as F
         return F.relu(x)
 
     def pytorch_operation(self, x):
@@ -33,7 +33,7 @@ class GeluBenchmark(UnaryOperatorBenchmark):
     op_name = "gelu"
 
     def mlx_operation(self, x):
-        import mlx_compat.nn.functional as F
+        import flashlight.nn.functional as F
         return F.gelu(x)
 
     def pytorch_operation(self, x):
@@ -47,8 +47,8 @@ class SigmoidBenchmark(UnaryOperatorBenchmark):
     op_name = "sigmoid"
 
     def mlx_operation(self, x):
-        import mlx_compat
-        return mlx_compat.sigmoid(x)
+        import flashlight
+        return flashlight.sigmoid(x)
 
     def pytorch_operation(self, x):
         import torch
@@ -61,8 +61,8 @@ class TanhBenchmark(UnaryOperatorBenchmark):
     op_name = "tanh"
 
     def mlx_operation(self, x):
-        import mlx_compat
-        return mlx_compat.tanh(x)
+        import flashlight
+        return flashlight.tanh(x)
 
     def pytorch_operation(self, x):
         import torch
@@ -75,7 +75,7 @@ class SiluBenchmark(UnaryOperatorBenchmark):
     op_name = "silu"
 
     def mlx_operation(self, x):
-        import mlx_compat.nn.functional as F
+        import flashlight.nn.functional as F
         return F.silu(x)
 
     def pytorch_operation(self, x):
@@ -98,8 +98,8 @@ class SoftmaxBenchmark(OperatorBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
-        x = mlx_compat.randn(*config["shape"])
+        import flashlight
+        x = flashlight.randn(*config["shape"])
         return (x, config["dim"])
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:
@@ -108,7 +108,7 @@ class SoftmaxBenchmark(OperatorBenchmark):
         return (x, config["dim"])
 
     def mlx_operation(self, x, dim):
-        import mlx_compat.nn.functional as F
+        import flashlight.nn.functional as F
         return F.softmax(x, dim=dim)
 
     def pytorch_operation(self, x, dim):
@@ -144,7 +144,7 @@ class LogSoftmaxBenchmark(SoftmaxBenchmark):
     name = "log_softmax"
 
     def mlx_operation(self, x, dim):
-        import mlx_compat.nn.functional as F
+        import flashlight.nn.functional as F
         return F.log_softmax(x, dim=dim)
 
     def pytorch_operation(self, x, dim):
@@ -166,8 +166,8 @@ class LeakyReluBenchmark(OperatorBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
-        x = mlx_compat.randn(*config["shape"])
+        import flashlight
+        x = flashlight.randn(*config["shape"])
         return (x, config["negative_slope"])
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:
@@ -176,7 +176,7 @@ class LeakyReluBenchmark(OperatorBenchmark):
         return (x, config["negative_slope"])
 
     def mlx_operation(self, x, negative_slope):
-        import mlx_compat.nn.functional as F
+        import flashlight.nn.functional as F
         return F.leaky_relu(x, negative_slope=negative_slope)
 
     def pytorch_operation(self, x, negative_slope):
@@ -197,8 +197,8 @@ class EluBenchmark(OperatorBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
-        x = mlx_compat.randn(*config["shape"])
+        import flashlight
+        x = flashlight.randn(*config["shape"])
         return (x, config["alpha"])
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:
@@ -207,7 +207,7 @@ class EluBenchmark(OperatorBenchmark):
         return (x, config["alpha"])
 
     def mlx_operation(self, x, alpha):
-        import mlx_compat.nn.functional as F
+        import flashlight.nn.functional as F
         return F.elu(x, alpha=alpha)
 
     def pytorch_operation(self, x, alpha):

@@ -78,7 +78,7 @@ Establish PyTorch-compatible tensor abstraction on top of MLX arrays.
 
 **Implementation**:
 ```python
-# File: mlx_compat/tensor.py
+# File: flashlight/tensor.py
 
 import mlx.core as mx
 
@@ -239,7 +239,7 @@ def test_view_semantics():
 
 **Implementation**:
 ```python
-# File: mlx_compat/dtypes.py
+# File: flashlight/dtypes.py
 
 import mlx.core as mx
 
@@ -307,7 +307,7 @@ pow(a, exp)      # Element-wise power
 
 **Implementation Example**:
 ```python
-# File: mlx_compat/ops/arithmetic.py
+# File: flashlight/ops/arithmetic.py
 
 def add(input, other, *, alpha=1):
     """Add two tensors element-wise."""
@@ -409,7 +409,7 @@ adaptive_avg_pool2d(input, output_size)
 
 #### Step 1: Operator Skeleton
 ```python
-# File: mlx_compat/ops/relu.py
+# File: flashlight/ops/relu.py
 
 def relu(input, inplace=False):
     """Apply ReLU activation."""
@@ -485,7 +485,7 @@ Implement automatic differentiation compatible with PyTorch's tape-based system.
 
 **Implementation**:
 ```python
-# File: mlx_compat/autograd/function.py
+# File: flashlight/autograd/function.py
 
 class Function:
     """Base class for differentiable functions."""
@@ -717,7 +717,7 @@ nn.MultiheadAttention(...)
 def test_resnet18_parity():
     """Verify MLX ResNet-18 matches PyTorch output."""
     torch_model = torchvision.models.resnet18()
-    mlx_model = mlx_compat.models.resnet18()
+    mlx_model = flashlight.models.resnet18()
 
     # Copy weights from PyTorch to MLX
     mlx_model.load_state_dict(torch_model.state_dict())
@@ -726,11 +726,11 @@ def test_resnet18_parity():
     input = torch.randn(1, 3, 224, 224)
     torch_output = torch_model(input)
 
-    mlx_input = mlx_compat.from_torch(input)
+    mlx_input = flashlight.from_torch(input)
     mlx_output = mlx_model(mlx_input)
 
     # Check outputs match within tolerance
-    diff = torch.abs(torch_output - mlx_compat.to_torch(mlx_output))
+    diff = torch.abs(torch_output - flashlight.to_torch(mlx_output))
     assert diff.max() < 1e-5  # Numerical tolerance
 ```
 
@@ -925,7 +925,7 @@ def gradient_check(op, *inputs, eps=1e-5):
 
 1. **Immediate Actions**:
    - Set up MLX development environment
-   - Create project structure (`mlx_compat/` package)
+   - Create project structure (`flashlight/` package)
    - Implement Phase 1.1: Tensor Wrapper Class
    - Write first unit tests
 

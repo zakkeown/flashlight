@@ -28,7 +28,7 @@ class MLPForwardBenchmark(ModelBenchmark):
         ]
 
     def create_mlx_model(self, config: Dict[str, Any]):
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
 
         layers = []
         in_features = config["input_size"]
@@ -59,8 +59,8 @@ class MLPForwardBenchmark(ModelBenchmark):
         return model.to(device)
 
     def create_mlx_input(self, config: Dict[str, Any]):
-        import mlx_compat
-        return mlx_compat.randn(config["batch"], config["input_size"])
+        import flashlight
+        return flashlight.randn(config["batch"], config["input_size"])
 
     def create_pytorch_input(self, config: Dict[str, Any], device: str):
         import torch
@@ -82,7 +82,7 @@ class MLPTrainingBenchmark(ModelBenchmark):
         ]
 
     def create_mlx_model(self, config: Dict[str, Any]):
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
 
         layers = []
         in_features = config["input_size"]
@@ -113,17 +113,17 @@ class MLPTrainingBenchmark(ModelBenchmark):
         return model.to(device)
 
     def create_mlx_input(self, config: Dict[str, Any]):
-        import mlx_compat
-        return mlx_compat.randn(config["batch"], config["input_size"])
+        import flashlight
+        return flashlight.randn(config["batch"], config["input_size"])
 
     def create_pytorch_input(self, config: Dict[str, Any], device: str):
         import torch
         return torch.randn(config["batch"], config["input_size"], device=device)
 
     def create_mlx_target(self, config: Dict[str, Any]):
-        import mlx_compat
+        import flashlight
         labels = np.random.randint(0, config["num_classes"], config["batch"])
-        return mlx_compat.tensor(labels)
+        return flashlight.tensor(labels)
 
     def create_pytorch_target(self, config: Dict[str, Any], device: str):
         import torch

@@ -15,9 +15,9 @@ try:
 except ImportError:
     TORCH_AVAILABLE = False
 
-import mlx_compat
-import mlx_compat.nn as nn
-from mlx_compat.ops.conv3d import conv_transpose3d
+import flashlight
+import flashlight.nn as nn
+from flashlight.ops.conv3d import conv_transpose3d
 
 
 class TestConvTranspose3dBasic:
@@ -25,8 +25,8 @@ class TestConvTranspose3dBasic:
 
     def test_basic_forward_pass(self):
         """Test that forward pass runs without error."""
-        x = mlx_compat.randn(2, 3, 4, 8, 8)  # NCDHW
-        weight = mlx_compat.randn(3, 6, 3, 3, 3)  # C_in, C_out/groups, kD, kH, kW
+        x = flashlight.randn(2, 3, 4, 8, 8)  # NCDHW
+        weight = flashlight.randn(3, 6, 3, 3, 3)  # C_in, C_out/groups, kD, kH, kW
 
         output = conv_transpose3d(x, weight)
 
@@ -40,8 +40,8 @@ class TestConvTranspose3dBasic:
         N, C_in, D, H, W = 2, 3, 4, 8, 8
         C_out, kD, kH, kW = 6, 3, 3, 3
 
-        x = mlx_compat.randn(N, C_in, D, H, W)
-        weight = mlx_compat.randn(C_in, C_out, kD, kH, kW)
+        x = flashlight.randn(N, C_in, D, H, W)
+        weight = flashlight.randn(C_in, C_out, kD, kH, kW)
 
         output = conv_transpose3d(x, weight, stride=1, padding=0)
 
@@ -62,8 +62,8 @@ class TestConvTranspose3dBasic:
         N, C_in, D, H, W = 2, 3, 4, 8, 8
         C_out, kD, kH, kW = 6, 3, 3, 3
 
-        x = mlx_compat.randn(N, C_in, D, H, W)
-        weight = mlx_compat.randn(C_in, C_out, kD, kH, kW)
+        x = flashlight.randn(N, C_in, D, H, W)
+        weight = flashlight.randn(C_in, C_out, kD, kH, kW)
 
         output = conv_transpose3d(x, weight, stride=2, padding=1)
 
@@ -79,9 +79,9 @@ class TestConvTranspose3dBasic:
 
     def test_with_bias(self):
         """Test forward pass with bias."""
-        x = mlx_compat.randn(2, 3, 4, 8, 8)
-        weight = mlx_compat.randn(3, 6, 3, 3, 3)
-        bias = mlx_compat.randn(6)
+        x = flashlight.randn(2, 3, 4, 8, 8)
+        weight = flashlight.randn(3, 6, 3, 3, 3)
+        bias = flashlight.randn(6)
 
         output = conv_transpose3d(x, weight, bias=bias)
 
@@ -90,8 +90,8 @@ class TestConvTranspose3dBasic:
 
     def test_output_padding(self):
         """Test that output_padding increases output size."""
-        x = mlx_compat.randn(2, 3, 4, 8, 8)
-        weight = mlx_compat.randn(3, 6, 3, 3, 3)
+        x = flashlight.randn(2, 3, 4, 8, 8)
+        weight = flashlight.randn(3, 6, 3, 3, 3)
 
         output_no_opad = conv_transpose3d(x, weight, stride=2, padding=1, output_padding=0)
         output_with_opad = conv_transpose3d(x, weight, stride=2, padding=1, output_padding=1)
@@ -126,7 +126,7 @@ class TestConvTranspose3dLayer:
     def test_layer_forward(self):
         """Test layer forward pass."""
         layer = nn.ConvTranspose3d(3, 6, kernel_size=3, stride=2, padding=1)
-        x = mlx_compat.randn(2, 3, 4, 8, 8)
+        x = flashlight.randn(2, 3, 4, 8, 8)
 
         output = layer(x)
 
@@ -150,7 +150,7 @@ class TestConvTranspose3dLayer:
     def test_layer_output_padding(self):
         """Test layer with output_padding."""
         layer = nn.ConvTranspose3d(3, 6, kernel_size=3, stride=2, padding=1, output_padding=1)
-        x = mlx_compat.randn(2, 3, 4, 8, 8)
+        x = flashlight.randn(2, 3, 4, 8, 8)
 
         output = layer(x)
 
@@ -177,7 +177,7 @@ class TestConvTranspose3dLayer:
 @pytest.mark.skipif(not TORCH_AVAILABLE, reason="PyTorch required for parity tests")
 @pytest.mark.parity
 class TestConvTranspose3dParity:
-    """Parity tests comparing mlx_compat with PyTorch."""
+    """Parity tests comparing flashlight with PyTorch."""
 
     def test_basic_parity(self):
         """Test basic conv_transpose3d parity with PyTorch."""
@@ -190,8 +190,8 @@ class TestConvTranspose3dParity:
         x_torch = torch.tensor(x_np)
         weight_torch = torch.tensor(weight_np)
 
-        x_mlx = mlx_compat.tensor(x_np)
-        weight_mlx = mlx_compat.tensor(weight_np)
+        x_mlx = flashlight.tensor(x_np)
+        weight_mlx = flashlight.tensor(weight_np)
 
         out_torch = F_torch.conv_transpose3d(x_torch, weight_torch)
         out_mlx = conv_transpose3d(x_mlx, weight_mlx)
@@ -213,8 +213,8 @@ class TestConvTranspose3dParity:
         x_torch = torch.tensor(x_np)
         weight_torch = torch.tensor(weight_np)
 
-        x_mlx = mlx_compat.tensor(x_np)
-        weight_mlx = mlx_compat.tensor(weight_np)
+        x_mlx = flashlight.tensor(x_np)
+        weight_mlx = flashlight.tensor(weight_np)
 
         for stride in [1, 2, (1, 2, 2)]:
             out_torch = F_torch.conv_transpose3d(x_torch, weight_torch, stride=stride)
@@ -237,8 +237,8 @@ class TestConvTranspose3dParity:
         x_torch = torch.tensor(x_np)
         weight_torch = torch.tensor(weight_np)
 
-        x_mlx = mlx_compat.tensor(x_np)
-        weight_mlx = mlx_compat.tensor(weight_np)
+        x_mlx = flashlight.tensor(x_np)
+        weight_mlx = flashlight.tensor(weight_np)
 
         for padding in [0, 1, (1, 1, 2)]:
             out_torch = F_torch.conv_transpose3d(x_torch, weight_torch, padding=padding)
@@ -261,8 +261,8 @@ class TestConvTranspose3dParity:
         x_torch = torch.tensor(x_np)
         weight_torch = torch.tensor(weight_np)
 
-        x_mlx = mlx_compat.tensor(x_np)
-        weight_mlx = mlx_compat.tensor(weight_np)
+        x_mlx = flashlight.tensor(x_np)
+        weight_mlx = flashlight.tensor(weight_np)
 
         # output_padding must be less than stride
         out_torch = F_torch.conv_transpose3d(
@@ -291,9 +291,9 @@ class TestConvTranspose3dParity:
         weight_torch = torch.tensor(weight_np)
         bias_torch = torch.tensor(bias_np)
 
-        x_mlx = mlx_compat.tensor(x_np)
-        weight_mlx = mlx_compat.tensor(weight_np)
-        bias_mlx = mlx_compat.tensor(bias_np)
+        x_mlx = flashlight.tensor(x_np)
+        weight_mlx = flashlight.tensor(weight_np)
+        bias_mlx = flashlight.tensor(bias_np)
 
         out_torch = F_torch.conv_transpose3d(x_torch, weight_torch, bias_torch)
         out_mlx = conv_transpose3d(x_mlx, weight_mlx, bias_mlx)
@@ -315,8 +315,8 @@ class TestConvTranspose3dParity:
         x_torch = torch.tensor(x_np)
         weight_torch = torch.tensor(weight_np)
 
-        x_mlx = mlx_compat.tensor(x_np)
-        weight_mlx = mlx_compat.tensor(weight_np)
+        x_mlx = flashlight.tensor(x_np)
+        weight_mlx = flashlight.tensor(weight_np)
 
         for dilation in [1, 2]:
             out_torch = F_torch.conv_transpose3d(x_torch, weight_torch, dilation=dilation)
@@ -345,11 +345,11 @@ class TestConvTranspose3dParity:
 
         # MLX layer
         layer_mlx = nn.ConvTranspose3d(3, 6, kernel_size=3, stride=2, padding=1)
-        layer_mlx.weight._mlx_array = mlx_compat.tensor(weight_np)._mlx_array
-        layer_mlx.bias._mlx_array = mlx_compat.tensor(bias_np)._mlx_array
+        layer_mlx.weight._mlx_array = flashlight.tensor(weight_np)._mlx_array
+        layer_mlx.bias._mlx_array = flashlight.tensor(bias_np)._mlx_array
 
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = layer_torch(x_torch)
         out_mlx = layer_mlx(x_mlx)
@@ -372,8 +372,8 @@ class TestConvTranspose3dParity:
         x_torch = torch.tensor(x_np)
         weight_torch = torch.tensor(weight_np)
 
-        x_mlx = mlx_compat.tensor(x_np)
-        weight_mlx = mlx_compat.tensor(weight_np)
+        x_mlx = flashlight.tensor(x_np)
+        weight_mlx = flashlight.tensor(weight_np)
 
         out_torch = F_torch.conv_transpose3d(x_torch, weight_torch, stride=(1, 2, 2), padding=(0, 1, 1))
         out_mlx = conv_transpose3d(x_mlx, weight_mlx, stride=(1, 2, 2), padding=(0, 1, 1))
@@ -395,8 +395,8 @@ class TestConvTranspose3dParity:
         x_torch = torch.tensor(x_np)
         weight_torch = torch.tensor(weight_np)
 
-        x_mlx = mlx_compat.tensor(x_np)
-        weight_mlx = mlx_compat.tensor(weight_np)
+        x_mlx = flashlight.tensor(x_np)
+        weight_mlx = flashlight.tensor(weight_np)
 
         out_torch = F_torch.conv_transpose3d(x_torch, weight_torch, stride=2, padding=1)
         out_mlx = conv_transpose3d(x_mlx, weight_mlx, stride=2, padding=1)
@@ -418,8 +418,8 @@ class TestConvTranspose3dParity:
         x_torch = torch.tensor(x_np)
         weight_torch = torch.tensor(weight_np)
 
-        x_mlx = mlx_compat.tensor(x_np)
-        weight_mlx = mlx_compat.tensor(weight_np)
+        x_mlx = flashlight.tensor(x_np)
+        weight_mlx = flashlight.tensor(weight_np)
 
         out_torch = F_torch.conv_transpose3d(x_torch, weight_torch)
         out_mlx = conv_transpose3d(x_mlx, weight_mlx)
@@ -443,9 +443,9 @@ class TestConvTranspose3dParity:
         weight_torch = torch.tensor(weight_np)
         bias_torch = torch.tensor(bias_np)
 
-        x_mlx = mlx_compat.tensor(x_np)
-        weight_mlx = mlx_compat.tensor(weight_np)
-        bias_mlx = mlx_compat.tensor(bias_np)
+        x_mlx = flashlight.tensor(x_np)
+        weight_mlx = flashlight.tensor(weight_np)
+        bias_mlx = flashlight.tensor(bias_np)
 
         out_torch = F_torch.conv_transpose3d(
             x_torch, weight_torch, bias_torch,

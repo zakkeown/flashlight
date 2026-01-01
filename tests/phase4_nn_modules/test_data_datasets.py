@@ -14,8 +14,8 @@ import pytest
 from tests.common_utils import TestCase, skipIfNoMLX, skipIfNoTorch
 
 try:
-    import mlx_compat
-    from mlx_compat.data import (
+    import flashlight
+    from flashlight.data import (
         Dataset, IterableDataset, TensorDataset,
         ConcatDataset, ChainDataset, Subset, StackDataset,
         random_split
@@ -95,8 +95,8 @@ class TestStackDataset(TestCase):
 
     def test_stacked_sample_format(self):
         """Verify samples are dicts with correct keys."""
-        x = mlx_compat.randn(10, 5)
-        y = mlx_compat.randint(0, 2, (10,))
+        x = flashlight.randn(10, 5)
+        y = flashlight.randint(0, 2, (10,))
         ds_x = TensorDataset(x)
         ds_y = TensorDataset(y)
 
@@ -109,8 +109,8 @@ class TestStackDataset(TestCase):
 
     def test_keyword_keys(self):
         """Verify keyword argument names become keys."""
-        x = mlx_compat.tensor([[1.0], [2.0], [3.0]])
-        y = mlx_compat.tensor([0, 1, 0])
+        x = flashlight.tensor([[1.0], [2.0], [3.0]])
+        y = flashlight.tensor([0, 1, 0])
         ds_x = TensorDataset(x)
         ds_y = TensorDataset(y)
 
@@ -121,8 +121,8 @@ class TestStackDataset(TestCase):
 
     def test_positional_keys(self):
         """Verify positional args get string index keys."""
-        x = mlx_compat.tensor([[1.0], [2.0]])
-        y = mlx_compat.tensor([0, 1])
+        x = flashlight.tensor([[1.0], [2.0]])
+        y = flashlight.tensor([0, 1])
         ds_x = TensorDataset(x)
         ds_y = TensorDataset(y)
 
@@ -133,8 +133,8 @@ class TestStackDataset(TestCase):
 
     def test_length_mismatch_error(self):
         """Verify error on mismatched lengths."""
-        x = mlx_compat.randn(10, 5)
-        y = mlx_compat.randn(5, 3)  # Different length
+        x = flashlight.randn(10, 5)
+        y = flashlight.randn(5, 3)  # Different length
         ds_x = TensorDataset(x)
         ds_y = TensorDataset(y)
 
@@ -143,8 +143,8 @@ class TestStackDataset(TestCase):
 
     def test_stack_length(self):
         """Test __len__ of stacked dataset."""
-        x = mlx_compat.randn(20, 5)
-        y = mlx_compat.randn(20, 3)
+        x = flashlight.randn(20, 5)
+        y = flashlight.randn(20, 3)
         ds_x = TensorDataset(x)
         ds_y = TensorDataset(y)
 
@@ -153,7 +153,7 @@ class TestStackDataset(TestCase):
 
     def test_cannot_mix_positional_and_keyword(self):
         """Test error when mixing positional and keyword args."""
-        x = mlx_compat.randn(10, 5)
+        x = flashlight.randn(10, 5)
         ds = TensorDataset(x)
 
         with self.assertRaises(ValueError):
@@ -171,7 +171,7 @@ class TestRandomSplit(TestCase):
 
     def test_split_sizes(self):
         """Verify splits have correct lengths."""
-        x = mlx_compat.randn(100, 10)
+        x = flashlight.randn(100, 10)
         dataset = TensorDataset(x)
 
         train, val, test = random_split(dataset, [70, 20, 10])
@@ -182,7 +182,7 @@ class TestRandomSplit(TestCase):
 
     def test_no_overlap(self):
         """Verify split subsets don't share indices."""
-        x = mlx_compat.arange(100).reshape(100, 1)
+        x = flashlight.arange(100).reshape(100, 1)
         dataset = TensorDataset(x)
 
         train, val = random_split(dataset, [80, 20])
@@ -196,7 +196,7 @@ class TestRandomSplit(TestCase):
 
     def test_complete_coverage(self):
         """Verify all indices are in some split."""
-        x = mlx_compat.arange(50).reshape(50, 1)
+        x = flashlight.arange(50).reshape(50, 1)
         dataset = TensorDataset(x)
 
         train, val = random_split(dataset, [30, 20])
@@ -210,7 +210,7 @@ class TestRandomSplit(TestCase):
 
     def test_wrong_sum_error(self):
         """Verify error when lengths don't sum to dataset size."""
-        x = mlx_compat.randn(100, 10)
+        x = flashlight.randn(100, 10)
         dataset = TensorDataset(x)
 
         with self.assertRaises(ValueError):
@@ -218,7 +218,7 @@ class TestRandomSplit(TestCase):
 
     def test_randomness(self):
         """Verify splits are random (different each time)."""
-        x = mlx_compat.arange(100).reshape(100, 1)
+        x = flashlight.arange(100).reshape(100, 1)
         dataset = TensorDataset(x)
 
         splits = []
@@ -233,7 +233,7 @@ class TestRandomSplit(TestCase):
 
     def test_single_split(self):
         """Test splitting into a single subset (entire dataset)."""
-        x = mlx_compat.randn(50, 10)
+        x = flashlight.randn(50, 10)
         dataset = TensorDataset(x)
 
         [full] = random_split(dataset, [50])
@@ -241,7 +241,7 @@ class TestRandomSplit(TestCase):
 
     def test_keyword_arguments(self):
         """Test calling with keyword arguments."""
-        x = mlx_compat.randn(100, 10)
+        x = flashlight.randn(100, 10)
         dataset = TensorDataset(x)
 
         train, val = random_split(dataset=dataset, lengths=[80, 20])
@@ -263,7 +263,7 @@ class TestDatasetParity(TestCase):
         from torch.utils.data import random_split as torch_random_split
 
         # MLX version
-        x_mlx = mlx_compat.arange(100).reshape(100, 1)
+        x_mlx = flashlight.arange(100).reshape(100, 1)
         dataset_mlx = TensorDataset(x_mlx)
         train_mlx, val_mlx = random_split(dataset_mlx, [80, 20])
 

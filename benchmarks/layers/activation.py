@@ -30,7 +30,7 @@ class ReLUBenchmark(LayerBenchmark):
         ]
 
     def create_mlx_layer(self, config: Dict[str, Any]):
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
         return nn.ReLU()
 
     def create_pytorch_layer(self, config: Dict[str, Any], device: str):
@@ -38,8 +38,8 @@ class ReLUBenchmark(LayerBenchmark):
         return nn.ReLU()
 
     def create_mlx_input(self, config: Dict[str, Any]):
-        import mlx_compat
-        return mlx_compat.randn(*config["shape"])
+        import flashlight
+        return flashlight.randn(*config["shape"])
 
     def create_pytorch_input(self, config: Dict[str, Any], device: str):
         import torch
@@ -68,7 +68,7 @@ class GELUBenchmark(ReLUBenchmark):
     name = "GELU"
 
     def create_mlx_layer(self, config: Dict[str, Any]):
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
         return nn.GELU()
 
     def create_pytorch_layer(self, config: Dict[str, Any], device: str):
@@ -82,7 +82,7 @@ class SiLUBenchmark(ReLUBenchmark):
     name = "SiLU"
 
     def create_mlx_layer(self, config: Dict[str, Any]):
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
         return nn.SiLU()
 
     def create_pytorch_layer(self, config: Dict[str, Any], device: str):
@@ -108,7 +108,7 @@ class SoftmaxBenchmark(LayerBenchmark):
         ]
 
     def create_mlx_layer(self, config: Dict[str, Any]):
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
         return nn.Softmax(dim=-1)
 
     def create_pytorch_layer(self, config: Dict[str, Any], device: str):
@@ -116,8 +116,8 @@ class SoftmaxBenchmark(LayerBenchmark):
         return nn.Softmax(dim=-1)
 
     def create_mlx_input(self, config: Dict[str, Any]):
-        import mlx_compat
-        return mlx_compat.randn(*config["shape"])
+        import flashlight
+        return flashlight.randn(*config["shape"])
 
     def create_pytorch_input(self, config: Dict[str, Any], device: str):
         import torch

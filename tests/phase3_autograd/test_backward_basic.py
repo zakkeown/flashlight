@@ -17,7 +17,7 @@ import numpy as np
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
-    import mlx_compat
+    import flashlight
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -29,12 +29,12 @@ class TestBasicBackward(TestCase):
 
     def test_simple_add_backward(self):
         """Test backward pass through addition."""
-        x = mlx_compat.tensor([1.0, 2.0, 3.0], requires_grad=True)
-        y = mlx_compat.tensor([4.0, 5.0, 6.0], requires_grad=True)
-        z = mlx_compat.add(x, y)
+        x = flashlight.tensor([1.0, 2.0, 3.0], requires_grad=True)
+        y = flashlight.tensor([4.0, 5.0, 6.0], requires_grad=True)
+        z = flashlight.add(x, y)
 
         # Backward from sum (scalar)
-        loss = mlx_compat.sum(z)
+        loss = flashlight.sum(z)
         loss.backward()
 
         # d(sum(x+y))/dx = 1, d(sum(x+y))/dy = 1
@@ -44,11 +44,11 @@ class TestBasicBackward(TestCase):
 
     def test_scalar_mul_backward(self):
         """Test backward through scalar multiplication."""
-        x = mlx_compat.tensor([1.0, 2.0, 3.0], requires_grad=True)
+        x = flashlight.tensor([1.0, 2.0, 3.0], requires_grad=True)
         y = x * 2.0
 
         # Backward
-        loss = mlx_compat.sum(y)
+        loss = flashlight.sum(y)
         loss.backward()
 
         # d(sum(2*x))/dx = 2
@@ -57,16 +57,16 @@ class TestBasicBackward(TestCase):
 
     def test_chain_backward(self):
         """Test backward through a chain of operations."""
-        x = mlx_compat.tensor([1.0, 2.0, 3.0], requires_grad=True)
+        x = flashlight.tensor([1.0, 2.0, 3.0], requires_grad=True)
 
         # y = x + 1
-        y = mlx_compat.add(x, 1.0)
+        y = flashlight.add(x, 1.0)
 
         # z = y * 2
         z = y * 2.0
 
         # loss = sum(z) = sum(2*(x+1)) = 2*sum(x) + 6
-        loss = mlx_compat.sum(z)
+        loss = flashlight.sum(z)
         loss.backward()
 
         # d(loss)/dx = 2
@@ -75,7 +75,7 @@ class TestBasicBackward(TestCase):
 
     def test_leaf_tensor_check(self):
         """Test that only leaf tensors get gradients."""
-        x = mlx_compat.tensor([1.0, 2.0], requires_grad=True)
+        x = flashlight.tensor([1.0, 2.0], requires_grad=True)
         y = x * 2
 
         # x is a leaf, y is not
@@ -83,7 +83,7 @@ class TestBasicBackward(TestCase):
         self.assertFalse(y.is_leaf)
 
         # After backward, only x should have grad
-        loss = mlx_compat.sum(y)
+        loss = flashlight.sum(y)
         loss.backward()
 
         self.assertIsNotNone(x.grad)
@@ -92,9 +92,9 @@ class TestBasicBackward(TestCase):
 
     def test_zero_grad(self):
         """Test zeroing gradients."""
-        x = mlx_compat.tensor([1.0, 2.0, 3.0], requires_grad=True)
+        x = flashlight.tensor([1.0, 2.0, 3.0], requires_grad=True)
         y = x * 2
-        loss = mlx_compat.sum(y)
+        loss = flashlight.sum(y)
         loss.backward()
 
         # Check gradient exists
@@ -106,9 +106,9 @@ class TestBasicBackward(TestCase):
 
     def test_requires_grad_false(self):
         """Test that tensors without requires_grad don't get gradients."""
-        x = mlx_compat.tensor([1.0, 2.0, 3.0], requires_grad=False)
+        x = flashlight.tensor([1.0, 2.0, 3.0], requires_grad=False)
         y = x * 2
-        loss = mlx_compat.sum(y)
+        loss = flashlight.sum(y)
 
         # Should raise error when trying to backward
         with self.assertRaises(RuntimeError):
@@ -116,7 +116,7 @@ class TestBasicBackward(TestCase):
 
     def test_non_scalar_backward_requires_gradient(self):
         """Test that backward on non-scalar requires gradient argument."""
-        x = mlx_compat.tensor([1.0, 2.0, 3.0], requires_grad=True)
+        x = flashlight.tensor([1.0, 2.0, 3.0], requires_grad=True)
         y = x * 2
 
         # Should raise error - y is not a scalar
@@ -125,11 +125,11 @@ class TestBasicBackward(TestCase):
 
     def test_non_scalar_backward_with_gradient(self):
         """Test backward on non-scalar with gradient argument."""
-        x = mlx_compat.tensor([1.0, 2.0, 3.0], requires_grad=True)
+        x = flashlight.tensor([1.0, 2.0, 3.0], requires_grad=True)
         y = x * 2
 
         # Provide gradient
-        grad_output = mlx_compat.tensor([1.0, 1.0, 1.0])
+        grad_output = flashlight.tensor([1.0, 1.0, 1.0])
         y.backward(gradient=grad_output)
 
         # d(y)/dx = 2
@@ -143,12 +143,12 @@ class TestGradientAccumulation(TestCase):
 
     def test_accumulation_simple(self):
         """Test gradient accumulation when tensor is used twice."""
-        x = mlx_compat.tensor([1.0, 2.0], requires_grad=True)
+        x = flashlight.tensor([1.0, 2.0], requires_grad=True)
 
         # Use x twice
         y = x + x  # y = 2x
 
-        loss = mlx_compat.sum(y)
+        loss = flashlight.sum(y)
         loss.backward()
 
         # Gradient should be accumulated: d(2x)/dx = 2
@@ -157,14 +157,14 @@ class TestGradientAccumulation(TestCase):
 
     def test_accumulation_complex(self):
         """Test gradient accumulation in complex graph."""
-        x = mlx_compat.tensor([1.0, 2.0], requires_grad=True)
+        x = flashlight.tensor([1.0, 2.0], requires_grad=True)
 
         # Use x in multiple paths
         y1 = x * 2
         y2 = x * 3
-        z = mlx_compat.add(y1, y2)  # z = 2x + 3x = 5x
+        z = flashlight.add(y1, y2)  # z = 2x + 3x = 5x
 
-        loss = mlx_compat.sum(z)
+        loss = flashlight.sum(z)
         loss.backward()
 
         # d(5x)/dx = 5

@@ -2,7 +2,7 @@
 """
 Signal Processing Benchmark - Window Functions
 
-Compares mlx_compat.signal.windows vs torch.signal.windows performance.
+Compares flashlight.signal.windows vs torch.signal.windows performance.
 """
 
 import sys
@@ -13,7 +13,7 @@ import numpy as np
 
 # MLX Compat
 try:
-    from mlx_compat.signal import windows as mlx_windows
+    from flashlight.signal import windows as mlx_windows
     import mlx.core as mx
     MLX_AVAILABLE = True
 except ImportError:

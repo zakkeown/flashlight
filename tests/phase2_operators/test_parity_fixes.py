@@ -22,7 +22,7 @@ except ImportError:
     TORCH_AVAILABLE = False
 
 try:
-    import mlx_compat
+    import flashlight
     import mlx.core as mx
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
@@ -43,10 +43,10 @@ class TestAngleParity(TestCase):
         """Test angle with positive real values."""
         values = [1.0, 2.0, 3.0, 100.0]
         pt_tensor = torch.tensor(values)
-        mlx_tensor = mlx_compat.tensor(values)
+        mlx_tensor = flashlight.tensor(values)
 
         pt_result = torch.angle(pt_tensor).numpy()
-        mlx_result = np.array(mlx_compat.angle(mlx_tensor)._mlx_array)
+        mlx_result = np.array(flashlight.angle(mlx_tensor)._mlx_array)
 
         np.testing.assert_allclose(pt_result, mlx_result, rtol=1e-5, atol=1e-6)
 
@@ -55,10 +55,10 @@ class TestAngleParity(TestCase):
         """Test angle with negative real values (should return pi)."""
         values = [-1.0, -2.0, -3.0, -100.0]
         pt_tensor = torch.tensor(values)
-        mlx_tensor = mlx_compat.tensor(values)
+        mlx_tensor = flashlight.tensor(values)
 
         pt_result = torch.angle(pt_tensor).numpy()
-        mlx_result = np.array(mlx_compat.angle(mlx_tensor)._mlx_array)
+        mlx_result = np.array(flashlight.angle(mlx_tensor)._mlx_array)
 
         np.testing.assert_allclose(pt_result, mlx_result, rtol=1e-5, atol=1e-6)
 
@@ -67,10 +67,10 @@ class TestAngleParity(TestCase):
         """Test angle with mixed real values."""
         values = [1.0, -1.0, 0.0, 2.5, -3.5]
         pt_tensor = torch.tensor(values)
-        mlx_tensor = mlx_compat.tensor(values)
+        mlx_tensor = flashlight.tensor(values)
 
         pt_result = torch.angle(pt_tensor).numpy()
-        mlx_result = np.array(mlx_compat.angle(mlx_tensor)._mlx_array)
+        mlx_result = np.array(flashlight.angle(mlx_tensor)._mlx_array)
 
         np.testing.assert_allclose(pt_result, mlx_result, rtol=1e-5, atol=1e-6)
 
@@ -79,10 +79,10 @@ class TestAngleParity(TestCase):
         """Test angle with infinity values."""
         values = [float('inf'), float('-inf')]
         pt_tensor = torch.tensor(values)
-        mlx_tensor = mlx_compat.tensor(values)
+        mlx_tensor = flashlight.tensor(values)
 
         pt_result = torch.angle(pt_tensor).numpy()
-        mlx_result = np.array(mlx_compat.angle(mlx_tensor)._mlx_array)
+        mlx_result = np.array(flashlight.angle(mlx_tensor)._mlx_array)
 
         np.testing.assert_allclose(pt_result, mlx_result, rtol=1e-5, atol=1e-6)
 
@@ -91,10 +91,10 @@ class TestAngleParity(TestCase):
         """Test angle with NaN values (should return NaN)."""
         values = [float('nan')]
         pt_tensor = torch.tensor(values)
-        mlx_tensor = mlx_compat.tensor(values)
+        mlx_tensor = flashlight.tensor(values)
 
         pt_result = torch.angle(pt_tensor).numpy()
-        mlx_result = np.array(mlx_compat.angle(mlx_tensor)._mlx_array)
+        mlx_result = np.array(flashlight.angle(mlx_tensor)._mlx_array)
 
         # Both should be NaN
         self.assertTrue(np.isnan(pt_result[0]))
@@ -113,8 +113,8 @@ class TestAngleParity(TestCase):
         # MLX complex tensor
         complex_np = np.array(real) + 1j * np.array(imag)
         complex_mlx = mx.array(complex_np)
-        mlx_tensor = mlx_compat.Tensor._from_mlx_array(complex_mlx)
-        mlx_result = np.array(mlx_compat.angle(mlx_tensor)._mlx_array)
+        mlx_tensor = flashlight.Tensor._from_mlx_array(complex_mlx)
+        mlx_result = np.array(flashlight.angle(mlx_tensor)._mlx_array)
 
         np.testing.assert_allclose(pt_result, mlx_result, rtol=1e-5, atol=1e-6)
 
@@ -130,10 +130,10 @@ class TestModeParity(TestCase):
         for n in [5, 10, 15, 22]:  # All lengths <= 23
             data = [0] + list(range(1, n)) + [0]
             pt_tensor = torch.tensor([data])
-            mlx_tensor = mlx_compat.tensor([data])
+            mlx_tensor = flashlight.tensor([data])
 
             pt_vals, pt_idx = torch.mode(pt_tensor, dim=1)
-            mlx_vals, mlx_idx = mlx_compat.mode(mlx_tensor, dim=1)
+            mlx_vals, mlx_idx = flashlight.mode(mlx_tensor, dim=1)
 
             # Should return last index
             expected_idx = len(data) - 1
@@ -149,10 +149,10 @@ class TestModeParity(TestCase):
         for n in [24, 30, 50]:  # All lengths >= 24
             data = [0] + list(range(1, n)) + [0]
             pt_tensor = torch.tensor([data])
-            mlx_tensor = mlx_compat.tensor([data])
+            mlx_tensor = flashlight.tensor([data])
 
             pt_vals, pt_idx = torch.mode(pt_tensor, dim=1)
-            mlx_vals, mlx_idx = mlx_compat.mode(mlx_tensor, dim=1)
+            mlx_vals, mlx_idx = flashlight.mode(mlx_tensor, dim=1)
 
             # Should return first index
             expected_idx = 0
@@ -167,10 +167,10 @@ class TestModeParity(TestCase):
         # Length 23: should return LAST index
         data_23 = [0] + list(range(1, 22)) + [0]  # length 23
         pt_tensor = torch.tensor([data_23])
-        mlx_tensor = mlx_compat.tensor([data_23])
+        mlx_tensor = flashlight.tensor([data_23])
 
         _, pt_idx = torch.mode(pt_tensor, dim=1)
-        _, mlx_idx = mlx_compat.mode(mlx_tensor, dim=1)
+        _, mlx_idx = flashlight.mode(mlx_tensor, dim=1)
 
         self.assertEqual(pt_idx.item(), 22)  # Last index
         self.assertEqual(int(mlx_idx._mlx_array.item()), 22)
@@ -178,10 +178,10 @@ class TestModeParity(TestCase):
         # Length 24: should return FIRST index
         data_24 = [0] + list(range(1, 23)) + [0]  # length 24
         pt_tensor = torch.tensor([data_24])
-        mlx_tensor = mlx_compat.tensor([data_24])
+        mlx_tensor = flashlight.tensor([data_24])
 
         _, pt_idx = torch.mode(pt_tensor, dim=1)
-        _, mlx_idx = mlx_compat.mode(mlx_tensor, dim=1)
+        _, mlx_idx = flashlight.mode(mlx_tensor, dim=1)
 
         self.assertEqual(pt_idx.item(), 0)  # First index
         self.assertEqual(int(mlx_idx._mlx_array.item()), 0)
@@ -199,10 +199,10 @@ class TestModeParity(TestCase):
 
         for data in test_cases:
             pt_tensor = torch.tensor([data])
-            mlx_tensor = mlx_compat.tensor([data])
+            mlx_tensor = flashlight.tensor([data])
 
             pt_vals, _ = torch.mode(pt_tensor, dim=1)
-            mlx_vals, _ = mlx_compat.mode(mlx_tensor, dim=1)
+            mlx_vals, _ = flashlight.mode(mlx_tensor, dim=1)
 
             self.assertEqual(pt_vals.item(), int(mlx_vals._mlx_array.item()),
                            f"Mode values should match for {data}")
@@ -215,11 +215,11 @@ class TestModeParity(TestCase):
             [[8, 8, 8, 9], [1, 1, 2, 2], [3, 4, 4, 4]]
         ])
         pt_tensor = torch.tensor(data)
-        mlx_tensor = mlx_compat.tensor(data.tolist())
+        mlx_tensor = flashlight.tensor(data.tolist())
 
         for dim in [0, 1, 2]:
             pt_vals, pt_idx = torch.mode(pt_tensor, dim=dim)
-            mlx_vals, mlx_idx = mlx_compat.mode(mlx_tensor, dim=dim)
+            mlx_vals, mlx_idx = flashlight.mode(mlx_tensor, dim=dim)
 
             pt_vals_np = pt_vals.numpy()
             pt_idx_np = pt_idx.numpy()
@@ -251,9 +251,9 @@ class TestLobpcgParity(TestCase):
         X_pt = torch.tensor(X_np)
         pt_vals, _ = torch.lobpcg(A_pt, k=k, X=X_pt)
 
-        A_mlx = mlx_compat.tensor(A_np.tolist())
-        X_mlx = mlx_compat.tensor(X_np.tolist())
-        mlx_vals, _ = mlx_compat.lobpcg(A_mlx, k=k, X=X_mlx)
+        A_mlx = flashlight.tensor(A_np.tolist())
+        X_mlx = flashlight.tensor(X_np.tolist())
+        mlx_vals, _ = flashlight.lobpcg(A_mlx, k=k, X=X_mlx)
 
         pt_vals_np = pt_vals.numpy()
         mlx_vals_np = np.array(mlx_vals._mlx_array)
@@ -275,9 +275,9 @@ class TestLobpcgParity(TestCase):
         X_pt = torch.tensor(X_np)
         _, pt_vecs = torch.lobpcg(A_pt, k=k, X=X_pt)
 
-        A_mlx = mlx_compat.tensor(A_np.tolist())
-        X_mlx = mlx_compat.tensor(X_np.tolist())
-        _, mlx_vecs = mlx_compat.lobpcg(A_mlx, k=k, X=X_mlx)
+        A_mlx = flashlight.tensor(A_np.tolist())
+        X_mlx = flashlight.tensor(X_np.tolist())
+        _, mlx_vecs = flashlight.lobpcg(A_mlx, k=k, X=X_mlx)
 
         pt_vecs_np = pt_vecs.numpy()
         mlx_vecs_np = np.array(mlx_vecs._mlx_array)
@@ -302,9 +302,9 @@ class TestLobpcgParity(TestCase):
         A_np = A_np @ A_np.T + np.eye(n, dtype=np.float32) * 0.1
         X_np = np.random.randn(n, k).astype(np.float32)
 
-        A_mlx = mlx_compat.tensor(A_np.tolist())
-        X_mlx = mlx_compat.tensor(X_np.tolist())
-        _, mlx_vecs = mlx_compat.lobpcg(A_mlx, k=k, X=X_mlx)
+        A_mlx = flashlight.tensor(A_np.tolist())
+        X_mlx = flashlight.tensor(X_np.tolist())
+        _, mlx_vecs = flashlight.lobpcg(A_mlx, k=k, X=X_mlx)
 
         mlx_vecs_np = np.array(mlx_vecs._mlx_array)
 
@@ -324,9 +324,9 @@ class TestLobpcgParity(TestCase):
         A_np = A_np @ A_np.T + np.eye(n, dtype=np.float32) * 0.1
         X_np = np.random.randn(n, k).astype(np.float32)
 
-        A_mlx = mlx_compat.tensor(A_np.tolist())
-        X_mlx = mlx_compat.tensor(X_np.tolist())
-        mlx_vals, mlx_vecs = mlx_compat.lobpcg(A_mlx, k=k, X=X_mlx)
+        A_mlx = flashlight.tensor(A_np.tolist())
+        X_mlx = flashlight.tensor(X_np.tolist())
+        mlx_vals, mlx_vecs = flashlight.lobpcg(A_mlx, k=k, X=X_mlx)
 
         mlx_vals_np = np.array(mlx_vals._mlx_array)
         mlx_vecs_np = np.array(mlx_vecs._mlx_array)
@@ -354,9 +354,9 @@ class TestLobpcgParity(TestCase):
         A_np = A_np @ A_np.T + np.eye(n, dtype=np.float32) * 0.1
         X_np = np.random.randn(n, k).astype(np.float32)
 
-        A_mlx = mlx_compat.tensor(A_np.tolist())
-        X_mlx = mlx_compat.tensor(X_np.tolist())
-        mlx_vals, _ = mlx_compat.lobpcg(A_mlx, k=k, X=X_mlx)
+        A_mlx = flashlight.tensor(A_np.tolist())
+        X_mlx = flashlight.tensor(X_np.tolist())
+        mlx_vals, _ = flashlight.lobpcg(A_mlx, k=k, X=X_mlx)
 
         mlx_vals_np = np.array(mlx_vals._mlx_array)
 

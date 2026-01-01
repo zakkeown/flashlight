@@ -88,8 +88,8 @@ class JSONFormatter:
             pass
 
         try:
-            import mlx_compat
-            metadata["frameworks"]["mlx_compat"] = getattr(mlx_compat, '__version__', 'unknown')
+            import flashlight
+            metadata["frameworks"]["flashlight"] = getattr(flashlight, '__version__', 'unknown')
         except ImportError:
             pass
 
@@ -137,7 +137,7 @@ class JSONFormatter:
         }
 
         # MLX timing
-        output["mlx_compat"] = {
+        output["flashlight"] = {
             "mean_ms": round(result.mlx_timing.mean_ms, 4),
             "std_ms": round(result.mlx_timing.std_ms, 4),
             "min_ms": round(result.mlx_timing.min_ms, 4),
@@ -151,7 +151,7 @@ class JSONFormatter:
         }
 
         if self.include_raw_times:
-            output["mlx_compat"]["raw_times_ms"] = [
+            output["flashlight"]["raw_times_ms"] = [
                 round(t, 4) for t in result.mlx_timing.times_ms
             ]
 

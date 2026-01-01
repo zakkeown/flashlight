@@ -1,4 +1,4 @@
-# Signature exclusions for mlx_compat parity checking
+# Signature exclusions for flashlight parity checking
 #
 # These are APIs where the signature "mismatch" is actually acceptable because
 # either our signature is more explicit than PyTorch's (*args, **kwargs wrapper),
@@ -11,9 +11,9 @@
 torch:
   # Low-level C++ builtins with complex signatures not fully replicated
   numel: "PyTorch numel() takes no args (method on tensor), our module-level version requires input"
-  ormqr: "Complex QR orthogonal multiplication - simplified signature in mlx_compat"
-  rnn_relu: "Low-level RNN function with packed sequence support - uses higher-level API in mlx_compat"
-  rnn_tanh: "Low-level RNN function with packed sequence support - uses higher-level API in mlx_compat"
+  ormqr: "Complex QR orthogonal multiplication - simplified signature in flashlight"
+  rnn_relu: "Low-level RNN function with packed sequence support - uses higher-level API in flashlight"
+  rnn_tanh: "Low-level RNN function with packed sequence support - uses higher-level API in flashlight"
   # Minor naming differences - functionally equivalent
   dot: "Parameter name 'other' vs 'tensor' - functionally equivalent"
   searchsorted: "Parameter name 'values' vs 'input' - functionally equivalent"

@@ -31,7 +31,7 @@ class Conv2dLayerBenchmark(LayerBenchmark):
         ]
 
     def create_mlx_layer(self, config: Dict[str, Any]):
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
         return nn.Conv2d(
             config["in_channels"], config["out_channels"],
             kernel_size=config["kernel"],
@@ -50,8 +50,8 @@ class Conv2dLayerBenchmark(LayerBenchmark):
         return layer.to(device)
 
     def create_mlx_input(self, config: Dict[str, Any]):
-        import mlx_compat
-        return mlx_compat.randn(config["batch"], config["in_channels"], config["h"], config["w"])
+        import flashlight
+        return flashlight.randn(config["batch"], config["in_channels"], config["h"], config["w"])
 
     def create_pytorch_input(self, config: Dict[str, Any], device: str):
         import torch
@@ -102,7 +102,7 @@ class Conv1dLayerBenchmark(LayerBenchmark):
         ]
 
     def create_mlx_layer(self, config: Dict[str, Any]):
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
         return nn.Conv1d(
             config["in_channels"], config["out_channels"],
             kernel_size=config["kernel"],
@@ -121,8 +121,8 @@ class Conv1dLayerBenchmark(LayerBenchmark):
         return layer.to(device)
 
     def create_mlx_input(self, config: Dict[str, Any]):
-        import mlx_compat
-        return mlx_compat.randn(config["batch"], config["in_channels"], config["length"])
+        import flashlight
+        return flashlight.randn(config["batch"], config["in_channels"], config["length"])
 
     def create_pytorch_input(self, config: Dict[str, Any], device: str):
         import torch

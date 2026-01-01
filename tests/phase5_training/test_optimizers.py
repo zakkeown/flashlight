@@ -17,9 +17,9 @@ import numpy as np
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
-    import mlx_compat
-    import mlx_compat.nn as nn
-    import mlx_compat.optim as optim
+    import flashlight
+    import flashlight.nn as nn
+    import flashlight.optim as optim
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -32,13 +32,13 @@ class TestSGD(TestCase):
     def test_sgd_step(self):
         """Test basic SGD step."""
         # Create a simple parameter
-        param = mlx_compat.nn.Parameter(mlx_compat.tensor([1.0, 2.0, 3.0], requires_grad=True))
+        param = flashlight.nn.Parameter(flashlight.tensor([1.0, 2.0, 3.0], requires_grad=True))
 
         # Create optimizer
         optimizer = optim.SGD([param], lr=0.1)
 
         # Simulate gradient
-        param.grad = mlx_compat.tensor([1.0, 1.0, 1.0])
+        param.grad = flashlight.tensor([1.0, 1.0, 1.0])
 
         # Step
         optimizer.step()
@@ -49,11 +49,11 @@ class TestSGD(TestCase):
 
     def test_sgd_zero_grad(self):
         """Test zero_grad."""
-        param = mlx_compat.nn.Parameter(mlx_compat.randn(3, 3))
+        param = flashlight.nn.Parameter(flashlight.randn(3, 3))
         optimizer = optim.SGD([param], lr=0.1)
 
         # Set gradient
-        param.grad = mlx_compat.randn(3, 3)
+        param.grad = flashlight.randn(3, 3)
         self.assertIsNotNone(param.grad)
 
         # Zero gradient
@@ -62,11 +62,11 @@ class TestSGD(TestCase):
 
     def test_sgd_momentum(self):
         """Test SGD with momentum."""
-        param = mlx_compat.nn.Parameter(mlx_compat.tensor([1.0], requires_grad=True))
+        param = flashlight.nn.Parameter(flashlight.tensor([1.0], requires_grad=True))
         optimizer = optim.SGD([param], lr=0.1, momentum=0.9)
 
         # First step
-        param.grad = mlx_compat.tensor([1.0])
+        param.grad = flashlight.tensor([1.0])
         optimizer.step()
 
         # param should be: 1.0 - 0.1 * 1.0 = 0.9
@@ -74,7 +74,7 @@ class TestSGD(TestCase):
 
         # Second step (momentum should accumulate)
         optimizer.zero_grad()
-        param.grad = mlx_compat.tensor([1.0])
+        param.grad = flashlight.tensor([1.0])
         optimizer.step()
 
         # momentum buffer: 0.9 * 1.0 + 1.0 = 1.9
@@ -83,10 +83,10 @@ class TestSGD(TestCase):
 
     def test_sgd_weight_decay(self):
         """Test SGD with weight decay."""
-        param = mlx_compat.nn.Parameter(mlx_compat.tensor([1.0], requires_grad=True))
+        param = flashlight.nn.Parameter(flashlight.tensor([1.0], requires_grad=True))
         optimizer = optim.SGD([param], lr=0.1, weight_decay=0.01)
 
-        param.grad = mlx_compat.tensor([0.0])  # No gradient
+        param.grad = flashlight.tensor([0.0])  # No gradient
         optimizer.step()
 
         # With weight decay: grad = 0.0 + 0.01 * 1.0 = 0.01
@@ -100,11 +100,11 @@ class TestAdam(TestCase):
 
     def test_adam_step(self):
         """Test basic Adam step."""
-        param = mlx_compat.nn.Parameter(mlx_compat.tensor([1.0], requires_grad=True))
+        param = flashlight.nn.Parameter(flashlight.tensor([1.0], requires_grad=True))
         optimizer = optim.Adam([param], lr=0.1)
 
         # First step
-        param.grad = mlx_compat.tensor([1.0])
+        param.grad = flashlight.tensor([1.0])
         optimizer.step()
 
         # Adam uses bias correction, so first step should make a noticeable change
@@ -114,7 +114,7 @@ class TestAdam(TestCase):
     def test_adam_convergence(self):
         """Test that Adam can optimize a simple function."""
         # Minimize f(x) = (x - 5)^2
-        param = mlx_compat.nn.Parameter(mlx_compat.tensor([0.0], requires_grad=True))
+        param = flashlight.nn.Parameter(flashlight.tensor([0.0], requires_grad=True))
         optimizer = optim.Adam([param], lr=0.1)
 
         for _ in range(100):
@@ -128,13 +128,13 @@ class TestAdam(TestCase):
 
     def test_adam_weight_decay(self):
         """Test Adam with weight decay."""
-        param = mlx_compat.nn.Parameter(mlx_compat.tensor([10.0], requires_grad=True))
+        param = flashlight.nn.Parameter(flashlight.tensor([10.0], requires_grad=True))
         optimizer = optim.Adam([param], lr=0.01, weight_decay=0.1)
 
         # Multiple steps with zero gradient - weight decay should shrink parameter
         for _ in range(10):
             optimizer.zero_grad()
-            param.grad = mlx_compat.tensor([0.0])
+            param.grad = flashlight.tensor([0.0])
             optimizer.step()
 
         # Parameter should have decreased due to weight decay
@@ -147,10 +147,10 @@ class TestAdamW(TestCase):
 
     def test_adamw_step(self):
         """Test basic AdamW step."""
-        param = mlx_compat.nn.Parameter(mlx_compat.tensor([1.0], requires_grad=True))
+        param = flashlight.nn.Parameter(flashlight.tensor([1.0], requires_grad=True))
         optimizer = optim.AdamW([param], lr=0.1)
 
-        param.grad = mlx_compat.tensor([1.0])
+        param.grad = flashlight.tensor([1.0])
         optimizer.step()
 
         # Should update parameter
@@ -158,13 +158,13 @@ class TestAdamW(TestCase):
 
     def test_adamw_weight_decay(self):
         """Test AdamW decoupled weight decay."""
-        param = mlx_compat.nn.Parameter(mlx_compat.tensor([10.0], requires_grad=True))
+        param = flashlight.nn.Parameter(flashlight.tensor([10.0], requires_grad=True))
         optimizer = optim.AdamW([param], lr=0.01, weight_decay=0.1)
 
         # Multiple steps - weight decay should work differently than Adam
         for _ in range(10):
             optimizer.zero_grad()
-            param.grad = mlx_compat.tensor([0.0])
+            param.grad = flashlight.tensor([0.0])
             optimizer.step()
 
         # Parameter should have decreased
@@ -185,9 +185,9 @@ class TestWithModel(TestCase):
         initial_weight = linear.weight.numpy().copy()
 
         # Forward and backward
-        x = mlx_compat.randn(3, 10)
+        x = flashlight.randn(3, 10)
         y = linear(x)
-        loss = mlx_compat.sum(y)
+        loss = flashlight.sum(y)
 
         optimizer.zero_grad()
         loss.backward()
@@ -211,8 +211,8 @@ class TestWithModel(TestCase):
         criterion = nn.MSELoss()
 
         # Training data
-        x = mlx_compat.randn(5, 10, requires_grad=False)
-        y_true = mlx_compat.randn(5, 2, requires_grad=False)
+        x = flashlight.randn(5, 10, requires_grad=False)
+        y_true = flashlight.randn(5, 2, requires_grad=False)
 
         # Training step
         optimizer.zero_grad()
@@ -231,7 +231,7 @@ class TestLRSchedulers(TestCase):
 
     def test_step_lr(self):
         """Test StepLR scheduler."""
-        param = mlx_compat.nn.Parameter(mlx_compat.randn(3, 3))
+        param = flashlight.nn.Parameter(flashlight.randn(3, 3))
         optimizer = optim.SGD([param], lr=0.1)
         scheduler = optim.StepLR(optimizer, step_size=2, gamma=0.1)
 
@@ -248,7 +248,7 @@ class TestLRSchedulers(TestCase):
 
     def test_exponential_lr(self):
         """Test ExponentialLR scheduler."""
-        param = mlx_compat.nn.Parameter(mlx_compat.randn(3, 3))
+        param = flashlight.nn.Parameter(flashlight.randn(3, 3))
         optimizer = optim.SGD([param], lr=1.0)
         scheduler = optim.ExponentialLR(optimizer, gamma=0.9)
 
@@ -262,7 +262,7 @@ class TestLRSchedulers(TestCase):
 
     def test_cosine_annealing_lr(self):
         """Test CosineAnnealingLR scheduler."""
-        param = mlx_compat.nn.Parameter(mlx_compat.randn(3, 3))
+        param = flashlight.nn.Parameter(flashlight.randn(3, 3))
         optimizer = optim.SGD([param], lr=1.0)
         scheduler = optim.CosineAnnealingLR(optimizer, T_max=10)
 
@@ -278,7 +278,7 @@ class TestLRSchedulers(TestCase):
 
     def test_reduce_lr_on_plateau(self):
         """Test ReduceLROnPlateau scheduler."""
-        param = mlx_compat.nn.Parameter(mlx_compat.randn(3, 3))
+        param = flashlight.nn.Parameter(flashlight.randn(3, 3))
         optimizer = optim.SGD([param], lr=1.0)
         scheduler = optim.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=2)
 

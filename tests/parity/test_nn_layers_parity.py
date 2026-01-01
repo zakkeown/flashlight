@@ -1,7 +1,7 @@
 """
 Parity tests for nn.Module layers.
 
-Tests that mlx_compat.nn layers produce identical outputs to torch.nn layers.
+Tests that flashlight.nn layers produce identical outputs to torch.nn layers.
 """
 
 import pytest
@@ -15,28 +15,28 @@ try:
 except ImportError:
     TORCH_AVAILABLE = False
 
-import mlx_compat
-import mlx_compat.nn as nn_mlx
+import flashlight
+import flashlight.nn as nn_mlx
 
 
 def copy_linear_weights(mlx_layer, torch_layer):
     """Copy weights from PyTorch Linear to MLX Linear."""
-    mlx_layer.weight._mlx_array = mlx_compat.tensor(
+    mlx_layer.weight._mlx_array = flashlight.tensor(
         torch_layer.weight.detach().numpy()
     )._mlx_array
     if torch_layer.bias is not None:
-        mlx_layer.bias._mlx_array = mlx_compat.tensor(
+        mlx_layer.bias._mlx_array = flashlight.tensor(
             torch_layer.bias.detach().numpy()
         )._mlx_array
 
 
 def copy_conv_weights(mlx_layer, torch_layer):
     """Copy weights from PyTorch Conv to MLX Conv."""
-    mlx_layer.weight._mlx_array = mlx_compat.tensor(
+    mlx_layer.weight._mlx_array = flashlight.tensor(
         torch_layer.weight.detach().numpy()
     )._mlx_array
     if torch_layer.bias is not None:
-        mlx_layer.bias._mlx_array = mlx_compat.tensor(
+        mlx_layer.bias._mlx_array = flashlight.tensor(
             torch_layer.bias.detach().numpy()
         )._mlx_array
 
@@ -44,17 +44,17 @@ def copy_conv_weights(mlx_layer, torch_layer):
 def copy_bn_weights(mlx_layer, torch_layer):
     """Copy weights from PyTorch BatchNorm to MLX BatchNorm."""
     if torch_layer.weight is not None:
-        mlx_layer.weight._mlx_array = mlx_compat.tensor(
+        mlx_layer.weight._mlx_array = flashlight.tensor(
             torch_layer.weight.detach().numpy()
         )._mlx_array
     if torch_layer.bias is not None:
-        mlx_layer.bias._mlx_array = mlx_compat.tensor(
+        mlx_layer.bias._mlx_array = flashlight.tensor(
             torch_layer.bias.detach().numpy()
         )._mlx_array
-    mlx_layer.running_mean._mlx_array = mlx_compat.tensor(
+    mlx_layer.running_mean._mlx_array = flashlight.tensor(
         torch_layer.running_mean.detach().numpy()
     )._mlx_array
-    mlx_layer.running_var._mlx_array = mlx_compat.tensor(
+    mlx_layer.running_var._mlx_array = flashlight.tensor(
         torch_layer.running_var.detach().numpy()
     )._mlx_array
 
@@ -77,7 +77,7 @@ class TestLinearParity:
 
         # Forward pass
         out_torch = torch_layer(torch.tensor(x_np))
-        out_mlx = mlx_layer(mlx_compat.tensor(x_np))
+        out_mlx = mlx_layer(flashlight.tensor(x_np))
 
         np.testing.assert_allclose(
             out_torch.detach().numpy(),
@@ -96,7 +96,7 @@ class TestLinearParity:
         copy_linear_weights(mlx_layer, torch_layer)
 
         out_torch = torch_layer(torch.tensor(x_np))
-        out_mlx = mlx_layer(mlx_compat.tensor(x_np))
+        out_mlx = mlx_layer(flashlight.tensor(x_np))
 
         np.testing.assert_allclose(
             out_torch.detach().numpy(),
@@ -115,7 +115,7 @@ class TestLinearParity:
         copy_linear_weights(mlx_layer, torch_layer)
 
         out_torch = torch_layer(torch.tensor(x_np))
-        out_mlx = mlx_layer(mlx_compat.tensor(x_np))
+        out_mlx = mlx_layer(flashlight.tensor(x_np))
 
         np.testing.assert_allclose(
             out_torch.detach().numpy(),
@@ -139,7 +139,7 @@ class TestConv2dParity:
         copy_conv_weights(mlx_layer, torch_layer)
 
         out_torch = torch_layer(torch.tensor(x_np))
-        out_mlx = mlx_layer(mlx_compat.tensor(x_np))
+        out_mlx = mlx_layer(flashlight.tensor(x_np))
 
         np.testing.assert_allclose(
             out_torch.detach().numpy(),
@@ -157,7 +157,7 @@ class TestConv2dParity:
         copy_conv_weights(mlx_layer, torch_layer)
 
         out_torch = torch_layer(torch.tensor(x_np))
-        out_mlx = mlx_layer(mlx_compat.tensor(x_np))
+        out_mlx = mlx_layer(flashlight.tensor(x_np))
 
         np.testing.assert_allclose(
             out_torch.detach().numpy(),
@@ -175,7 +175,7 @@ class TestConv2dParity:
         copy_conv_weights(mlx_layer, torch_layer)
 
         out_torch = torch_layer(torch.tensor(x_np))
-        out_mlx = mlx_layer(mlx_compat.tensor(x_np))
+        out_mlx = mlx_layer(flashlight.tensor(x_np))
 
         np.testing.assert_allclose(
             out_torch.detach().numpy(),
@@ -199,7 +199,7 @@ class TestConv1dParity:
         copy_conv_weights(mlx_layer, torch_layer)
 
         out_torch = torch_layer(torch.tensor(x_np))
-        out_mlx = mlx_layer(mlx_compat.tensor(x_np))
+        out_mlx = mlx_layer(flashlight.tensor(x_np))
 
         np.testing.assert_allclose(
             out_torch.detach().numpy(),
@@ -225,7 +225,7 @@ class TestBatchNormParity:
         copy_bn_weights(mlx_layer, torch_layer)
 
         out_torch = torch_layer(torch.tensor(x_np))
-        out_mlx = mlx_layer(mlx_compat.tensor(x_np))
+        out_mlx = mlx_layer(flashlight.tensor(x_np))
 
         np.testing.assert_allclose(
             out_torch.detach().numpy(),
@@ -245,7 +245,7 @@ class TestBatchNormParity:
         copy_bn_weights(mlx_layer, torch_layer)
 
         out_torch = torch_layer(torch.tensor(x_np))
-        out_mlx = mlx_layer(mlx_compat.tensor(x_np))
+        out_mlx = mlx_layer(flashlight.tensor(x_np))
 
         np.testing.assert_allclose(
             out_torch.detach().numpy(),
@@ -268,15 +268,15 @@ class TestLayerNormParity:
         mlx_layer = nn_mlx.LayerNorm(64)
 
         # Copy weights
-        mlx_layer.weight._mlx_array = mlx_compat.tensor(
+        mlx_layer.weight._mlx_array = flashlight.tensor(
             torch_layer.weight.detach().numpy()
         )._mlx_array
-        mlx_layer.bias._mlx_array = mlx_compat.tensor(
+        mlx_layer.bias._mlx_array = flashlight.tensor(
             torch_layer.bias.detach().numpy()
         )._mlx_array
 
         out_torch = torch_layer(torch.tensor(x_np))
-        out_mlx = mlx_layer(mlx_compat.tensor(x_np))
+        out_mlx = mlx_layer(flashlight.tensor(x_np))
 
         np.testing.assert_allclose(
             out_torch.detach().numpy(),
@@ -292,15 +292,15 @@ class TestLayerNormParity:
         torch_layer = nn_torch.LayerNorm([10, 64])
         mlx_layer = nn_mlx.LayerNorm([10, 64])
 
-        mlx_layer.weight._mlx_array = mlx_compat.tensor(
+        mlx_layer.weight._mlx_array = flashlight.tensor(
             torch_layer.weight.detach().numpy()
         )._mlx_array
-        mlx_layer.bias._mlx_array = mlx_compat.tensor(
+        mlx_layer.bias._mlx_array = flashlight.tensor(
             torch_layer.bias.detach().numpy()
         )._mlx_array
 
         out_torch = torch_layer(torch.tensor(x_np))
-        out_mlx = mlx_layer(mlx_compat.tensor(x_np))
+        out_mlx = mlx_layer(flashlight.tensor(x_np))
 
         np.testing.assert_allclose(
             out_torch.detach().numpy(),
@@ -323,7 +323,7 @@ class TestPoolingParity:
         mlx_layer = nn_mlx.MaxPool2d(kernel_size=2, stride=2)
 
         out_torch = torch_layer(torch.tensor(x_np))
-        out_mlx = mlx_layer(mlx_compat.tensor(x_np))
+        out_mlx = mlx_layer(flashlight.tensor(x_np))
 
         np.testing.assert_allclose(
             out_torch.detach().numpy(),
@@ -340,7 +340,7 @@ class TestPoolingParity:
         mlx_layer = nn_mlx.AvgPool2d(kernel_size=2, stride=2)
 
         out_torch = torch_layer(torch.tensor(x_np))
-        out_mlx = mlx_layer(mlx_compat.tensor(x_np))
+        out_mlx = mlx_layer(flashlight.tensor(x_np))
 
         np.testing.assert_allclose(
             out_torch.detach().numpy(),
@@ -357,7 +357,7 @@ class TestPoolingParity:
         mlx_layer = nn_mlx.AdaptiveAvgPool2d((1, 1))
 
         out_torch = torch_layer(torch.tensor(x_np))
-        out_mlx = mlx_layer(mlx_compat.tensor(x_np))
+        out_mlx = mlx_layer(flashlight.tensor(x_np))
 
         np.testing.assert_allclose(
             out_torch.detach().numpy(),
@@ -380,7 +380,7 @@ class TestActivationLayersParity:
         mlx_layer = nn_mlx.ReLU()
 
         out_torch = torch_layer(torch.tensor(x_np))
-        out_mlx = mlx_layer(mlx_compat.tensor(x_np))
+        out_mlx = mlx_layer(flashlight.tensor(x_np))
 
         np.testing.assert_allclose(
             out_torch.detach().numpy(),
@@ -397,7 +397,7 @@ class TestActivationLayersParity:
         mlx_layer = nn_mlx.GELU()
 
         out_torch = torch_layer(torch.tensor(x_np))
-        out_mlx = mlx_layer(mlx_compat.tensor(x_np))
+        out_mlx = mlx_layer(flashlight.tensor(x_np))
 
         np.testing.assert_allclose(
             out_torch.detach().numpy(),
@@ -414,7 +414,7 @@ class TestActivationLayersParity:
         mlx_layer = nn_mlx.SiLU()
 
         out_torch = torch_layer(torch.tensor(x_np))
-        out_mlx = mlx_layer(mlx_compat.tensor(x_np))
+        out_mlx = mlx_layer(flashlight.tensor(x_np))
 
         np.testing.assert_allclose(
             out_torch.detach().numpy(),
@@ -431,7 +431,7 @@ class TestActivationLayersParity:
         mlx_layer = nn_mlx.LeakyReLU(negative_slope=0.01)
 
         out_torch = torch_layer(torch.tensor(x_np))
-        out_mlx = mlx_layer(mlx_compat.tensor(x_np))
+        out_mlx = mlx_layer(flashlight.tensor(x_np))
 
         np.testing.assert_allclose(
             out_torch.detach().numpy(),
@@ -448,7 +448,7 @@ class TestActivationLayersParity:
         mlx_layer = nn_mlx.Softmax(dim=-1)
 
         out_torch = torch_layer(torch.tensor(x_np))
-        out_mlx = mlx_layer(mlx_compat.tensor(x_np))
+        out_mlx = mlx_layer(flashlight.tensor(x_np))
 
         np.testing.assert_allclose(
             out_torch.detach().numpy(),
@@ -472,12 +472,12 @@ class TestEmbeddingParity:
         mlx_layer = nn_mlx.Embedding(num_embeddings, embedding_dim)
 
         # Copy weights
-        mlx_layer.weight._mlx_array = mlx_compat.tensor(
+        mlx_layer.weight._mlx_array = flashlight.tensor(
             torch_layer.weight.detach().numpy()
         )._mlx_array
 
         out_torch = torch_layer(torch.tensor(indices))
-        out_mlx = mlx_layer(mlx_compat.tensor(indices))
+        out_mlx = mlx_layer(flashlight.tensor(indices))
 
         np.testing.assert_allclose(
             out_torch.detach().numpy(),
@@ -494,12 +494,12 @@ class TestEmbeddingParity:
         torch_layer = nn_torch.Embedding(num_embeddings, embedding_dim)
         mlx_layer = nn_mlx.Embedding(num_embeddings, embedding_dim)
 
-        mlx_layer.weight._mlx_array = mlx_compat.tensor(
+        mlx_layer.weight._mlx_array = flashlight.tensor(
             torch_layer.weight.detach().numpy()
         )._mlx_array
 
         out_torch = torch_layer(torch.tensor(indices))
-        out_mlx = mlx_layer(mlx_compat.tensor(indices))
+        out_mlx = mlx_layer(flashlight.tensor(indices))
 
         np.testing.assert_allclose(
             out_torch.detach().numpy(),
@@ -524,7 +524,7 @@ class TestDropoutParity:
         mlx_layer.eval()
 
         out_torch = torch_layer(torch.tensor(x_np))
-        out_mlx = mlx_layer(mlx_compat.tensor(x_np))
+        out_mlx = mlx_layer(flashlight.tensor(x_np))
 
         np.testing.assert_allclose(
             out_torch.detach().numpy(),
@@ -548,7 +548,7 @@ class TestLossParity:
         mlx_loss = nn_mlx.MSELoss()
 
         out_torch = torch_loss(torch.tensor(pred_np), torch.tensor(target_np))
-        out_mlx = mlx_loss(mlx_compat.tensor(pred_np), mlx_compat.tensor(target_np))
+        out_mlx = mlx_loss(flashlight.tensor(pred_np), flashlight.tensor(target_np))
 
         np.testing.assert_allclose(
             out_torch.detach().numpy(),
@@ -566,7 +566,7 @@ class TestLossParity:
         mlx_loss = nn_mlx.L1Loss()
 
         out_torch = torch_loss(torch.tensor(pred_np), torch.tensor(target_np))
-        out_mlx = mlx_loss(mlx_compat.tensor(pred_np), mlx_compat.tensor(target_np))
+        out_mlx = mlx_loss(flashlight.tensor(pred_np), flashlight.tensor(target_np))
 
         np.testing.assert_allclose(
             out_torch.detach().numpy(),
@@ -585,8 +585,8 @@ class TestLossParity:
 
         out_torch = torch_loss(torch.tensor(logits_np), torch.tensor(target_np))
         out_mlx = mlx_loss(
-            mlx_compat.tensor(logits_np),
-            mlx_compat.tensor(target_np, dtype=mlx_compat.int32)
+            flashlight.tensor(logits_np),
+            flashlight.tensor(target_np, dtype=flashlight.int32)
         )
 
         np.testing.assert_allclose(
@@ -606,7 +606,7 @@ class TestLossParity:
         mlx_loss = nn_mlx.BCELoss()
 
         out_torch = torch_loss(torch.tensor(pred_np), torch.tensor(target_np))
-        out_mlx = mlx_loss(mlx_compat.tensor(pred_np), mlx_compat.tensor(target_np))
+        out_mlx = mlx_loss(flashlight.tensor(pred_np), flashlight.tensor(target_np))
 
         np.testing.assert_allclose(
             out_torch.detach().numpy(),
@@ -626,8 +626,8 @@ class TestLossParity:
 
         out_torch = torch_loss(torch.tensor(log_probs_np), torch.tensor(target_np))
         out_mlx = mlx_loss(
-            mlx_compat.tensor(log_probs_np),
-            mlx_compat.tensor(target_np, dtype=mlx_compat.int32)
+            flashlight.tensor(log_probs_np),
+            flashlight.tensor(target_np, dtype=flashlight.int32)
         )
 
         np.testing.assert_allclose(
@@ -653,21 +653,21 @@ class TestRNNParity:
         mlx_layer = nn_mlx.LSTM(input_size, hidden_size, batch_first=False)
 
         # Copy weights - LSTM has weight_ih_l0, weight_hh_l0, bias_ih_l0, bias_hh_l0
-        mlx_layer.weight_ih_l0._mlx_array = mlx_compat.tensor(
+        mlx_layer.weight_ih_l0._mlx_array = flashlight.tensor(
             torch_layer.weight_ih_l0.detach().numpy()
         )._mlx_array
-        mlx_layer.weight_hh_l0._mlx_array = mlx_compat.tensor(
+        mlx_layer.weight_hh_l0._mlx_array = flashlight.tensor(
             torch_layer.weight_hh_l0.detach().numpy()
         )._mlx_array
-        mlx_layer.bias_ih_l0._mlx_array = mlx_compat.tensor(
+        mlx_layer.bias_ih_l0._mlx_array = flashlight.tensor(
             torch_layer.bias_ih_l0.detach().numpy()
         )._mlx_array
-        mlx_layer.bias_hh_l0._mlx_array = mlx_compat.tensor(
+        mlx_layer.bias_hh_l0._mlx_array = flashlight.tensor(
             torch_layer.bias_hh_l0.detach().numpy()
         )._mlx_array
 
         out_torch, (h_torch, c_torch) = torch_layer(torch.tensor(x_np))
-        out_mlx, (h_mlx, c_mlx) = mlx_layer(mlx_compat.tensor(x_np))
+        out_mlx, (h_mlx, c_mlx) = mlx_layer(flashlight.tensor(x_np))
 
         np.testing.assert_allclose(
             out_torch.detach().numpy(),
@@ -686,21 +686,21 @@ class TestRNNParity:
         mlx_layer = nn_mlx.GRU(input_size, hidden_size, batch_first=False)
 
         # Copy weights
-        mlx_layer.weight_ih_l0._mlx_array = mlx_compat.tensor(
+        mlx_layer.weight_ih_l0._mlx_array = flashlight.tensor(
             torch_layer.weight_ih_l0.detach().numpy()
         )._mlx_array
-        mlx_layer.weight_hh_l0._mlx_array = mlx_compat.tensor(
+        mlx_layer.weight_hh_l0._mlx_array = flashlight.tensor(
             torch_layer.weight_hh_l0.detach().numpy()
         )._mlx_array
-        mlx_layer.bias_ih_l0._mlx_array = mlx_compat.tensor(
+        mlx_layer.bias_ih_l0._mlx_array = flashlight.tensor(
             torch_layer.bias_ih_l0.detach().numpy()
         )._mlx_array
-        mlx_layer.bias_hh_l0._mlx_array = mlx_compat.tensor(
+        mlx_layer.bias_hh_l0._mlx_array = flashlight.tensor(
             torch_layer.bias_hh_l0.detach().numpy()
         )._mlx_array
 
         out_torch, h_torch = torch_layer(torch.tensor(x_np))
-        out_mlx, h_mlx = mlx_layer(mlx_compat.tensor(x_np))
+        out_mlx, h_mlx = mlx_layer(flashlight.tensor(x_np))
 
         np.testing.assert_allclose(
             out_torch.detach().numpy(),
@@ -723,7 +723,7 @@ class TestPaddingParity:
         mlx_layer = nn_mlx.ZeroPad2d(padding=(1, 2, 3, 4))
 
         out_torch = torch_layer(torch.tensor(x_np))
-        out_mlx = mlx_layer(mlx_compat.tensor(x_np))
+        out_mlx = mlx_layer(flashlight.tensor(x_np))
 
         np.testing.assert_allclose(
             out_torch.detach().numpy(),
@@ -740,7 +740,7 @@ class TestPaddingParity:
         mlx_layer = nn_mlx.ReflectionPad2d(padding=2)
 
         out_torch = torch_layer(torch.tensor(x_np))
-        out_mlx = mlx_layer(mlx_compat.tensor(x_np))
+        out_mlx = mlx_layer(flashlight.tensor(x_np))
 
         np.testing.assert_allclose(
             out_torch.detach().numpy(),
@@ -757,7 +757,7 @@ class TestPaddingParity:
         mlx_layer = nn_mlx.ReplicationPad2d(padding=2)
 
         out_torch = torch_layer(torch.tensor(x_np))
-        out_mlx = mlx_layer(mlx_compat.tensor(x_np))
+        out_mlx = mlx_layer(flashlight.tensor(x_np))
 
         np.testing.assert_allclose(
             out_torch.detach().numpy(),

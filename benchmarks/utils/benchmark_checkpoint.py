@@ -9,9 +9,9 @@ import time
 import gc
 
 import mlx.core as mx
-import mlx_compat
-import mlx_compat.nn as nn
-from mlx_compat.utils.checkpoint import checkpoint, checkpoint_sequential
+import flashlight
+import flashlight.nn as nn
+from flashlight.utils.checkpoint import checkpoint, checkpoint_sequential
 
 try:
     import torch
@@ -57,7 +57,7 @@ def benchmark_forward_pass():
     model = create_mlx_model(num_layers, hidden_size)
 
     # Create input
-    x = mlx_compat.randn(batch_size, hidden_size)
+    x = flashlight.randn(batch_size, hidden_size)
     x.requires_grad = True
 
     # Warmup
@@ -101,7 +101,7 @@ def benchmark_memory_usage():
     model = create_mlx_model(num_layers, hidden_size)
 
     # Create input
-    x = mlx_compat.randn(batch_size, hidden_size)
+    x = flashlight.randn(batch_size, hidden_size)
     x.requires_grad = True
 
     # Force garbage collection
@@ -126,7 +126,7 @@ def benchmark_memory_usage():
     mx.synchronize()
 
     # With checkpoint
-    x2 = mlx_compat.randn(batch_size, hidden_size)
+    x2 = flashlight.randn(batch_size, hidden_size)
     x2.requires_grad = True
 
     baseline_memory = mx.metal.get_active_memory() if hasattr(mx.metal, 'get_active_memory') else 0
@@ -170,7 +170,7 @@ def benchmark_vs_pytorch():
     torch_model = torch_model.to(device)
 
     # MLX - without checkpoint
-    mlx_x = mlx_compat.randn(batch_size, hidden_size)
+    mlx_x = flashlight.randn(batch_size, hidden_size)
     mlx_x.requires_grad = True
 
     # Warmup
@@ -245,7 +245,7 @@ def benchmark_different_segments():
     model = create_mlx_model(num_layers, hidden_size)
     layers_list = list(model.children())
 
-    x = mlx_compat.randn(batch_size, hidden_size)
+    x = flashlight.randn(batch_size, hidden_size)
     x.requires_grad = True
 
     segment_counts = [1, 2, 4, 8, 16]

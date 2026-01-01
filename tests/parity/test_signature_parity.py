@@ -1,5 +1,5 @@
 """
-Signature parity tests comparing mlx_compat signatures against reference PyTorch source.
+Signature parity tests comparing flashlight signatures against reference PyTorch source.
 
 These tests use AST-based parsing of the reference PyTorch source to extract
 signatures, bypassing the limitation that C++ builtins can't be introspected.
@@ -75,8 +75,8 @@ class TestOptimizerSignatureParity:
 
     @pytest.fixture
     def mlx_optim(self):
-        """Import mlx_compat.optim."""
-        import mlx_compat.optim as optim
+        """Import flashlight.optim."""
+        import flashlight.optim as optim
         return optim
 
     def test_sgd_signature_parity(self, mlx_optim):
@@ -93,7 +93,7 @@ class TestOptimizerSignatureParity:
         assert comparison["matches"], (
             f"SGD signature mismatch:\n"
             f"  Reference: {get_parameter_summary(ref_sig)}\n"
-            f"  mlx_compat: {get_parameter_summary(mlx_sig)}\n"
+            f"  flashlight: {get_parameter_summary(mlx_sig)}\n"
             f"  Differences: {comparison['differences']}"
         )
 
@@ -111,7 +111,7 @@ class TestOptimizerSignatureParity:
         assert comparison["matches"], (
             f"Adam signature mismatch:\n"
             f"  Reference: {get_parameter_summary(ref_sig)}\n"
-            f"  mlx_compat: {get_parameter_summary(mlx_sig)}\n"
+            f"  flashlight: {get_parameter_summary(mlx_sig)}\n"
             f"  Differences: {comparison['differences']}"
         )
 
@@ -129,7 +129,7 @@ class TestOptimizerSignatureParity:
         assert comparison["matches"], (
             f"AdamW signature mismatch:\n"
             f"  Reference: {get_parameter_summary(ref_sig)}\n"
-            f"  mlx_compat: {get_parameter_summary(mlx_sig)}\n"
+            f"  flashlight: {get_parameter_summary(mlx_sig)}\n"
             f"  Differences: {comparison['differences']}"
         )
 
@@ -147,7 +147,7 @@ class TestOptimizerSignatureParity:
         assert comparison["matches"], (
             f"Adagrad signature mismatch:\n"
             f"  Reference: {get_parameter_summary(ref_sig)}\n"
-            f"  mlx_compat: {get_parameter_summary(mlx_sig)}\n"
+            f"  flashlight: {get_parameter_summary(mlx_sig)}\n"
             f"  Differences: {comparison['differences']}"
         )
 
@@ -165,7 +165,7 @@ class TestOptimizerSignatureParity:
         assert comparison["matches"], (
             f"RMSprop signature mismatch:\n"
             f"  Reference: {get_parameter_summary(ref_sig)}\n"
-            f"  mlx_compat: {get_parameter_summary(mlx_sig)}\n"
+            f"  flashlight: {get_parameter_summary(mlx_sig)}\n"
             f"  Differences: {comparison['differences']}"
         )
 
@@ -175,8 +175,8 @@ class TestNNModuleSignatureParity:
 
     @pytest.fixture
     def mlx_nn(self):
-        """Import mlx_compat.nn."""
-        import mlx_compat.nn as nn
+        """Import flashlight.nn."""
+        import flashlight.nn as nn
         return nn
 
     def _test_nn_signature(self, mlx_nn, class_name, source_file):
@@ -192,19 +192,19 @@ class TestNNModuleSignatureParity:
         ref_sig = sigs[class_name]
 
         if not hasattr(mlx_nn, class_name):
-            pytest.skip(f"{class_name} not in mlx_compat.nn")
+            pytest.skip(f"{class_name} not in flashlight.nn")
 
         mlx_class = getattr(mlx_nn, class_name)
         mlx_sig = extract_signature(mlx_class)
 
         if mlx_sig is None or not mlx_sig.get("extractable"):
-            pytest.skip(f"{class_name} signature not extractable from mlx_compat")
+            pytest.skip(f"{class_name} signature not extractable from flashlight")
 
         comparison = compare_signatures(ref_sig, mlx_sig, strict_defaults=True)
         assert comparison["matches"], (
             f"{class_name} signature mismatch:\n"
             f"  Reference: {get_parameter_summary(ref_sig)}\n"
-            f"  mlx_compat: {get_parameter_summary(mlx_sig)}\n"
+            f"  flashlight: {get_parameter_summary(mlx_sig)}\n"
             f"  Differences: {comparison['differences']}"
         )
 
@@ -254,8 +254,8 @@ class TestDataModuleSignatureParity:
 
     @pytest.fixture
     def mlx_data(self):
-        """Import mlx_compat data modules."""
-        import mlx_compat.data as data
+        """Import flashlight data modules."""
+        import flashlight.data as data
         return data
 
     def test_dataloader_signature_parity(self, mlx_data):
@@ -272,13 +272,13 @@ class TestDataModuleSignatureParity:
         mlx_sig = extract_signature(mlx_data.DataLoader)
 
         if mlx_sig is None or not mlx_sig.get("extractable"):
-            pytest.skip("DataLoader signature not extractable from mlx_compat")
+            pytest.skip("DataLoader signature not extractable from flashlight")
 
         comparison = compare_signatures(ref_sig, mlx_sig, strict_defaults=True)
         assert comparison["matches"], (
             f"DataLoader signature mismatch:\n"
             f"  Reference: {get_parameter_summary(ref_sig)}\n"
-            f"  mlx_compat: {get_parameter_summary(mlx_sig)}\n"
+            f"  flashlight: {get_parameter_summary(mlx_sig)}\n"
             f"  Differences: {comparison['differences']}"
         )
 
@@ -340,8 +340,8 @@ class TestSignatureValidatorWithSource:
             }
         }
 
-        # Get actual mlx_compat Adam signature
-        import mlx_compat.optim as optim
+        # Get actual flashlight Adam signature
+        import flashlight.optim as optim
         mlx_sig = extract_signature(optim.Adam)
 
         mlx_apis = {
@@ -370,19 +370,19 @@ class TestSignatureValidatorWithSource:
 
 
 class TestFullSignatureAudit:
-    """Run a full signature audit comparing all mlx_compat signatures to reference."""
+    """Run a full signature audit comparing all flashlight signatures to reference."""
 
     @pytest.mark.slow
     def test_full_optimizer_audit(self):
         """Audit all optimizer signatures."""
-        import mlx_compat.optim as optim
+        import flashlight.optim as optim
 
         optimizers = ["SGD", "Adam", "AdamW", "Adagrad", "RMSprop", "Adadelta", "Adamax"]
         results = {}
 
         for opt_name in optimizers:
             if not hasattr(optim, opt_name):
-                results[opt_name] = {"status": "missing", "reason": "Not in mlx_compat"}
+                results[opt_name] = {"status": "missing", "reason": "Not in flashlight"}
                 continue
 
             ref_sig = get_source_signature("torch.optim", opt_name)
@@ -392,7 +392,7 @@ class TestFullSignatureAudit:
 
             mlx_sig = extract_signature(getattr(optim, opt_name))
             if mlx_sig is None or not mlx_sig.get("extractable"):
-                results[opt_name] = {"status": "skipped", "reason": "Not extractable from mlx_compat"}
+                results[opt_name] = {"status": "skipped", "reason": "Not extractable from flashlight"}
                 continue
 
             comparison = compare_signatures(ref_sig, mlx_sig, strict_defaults=True)

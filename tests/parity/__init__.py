@@ -1,1 +1,1 @@
-"""Parity tests comparing mlx_compat with PyTorch."""
+"""Parity tests comparing flashlight with PyTorch."""

@@ -12,7 +12,7 @@ from typing import Dict, List, Tuple, Callable
 from dataclasses import dataclass
 
 try:
-    import mlx_compat
+    import flashlight
     import mlx.core as mx
     MLX_AVAILABLE = True
 except ImportError:
@@ -74,7 +74,7 @@ def benchmark_max_backward(shape: Tuple[int, ...], iterations: int = 100) -> Ben
 
     # MLX Compat
     def mlx_max_backward():
-        x = mlx_compat.tensor(data, requires_grad=True)
+        x = flashlight.tensor(data, requires_grad=True)
         y = x.max()
         y.backward()
         return x.grad
@@ -125,10 +125,10 @@ def benchmark_matmul_backward(shapes: Tuple[Tuple[int, int], Tuple[int, int]], i
 
     # MLX Compat
     def mlx_matmul_backward():
-        a = mlx_compat.tensor(data_a, requires_grad=True)
-        b = mlx_compat.tensor(data_b, requires_grad=True)
+        a = flashlight.tensor(data_a, requires_grad=True)
+        b = flashlight.tensor(data_b, requires_grad=True)
         c = a @ b
-        mlx_compat.sum(c).backward()
+        flashlight.sum(c).backward()
         return a.grad, b.grad
 
     # PyTorch CPU
@@ -177,9 +177,9 @@ def benchmark_relu_backward(shape: Tuple[int, ...], iterations: int = 100) -> Be
 
     # MLX Compat
     def mlx_relu_backward():
-        x = mlx_compat.tensor(data, requires_grad=True)
-        y = mlx_compat.relu(x)
-        mlx_compat.sum(y).backward()
+        x = flashlight.tensor(data, requires_grad=True)
+        y = flashlight.relu(x)
+        flashlight.sum(y).backward()
         return x.grad
 
     # PyTorch CPU
@@ -227,12 +227,12 @@ def benchmark_conv2d_backward(batch_channels_hw: Tuple[int, int, int, int], iter
     data = np.random.randn(batch, in_ch, h, w).astype(np.float32)
 
     # MLX Compat
-    mlx_conv = mlx_compat.nn.Conv2d(in_ch, out_ch, kernel_size=3, padding=1)
+    mlx_conv = flashlight.nn.Conv2d(in_ch, out_ch, kernel_size=3, padding=1)
 
     def mlx_conv_backward():
-        x = mlx_compat.tensor(data, requires_grad=True)
+        x = flashlight.tensor(data, requires_grad=True)
         y = mlx_conv(x)
-        mlx_compat.sum(y).backward()
+        flashlight.sum(y).backward()
         return x.grad
 
     # PyTorch CPU
@@ -286,9 +286,9 @@ def benchmark_chain_backward(shape: Tuple[int, ...], iterations: int = 100) -> B
 
     # MLX Compat
     def mlx_chain_backward():
-        x = mlx_compat.tensor(data, requires_grad=True)
-        y = mlx_compat.relu(mlx_compat.sigmoid(x * 2 + 1))
-        mlx_compat.sum(y).backward()
+        x = flashlight.tensor(data, requires_grad=True)
+        y = flashlight.relu(flashlight.sigmoid(x * 2 + 1))
+        flashlight.sum(y).backward()
         return x.grad
 
     # PyTorch CPU

@@ -34,7 +34,7 @@ class LinearLayerBenchmark(LayerBenchmark):
         ]
 
     def create_mlx_layer(self, config: Dict[str, Any]):
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
         return nn.Linear(config["in_features"], config["out_features"])
 
     def create_pytorch_layer(self, config: Dict[str, Any], device: str):
@@ -43,8 +43,8 @@ class LinearLayerBenchmark(LayerBenchmark):
         return layer.to(device)
 
     def create_mlx_input(self, config: Dict[str, Any]):
-        import mlx_compat
-        return mlx_compat.randn(config["batch"], config["in_features"])
+        import flashlight
+        return flashlight.randn(config["batch"], config["in_features"])
 
     def create_pytorch_input(self, config: Dict[str, Any], device: str):
         import torch
@@ -87,7 +87,7 @@ class LinearWithBiasBenchmark(LinearLayerBenchmark):
     name = "Linear_no_bias"
 
     def create_mlx_layer(self, config: Dict[str, Any]):
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
         return nn.Linear(config["in_features"], config["out_features"], bias=False)
 
     def create_pytorch_layer(self, config: Dict[str, Any], device: str):

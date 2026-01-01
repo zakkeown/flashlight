@@ -24,17 +24,17 @@ jobs:
           pip install black isort flake8
 
       - name: Check formatting with black
-        run: black --check mlx_compat tests
+        run: black --check flashlight tests
 
       - name: Check imports with isort
-        run: isort --check-only mlx_compat tests
+        run: isort --check-only flashlight tests
 
       - name: Lint with flake8
         run: |
           # Stop on syntax errors or undefined names
-          flake8 mlx_compat tests --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 flashlight tests --count --select=E9,F63,F7,F82 --show-source --statistics
           # Exit-zero treats all errors as warnings
-          flake8 mlx_compat tests --count --exit-zero --max-complexity=10 --max-line-length=100 --statistics
+          flake8 flashlight tests --count --exit-zero --max-complexity=10 --max-line-length=100 --statistics
 
   test:
     name: Test Python ${{ matrix.python-version }}
@@ -66,7 +66,7 @@ jobs:
 
       - name: Run tests
         run: |
-          pytest tests/ -v --cov=mlx_compat --cov-report=xml --cov-report=term
+          pytest tests/ -v --cov=flashlight --cov-report=xml --cov-report=term
 
       - name: Upload coverage to Codecov
         if: matrix.os == 'macos-latest' && matrix.python-version == '3.11'
@@ -97,7 +97,7 @@ jobs:
 
       - name: Run full test suite with MLX
         run: |
-          pytest tests/ -v --cov=mlx_compat --cov-report=term-missing
+          pytest tests/ -v --cov=flashlight --cov-report=term-missing
 
       - name: Run integration tests
         run: |

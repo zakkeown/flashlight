@@ -1,7 +1,7 @@
 """
 Pooling Layer Parity Tests
 
-Tests numerical parity between mlx_compat pooling layers and PyTorch.
+Tests numerical parity between flashlight pooling layers and PyTorch.
 """
 
 import pytest
@@ -9,8 +9,8 @@ import numpy as np
 
 torch = pytest.importorskip("torch")
 
-import mlx_compat
-import mlx_compat.nn as nn
+import flashlight
+import flashlight.nn as nn
 
 
 class TestMaxPoolParity:
@@ -29,7 +29,7 @@ class TestMaxPoolParity:
         x_np = np.random.randn(batch, channels, length).astype(np.float32)
 
         torch_out = torch_pool(torch.tensor(x_np))
-        mlx_out = mlx_pool(mlx_compat.tensor(x_np))
+        mlx_out = mlx_pool(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out.tolist())))
         assert max_diff < 1e-6, f"MaxPool1d mismatch: {max_diff}"
@@ -47,7 +47,7 @@ class TestMaxPoolParity:
         x_np = np.random.randn(batch, channels, h, w).astype(np.float32)
 
         torch_out = torch_pool(torch.tensor(x_np))
-        mlx_out = mlx_pool(mlx_compat.tensor(x_np))
+        mlx_out = mlx_pool(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out.tolist())))
         assert max_diff < 1e-6, f"MaxPool2d mismatch: {max_diff}"
@@ -65,7 +65,7 @@ class TestMaxPoolParity:
         x_np = np.random.randn(batch, channels, h, w).astype(np.float32)
 
         torch_out = torch_pool(torch.tensor(x_np))
-        mlx_out = mlx_pool(mlx_compat.tensor(x_np))
+        mlx_out = mlx_pool(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out.tolist())))
         assert max_diff < 1e-6, f"MaxPool2d stride/padding mismatch: {max_diff}"
@@ -83,7 +83,7 @@ class TestMaxPoolParity:
         x_np = np.random.randn(batch, channels, d, h, w).astype(np.float32)
 
         torch_out = torch_pool(torch.tensor(x_np))
-        mlx_out = mlx_pool(mlx_compat.tensor(x_np))
+        mlx_out = mlx_pool(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out.tolist())))
         assert max_diff < 1e-6, f"MaxPool3d mismatch: {max_diff}"
@@ -105,7 +105,7 @@ class TestAvgPoolParity:
         x_np = np.random.randn(batch, channels, length).astype(np.float32)
 
         torch_out = torch_pool(torch.tensor(x_np))
-        mlx_out = mlx_pool(mlx_compat.tensor(x_np))
+        mlx_out = mlx_pool(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out.tolist())))
         assert max_diff < 1e-5, f"AvgPool1d mismatch: {max_diff}"
@@ -123,7 +123,7 @@ class TestAvgPoolParity:
         x_np = np.random.randn(batch, channels, h, w).astype(np.float32)
 
         torch_out = torch_pool(torch.tensor(x_np))
-        mlx_out = mlx_pool(mlx_compat.tensor(x_np))
+        mlx_out = mlx_pool(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out.tolist())))
         assert max_diff < 1e-5, f"AvgPool2d mismatch: {max_diff}"
@@ -141,7 +141,7 @@ class TestAvgPoolParity:
         x_np = np.random.randn(batch, channels, h, w).astype(np.float32)
 
         torch_out = torch_pool(torch.tensor(x_np))
-        mlx_out = mlx_pool(mlx_compat.tensor(x_np))
+        mlx_out = mlx_pool(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out.tolist())))
         assert max_diff < 1e-5, f"AvgPool2d count_include_pad mismatch: {max_diff}"
@@ -163,7 +163,7 @@ class TestAdaptivePoolParity:
         x_np = np.random.randn(batch, channels, h, w).astype(np.float32)
 
         torch_out = torch_pool(torch.tensor(x_np))
-        mlx_out = mlx_pool(mlx_compat.tensor(x_np))
+        mlx_out = mlx_pool(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out.tolist())))
         assert max_diff < 1e-5, f"AdaptiveAvgPool2d mismatch: {max_diff}"
@@ -181,7 +181,7 @@ class TestAdaptivePoolParity:
         x_np = np.random.randn(batch, channels, h, w).astype(np.float32)
 
         torch_out = torch_pool(torch.tensor(x_np))
-        mlx_out = mlx_pool(mlx_compat.tensor(x_np))
+        mlx_out = mlx_pool(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out.tolist())))
         assert max_diff < 1e-5, f"AdaptiveAvgPool2d global mismatch: {max_diff}"
@@ -199,7 +199,7 @@ class TestAdaptivePoolParity:
         x_np = np.random.randn(batch, channels, h, w).astype(np.float32)
 
         torch_out = torch_pool(torch.tensor(x_np))
-        mlx_out = mlx_pool(mlx_compat.tensor(x_np))
+        mlx_out = mlx_pool(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out.tolist())))
         assert max_diff < 1e-6, f"AdaptiveMaxPool2d mismatch: {max_diff}"
@@ -217,7 +217,7 @@ class TestAdaptivePoolParity:
         x_np = np.random.randn(batch, channels, length).astype(np.float32)
 
         torch_out = torch_pool(torch.tensor(x_np))
-        mlx_out = mlx_pool(mlx_compat.tensor(x_np))
+        mlx_out = mlx_pool(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out.tolist())))
         assert max_diff < 1e-5, f"AdaptiveAvgPool1d mismatch: {max_diff}"

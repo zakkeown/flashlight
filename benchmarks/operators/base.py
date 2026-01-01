@@ -17,7 +17,7 @@ class OperatorBenchmark(BaseBenchmark):
 
     Subclasses should implement:
     - get_input_configs(): Return configurations to benchmark
-    - create_mlx_inputs(config): Create mlx_compat tensors
+    - create_mlx_inputs(config): Create flashlight tensors
     - create_pytorch_inputs(config, device): Create PyTorch tensors
     - mlx_operation(*inputs): The MLX operation
     - pytorch_operation(*inputs): The PyTorch operation
@@ -59,8 +59,8 @@ class UnaryOperatorBenchmark(OperatorBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
-        x = mlx_compat.randn(*config["shape"])
+        import flashlight
+        x = flashlight.randn(*config["shape"])
         return (x,)
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:
@@ -130,9 +130,9 @@ class BinaryOperatorBenchmark(OperatorBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
-        a = mlx_compat.randn(*config["shape"])
-        b = mlx_compat.randn(*config["shape"])
+        import flashlight
+        a = flashlight.randn(*config["shape"])
+        b = flashlight.randn(*config["shape"])
         return (a, b)
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:

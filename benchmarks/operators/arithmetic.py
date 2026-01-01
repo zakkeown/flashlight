@@ -26,17 +26,17 @@ class MatmulOperatorBenchmark(MatmulBenchmark):
     level = BenchmarkLevel.OPERATOR
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
+        import flashlight
 
         m, k, n = config["m"], config["k"], config["n"]
         batch = config.get("batch", None)
 
         if batch:
-            a = mlx_compat.randn(batch, m, k)
-            b = mlx_compat.randn(batch, k, n)
+            a = flashlight.randn(batch, m, k)
+            b = flashlight.randn(batch, k, n)
         else:
-            a = mlx_compat.randn(m, k)
-            b = mlx_compat.randn(k, n)
+            a = flashlight.randn(m, k)
+            b = flashlight.randn(k, n)
 
         return (a, b)
 
@@ -104,10 +104,10 @@ class DivOperatorBenchmark(BinaryOperatorBenchmark):
     op_name = "div"
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
-        a = mlx_compat.randn(*config["shape"])
+        import flashlight
+        a = flashlight.randn(*config["shape"])
         # Avoid division by zero
-        b = mlx_compat.randn(*config["shape"]).abs() + 0.1
+        b = flashlight.randn(*config["shape"]).abs() + 0.1
         return (a, b)
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:
@@ -136,8 +136,8 @@ class PowOperatorBenchmark(OperatorBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
-        x = mlx_compat.randn(*config["shape"]).abs() + 0.1
+        import flashlight
+        x = flashlight.randn(*config["shape"]).abs() + 0.1
         return (x, config["exponent"])
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:
@@ -158,8 +158,8 @@ class SqrtOperatorBenchmark(UnaryOperatorBenchmark):
     op_name = "sqrt"
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
-        x = mlx_compat.randn(*config["shape"]).abs() + 0.1
+        import flashlight
+        x = flashlight.randn(*config["shape"]).abs() + 0.1
         return (x,)
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:
@@ -168,8 +168,8 @@ class SqrtOperatorBenchmark(UnaryOperatorBenchmark):
         return (x,)
 
     def mlx_operation(self, x):
-        import mlx_compat
-        return mlx_compat.sqrt(x)
+        import flashlight
+        return flashlight.sqrt(x)
 
     def pytorch_operation(self, x):
         import torch
@@ -182,9 +182,9 @@ class ExpOperatorBenchmark(UnaryOperatorBenchmark):
     op_name = "exp"
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
+        import flashlight
         # Clamp to avoid overflow
-        x = mlx_compat.randn(*config["shape"]).clamp(-10, 10)
+        x = flashlight.randn(*config["shape"]).clamp(-10, 10)
         return (x,)
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:
@@ -193,8 +193,8 @@ class ExpOperatorBenchmark(UnaryOperatorBenchmark):
         return (x,)
 
     def mlx_operation(self, x):
-        import mlx_compat
-        return mlx_compat.exp(x)
+        import flashlight
+        return flashlight.exp(x)
 
     def pytorch_operation(self, x):
         import torch
@@ -207,8 +207,8 @@ class LogOperatorBenchmark(UnaryOperatorBenchmark):
     op_name = "log"
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
-        x = mlx_compat.randn(*config["shape"]).abs() + 0.1
+        import flashlight
+        x = flashlight.randn(*config["shape"]).abs() + 0.1
         return (x,)
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:
@@ -217,8 +217,8 @@ class LogOperatorBenchmark(UnaryOperatorBenchmark):
         return (x,)
 
     def mlx_operation(self, x):
-        import mlx_compat
-        return mlx_compat.log(x)
+        import flashlight
+        return flashlight.log(x)
 
     def pytorch_operation(self, x):
         import torch
@@ -231,8 +231,8 @@ class AbsOperatorBenchmark(UnaryOperatorBenchmark):
     op_name = "abs"
 
     def mlx_operation(self, x):
-        import mlx_compat
-        return mlx_compat.abs(x)
+        import flashlight
+        return flashlight.abs(x)
 
     def pytorch_operation(self, x):
         import torch

@@ -65,7 +65,7 @@ class ConsoleFormatter:
         """Format the header with system information."""
         lines = []
         lines.append("=" * self.width)
-        lines.append(self._center("mlx_compat Benchmarking Suite v1.0.0"))
+        lines.append(self._center("flashlight Benchmarking Suite v1.0.0"))
         lines.append("=" * self.width)
 
         # System info
@@ -208,7 +208,7 @@ class ConsoleFormatter:
         lines.append("  " + ", ".join(level_parts))
 
         lines.append("")
-        lines.append("mlx_compat vs PyTorch:")
+        lines.append("flashlight vs PyTorch:")
         if summary.faster_count + summary.slower_count > 0:
             total = summary.faster_count + summary.slower_count
             faster_pct = 100 * summary.faster_count / total

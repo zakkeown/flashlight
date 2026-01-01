@@ -32,7 +32,7 @@ jobs:
           # Install PyTorch CPU-only for faster CI
           pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install pyyaml packaging
-          # Install mlx_compat in editable mode
+          # Install flashlight in editable mode
           pip install -e .
 
       - name: Run parity check (informational)

@@ -18,7 +18,7 @@ class LayerBenchmark(BaseBenchmark):
 
     Subclasses should implement:
     - get_input_configs(): Return configurations to benchmark
-    - create_mlx_layer(config): Create mlx_compat layer
+    - create_mlx_layer(config): Create flashlight layer
     - create_pytorch_layer(config, device): Create PyTorch layer
     - create_mlx_input(config): Create input tensor
     - create_pytorch_input(config, device): Create input tensor
@@ -27,7 +27,7 @@ class LayerBenchmark(BaseBenchmark):
     level = BenchmarkLevel.LAYER
 
     def create_mlx_layer(self, config: Dict[str, Any]):
-        """Create mlx_compat layer."""
+        """Create flashlight layer."""
         raise NotImplementedError
 
     def create_pytorch_layer(self, config: Dict[str, Any], device: str):
@@ -35,7 +35,7 @@ class LayerBenchmark(BaseBenchmark):
         raise NotImplementedError
 
     def create_mlx_input(self, config: Dict[str, Any]):
-        """Create mlx_compat input tensor."""
+        """Create flashlight input tensor."""
         raise NotImplementedError
 
     def create_pytorch_input(self, config: Dict[str, Any], device: str):

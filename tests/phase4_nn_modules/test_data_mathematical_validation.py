@@ -24,14 +24,14 @@ except ImportError:
     SCIPY_AVAILABLE = False
 
 try:
-    import mlx_compat
-    from mlx_compat.data import (
+    import flashlight
+    from flashlight.data import (
         TensorDataset, DataLoader,
         SequentialSampler, RandomSampler, SubsetRandomSampler,
         WeightedRandomSampler, BatchSampler, DistributedSampler,
         ChainDataset, StackDataset, random_split
     )
-    from mlx_compat.data._random import (
+    from flashlight.data._random import (
         mlx_permutation, mlx_shuffle_list, mlx_randint,
         mlx_weighted_sample, mlx_seeded_key
     )
@@ -464,7 +464,7 @@ class TestChainDatasetParity(TestCase):
                 return iter(range(self.start, self.end))
 
         # MLX version uses our IterableDataset
-        from mlx_compat.data import IterableDataset
+        from flashlight.data import IterableDataset
 
         class MLXIterable(IterableDataset):
             def __init__(self, start, end):
@@ -503,8 +503,8 @@ class TestStackDatasetParity(TestCase):
         np_y = np.array([0, 1, 0])
 
         # MLX version
-        x_mlx = mlx_compat.tensor(np_x)
-        y_mlx = mlx_compat.tensor(np_y)
+        x_mlx = flashlight.tensor(np_x)
+        y_mlx = flashlight.tensor(np_y)
         ds_x = TensorDataset(x_mlx)
         ds_y = TensorDataset(y_mlx)
         stacked = StackDataset(features=ds_x, labels=ds_y)
@@ -528,7 +528,7 @@ class TestDataLoaderShuffleStatistics(TestCase):
 
     def test_shuffle_produces_different_orders(self):
         """Shuffling should produce different orders across iterations."""
-        x = mlx_compat.arange(100).reshape(100, 1)
+        x = flashlight.arange(100).reshape(100, 1)
         dataset = TensorDataset(x)
 
         orders = []
@@ -546,7 +546,7 @@ class TestDataLoaderShuffleStatistics(TestCase):
     @skipIfNoScipy
     def test_shuffle_first_element_uniform(self):
         """First element after shuffle should be uniformly distributed."""
-        x = mlx_compat.arange(10).reshape(10, 1)
+        x = flashlight.arange(10).reshape(10, 1)
         dataset = TensorDataset(x)
 
         first_elements = []
@@ -574,7 +574,7 @@ class TestDistributedSamplerDistribution(TestCase):
 
     def test_each_rank_gets_fair_share(self):
         """Each rank should get approximately equal share of data."""
-        x = mlx_compat.randn(100, 10)
+        x = flashlight.randn(100, 10)
         dataset = TensorDataset(x)
 
         num_replicas = 4
@@ -593,7 +593,7 @@ class TestDistributedSamplerDistribution(TestCase):
     @skipIfNoScipy
     def test_shuffle_distribution_across_epochs(self):
         """Shuffled distribution should be uniform across multiple epochs."""
-        x = mlx_compat.arange(40).reshape(40, 1)
+        x = flashlight.arange(40).reshape(40, 1)
         dataset = TensorDataset(x)
 
         sampler = DistributedSampler(
@@ -630,7 +630,7 @@ class TestCollateNumpyParity(TestCase):
     def test_collate_numpy_arrays(self):
         """Verify NumPy array collation produces correct tensor."""
         import torch
-        from mlx_compat.data.dataloader import default_collate as mlx_collate
+        from flashlight.data.dataloader import default_collate as mlx_collate
         from torch.utils.data._utils.collate import default_collate as torch_collate
 
         # Create numpy arrays
@@ -658,7 +658,7 @@ class TestCollateNumpyParity(TestCase):
 
     def test_collate_numpy_preserves_dtype(self):
         """Verify NumPy dtype is reasonably preserved."""
-        from mlx_compat.data.dataloader import default_collate
+        from flashlight.data.dataloader import default_collate
 
         # Float32
         np_float32 = [np.array([1.0, 2.0], dtype=np.float32)]

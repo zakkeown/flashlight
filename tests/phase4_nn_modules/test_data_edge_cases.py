@@ -14,8 +14,8 @@ import pytest
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
-    import mlx_compat
-    from mlx_compat.data import (
+    import flashlight
+    from flashlight.data import (
         Dataset, IterableDataset,
         TensorDataset, ConcatDataset, Subset, StackDataset,
         DataLoader, default_collate,
@@ -44,7 +44,7 @@ class TestEmptyDatasets(TestCase):
 
     def test_empty_subset(self):
         """Test Subset with empty indices."""
-        x = mlx_compat.randn(10, 5)
+        x = flashlight.randn(10, 5)
         dataset = TensorDataset(x)
         subset = Subset(dataset, [])
 
@@ -52,7 +52,7 @@ class TestEmptyDatasets(TestCase):
 
     def test_dataloader_with_empty_subset(self):
         """Test DataLoader with empty dataset."""
-        x = mlx_compat.randn(10, 5)
+        x = flashlight.randn(10, 5)
         dataset = TensorDataset(x)
         subset = Subset(dataset, [])
 
@@ -67,7 +67,7 @@ class TestSingleSampleDataset(TestCase):
 
     def test_single_sample_tensor_dataset(self):
         """Test TensorDataset with single sample."""
-        x = mlx_compat.randn(1, 10)
+        x = flashlight.randn(1, 10)
         dataset = TensorDataset(x)
 
         self.assertEqual(len(dataset), 1)
@@ -76,7 +76,7 @@ class TestSingleSampleDataset(TestCase):
 
     def test_single_sample_dataloader(self):
         """Test DataLoader with single sample."""
-        x = mlx_compat.randn(1, 10)
+        x = flashlight.randn(1, 10)
         dataset = TensorDataset(x)
         loader = DataLoader(dataset, batch_size=1)
 
@@ -86,7 +86,7 @@ class TestSingleSampleDataset(TestCase):
 
     def test_single_sample_shuffle(self):
         """Test shuffling with single sample."""
-        x = mlx_compat.tensor([[1.0, 2.0, 3.0]])
+        x = flashlight.tensor([[1.0, 2.0, 3.0]])
         dataset = TensorDataset(x)
         loader = DataLoader(dataset, batch_size=1, shuffle=True)
 
@@ -95,7 +95,7 @@ class TestSingleSampleDataset(TestCase):
 
     def test_single_sample_random_split(self):
         """Test random_split with single sample."""
-        x = mlx_compat.randn(1, 5)
+        x = flashlight.randn(1, 5)
         dataset = TensorDataset(x)
 
         [train] = random_split(dataset, [1])
@@ -108,7 +108,7 @@ class TestBatchSizeLargerThanDataset(TestCase):
 
     def test_batch_larger_no_drop_last(self):
         """Test batch_size larger than dataset with drop_last=False."""
-        x = mlx_compat.randn(5, 10)
+        x = flashlight.randn(5, 10)
         dataset = TensorDataset(x)
         loader = DataLoader(dataset, batch_size=10, drop_last=False)
 
@@ -118,7 +118,7 @@ class TestBatchSizeLargerThanDataset(TestCase):
 
     def test_batch_larger_drop_last(self):
         """Test batch_size larger than dataset with drop_last=True."""
-        x = mlx_compat.randn(5, 10)
+        x = flashlight.randn(5, 10)
         dataset = TensorDataset(x)
         loader = DataLoader(dataset, batch_size=10, drop_last=True)
 
@@ -132,8 +132,8 @@ class TestNegativeIndexing(TestCase):
 
     def test_concat_dataset_negative_index(self):
         """Test ConcatDataset with negative indices."""
-        x1 = mlx_compat.tensor([[1.0], [2.0], [3.0]])
-        x2 = mlx_compat.tensor([[4.0], [5.0]])
+        x1 = flashlight.tensor([[1.0], [2.0], [3.0]])
+        x2 = flashlight.tensor([[4.0], [5.0]])
         ds1 = TensorDataset(x1)
         ds2 = TensorDataset(x2)
         concat = ConcatDataset([ds1, ds2])
@@ -145,7 +145,7 @@ class TestNegativeIndexing(TestCase):
 
     def test_subset_negative_index(self):
         """Test Subset with negative indices."""
-        x = mlx_compat.tensor([[1.0], [2.0], [3.0], [4.0], [5.0]])
+        x = flashlight.tensor([[1.0], [2.0], [3.0], [4.0], [5.0]])
         dataset = TensorDataset(x)
         subset = Subset(dataset, [0, 2, 4])  # Indices: 0->1.0, 2->3.0, 4->5.0
 
@@ -156,7 +156,7 @@ class TestNegativeIndexing(TestCase):
 
     def test_subset_negative_index_out_of_range(self):
         """Test Subset raises IndexError for out-of-range negative indices."""
-        x = mlx_compat.randn(10, 3)
+        x = flashlight.randn(10, 3)
         dataset = TensorDataset(x)
         subset = Subset(dataset, [0, 1, 2])
 
@@ -168,7 +168,7 @@ class TestNegativeIndexing(TestCase):
 
     def test_concat_dataset_out_of_range(self):
         """Test ConcatDataset with out-of-range indices."""
-        x = mlx_compat.randn(5, 3)
+        x = flashlight.randn(5, 3)
         ds = TensorDataset(x)
         concat = ConcatDataset([ds])
 
@@ -203,8 +203,8 @@ class TestCollateEdgeCases(TestCase):
     def test_collate_mixed_shapes_error(self):
         """Test that mixed shapes cause error."""
         samples = [
-            mlx_compat.tensor([1.0, 2.0]),
-            mlx_compat.tensor([3.0, 4.0, 5.0]),  # Different shape
+            flashlight.tensor([1.0, 2.0]),
+            flashlight.tensor([3.0, 4.0, 5.0]),  # Different shape
         ]
         # This should raise an error during stacking
         with self.assertRaises(Exception):
@@ -216,8 +216,8 @@ class TestCollateEdgeCases(TestCase):
 
         Sample = namedtuple('Sample', ['x', 'y'])
         samples = [
-            Sample(x=mlx_compat.tensor([1.0]), y=mlx_compat.tensor([0])),
-            Sample(x=mlx_compat.tensor([2.0]), y=mlx_compat.tensor([1])),
+            Sample(x=flashlight.tensor([1.0]), y=flashlight.tensor([0])),
+            Sample(x=flashlight.tensor([2.0]), y=flashlight.tensor([1])),
         ]
         result = default_collate(samples)
 
@@ -275,7 +275,7 @@ class TestDataLoaderEdgeCases(TestCase):
 
     def test_dataloader_conflicting_params_error(self):
         """Test DataLoader raises error on conflicting parameters."""
-        x = mlx_compat.randn(100, 10)
+        x = flashlight.randn(100, 10)
         dataset = TensorDataset(x)
 
         # batch_sampler with batch_size != 1
@@ -287,7 +287,7 @@ class TestDataLoaderEdgeCases(TestCase):
 
     def test_dataloader_sampler_with_shuffle_error(self):
         """Test DataLoader raises error when both sampler and shuffle provided."""
-        x = mlx_compat.randn(100, 10)
+        x = flashlight.randn(100, 10)
         dataset = TensorDataset(x)
         sampler = SequentialSampler(dataset)
 
@@ -296,7 +296,7 @@ class TestDataLoaderEdgeCases(TestCase):
 
     def test_dataloader_invalid_batch_size(self):
         """Test DataLoader with invalid batch_size."""
-        x = mlx_compat.randn(100, 10)
+        x = flashlight.randn(100, 10)
         dataset = TensorDataset(x)
 
         with self.assertRaises(ValueError):
@@ -307,7 +307,7 @@ class TestDataLoaderEdgeCases(TestCase):
 
     def test_dataloader_multiple_iterations(self):
         """Test DataLoader can be iterated multiple times."""
-        x = mlx_compat.arange(100).reshape(100, 1)
+        x = flashlight.arange(100).reshape(100, 1)
         dataset = TensorDataset(x)
         loader = DataLoader(dataset, batch_size=10, shuffle=False)
 
@@ -324,7 +324,7 @@ class TestRandomSplitEdgeCases(TestCase):
 
     def test_split_zero_length_error(self):
         """Test that zero-length splits are allowed."""
-        x = mlx_compat.randn(10, 5)
+        x = flashlight.randn(10, 5)
         dataset = TensorDataset(x)
 
         # Split with a zero-length subset
@@ -339,7 +339,7 @@ class TestRandomSplitEdgeCases(TestCase):
         with self.assertRaises(TypeError):
             random_split()
 
-        x = mlx_compat.randn(10, 5)
+        x = flashlight.randn(10, 5)
         dataset = TensorDataset(x)
 
         with self.assertRaises(TypeError):
@@ -352,7 +352,7 @@ class TestMLXRandomUtilities(TestCase):
 
     def test_mlx_permutation_basic(self):
         """Test basic permutation generation."""
-        from mlx_compat.data._random import mlx_permutation
+        from flashlight.data._random import mlx_permutation
 
         perm = mlx_permutation(10)
         self.assertEqual(len(perm), 10)
@@ -360,14 +360,14 @@ class TestMLXRandomUtilities(TestCase):
 
     def test_mlx_permutation_empty(self):
         """Test permutation with n=0."""
-        from mlx_compat.data._random import mlx_permutation
+        from flashlight.data._random import mlx_permutation
 
         perm = mlx_permutation(0)
         self.assertEqual(perm, [])
 
     def test_mlx_shuffle_list(self):
         """Test list shuffling."""
-        from mlx_compat.data._random import mlx_shuffle_list
+        from flashlight.data._random import mlx_shuffle_list
 
         original = [1, 2, 3, 4, 5]
         shuffled = mlx_shuffle_list(original)
@@ -377,7 +377,7 @@ class TestMLXRandomUtilities(TestCase):
 
     def test_mlx_randint(self):
         """Test random integer generation."""
-        from mlx_compat.data._random import mlx_randint
+        from flashlight.data._random import mlx_randint
 
         values = mlx_randint(0, 10, 100)
         self.assertEqual(len(values), 100)
@@ -385,7 +385,7 @@ class TestMLXRandomUtilities(TestCase):
 
     def test_mlx_weighted_sample_with_replacement(self):
         """Test weighted sampling with replacement."""
-        from mlx_compat.data._random import mlx_weighted_sample
+        from flashlight.data._random import mlx_weighted_sample
 
         weights = [0.1, 0.9]
         samples = mlx_weighted_sample(weights, 1000, replacement=True)
@@ -396,7 +396,7 @@ class TestMLXRandomUtilities(TestCase):
 
     def test_mlx_weighted_sample_without_replacement(self):
         """Test weighted sampling without replacement."""
-        from mlx_compat.data._random import mlx_weighted_sample
+        from flashlight.data._random import mlx_weighted_sample
 
         weights = [0.5, 0.3, 0.2]
         samples = mlx_weighted_sample(weights, 2, replacement=False)
@@ -406,7 +406,7 @@ class TestMLXRandomUtilities(TestCase):
 
     def test_mlx_seeded_key(self):
         """Test seeded key generation."""
-        from mlx_compat.data._random import mlx_seeded_key, mlx_permutation
+        from flashlight.data._random import mlx_seeded_key, mlx_permutation
 
         key1 = mlx_seeded_key(42, epoch=0)
         key2 = mlx_seeded_key(42, epoch=0)
@@ -429,14 +429,14 @@ class TestStubFunctions(TestCase):
 
     def test_get_worker_info_returns_none(self):
         """Test get_worker_info returns None (single-threaded MLX)."""
-        from mlx_compat.data import get_worker_info
+        from flashlight.data import get_worker_info
 
         result = get_worker_info()
         self.assertIsNone(result)
 
     def test_default_convert_identity(self):
         """Test default_convert returns input unchanged."""
-        from mlx_compat.data import default_convert
+        from flashlight.data import default_convert
 
         # Test with various types
         test_inputs = [
@@ -444,12 +444,12 @@ class TestStubFunctions(TestCase):
             "hello",
             [1, 2, 3],
             {"a": 1, "b": 2},
-            mlx_compat.tensor([1.0, 2.0]),
+            flashlight.tensor([1.0, 2.0]),
         ]
 
         for inp in test_inputs:
             result = default_convert(inp)
-            if isinstance(inp, mlx_compat.Tensor):
+            if isinstance(inp, flashlight.Tensor):
                 # Tensor comparison
                 self.assertTrue((result == inp).all())
             else:
@@ -462,7 +462,7 @@ class TestDataChunkContainer(TestCase):
 
     def test_datachunk_basic(self):
         """Test DataChunk creation and iteration."""
-        from mlx_compat.data import DataChunk
+        from flashlight.data import DataChunk
 
         items = [1, 2, 3, 4, 5]
         chunk = DataChunk(items)
@@ -472,7 +472,7 @@ class TestDataChunkContainer(TestCase):
 
     def test_datachunk_getitem(self):
         """Test DataChunk indexing."""
-        from mlx_compat.data import DataChunk
+        from flashlight.data import DataChunk
 
         items = ["a", "b", "c", "d"]
         chunk = DataChunk(items)
@@ -483,7 +483,7 @@ class TestDataChunkContainer(TestCase):
 
     def test_datachunk_as_str(self):
         """Test DataChunk string representation."""
-        from mlx_compat.data import DataChunk
+        from flashlight.data import DataChunk
 
         items = [1, 2, 3]
         chunk = DataChunk(items)
@@ -493,7 +493,7 @@ class TestDataChunkContainer(TestCase):
 
     def test_datachunk_raw_iterator(self):
         """Test DataChunk raw iterator."""
-        from mlx_compat.data import DataChunk
+        from flashlight.data import DataChunk
 
         items = [10, 20, 30]
         chunk = DataChunk(items)
@@ -503,7 +503,7 @@ class TestDataChunkContainer(TestCase):
 
     def test_datachunk_empty(self):
         """Test DataChunk with empty list."""
-        from mlx_compat.data import DataChunk
+        from flashlight.data import DataChunk
 
         chunk = DataChunk([])
         self.assertEqual(len(chunk), 0)

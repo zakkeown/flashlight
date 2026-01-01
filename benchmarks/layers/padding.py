@@ -25,7 +25,7 @@ class ZeroPad2dBenchmark(LayerBenchmark):
         ]
 
     def create_mlx_layer(self, config: Dict[str, Any]):
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
         return nn.ZeroPad2d(config["padding"])
 
     def create_pytorch_layer(self, config: Dict[str, Any], device: str):
@@ -33,8 +33,8 @@ class ZeroPad2dBenchmark(LayerBenchmark):
         return nn.ZeroPad2d(config["padding"])
 
     def create_mlx_input(self, config: Dict[str, Any]):
-        import mlx_compat
-        return mlx_compat.randn(
+        import flashlight
+        return flashlight.randn(
             config["batch"], config["channels"],
             config["height"], config["width"]
         )
@@ -83,7 +83,7 @@ class ReflectionPad2dBenchmark(ZeroPad2dBenchmark):
     name = "ReflectionPad2d"
 
     def create_mlx_layer(self, config: Dict[str, Any]):
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
         return nn.ReflectionPad2d(config["padding"])
 
     def create_pytorch_layer(self, config: Dict[str, Any], device: str):
@@ -97,7 +97,7 @@ class ReplicationPad2dBenchmark(ZeroPad2dBenchmark):
     name = "ReplicationPad2d"
 
     def create_mlx_layer(self, config: Dict[str, Any]):
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
         return nn.ReplicationPad2d(config["padding"])
 
     def create_pytorch_layer(self, config: Dict[str, Any], device: str):
@@ -119,7 +119,7 @@ class ConstantPad2dBenchmark(LayerBenchmark):
         ]
 
     def create_mlx_layer(self, config: Dict[str, Any]):
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
         return nn.ConstantPad2d(config["padding"], config["value"])
 
     def create_pytorch_layer(self, config: Dict[str, Any], device: str):
@@ -127,8 +127,8 @@ class ConstantPad2dBenchmark(LayerBenchmark):
         return nn.ConstantPad2d(config["padding"], config["value"])
 
     def create_mlx_input(self, config: Dict[str, Any]):
-        import mlx_compat
-        return mlx_compat.randn(
+        import flashlight
+        return flashlight.randn(
             config["batch"], config["channels"],
             config["height"], config["width"]
         )
@@ -181,7 +181,7 @@ class ZeroPad1dBenchmark(LayerBenchmark):
         ]
 
     def create_mlx_layer(self, config: Dict[str, Any]):
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
         return nn.ZeroPad1d(config["padding"])
 
     def create_pytorch_layer(self, config: Dict[str, Any], device: str):
@@ -189,8 +189,8 @@ class ZeroPad1dBenchmark(LayerBenchmark):
         return nn.ZeroPad1d(config["padding"])
 
     def create_mlx_input(self, config: Dict[str, Any]):
-        import mlx_compat
-        return mlx_compat.randn(
+        import flashlight
+        return flashlight.randn(
             config["batch"], config["channels"], config["length"]
         )
 

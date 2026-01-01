@@ -1,7 +1,7 @@
 """
 API presence validator.
 
-Validates that expected PyTorch APIs exist in mlx_compat.
+Validates that expected PyTorch APIs exist in flashlight.
 """
 
 from dataclasses import dataclass, field
@@ -38,11 +38,11 @@ class PresenceValidationResult:
 
 class APIPresenceValidator:
     """
-    Validates that expected PyTorch APIs exist in mlx_compat.
+    Validates that expected PyTorch APIs exist in flashlight.
 
     Args:
         pytorch_apis: Dictionary of PyTorch APIs by module
-        mlx_apis: Dictionary of mlx_compat APIs by module
+        mlx_apis: Dictionary of flashlight APIs by module
         exclusions: Dictionary of excluded APIs by module
     """
 

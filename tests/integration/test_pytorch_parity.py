@@ -1,7 +1,7 @@
 """
 PyTorch Parity Tests
 
-Tests numerical parity between mlx_compat and PyTorch implementations.
+Tests numerical parity between flashlight and PyTorch implementations.
 """
 
 import sys
@@ -17,9 +17,9 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from common_utils import TestCase, skipIfNoMLX
 
 try:
-    import mlx_compat
-    import mlx_compat.nn as nn
-    import mlx_compat.optim as optim
+    import flashlight
+    import flashlight.nn as nn
+    import flashlight.optim as optim
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -56,7 +56,7 @@ class TestLinearParity(TestCase):
         # Random input
         x_np = np.random.randn(3, 10).astype(np.float32)
         x_torch = torch.from_numpy(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         # Forward pass
         y_torch = torch_linear(x_torch)
@@ -80,10 +80,10 @@ class TestActivationParity(TestCase):
         """Test ReLU matches PyTorch."""
         x_np = np.random.randn(4, 10).astype(np.float32)
         x_torch = torch.from_numpy(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         y_torch = torch.relu(x_torch)
-        y_mlx = mlx_compat.relu(x_mlx)
+        y_mlx = flashlight.relu(x_mlx)
 
         np.testing.assert_allclose(
             y_mlx.numpy(),
@@ -96,10 +96,10 @@ class TestActivationParity(TestCase):
         """Test GELU matches PyTorch."""
         x_np = np.random.randn(4, 10).astype(np.float32)
         x_torch = torch.from_numpy(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         y_torch = torch.nn.functional.gelu(x_torch)
-        y_mlx = mlx_compat.gelu(x_mlx)
+        y_mlx = flashlight.gelu(x_mlx)
 
         np.testing.assert_allclose(
             y_mlx.numpy(),
@@ -128,7 +128,7 @@ class TestConvParity(TestCase):
         # Random input
         x_np = np.random.randn(2, 3, 16, 16).astype(np.float32)
         x_torch = torch.from_numpy(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         # Forward pass
         y_torch = torch_conv(x_torch)
@@ -155,8 +155,8 @@ class TestLossParity(TestCase):
 
         pred_torch = torch.from_numpy(pred_np)
         target_torch = torch.from_numpy(target_np)
-        pred_mlx = mlx_compat.tensor(pred_np)
-        target_mlx = mlx_compat.tensor(target_np)
+        pred_mlx = flashlight.tensor(pred_np)
+        target_mlx = flashlight.tensor(target_np)
 
         loss_torch = torch_nn.MSELoss()(pred_torch, target_torch)
         loss_mlx = nn.MSELoss()(pred_mlx, target_mlx)
@@ -175,8 +175,8 @@ class TestLossParity(TestCase):
 
         logits_torch = torch.from_numpy(logits_np)
         target_torch = torch.from_numpy(target_np).long()
-        logits_mlx = mlx_compat.tensor(logits_np)
-        target_mlx = mlx_compat.tensor(target_np)
+        logits_mlx = flashlight.tensor(logits_np)
+        target_mlx = flashlight.tensor(target_np)
 
         loss_torch = torch_nn.CrossEntropyLoss()(logits_torch, target_torch)
         loss_mlx = nn.CrossEntropyLoss()(logits_mlx, target_mlx)
@@ -207,8 +207,8 @@ class TestOptimizerParity(TestCase):
         opt_torch.step()
 
         # MLX
-        param_mlx = nn.Parameter(mlx_compat.tensor(param_np.copy()))
-        param_mlx.grad = mlx_compat.tensor(grad_np)
+        param_mlx = nn.Parameter(flashlight.tensor(param_np.copy()))
+        param_mlx.grad = flashlight.tensor(grad_np)
         opt_mlx = optim.SGD([param_mlx], lr=0.01)
         opt_mlx.step()
 
@@ -233,8 +233,8 @@ class TestOptimizerParity(TestCase):
         opt_torch.step()
 
         # MLX
-        param_mlx = nn.Parameter(mlx_compat.tensor(param_np.copy()))
-        param_mlx.grad = mlx_compat.tensor(grad_np)
+        param_mlx = nn.Parameter(flashlight.tensor(param_np.copy()))
+        param_mlx.grad = flashlight.tensor(grad_np)
         opt_mlx = optim.Adam([param_mlx], lr=0.001)
         opt_mlx.step()
 
@@ -276,7 +276,7 @@ class TestModelParity(TestCase):
         # Random input
         x_np = np.random.randn(4, 784).astype(np.float32)
         x_torch = torch.from_numpy(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         # Forward pass
         y_torch = torch_model(x_torch)

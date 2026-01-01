@@ -23,8 +23,8 @@ class EqOperatorBenchmark(BinaryOperatorBenchmark):
     op_name = "eq"
 
     def mlx_operation(self, a, b):
-        import mlx_compat
-        return mlx_compat.eq(a, b)
+        import flashlight
+        return flashlight.eq(a, b)
 
     def pytorch_operation(self, a, b):
         import torch
@@ -37,8 +37,8 @@ class NeOperatorBenchmark(BinaryOperatorBenchmark):
     op_name = "ne"
 
     def mlx_operation(self, a, b):
-        import mlx_compat
-        return mlx_compat.ne(a, b)
+        import flashlight
+        return flashlight.ne(a, b)
 
     def pytorch_operation(self, a, b):
         import torch
@@ -51,8 +51,8 @@ class LtOperatorBenchmark(BinaryOperatorBenchmark):
     op_name = "lt"
 
     def mlx_operation(self, a, b):
-        import mlx_compat
-        return mlx_compat.lt(a, b)
+        import flashlight
+        return flashlight.lt(a, b)
 
     def pytorch_operation(self, a, b):
         import torch
@@ -65,8 +65,8 @@ class LeOperatorBenchmark(BinaryOperatorBenchmark):
     op_name = "le"
 
     def mlx_operation(self, a, b):
-        import mlx_compat
-        return mlx_compat.le(a, b)
+        import flashlight
+        return flashlight.le(a, b)
 
     def pytorch_operation(self, a, b):
         import torch
@@ -79,8 +79,8 @@ class GtOperatorBenchmark(BinaryOperatorBenchmark):
     op_name = "gt"
 
     def mlx_operation(self, a, b):
-        import mlx_compat
-        return mlx_compat.gt(a, b)
+        import flashlight
+        return flashlight.gt(a, b)
 
     def pytorch_operation(self, a, b):
         import torch
@@ -93,8 +93,8 @@ class GeOperatorBenchmark(BinaryOperatorBenchmark):
     op_name = "ge"
 
     def mlx_operation(self, a, b):
-        import mlx_compat
-        return mlx_compat.ge(a, b)
+        import flashlight
+        return flashlight.ge(a, b)
 
     def pytorch_operation(self, a, b):
         import torch
@@ -107,8 +107,8 @@ class MaximumOperatorBenchmark(BinaryOperatorBenchmark):
     op_name = "maximum"
 
     def mlx_operation(self, a, b):
-        import mlx_compat
-        return mlx_compat.maximum(a, b)
+        import flashlight
+        return flashlight.maximum(a, b)
 
     def pytorch_operation(self, a, b):
         import torch
@@ -121,8 +121,8 @@ class MinimumOperatorBenchmark(BinaryOperatorBenchmark):
     op_name = "minimum"
 
     def mlx_operation(self, a, b):
-        import mlx_compat
-        return mlx_compat.minimum(a, b)
+        import flashlight
+        return flashlight.minimum(a, b)
 
     def pytorch_operation(self, a, b):
         import torch
@@ -135,8 +135,8 @@ class IscloseOperatorBenchmark(BinaryOperatorBenchmark):
     op_name = "isclose"
 
     def mlx_operation(self, a, b):
-        import mlx_compat
-        return mlx_compat.isclose(a, b)
+        import flashlight
+        return flashlight.isclose(a, b)
 
     def pytorch_operation(self, a, b):
         import torch

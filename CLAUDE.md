@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **MLX Compat** is a PyTorch-compatible API layer for Apple's MLX framework. It enables PyTorch code to run on Apple Silicon with minimal modifications through a complete bottom-up implementation.
 
-**Package name**: `mlx-compat` (import as `mlx_compat`)
+**Package name**: `flashlight` (import as `flashlight`)
 **Status**: Phase 6 Complete - Full training pipeline verified
 
 ## Build/Test/Lint Commands
@@ -24,9 +24,9 @@ pytest tests/ -m integration       # Integration tests
 pytest tests/ -k "test_name"       # Single test by name
 
 # Linting/Formatting
-black mlx_compat tests
-isort mlx_compat tests
-flake8 mlx_compat tests
+black flashlight tests
+isort flashlight tests
+flake8 flashlight tests
 
 # Parity check tool
 python3 -m parity_check --format console
@@ -47,12 +47,12 @@ MLX Backend (external, Apple's Metal-based ML framework)
 
 ### Key Source Files
 
-- `mlx_compat/tensor.py` - Core Tensor class wrapping MLX arrays
-- `mlx_compat/ops/` - All operators (arithmetic, activations, reductions, shape, indexing, conv, pooling)
-- `mlx_compat/autograd/engine.py` - Backward pass engine
-- `mlx_compat/nn/module.py` - Base Module class
-- `mlx_compat/nn/layers/` - Layer implementations (Linear, Conv2d, BatchNorm, etc.)
-- `mlx_compat/optim/` - Optimizers (SGD, Adam, AdamW) and LR schedulers
+- `flashlight/tensor.py` - Core Tensor class wrapping MLX arrays
+- `flashlight/ops/` - All operators (arithmetic, activations, reductions, shape, indexing, conv, pooling)
+- `flashlight/autograd/engine.py` - Backward pass engine
+- `flashlight/nn/module.py` - Base Module class
+- `flashlight/nn/layers/` - Layer implementations (Linear, Conv2d, BatchNorm, etc.)
+- `flashlight/optim/` - Optimizers (SGD, Adam, AdamW) and LR schedulers
 
 ### Critical Design Patterns
 

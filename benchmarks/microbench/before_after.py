@@ -112,10 +112,10 @@ class BeforeAfterComparator:
             before = before_index[key]
 
             # Extract timing stats
-            before_mean = before.get("mlx_compat", {}).get("mean_ms", 0)
-            before_std = before.get("mlx_compat", {}).get("std_ms", 0)
-            after_mean = after.get("mlx_compat", {}).get("mean_ms", 0)
-            after_std = after.get("mlx_compat", {}).get("std_ms", 0)
+            before_mean = before.get("flashlight", {}).get("mean_ms", 0)
+            before_std = before.get("flashlight", {}).get("std_ms", 0)
+            after_mean = after.get("flashlight", {}).get("mean_ms", 0)
+            after_std = after.get("flashlight", {}).get("std_ms", 0)
 
             if after_mean <= 0 or before_mean <= 0:
                 continue
@@ -252,7 +252,7 @@ class BeforeAfterComparator:
         """Generate console-friendly report."""
         lines = [
             "=" * 80,
-            "           mlx_compat Performance Comparison Report",
+            "           flashlight Performance Comparison Report",
             "=" * 80,
             "",
         ]

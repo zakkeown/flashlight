@@ -16,9 +16,9 @@ import numpy as np
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
-    import mlx_compat
+    import flashlight
     import mlx.core as mx
-    from mlx_compat.autograd.function import Function
+    from flashlight.autograd.function import Function
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -40,11 +40,11 @@ class TestCustomFunction(TestCase):
             def backward(ctx, grad_output):
                 input, = ctx.saved_tensors
                 mask = (input._mlx_array > 0).astype(grad_output._mlx_array.dtype)
-                return mlx_compat.tensor(grad_output._mlx_array * mask)
+                return flashlight.tensor(grad_output._mlx_array * mask)
 
-        x = mlx_compat.tensor([-1.0, 0.5, -0.5, 2.0], requires_grad=True)
+        x = flashlight.tensor([-1.0, 0.5, -0.5, 2.0], requires_grad=True)
         y = MyReLU.apply(x)
-        loss = mlx_compat.sum(y)
+        loss = flashlight.sum(y)
         loss.backward()
 
         expected = np.array([0.0, 1.0, 0.0, 1.0])
@@ -60,11 +60,11 @@ class TestCustomFunction(TestCase):
 
             @staticmethod
             def backward(ctx, grad_output):
-                return mlx_compat.tensor(grad_output._mlx_array * ctx.scale)
+                return flashlight.tensor(grad_output._mlx_array * ctx.scale)
 
-        x = mlx_compat.tensor([1.0, 2.0, 3.0], requires_grad=True)
+        x = flashlight.tensor([1.0, 2.0, 3.0], requires_grad=True)
         y = Scale.apply(x, 3.0)
-        loss = mlx_compat.sum(y)
+        loss = flashlight.sum(y)
         loss.backward()
 
         expected = np.array([3.0, 3.0, 3.0])
@@ -81,11 +81,11 @@ class TestCustomFunction(TestCase):
             @staticmethod
             def backward(ctx, grad_output):
                 input, = ctx.saved_tensors
-                return mlx_compat.tensor(2 * input._mlx_array * grad_output._mlx_array)
+                return flashlight.tensor(2 * input._mlx_array * grad_output._mlx_array)
 
-        x = mlx_compat.tensor([1.0, 2.0, 3.0], requires_grad=True)
+        x = flashlight.tensor([1.0, 2.0, 3.0], requires_grad=True)
         y = Square.apply(x)
-        loss = mlx_compat.sum(y)
+        loss = flashlight.sum(y)
         loss.backward()
 
         # d(x^2)/dx = 2x
@@ -111,9 +111,9 @@ class TestSavedTensorsContext(TestCase):
                 self.assertIsNotNone(x)
                 return grad_output
 
-        x = mlx_compat.tensor([1.0, 2.0], requires_grad=True)
+        x = flashlight.tensor([1.0, 2.0], requires_grad=True)
         y = SaveOne.apply(x)
-        loss = mlx_compat.sum(y)
+        loss = flashlight.sum(y)
         loss.backward()
 
     def test_save_multiple_tensors(self):
@@ -129,10 +129,10 @@ class TestSavedTensorsContext(TestCase):
                 x, y = ctx.saved_tensors
                 return grad_output, grad_output
 
-        x = mlx_compat.tensor([1.0, 2.0], requires_grad=True)
-        y = mlx_compat.tensor([3.0, 4.0], requires_grad=True)
+        x = flashlight.tensor([1.0, 2.0], requires_grad=True)
+        y = flashlight.tensor([3.0, 4.0], requires_grad=True)
         z = SaveMultiple.apply(x, y)
-        loss = mlx_compat.sum(z)
+        loss = flashlight.sum(z)
         loss.backward()
 
         np.testing.assert_array_almost_equal(x.grad.numpy(), np.ones(2))
@@ -152,7 +152,7 @@ class TestCustomFunctionChain(TestCase):
 
             @staticmethod
             def backward(ctx, grad_output):
-                return mlx_compat.tensor(grad_output._mlx_array * 2)
+                return flashlight.tensor(grad_output._mlx_array * 2)
 
         class AddOne(Function):
             @staticmethod
@@ -163,10 +163,10 @@ class TestCustomFunctionChain(TestCase):
             def backward(ctx, grad_output):
                 return grad_output
 
-        x = mlx_compat.tensor([1.0, 2.0, 3.0], requires_grad=True)
+        x = flashlight.tensor([1.0, 2.0, 3.0], requires_grad=True)
         y = Double.apply(x)
         z = AddOne.apply(y)
-        loss = mlx_compat.sum(z)
+        loss = flashlight.sum(z)
         loss.backward()
 
         # Chain: z = 2x + 1, d/dx = 2

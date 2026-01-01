@@ -27,8 +27,8 @@ class MaxPool2dBenchmark(OperatorBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
-        x = mlx_compat.randn(config["batch"], config["channels"], config["h"], config["w"])
+        import flashlight
+        x = flashlight.randn(config["batch"], config["channels"], config["h"], config["w"])
         return (x, config["k"], config["stride"], config["padding"])
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:
@@ -37,7 +37,7 @@ class MaxPool2dBenchmark(OperatorBenchmark):
         return (x, config["k"], config["stride"], config["padding"])
 
     def mlx_operation(self, x, k, stride, padding):
-        import mlx_compat.nn.functional as F
+        import flashlight.nn.functional as F
         return F.max_pool2d(x, kernel_size=k, stride=stride, padding=padding)
 
     def pytorch_operation(self, x, k, stride, padding):
@@ -73,7 +73,7 @@ class AvgPool2dBenchmark(MaxPool2dBenchmark):
     name = "avg_pool2d"
 
     def mlx_operation(self, x, k, stride, padding):
-        import mlx_compat.nn.functional as F
+        import flashlight.nn.functional as F
         return F.avg_pool2d(x, kernel_size=k, stride=stride, padding=padding)
 
     def pytorch_operation(self, x, k, stride, padding):
@@ -96,8 +96,8 @@ class AdaptiveAvgPool2dBenchmark(OperatorBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
-        x = mlx_compat.randn(config["batch"], config["channels"], config["h"], config["w"])
+        import flashlight
+        x = flashlight.randn(config["batch"], config["channels"], config["h"], config["w"])
         return (x, config["output_size"])
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:
@@ -106,7 +106,7 @@ class AdaptiveAvgPool2dBenchmark(OperatorBenchmark):
         return (x, config["output_size"])
 
     def mlx_operation(self, x, output_size):
-        import mlx_compat.nn.functional as F
+        import flashlight.nn.functional as F
         return F.adaptive_avg_pool2d(x, output_size)
 
     def pytorch_operation(self, x, output_size):
@@ -127,8 +127,8 @@ class MaxPool1dBenchmark(OperatorBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
-        x = mlx_compat.randn(config["batch"], config["channels"], config["length"])
+        import flashlight
+        x = flashlight.randn(config["batch"], config["channels"], config["length"])
         return (x, config["k"], config["stride"])
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:
@@ -137,7 +137,7 @@ class MaxPool1dBenchmark(OperatorBenchmark):
         return (x, config["k"], config["stride"])
 
     def mlx_operation(self, x, k, stride):
-        import mlx_compat.nn.functional as F
+        import flashlight.nn.functional as F
         return F.max_pool1d(x, kernel_size=k, stride=stride)
 
     def pytorch_operation(self, x, k, stride):

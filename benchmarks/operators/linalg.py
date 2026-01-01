@@ -34,9 +34,9 @@ class EinsumBenchmark(OperatorBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
+        import flashlight
 
-        tensors = [mlx_compat.randn(*shape) for shape in config["shapes"]]
+        tensors = [flashlight.randn(*shape) for shape in config["shapes"]]
         return (config["equation"], tensors)
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:
@@ -46,8 +46,8 @@ class EinsumBenchmark(OperatorBenchmark):
         return (config["equation"], tensors)
 
     def mlx_operation(self, equation, tensors):
-        import mlx_compat
-        return mlx_compat.einsum(equation, *tensors)
+        import flashlight
+        return flashlight.einsum(equation, *tensors)
 
     def pytorch_operation(self, equation, tensors):
         import torch
@@ -69,10 +69,10 @@ class BmmBenchmark(OperatorBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
+        import flashlight
 
-        a = mlx_compat.randn(config["batch"], config["m"], config["k"])
-        b = mlx_compat.randn(config["batch"], config["k"], config["n"])
+        a = flashlight.randn(config["batch"], config["m"], config["k"])
+        b = flashlight.randn(config["batch"], config["k"], config["n"])
         return (a, b)
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:
@@ -83,8 +83,8 @@ class BmmBenchmark(OperatorBenchmark):
         return (a, b)
 
     def mlx_operation(self, a, b):
-        import mlx_compat
-        return mlx_compat.bmm(a, b)
+        import flashlight
+        return flashlight.bmm(a, b)
 
     def pytorch_operation(self, a, b):
         import torch
@@ -121,10 +121,10 @@ class MmBenchmark(OperatorBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
+        import flashlight
 
-        a = mlx_compat.randn(config["m"], config["k"])
-        b = mlx_compat.randn(config["k"], config["n"])
+        a = flashlight.randn(config["m"], config["k"])
+        b = flashlight.randn(config["k"], config["n"])
         return (a, b)
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:
@@ -135,8 +135,8 @@ class MmBenchmark(OperatorBenchmark):
         return (a, b)
 
     def mlx_operation(self, a, b):
-        import mlx_compat
-        return mlx_compat.mm(a, b)
+        import flashlight
+        return flashlight.mm(a, b)
 
     def pytorch_operation(self, a, b):
         import torch

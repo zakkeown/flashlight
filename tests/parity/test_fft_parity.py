@@ -1,7 +1,7 @@
 """
 FFT Parity Tests
 
-Tests numerical parity between mlx_compat.fft and PyTorch torch.fft.
+Tests numerical parity between flashlight.fft and PyTorch torch.fft.
 """
 
 import pytest
@@ -9,7 +9,7 @@ import numpy as np
 
 torch = pytest.importorskip("torch")
 
-import mlx_compat
+import flashlight
 
 
 class TestBasicFFTParity:
@@ -22,7 +22,7 @@ class TestBasicFFTParity:
         x_np = np.random.randn(64).astype(np.float32)
 
         torch_out = torch.fft.fft(torch.tensor(x_np))
-        mlx_out = mlx_compat.fft.fft(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.fft.fft(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-5, f"fft mismatch: {max_diff}"
@@ -35,7 +35,7 @@ class TestBasicFFTParity:
         x_np = x_np.astype(np.complex64)
 
         torch_out = torch.fft.ifft(torch.tensor(x_np))
-        mlx_out = mlx_compat.fft.ifft(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.fft.ifft(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-5, f"ifft mismatch: {max_diff}"
@@ -47,7 +47,7 @@ class TestBasicFFTParity:
         x_np = np.random.randn(32).astype(np.float32)
 
         torch_out = torch.fft.fft(torch.tensor(x_np), n=64)
-        mlx_out = mlx_compat.fft.fft(mlx_compat.tensor(x_np), n=64)
+        mlx_out = flashlight.fft.fft(flashlight.tensor(x_np), n=64)
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-5, f"fft with n mismatch: {max_diff}"
@@ -63,7 +63,7 @@ class TestRealFFTParity:
         x_np = np.random.randn(64).astype(np.float32)
 
         torch_out = torch.fft.rfft(torch.tensor(x_np))
-        mlx_out = mlx_compat.fft.rfft(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.fft.rfft(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-5, f"rfft mismatch: {max_diff}"
@@ -79,7 +79,7 @@ class TestRealFFTParity:
         x_np[-1] = x_np[-1].real
 
         torch_out = torch.fft.irfft(torch.tensor(x_np))
-        mlx_out = mlx_compat.fft.irfft(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.fft.irfft(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-5, f"irfft mismatch: {max_diff}"
@@ -95,7 +95,7 @@ class Test2DFFTParity:
         x_np = np.random.randn(16, 16).astype(np.float32)
 
         torch_out = torch.fft.fft2(torch.tensor(x_np))
-        mlx_out = mlx_compat.fft.fft2(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.fft.fft2(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-4, f"fft2 mismatch: {max_diff}"
@@ -108,7 +108,7 @@ class Test2DFFTParity:
         x_np = x_np.astype(np.complex64)
 
         torch_out = torch.fft.ifft2(torch.tensor(x_np))
-        mlx_out = mlx_compat.fft.ifft2(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.fft.ifft2(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-4, f"ifft2 mismatch: {max_diff}"
@@ -120,7 +120,7 @@ class Test2DFFTParity:
         x_np = np.random.randn(16, 16).astype(np.float32)
 
         torch_out = torch.fft.rfft2(torch.tensor(x_np))
-        mlx_out = mlx_compat.fft.rfft2(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.fft.rfft2(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-4, f"rfft2 mismatch: {max_diff}"
@@ -136,7 +136,7 @@ class TestNDFFTParity:
         x_np = np.random.randn(8, 8, 8).astype(np.float32)
 
         torch_out = torch.fft.fftn(torch.tensor(x_np))
-        mlx_out = mlx_compat.fft.fftn(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.fft.fftn(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-4, f"fftn mismatch: {max_diff}"
@@ -149,7 +149,7 @@ class TestNDFFTParity:
         x_np = x_np.astype(np.complex64)
 
         torch_out = torch.fft.ifftn(torch.tensor(x_np))
-        mlx_out = mlx_compat.fft.ifftn(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.fft.ifftn(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-4, f"ifftn mismatch: {max_diff}"
@@ -161,7 +161,7 @@ class TestNDFFTParity:
         x_np = np.random.randn(8, 8, 8).astype(np.float32)
 
         torch_out = torch.fft.rfftn(torch.tensor(x_np))
-        mlx_out = mlx_compat.fft.rfftn(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.fft.rfftn(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-4, f"rfftn mismatch: {max_diff}"
@@ -176,7 +176,7 @@ class TestFFTShiftParity:
         x_np = np.arange(10).astype(np.float32)
 
         torch_out = torch.fft.fftshift(torch.tensor(x_np))
-        mlx_out = mlx_compat.fft.fftshift(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.fft.fftshift(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-6, f"fftshift 1D mismatch: {max_diff}"
@@ -187,7 +187,7 @@ class TestFFTShiftParity:
         x_np = np.arange(16).reshape(4, 4).astype(np.float32)
 
         torch_out = torch.fft.fftshift(torch.tensor(x_np))
-        mlx_out = mlx_compat.fft.fftshift(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.fft.fftshift(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-6, f"fftshift 2D mismatch: {max_diff}"
@@ -198,7 +198,7 @@ class TestFFTShiftParity:
         x_np = np.arange(10).astype(np.float32)
 
         torch_out = torch.fft.ifftshift(torch.tensor(x_np))
-        mlx_out = mlx_compat.fft.ifftshift(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.fft.ifftshift(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-6, f"ifftshift mismatch: {max_diff}"
@@ -211,7 +211,7 @@ class TestFFTFrequenciesParity:
     def test_fftfreq_even_parity(self):
         """Test fftfreq with even length matches PyTorch."""
         torch_out = torch.fft.fftfreq(16, d=0.1)
-        mlx_out = mlx_compat.fft.fftfreq(16, d=0.1)
+        mlx_out = flashlight.fft.fftfreq(16, d=0.1)
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-5, f"fftfreq even mismatch: {max_diff}"
@@ -220,7 +220,7 @@ class TestFFTFrequenciesParity:
     def test_fftfreq_odd_parity(self):
         """Test fftfreq with odd length matches PyTorch."""
         torch_out = torch.fft.fftfreq(17, d=0.1)
-        mlx_out = mlx_compat.fft.fftfreq(17, d=0.1)
+        mlx_out = flashlight.fft.fftfreq(17, d=0.1)
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-5, f"fftfreq odd mismatch: {max_diff}"
@@ -229,7 +229,7 @@ class TestFFTFrequenciesParity:
     def test_rfftfreq_even_parity(self):
         """Test rfftfreq with even length matches PyTorch."""
         torch_out = torch.fft.rfftfreq(16, d=0.1)
-        mlx_out = mlx_compat.fft.rfftfreq(16, d=0.1)
+        mlx_out = flashlight.fft.rfftfreq(16, d=0.1)
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-5, f"rfftfreq even mismatch: {max_diff}"
@@ -238,7 +238,7 @@ class TestFFTFrequenciesParity:
     def test_rfftfreq_odd_parity(self):
         """Test rfftfreq with odd length matches PyTorch."""
         torch_out = torch.fft.rfftfreq(17, d=0.1)
-        mlx_out = mlx_compat.fft.rfftfreq(17, d=0.1)
+        mlx_out = flashlight.fft.rfftfreq(17, d=0.1)
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-5, f"rfftfreq odd mismatch: {max_diff}"
@@ -258,8 +258,8 @@ class TestFFTRoundtripParity:
         torch_roundtrip = torch.fft.ifft(torch.fft.fft(torch_x))
 
         # MLX compat roundtrip
-        mlx_x = mlx_compat.tensor(x_np)
-        mlx_roundtrip = mlx_compat.fft.ifft(mlx_compat.fft.fft(mlx_x))
+        mlx_x = flashlight.tensor(x_np)
+        mlx_roundtrip = flashlight.fft.ifft(flashlight.fft.fft(mlx_x))
 
         # Compare roundtrip results
         max_diff = np.max(np.abs(torch_roundtrip.numpy() - np.array(mlx_roundtrip._mlx_array)))
@@ -276,8 +276,8 @@ class TestFFTRoundtripParity:
         torch_roundtrip = torch.fft.irfft(torch.fft.rfft(torch_x))
 
         # MLX compat roundtrip
-        mlx_x = mlx_compat.tensor(x_np)
-        mlx_roundtrip = mlx_compat.fft.irfft(mlx_compat.fft.rfft(mlx_x))
+        mlx_x = flashlight.tensor(x_np)
+        mlx_roundtrip = flashlight.fft.irfft(flashlight.fft.rfft(mlx_x))
 
         # Compare roundtrip results
         max_diff = np.max(np.abs(torch_roundtrip.numpy() - np.array(mlx_roundtrip._mlx_array)))
@@ -295,13 +295,13 @@ class TestFFTDimensionParity:
 
         # Along dim=0
         torch_out = torch.fft.fft(torch.tensor(x_np), dim=0)
-        mlx_out = mlx_compat.fft.fft(mlx_compat.tensor(x_np), dim=0)
+        mlx_out = flashlight.fft.fft(flashlight.tensor(x_np), dim=0)
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-4, f"fft dim=0 mismatch: {max_diff}"
 
         # Along dim=1
         torch_out = torch.fft.fft(torch.tensor(x_np), dim=1)
-        mlx_out = mlx_compat.fft.fft(mlx_compat.tensor(x_np), dim=1)
+        mlx_out = flashlight.fft.fft(flashlight.tensor(x_np), dim=1)
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-4, f"fft dim=1 mismatch: {max_diff}"
 
@@ -312,7 +312,7 @@ class TestFFTDimensionParity:
         x_np = np.random.randn(8, 16).astype(np.float32)
 
         torch_out = torch.fft.rfft(torch.tensor(x_np), dim=1)
-        mlx_out = mlx_compat.fft.rfft(mlx_compat.tensor(x_np), dim=1)
+        mlx_out = flashlight.fft.rfft(flashlight.tensor(x_np), dim=1)
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-4, f"rfft dim mismatch: {max_diff}"

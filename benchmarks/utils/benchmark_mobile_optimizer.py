@@ -1,5 +1,5 @@
 """
-Benchmark for mlx_compat.utils.mobile_optimizer module.
+Benchmark for flashlight.utils.mobile_optimizer module.
 
 Compares optimization speed against PyTorch.
 """
@@ -8,9 +8,9 @@ import time
 import sys
 
 import mlx.core as mx
-import mlx_compat
-import mlx_compat.nn as nn
-from mlx_compat.utils.mobile_optimizer import optimize_for_mobile, generate_mobile_module_lints
+import flashlight
+import flashlight.nn as nn
+from flashlight.utils.mobile_optimizer import optimize_for_mobile, generate_mobile_module_lints
 
 try:
     import torch
@@ -153,7 +153,7 @@ def benchmark_inference_improvement():
     model = create_mlx_model(depth=10, width=256)
     model.eval()
 
-    x = mlx_compat.randn(32, 256)
+    x = flashlight.randn(32, 256)
 
     # Warmup
     for _ in range(5):
@@ -215,7 +215,7 @@ def benchmark_conv_bn_fusion():
         model = ConvNet(num_blocks=5)
         model.eval()
 
-        x = mlx_compat.randn(batch_size, 3, image_size, image_size)
+        x = flashlight.randn(batch_size, 3, image_size, image_size)
 
         # Warmup
         for _ in range(5):

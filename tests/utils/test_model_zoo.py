@@ -1,5 +1,5 @@
 """
-Tests for mlx_compat.utils.model_zoo module.
+Tests for flashlight.utils.model_zoo module.
 
 Tests model weight downloading and caching functionality.
 """
@@ -9,7 +9,7 @@ import tempfile
 import unittest
 from unittest.mock import patch, MagicMock
 
-from mlx_compat.utils.model_zoo import (
+from flashlight.utils.model_zoo import (
     get_dir,
     set_dir,
     load_url,
@@ -73,7 +73,7 @@ class TestDownloadUrlToFile(unittest.TestCase):
             mock_response.info.return_value.get_all.return_value = ["100"]
             mock_response.read.side_effect = [b"test content", b""]
 
-            with patch("mlx_compat.utils.model_zoo.urlopen", return_value=mock_response):
+            with patch("flashlight.utils.model_zoo.urlopen", return_value=mock_response):
                 _download_url_to_file("http://example.com/file.txt", dst, progress=False)
 
             self.assertTrue(os.path.exists(dst))
@@ -95,7 +95,7 @@ class TestDownloadUrlToFile(unittest.TestCase):
             mock_response.info.return_value.get_all.return_value = None
             mock_response.read.side_effect = [content, b""]
 
-            with patch("mlx_compat.utils.model_zoo.urlopen", return_value=mock_response):
+            with patch("flashlight.utils.model_zoo.urlopen", return_value=mock_response):
                 # Should not raise with correct hash
                 _download_url_to_file(
                     "http://example.com/file.txt",
@@ -114,7 +114,7 @@ class TestDownloadUrlToFile(unittest.TestCase):
             mock_response.info.return_value.get_all.return_value = None
             mock_response.read.side_effect = [b"test content", b""]
 
-            with patch("mlx_compat.utils.model_zoo.urlopen", return_value=mock_response):
+            with patch("flashlight.utils.model_zoo.urlopen", return_value=mock_response):
                 with self.assertRaises(RuntimeError) as ctx:
                     _download_url_to_file(
                         "http://example.com/file.txt",
@@ -148,8 +148,8 @@ class TestLoadUrl(unittest.TestCase):
                 f.write(data)
 
             # Mock to return our temp directory
-            with patch("mlx_compat.utils.model_zoo.get_dir", return_value=tmpdir):
-                with patch("mlx_compat.utils.model_zoo._download_url_to_file") as mock_download:
+            with patch("flashlight.utils.model_zoo.get_dir", return_value=tmpdir):
+                with patch("flashlight.utils.model_zoo._download_url_to_file") as mock_download:
                     # Should not download since file exists
                     try:
                         result = load_url("http://example.com/model.safetensors")
@@ -175,8 +175,8 @@ class TestLoadUrl(unittest.TestCase):
                 f.write(header)
                 f.write(data)
 
-            with patch("mlx_compat.utils.model_zoo.get_dir", return_value=tmpdir):
-                with patch("mlx_compat.utils.model_zoo._download_url_to_file") as mock_download:
+            with patch("flashlight.utils.model_zoo.get_dir", return_value=tmpdir):
+                with patch("flashlight.utils.model_zoo._download_url_to_file") as mock_download:
                     # File exists, so download should not be called
                     try:
                         result = load_url(
@@ -203,7 +203,7 @@ class TestDownloadUrlToFilePublic(unittest.TestCase):
             mock_response.info.return_value.get_all.return_value = None
             mock_response.read.side_effect = [b"content", b""]
 
-            with patch("mlx_compat.utils.model_zoo.urlopen", return_value=mock_response):
+            with patch("flashlight.utils.model_zoo.urlopen", return_value=mock_response):
                 download_url_to_file("http://example.com/file.txt", dst, progress=False)
 
             self.assertTrue(os.path.exists(dst))

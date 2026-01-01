@@ -16,7 +16,7 @@ import numpy as np
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
-    import mlx_compat
+    import flashlight
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -28,10 +28,10 @@ class TestCatBackward(TestCase):
 
     def test_cat_dim0(self):
         """Test cat along dim 0 backward."""
-        x = mlx_compat.tensor([[1.0, 2.0]], requires_grad=True)
-        y = mlx_compat.tensor([[3.0, 4.0]], requires_grad=True)
-        z = mlx_compat.cat([x, y], dim=0)
-        loss = mlx_compat.sum(z)
+        x = flashlight.tensor([[1.0, 2.0]], requires_grad=True)
+        y = flashlight.tensor([[3.0, 4.0]], requires_grad=True)
+        z = flashlight.cat([x, y], dim=0)
+        loss = flashlight.sum(z)
         loss.backward()
 
         np.testing.assert_array_almost_equal(x.grad.numpy(), np.ones((1, 2)))
@@ -39,10 +39,10 @@ class TestCatBackward(TestCase):
 
     def test_cat_dim1(self):
         """Test cat along dim 1 backward."""
-        x = mlx_compat.tensor([[1.0], [2.0]], requires_grad=True)
-        y = mlx_compat.tensor([[3.0], [4.0]], requires_grad=True)
-        z = mlx_compat.cat([x, y], dim=1)
-        loss = mlx_compat.sum(z)
+        x = flashlight.tensor([[1.0], [2.0]], requires_grad=True)
+        y = flashlight.tensor([[3.0], [4.0]], requires_grad=True)
+        z = flashlight.cat([x, y], dim=1)
+        loss = flashlight.sum(z)
         loss.backward()
 
         np.testing.assert_array_almost_equal(x.grad.numpy(), np.ones((2, 1)))
@@ -50,11 +50,11 @@ class TestCatBackward(TestCase):
 
     def test_cat_multiple(self):
         """Test cat with multiple tensors."""
-        x = mlx_compat.tensor([1.0], requires_grad=True)
-        y = mlx_compat.tensor([2.0], requires_grad=True)
-        w = mlx_compat.tensor([3.0], requires_grad=True)
-        z = mlx_compat.cat([x, y, w], dim=0)
-        loss = mlx_compat.sum(z)
+        x = flashlight.tensor([1.0], requires_grad=True)
+        y = flashlight.tensor([2.0], requires_grad=True)
+        w = flashlight.tensor([3.0], requires_grad=True)
+        z = flashlight.cat([x, y, w], dim=0)
+        loss = flashlight.sum(z)
         loss.backward()
 
         np.testing.assert_array_almost_equal(x.grad.numpy(), np.ones(1))
@@ -68,27 +68,27 @@ class TestViewBackward(TestCase):
 
     def test_view_flatten(self):
         """Test view flatten backward."""
-        x = mlx_compat.tensor([[1.0, 2.0], [3.0, 4.0]], requires_grad=True)
+        x = flashlight.tensor([[1.0, 2.0], [3.0, 4.0]], requires_grad=True)
         y = x.view(4)
-        loss = mlx_compat.sum(y)
+        loss = flashlight.sum(y)
         loss.backward()
 
         np.testing.assert_array_almost_equal(x.grad.numpy(), np.ones((2, 2)))
 
     def test_view_reshape(self):
         """Test view reshape backward."""
-        x = mlx_compat.tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], requires_grad=True)
+        x = flashlight.tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], requires_grad=True)
         y = x.view(2, 3)
-        loss = mlx_compat.sum(y)
+        loss = flashlight.sum(y)
         loss.backward()
 
         np.testing.assert_array_almost_equal(x.grad.numpy(), np.ones(6))
 
     def test_view_chain(self):
         """Test chained view operations."""
-        x = mlx_compat.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], requires_grad=True)
+        x = flashlight.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], requires_grad=True)
         y = x.view(6).view(3, 2).view(2, 3)
-        loss = mlx_compat.sum(y)
+        loss = flashlight.sum(y)
         loss.backward()
 
         np.testing.assert_array_almost_equal(x.grad.numpy(), np.ones((2, 3)))
@@ -100,27 +100,27 @@ class TestTransposeBackward(TestCase):
 
     def test_transpose_2d(self):
         """Test 2D transpose backward."""
-        x = mlx_compat.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], requires_grad=True)
+        x = flashlight.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], requires_grad=True)
         y = x.transpose(0, 1)
-        loss = mlx_compat.sum(y)
+        loss = flashlight.sum(y)
         loss.backward()
 
         np.testing.assert_array_almost_equal(x.grad.numpy(), np.ones((2, 3)))
 
     def test_transpose_3d(self):
         """Test 3D transpose backward."""
-        x = mlx_compat.tensor([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]], requires_grad=True)
+        x = flashlight.tensor([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]], requires_grad=True)
         y = x.transpose(0, 2)
-        loss = mlx_compat.sum(y)
+        loss = flashlight.sum(y)
         loss.backward()
 
         np.testing.assert_array_almost_equal(x.grad.numpy(), np.ones((2, 2, 2)))
 
     def test_transpose_t(self):
         """Test .t() method backward."""
-        x = mlx_compat.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]], requires_grad=True)
+        x = flashlight.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]], requires_grad=True)
         y = x.t()
-        loss = mlx_compat.sum(y)
+        loss = flashlight.sum(y)
         loss.backward()
 
         np.testing.assert_array_almost_equal(x.grad.numpy(), np.ones((3, 2)))

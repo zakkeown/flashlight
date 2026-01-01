@@ -173,7 +173,7 @@ class BenchmarkResult:
             "input_config": self.input_config,
             "dtype": self.dtype,
             "timestamp": self.timestamp,
-            "mlx_compat": {
+            "flashlight": {
                 "mean_ms": self.mlx_timing.mean_ms,
                 "std_ms": self.mlx_timing.std_ms,
                 "min_ms": self.mlx_timing.min_ms,

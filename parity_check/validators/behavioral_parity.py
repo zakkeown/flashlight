@@ -84,7 +84,7 @@ class BehavioralValidationResult:
 
 class BehavioralParityValidator:
     """
-    Validates behavioral parity between mlx_compat and PyTorch.
+    Validates behavioral parity between flashlight and PyTorch.
 
     Tests PyTorch behavioral contracts that don't require numerical comparison,
     such as context manager behavior, module state transitions, and container semantics.
@@ -128,20 +128,20 @@ class BehavioralParityValidator:
         self.seed = seed
 
         # Lazy-loaded modules
-        self._mlx_compat = None
+        self._flashlight = None
 
         # Test registry - maps category to list of test methods
         self._test_registry: Dict[str, List[Callable[[], BehavioralTestResult]]] = {}
         self._register_tests()
 
     @property
-    def mlx_compat(self):
-        """Lazy-load mlx_compat."""
-        if self._mlx_compat is None:
-            import mlx_compat
+    def flashlight(self):
+        """Lazy-load flashlight."""
+        if self._flashlight is None:
+            import flashlight
 
-            self._mlx_compat = mlx_compat
-        return self._mlx_compat
+            self._flashlight = flashlight
+        return self._flashlight
 
     def _register_tests(self):
         """Register all behavioral tests by category."""
@@ -304,14 +304,14 @@ class BehavioralParityValidator:
 
     def _test_no_grad_disables_gradients(self) -> BehavioralTestResult:
         """Test that no_grad() disables gradient tracking."""
-        import mlx_compat
+        import flashlight
 
-        grad_enabled_outside_before = mlx_compat.is_grad_enabled()
+        grad_enabled_outside_before = flashlight.is_grad_enabled()
 
-        with mlx_compat.no_grad():
-            grad_enabled_inside = mlx_compat.is_grad_enabled()
+        with flashlight.no_grad():
+            grad_enabled_inside = flashlight.is_grad_enabled()
 
-        grad_enabled_outside_after = mlx_compat.is_grad_enabled()
+        grad_enabled_outside_after = flashlight.is_grad_enabled()
 
         passed = (
             grad_enabled_outside_before
@@ -333,13 +333,13 @@ class BehavioralParityValidator:
 
     def _test_enable_grad_within_no_grad(self) -> BehavioralTestResult:
         """Test that enable_grad() works within no_grad() context."""
-        import mlx_compat
+        import flashlight
 
-        with mlx_compat.no_grad():
-            outer_state = mlx_compat.is_grad_enabled()
-            with mlx_compat.enable_grad():
-                inner_state = mlx_compat.is_grad_enabled()
-            after_inner = mlx_compat.is_grad_enabled()
+        with flashlight.no_grad():
+            outer_state = flashlight.is_grad_enabled()
+            with flashlight.enable_grad():
+                inner_state = flashlight.is_grad_enabled()
+            after_inner = flashlight.is_grad_enabled()
 
         passed = not outer_state and inner_state and not after_inner
 
@@ -357,17 +357,17 @@ class BehavioralParityValidator:
 
     def _test_set_grad_enabled_toggle(self) -> BehavioralTestResult:
         """Test that set_grad_enabled(bool) toggles correctly."""
-        import mlx_compat
+        import flashlight
 
-        original = mlx_compat.is_grad_enabled()
+        original = flashlight.is_grad_enabled()
 
-        with mlx_compat.set_grad_enabled(False):
-            state_false = mlx_compat.is_grad_enabled()
+        with flashlight.set_grad_enabled(False):
+            state_false = flashlight.is_grad_enabled()
 
-        with mlx_compat.set_grad_enabled(True):
-            state_true = mlx_compat.is_grad_enabled()
+        with flashlight.set_grad_enabled(True):
+            state_true = flashlight.is_grad_enabled()
 
-        final = mlx_compat.is_grad_enabled()
+        final = flashlight.is_grad_enabled()
 
         passed = not state_false and state_true and final == original
 
@@ -386,14 +386,14 @@ class BehavioralParityValidator:
 
     def _test_no_grad_as_decorator(self) -> BehavioralTestResult:
         """Test that no_grad() works as a decorator."""
-        import mlx_compat
+        import flashlight
 
-        @mlx_compat.no_grad()
+        @flashlight.no_grad()
         def compute():
-            return mlx_compat.is_grad_enabled()
+            return flashlight.is_grad_enabled()
 
         inside_fn = compute()
-        outside_fn = mlx_compat.is_grad_enabled()
+        outside_fn = flashlight.is_grad_enabled()
 
         passed = not inside_fn and outside_fn
 
@@ -407,19 +407,19 @@ class BehavioralParityValidator:
 
     def _test_nested_context_managers(self) -> BehavioralTestResult:
         """Test deeply nested gradient context managers."""
-        import mlx_compat
+        import flashlight
 
         states = []
 
-        with mlx_compat.no_grad():
-            states.append(("no_grad_1", mlx_compat.is_grad_enabled()))
-            with mlx_compat.no_grad():
-                states.append(("no_grad_2", mlx_compat.is_grad_enabled()))
-                with mlx_compat.enable_grad():
-                    states.append(("enable_grad", mlx_compat.is_grad_enabled()))
-                states.append(("after_enable", mlx_compat.is_grad_enabled()))
-            states.append(("after_no_grad_2", mlx_compat.is_grad_enabled()))
-        states.append(("final", mlx_compat.is_grad_enabled()))
+        with flashlight.no_grad():
+            states.append(("no_grad_1", flashlight.is_grad_enabled()))
+            with flashlight.no_grad():
+                states.append(("no_grad_2", flashlight.is_grad_enabled()))
+                with flashlight.enable_grad():
+                    states.append(("enable_grad", flashlight.is_grad_enabled()))
+                states.append(("after_enable", flashlight.is_grad_enabled()))
+            states.append(("after_no_grad_2", flashlight.is_grad_enabled()))
+        states.append(("final", flashlight.is_grad_enabled()))
 
         expected = [
             ("no_grad_1", False),
@@ -446,7 +446,7 @@ class BehavioralParityValidator:
 
     def _test_train_eval_toggle(self) -> BehavioralTestResult:
         """Test that train()/eval() toggles self.training flag."""
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
 
         model = nn.Linear(10, 5)
 
@@ -480,7 +480,7 @@ class BehavioralParityValidator:
 
     def _test_training_flag_propagation(self) -> BehavioralTestResult:
         """Test that training mode propagates to child modules."""
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
 
         model = nn.Sequential(
             nn.Linear(10, 20),
@@ -506,8 +506,8 @@ class BehavioralParityValidator:
 
     def _test_state_dict_round_trip(self) -> BehavioralTestResult:
         """Test that state_dict()/load_state_dict() round-trips correctly."""
-        import mlx_compat
-        import mlx_compat.nn as nn
+        import flashlight
+        import flashlight.nn as nn
 
         model1 = nn.Linear(10, 5)
         model2 = nn.Linear(10, 5)
@@ -519,8 +519,8 @@ class BehavioralParityValidator:
         model2.load_state_dict(state)
 
         # Check weights match
-        weight_match = bool(mlx_compat.allclose(model1.weight, model2.weight))
-        bias_match = bool(mlx_compat.allclose(model1.bias, model2.bias))
+        weight_match = bool(flashlight.allclose(model1.weight, model2.weight))
+        bias_match = bool(flashlight.allclose(model1.bias, model2.bias))
 
         passed = weight_match and bias_match
 
@@ -534,7 +534,7 @@ class BehavioralParityValidator:
 
     def _test_buffers_vs_parameters(self) -> BehavioralTestResult:
         """Test that buffers and parameters are distinguished."""
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
 
         # BatchNorm has both parameters (weight, bias) and buffers (running_mean, running_var)
         bn = nn.BatchNorm1d(10)
@@ -570,7 +570,7 @@ class BehavioralParityValidator:
 
     def _test_named_parameters_hierarchy(self) -> BehavioralTestResult:
         """Test that named_parameters() yields correct hierarchy."""
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
 
         model = nn.Sequential(
             nn.Linear(10, 20),
@@ -592,12 +592,12 @@ class BehavioralParityValidator:
 
     def _test_zero_grad_clears_gradients(self) -> BehavioralTestResult:
         """Test that zero_grad() clears parameter gradients."""
-        import mlx_compat
-        import mlx_compat.nn as nn
+        import flashlight
+        import flashlight.nn as nn
 
         model = nn.Linear(10, 5)
-        x = mlx_compat.randn(3, 10)
-        y = mlx_compat.sum(model(x))
+        x = flashlight.randn(3, 10)
+        y = flashlight.sum(model(x))
         y.backward()
 
         # Gradients should exist after backward
@@ -623,7 +623,7 @@ class BehavioralParityValidator:
 
     def _test_requires_grad_propagation(self) -> BehavioralTestResult:
         """Test that requires_grad_() propagates to all parameters."""
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
 
         model = nn.Sequential(nn.Linear(10, 5), nn.Linear(5, 2))
 
@@ -649,8 +649,8 @@ class BehavioralParityValidator:
 
     def _test_sequential_forward_order(self) -> BehavioralTestResult:
         """Test that Sequential forwards through layers in order."""
-        import mlx_compat
-        import mlx_compat.nn as nn
+        import flashlight
+        import flashlight.nn as nn
 
         # Create a model that transforms shape: 10 -> 20 -> 5
         model = nn.Sequential(
@@ -658,7 +658,7 @@ class BehavioralParityValidator:
             nn.Linear(20, 5),
         )
 
-        x = mlx_compat.randn(3, 10)
+        x = flashlight.randn(3, 10)
         y = model(x)
 
         passed = y.shape == (3, 5)
@@ -673,7 +673,7 @@ class BehavioralParityValidator:
 
     def _test_modulelist_iteration_order(self) -> BehavioralTestResult:
         """Test that ModuleList iterates in insertion order."""
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
 
         modules = nn.ModuleList([
             nn.Linear(10, 10),
@@ -695,7 +695,7 @@ class BehavioralParityValidator:
 
     def _test_modulelist_parameter_registration(self) -> BehavioralTestResult:
         """Test that ModuleList registers parameters correctly."""
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
 
         modules = nn.ModuleList([
             nn.Linear(10, 5),
@@ -718,7 +718,7 @@ class BehavioralParityValidator:
 
     def _test_moduledict_semantics(self) -> BehavioralTestResult:
         """Test that ModuleDict has dict-like semantics."""
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
 
         modules = nn.ModuleDict({
             "encoder": nn.Linear(10, 20),
@@ -750,7 +750,7 @@ class BehavioralParityValidator:
 
     def _test_sequential_indexing(self) -> BehavioralTestResult:
         """Test that Sequential supports indexing."""
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
 
         model = nn.Sequential(
             nn.Linear(10, 20),
@@ -777,7 +777,7 @@ class BehavioralParityValidator:
 
     def _test_sequential_slicing(self) -> BehavioralTestResult:
         """Test that Sequential supports slicing."""
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
 
         model = nn.Sequential(
             nn.Linear(10, 20),
@@ -803,26 +803,26 @@ class BehavioralParityValidator:
 
     def _test_optimizer_step_updates_params(self) -> BehavioralTestResult:
         """Test that optimizer.step() actually updates parameters."""
-        import mlx_compat
-        import mlx_compat.nn as nn
-        import mlx_compat.optim as optim
+        import flashlight
+        import flashlight.nn as nn
+        import flashlight.optim as optim
 
         model = nn.Linear(10, 5)
         optimizer = optim.SGD(model.parameters(), lr=0.1)
 
         # Store original weight
-        original_weight = mlx_compat.clone(model.weight)
+        original_weight = flashlight.clone(model.weight)
 
         # Forward + backward
-        x = mlx_compat.randn(3, 10)
-        loss = mlx_compat.sum(model(x))
+        x = flashlight.randn(3, 10)
+        loss = flashlight.sum(model(x))
         loss.backward()
 
         # Step
         optimizer.step()
 
         # Weight should have changed
-        weight_changed = not bool(mlx_compat.allclose(model.weight, original_weight))
+        weight_changed = not bool(flashlight.allclose(model.weight, original_weight))
 
         passed = weight_changed
 
@@ -835,16 +835,16 @@ class BehavioralParityValidator:
 
     def _test_optimizer_zero_grad(self) -> BehavioralTestResult:
         """Test that optimizer.zero_grad() clears gradients."""
-        import mlx_compat
-        import mlx_compat.nn as nn
-        import mlx_compat.optim as optim
+        import flashlight
+        import flashlight.nn as nn
+        import flashlight.optim as optim
 
         model = nn.Linear(10, 5)
         optimizer = optim.SGD(model.parameters(), lr=0.1)
 
         # Create gradients
-        x = mlx_compat.randn(3, 10)
-        loss = mlx_compat.sum(model(x))
+        x = flashlight.randn(3, 10)
+        loss = flashlight.sum(model(x))
         loss.backward()
 
         has_grads_before = any(p.grad is not None for p in model.parameters())
@@ -868,17 +868,17 @@ class BehavioralParityValidator:
 
     def _test_optimizer_state_dict_round_trip(self) -> BehavioralTestResult:
         """Test optimizer state_dict()/load_state_dict() round-trip."""
-        import mlx_compat
-        import mlx_compat.nn as nn
-        import mlx_compat.optim as optim
+        import flashlight
+        import flashlight.nn as nn
+        import flashlight.optim as optim
 
         model = nn.Linear(10, 5)
         optimizer = optim.Adam(model.parameters(), lr=0.001)
 
         # Run a few steps to populate optimizer state
         for _ in range(3):
-            x = mlx_compat.randn(3, 10)
-            loss = mlx_compat.sum(model(x))
+            x = flashlight.randn(3, 10)
+            loss = flashlight.sum(model(x))
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
@@ -906,8 +906,8 @@ class BehavioralParityValidator:
 
     def _test_optimizer_param_groups(self) -> BehavioralTestResult:
         """Test that parameter groups work correctly."""
-        import mlx_compat.nn as nn
-        import mlx_compat.optim as optim
+        import flashlight.nn as nn
+        import flashlight.optim as optim
 
         model = nn.Sequential(
             nn.Linear(10, 20),
@@ -944,22 +944,22 @@ class BehavioralParityValidator:
 
     def _test_dropout_train_vs_eval(self) -> BehavioralTestResult:
         """Test that Dropout applies in train mode, passes through in eval."""
-        import mlx_compat
-        import mlx_compat.nn as nn
+        import flashlight
+        import flashlight.nn as nn
 
-        mlx_compat.manual_seed(42)
+        flashlight.manual_seed(42)
         dropout = nn.Dropout(p=0.5)
-        x = mlx_compat.ones(100, 100)
+        x = flashlight.ones(100, 100)
 
         # Train mode: should have zeros
         dropout.train()
         y_train = dropout(x)
-        has_zeros_train = bool(mlx_compat.any(y_train == 0))
+        has_zeros_train = bool(flashlight.any(y_train == 0))
 
         # Eval mode: should pass through unchanged
         dropout.eval()
         y_eval = dropout(x)
-        is_unchanged_eval = bool(mlx_compat.allclose(y_eval, x))
+        is_unchanged_eval = bool(flashlight.allclose(y_eval, x))
 
         passed = has_zeros_train and is_unchanged_eval
 
@@ -976,29 +976,29 @@ class BehavioralParityValidator:
 
     def _test_batchnorm_train_vs_eval(self) -> BehavioralTestResult:
         """Test that BatchNorm uses different statistics in train vs eval."""
-        import mlx_compat
-        import mlx_compat.nn as nn
+        import flashlight
+        import flashlight.nn as nn
 
         bn = nn.BatchNorm1d(10)
 
         # In training mode, running stats should update
         bn.train()
-        x = mlx_compat.randn(32, 10) * 2 + 5  # Non-standard mean/std
+        x = flashlight.randn(32, 10) * 2 + 5  # Non-standard mean/std
 
-        running_mean_before = mlx_compat.clone(bn.running_mean)
+        running_mean_before = flashlight.clone(bn.running_mean)
         _ = bn(x)
-        running_mean_after = mlx_compat.clone(bn.running_mean)
+        running_mean_after = flashlight.clone(bn.running_mean)
 
         # Running mean should have changed
         stats_updated = not bool(
-            mlx_compat.allclose(running_mean_before, running_mean_after)
+            flashlight.allclose(running_mean_before, running_mean_after)
         )
 
         # In eval mode, same input should give consistent output
         bn.eval()
         y1 = bn(x)
         y2 = bn(x)
-        eval_consistent = bool(mlx_compat.allclose(y1, y2))
+        eval_consistent = bool(flashlight.allclose(y1, y2))
 
         passed = stats_updated and eval_consistent
 
@@ -1019,10 +1019,10 @@ class BehavioralParityValidator:
 
     def _test_randn_statistics(self) -> BehavioralTestResult:
         """Test that randn has mean~0, std~1."""
-        import mlx_compat
+        import flashlight
 
-        mlx_compat.manual_seed(self.seed)
-        x = mlx_compat.randn(10000)
+        flashlight.manual_seed(self.seed)
+        x = flashlight.randn(10000)
 
         mean = float(x.mean().item())
         std = float(x.std().item())
@@ -1040,14 +1040,14 @@ class BehavioralParityValidator:
 
     def _test_rand_statistics(self) -> BehavioralTestResult:
         """Test that rand has mean~0.5, uniform distribution."""
-        import mlx_compat
+        import flashlight
 
-        mlx_compat.manual_seed(self.seed)
-        x = mlx_compat.rand(10000)
+        flashlight.manual_seed(self.seed)
+        x = flashlight.rand(10000)
 
         mean = float(x.mean().item())
-        min_val = float(mlx_compat.min(x).item())
-        max_val = float(mlx_compat.max(x).item())
+        min_val = float(flashlight.min(x).item())
+        max_val = float(flashlight.max(x).item())
 
         passed = abs(mean - 0.5) < 0.1 and min_val >= 0 and max_val <= 1
 
@@ -1061,11 +1061,11 @@ class BehavioralParityValidator:
 
     def _test_normal_statistics(self) -> BehavioralTestResult:
         """Test that normal(mean, std) has correct statistics."""
-        import mlx_compat
+        import flashlight
 
-        mlx_compat.manual_seed(self.seed)
+        flashlight.manual_seed(self.seed)
         target_mean, target_std = 5.0, 2.0
-        x = mlx_compat.normal(target_mean, target_std, (10000,))
+        x = flashlight.normal(target_mean, target_std, (10000,))
 
         actual_mean = float(x.mean().item())
         actual_std = float(x.std().item())
@@ -1092,15 +1092,15 @@ class BehavioralParityValidator:
 
     def _test_seed_reproducibility(self) -> BehavioralTestResult:
         """Test that same seed produces same random numbers."""
-        import mlx_compat
+        import flashlight
 
-        mlx_compat.manual_seed(12345)
-        x1 = mlx_compat.randn(100)
+        flashlight.manual_seed(12345)
+        x1 = flashlight.randn(100)
 
-        mlx_compat.manual_seed(12345)
-        x2 = mlx_compat.randn(100)
+        flashlight.manual_seed(12345)
+        x2 = flashlight.randn(100)
 
-        passed = bool(mlx_compat.allclose(x1, x2))
+        passed = bool(flashlight.allclose(x1, x2))
 
         return BehavioralTestResult(
             category="distribution",
@@ -1115,9 +1115,9 @@ class BehavioralParityValidator:
 
     def _test_empty_tensor_behavior(self) -> BehavioralTestResult:
         """Test behavior with empty tensors."""
-        import mlx_compat
+        import flashlight
 
-        empty = mlx_compat.tensor([])
+        empty = flashlight.tensor([])
 
         # numel is a property, not a method
         numel_val = empty.numel
@@ -1134,9 +1134,9 @@ class BehavioralParityValidator:
 
     def _test_zero_dim_tensor(self) -> BehavioralTestResult:
         """Test zero-dimensional (scalar) tensor behavior."""
-        import mlx_compat
+        import flashlight
 
-        scalar = mlx_compat.tensor(5.0)
+        scalar = flashlight.tensor(5.0)
 
         # Use ndim property and numel property
         ndim_val = scalar.ndim
@@ -1155,10 +1155,10 @@ class BehavioralParityValidator:
 
     def _test_broadcasting_rules(self) -> BehavioralTestResult:
         """Test that broadcasting follows PyTorch rules."""
-        import mlx_compat
+        import flashlight
 
-        a = mlx_compat.ones(3, 1)
-        b = mlx_compat.ones(1, 4)
+        a = flashlight.ones(3, 1)
+        b = flashlight.ones(1, 4)
         c = a + b
 
         passed = c.shape == (3, 4)
@@ -1177,16 +1177,16 @@ class BehavioralParityValidator:
 
     def _test_retain_graph(self) -> BehavioralTestResult:
         """Test that retain_graph allows multiple backward passes."""
-        import mlx_compat
-        import mlx_compat.nn as nn
+        import flashlight
+        import flashlight.nn as nn
 
         model = nn.Linear(10, 5)
-        x = mlx_compat.randn(3, 10)
+        x = flashlight.randn(3, 10)
 
         # First backward with retain_graph
-        y = mlx_compat.sum(model(x))
+        y = flashlight.sum(model(x))
         y.backward(retain_graph=True)
-        grad1 = mlx_compat.clone(model.weight.grad)
+        grad1 = flashlight.clone(model.weight.grad)
 
         # Second backward should still work
         try:
@@ -1194,7 +1194,7 @@ class BehavioralParityValidator:
             grad2 = model.weight.grad
             second_backward_worked = True
             # With accumulation, grad2 should be ~2x grad1
-            grads_accumulated = float(mlx_compat.mean(grad2 / grad1).item()) > 1.5
+            grads_accumulated = float(flashlight.mean(grad2 / grad1).item()) > 1.5
         except Exception:
             second_backward_worked = False
             grads_accumulated = False
@@ -1214,24 +1214,24 @@ class BehavioralParityValidator:
 
     def _test_gradient_accumulation(self) -> BehavioralTestResult:
         """Test that gradients accumulate across backward calls."""
-        import mlx_compat
-        import mlx_compat.nn as nn
+        import flashlight
+        import flashlight.nn as nn
 
         model = nn.Linear(10, 5)
-        x = mlx_compat.randn(3, 10)
+        x = flashlight.randn(3, 10)
 
         # First backward
-        y1 = mlx_compat.sum(model(x))
+        y1 = flashlight.sum(model(x))
         y1.backward()
-        grad1 = mlx_compat.clone(model.weight.grad)
+        grad1 = flashlight.clone(model.weight.grad)
 
         # Second backward (without zero_grad)
-        y2 = mlx_compat.sum(model(x))
+        y2 = flashlight.sum(model(x))
         y2.backward()
         grad2 = model.weight.grad
 
         # Gradients should have accumulated
-        accumulated = not bool(mlx_compat.allclose(grad1, grad2))
+        accumulated = not bool(flashlight.allclose(grad1, grad2))
 
         passed = accumulated
 
@@ -1244,9 +1244,9 @@ class BehavioralParityValidator:
 
     def _test_create_graph(self) -> BehavioralTestResult:
         """Test that create_graph enables higher-order gradients."""
-        import mlx_compat
+        import flashlight
 
-        x = mlx_compat.tensor([2.0], requires_grad=True)
+        x = flashlight.tensor([2.0], requires_grad=True)
         y = x ** 3  # y = x^3, dy/dx = 3x^2
 
         # First derivative with create_graph
@@ -1274,14 +1274,14 @@ class BehavioralParityValidator:
 
     def _test_view_shares_storage(self) -> BehavioralTestResult:
         """Test that view operations share underlying storage."""
-        import mlx_compat
+        import flashlight
 
-        x = mlx_compat.tensor([[1.0, 2.0], [3.0, 4.0]])
+        x = flashlight.tensor([[1.0, 2.0], [3.0, 4.0]])
         y = x.view(4)
 
         # Modifying y should affect x (or at least y should reflect x's data)
-        original_x = mlx_compat.clone(x)
-        same_data = bool(mlx_compat.allclose(y, x.view(4)))
+        original_x = flashlight.clone(x)
+        same_data = bool(flashlight.allclose(y, x.view(4)))
 
         passed = same_data
 
@@ -1294,9 +1294,9 @@ class BehavioralParityValidator:
 
     def _test_contiguous_behavior(self) -> BehavioralTestResult:
         """Test contiguous() behavior."""
-        import mlx_compat
+        import flashlight
 
-        x = mlx_compat.tensor([[1.0, 2.0], [3.0, 4.0]])
+        x = flashlight.tensor([[1.0, 2.0], [3.0, 4.0]])
 
         # After transpose, tensor may not be contiguous
         x_t = x.t()
@@ -1318,9 +1318,9 @@ class BehavioralParityValidator:
 
     def _test_reshape_vs_view(self) -> BehavioralTestResult:
         """Test that reshape is more flexible than view."""
-        import mlx_compat
+        import flashlight
 
-        x = mlx_compat.tensor([[1.0, 2.0], [3.0, 4.0]])
+        x = flashlight.tensor([[1.0, 2.0], [3.0, 4.0]])
 
         # Both should work on contiguous tensor
         view_result = x.view(4)
@@ -1343,15 +1343,15 @@ class BehavioralParityValidator:
 
     def _test_mixed_dtype_ops(self) -> BehavioralTestResult:
         """Test operations between different dtypes."""
-        import mlx_compat
+        import flashlight
 
-        x_float = mlx_compat.tensor([1.0, 2.0])
-        x_int = mlx_compat.tensor([1, 2])
+        x_float = flashlight.tensor([1.0, 2.0])
+        x_int = flashlight.tensor([1, 2])
 
         # Float + int should promote to float
         result = x_float + x_int
 
-        passed = result.dtype in (mlx_compat.float32, mlx_compat.float16)
+        passed = result.dtype in (flashlight.float32, flashlight.float16)
 
         return BehavioralTestResult(
             category="dtype_promotion",
@@ -1363,17 +1363,17 @@ class BehavioralParityValidator:
 
     def _test_type_conversion_methods(self) -> BehavioralTestResult:
         """Test .float(), .int(), .half() conversion methods."""
-        import mlx_compat
+        import flashlight
 
-        x = mlx_compat.tensor([1, 2, 3])
+        x = flashlight.tensor([1, 2, 3])
 
         # Test float conversion
         x_float = x.float()
-        float_ok = x_float.dtype == mlx_compat.float32
+        float_ok = x_float.dtype == flashlight.float32
 
         # Test int conversion
         x_int = x_float.int()
-        int_ok = x_int.dtype in (mlx_compat.int32, mlx_compat.int64)
+        int_ok = x_int.dtype in (flashlight.int32, flashlight.int64)
 
         passed = float_ok and int_ok
 
@@ -1386,13 +1386,13 @@ class BehavioralParityValidator:
 
     def _test_dtype_consistency(self) -> BehavioralTestResult:
         """Test that dtype is preserved through operations."""
-        import mlx_compat
+        import flashlight
 
-        x = mlx_compat.tensor([1.0, 2.0], dtype=mlx_compat.float32)
+        x = flashlight.tensor([1.0, 2.0], dtype=flashlight.float32)
         y = x * 2.0
-        z = mlx_compat.sum(x)
+        z = flashlight.sum(x)
 
-        dtype_preserved = y.dtype == mlx_compat.float32 and z.dtype == mlx_compat.float32
+        dtype_preserved = y.dtype == flashlight.float32 and z.dtype == flashlight.float32
 
         passed = dtype_preserved
 
@@ -1409,14 +1409,14 @@ class BehavioralParityValidator:
 
     def _test_add_inplace(self) -> BehavioralTestResult:
         """Test add_ in-place operation."""
-        import mlx_compat
+        import flashlight
 
-        x = mlx_compat.tensor([1.0, 2.0, 3.0])
-        original_sum = float(mlx_compat.sum(x).item())
+        x = flashlight.tensor([1.0, 2.0, 3.0])
+        original_sum = float(flashlight.sum(x).item())
 
         x.add_(1.0)  # Should add 1 to each element in-place
 
-        new_sum = float(mlx_compat.sum(x).item())
+        new_sum = float(flashlight.sum(x).item())
 
         passed = abs(new_sum - (original_sum + 3.0)) < 0.01
 
@@ -1429,14 +1429,14 @@ class BehavioralParityValidator:
 
     def _test_mul_inplace(self) -> BehavioralTestResult:
         """Test mul_ in-place operation."""
-        import mlx_compat
+        import flashlight
 
-        x = mlx_compat.tensor([1.0, 2.0, 3.0])
-        original_sum = float(mlx_compat.sum(x).item())
+        x = flashlight.tensor([1.0, 2.0, 3.0])
+        original_sum = float(flashlight.sum(x).item())
 
         x.mul_(2.0)  # Should multiply each element by 2 in-place
 
-        new_sum = float(mlx_compat.sum(x).item())
+        new_sum = float(flashlight.sum(x).item())
 
         passed = abs(new_sum - (original_sum * 2.0)) < 0.01
 
@@ -1449,12 +1449,12 @@ class BehavioralParityValidator:
 
     def _test_zero_inplace(self) -> BehavioralTestResult:
         """Test zero_ in-place operation."""
-        import mlx_compat
+        import flashlight
 
-        x = mlx_compat.tensor([1.0, 2.0, 3.0])
+        x = flashlight.tensor([1.0, 2.0, 3.0])
         x.zero_()
 
-        all_zeros = bool(mlx_compat.allclose(x, mlx_compat.zeros(3)))
+        all_zeros = bool(flashlight.allclose(x, flashlight.zeros(3)))
 
         passed = all_zeros
 
@@ -1471,8 +1471,8 @@ class BehavioralParityValidator:
 
     def _test_forward_hook(self) -> BehavioralTestResult:
         """Test that forward hooks are called."""
-        import mlx_compat
-        import mlx_compat.nn as nn
+        import flashlight
+        import flashlight.nn as nn
 
         model = nn.Linear(10, 5)
         hook_outputs = []
@@ -1482,7 +1482,7 @@ class BehavioralParityValidator:
 
         handle = model.register_forward_hook(hook)
 
-        x = mlx_compat.randn(3, 10)
+        x = flashlight.randn(3, 10)
         _ = model(x)
 
         handle.remove()
@@ -1498,8 +1498,8 @@ class BehavioralParityValidator:
 
     def _test_forward_pre_hook(self) -> BehavioralTestResult:
         """Test that forward pre-hooks are called before forward."""
-        import mlx_compat
-        import mlx_compat.nn as nn
+        import flashlight
+        import flashlight.nn as nn
 
         model = nn.Linear(10, 5)
         pre_hook_inputs = []
@@ -1509,7 +1509,7 @@ class BehavioralParityValidator:
 
         handle = model.register_forward_pre_hook(pre_hook)
 
-        x = mlx_compat.randn(3, 10)
+        x = flashlight.randn(3, 10)
         _ = model(x)
 
         handle.remove()
@@ -1525,7 +1525,7 @@ class BehavioralParityValidator:
 
     def _test_apply_fn(self) -> BehavioralTestResult:
         """Test that apply() calls function on all modules."""
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
 
         model = nn.Sequential(
             nn.Linear(10, 20),
@@ -1555,14 +1555,14 @@ class BehavioralParityValidator:
 
     def _test_uniform_init(self) -> BehavioralTestResult:
         """Test uniform_ initialization."""
-        import mlx_compat
-        import mlx_compat.nn as nn
+        import flashlight
+        import flashlight.nn as nn
 
-        x = mlx_compat.empty(1000)
+        x = flashlight.empty(1000)
         nn.init.uniform_(x, a=-1.0, b=1.0)
 
-        min_val = float(mlx_compat.min(x).item())
-        max_val = float(mlx_compat.max(x).item())
+        min_val = float(flashlight.min(x).item())
+        max_val = float(flashlight.max(x).item())
         mean_val = float(x.mean().item())
 
         passed = min_val >= -1.0 and max_val <= 1.0 and abs(mean_val) < 0.1
@@ -1576,10 +1576,10 @@ class BehavioralParityValidator:
 
     def _test_normal_init(self) -> BehavioralTestResult:
         """Test normal_ initialization."""
-        import mlx_compat
-        import mlx_compat.nn as nn
+        import flashlight
+        import flashlight.nn as nn
 
-        x = mlx_compat.empty(10000)
+        x = flashlight.empty(10000)
         nn.init.normal_(x, mean=0.0, std=1.0)
 
         mean_val = float(x.mean().item())
@@ -1596,15 +1596,15 @@ class BehavioralParityValidator:
 
     def _test_xavier_init(self) -> BehavioralTestResult:
         """Test xavier_uniform_ initialization."""
-        import mlx_compat
-        import mlx_compat.nn as nn
+        import flashlight
+        import flashlight.nn as nn
 
-        x = mlx_compat.empty(100, 100)
+        x = flashlight.empty(100, 100)
         nn.init.xavier_uniform_(x)
 
         # Xavier should have bounded values based on fan_in, fan_out
-        min_val = float(mlx_compat.min(x).item())
-        max_val = float(mlx_compat.max(x).item())
+        min_val = float(flashlight.min(x).item())
+        max_val = float(flashlight.max(x).item())
 
         # For 100x100, bound should be sqrt(6/(100+100)) ~ 0.173
         bound = (6.0 / 200) ** 0.5
@@ -1619,10 +1619,10 @@ class BehavioralParityValidator:
 
     def _test_kaiming_init(self) -> BehavioralTestResult:
         """Test kaiming_uniform_ initialization."""
-        import mlx_compat
-        import mlx_compat.nn as nn
+        import flashlight
+        import flashlight.nn as nn
 
-        x = mlx_compat.empty(100, 100)
+        x = flashlight.empty(100, 100)
         nn.init.kaiming_uniform_(x, a=0, mode='fan_in', nonlinearity='relu')
 
         # Check it's not all zeros or constant
@@ -1643,12 +1643,12 @@ class BehavioralParityValidator:
 
     def _test_loss_reduction_none(self) -> BehavioralTestResult:
         """Test loss with reduction='none' returns per-element loss."""
-        import mlx_compat
-        import mlx_compat.nn as nn
+        import flashlight
+        import flashlight.nn as nn
 
         loss_fn = nn.MSELoss(reduction='none')
-        x = mlx_compat.tensor([1.0, 2.0, 3.0])
-        target = mlx_compat.tensor([1.5, 2.5, 3.5])
+        x = flashlight.tensor([1.0, 2.0, 3.0])
+        target = flashlight.tensor([1.5, 2.5, 3.5])
 
         loss = loss_fn(x, target)
 
@@ -1663,12 +1663,12 @@ class BehavioralParityValidator:
 
     def _test_loss_reduction_mean(self) -> BehavioralTestResult:
         """Test loss with reduction='mean' returns scalar."""
-        import mlx_compat
-        import mlx_compat.nn as nn
+        import flashlight
+        import flashlight.nn as nn
 
         loss_fn = nn.MSELoss(reduction='mean')
-        x = mlx_compat.tensor([1.0, 2.0, 3.0])
-        target = mlx_compat.tensor([1.5, 2.5, 3.5])
+        x = flashlight.tensor([1.0, 2.0, 3.0])
+        target = flashlight.tensor([1.5, 2.5, 3.5])
 
         loss = loss_fn(x, target)
 
@@ -1683,20 +1683,20 @@ class BehavioralParityValidator:
 
     def _test_loss_reduction_sum(self) -> BehavioralTestResult:
         """Test loss with reduction='sum' returns scalar sum."""
-        import mlx_compat
-        import mlx_compat.nn as nn
+        import flashlight
+        import flashlight.nn as nn
 
         loss_fn_sum = nn.MSELoss(reduction='sum')
         loss_fn_none = nn.MSELoss(reduction='none')
 
-        x = mlx_compat.tensor([1.0, 2.0, 3.0])
-        target = mlx_compat.tensor([1.5, 2.5, 3.5])
+        x = flashlight.tensor([1.0, 2.0, 3.0])
+        target = flashlight.tensor([1.5, 2.5, 3.5])
 
         loss_sum = loss_fn_sum(x, target)
         loss_none = loss_fn_none(x, target)
 
         # Sum should equal sum of per-element losses
-        expected = float(mlx_compat.sum(loss_none).item())
+        expected = float(flashlight.sum(loss_none).item())
         actual = float(loss_sum.item())
 
         passed = abs(actual - expected) < 0.001
@@ -1714,17 +1714,17 @@ class BehavioralParityValidator:
 
     def _test_relu_inplace(self) -> BehavioralTestResult:
         """Test ReLU with inplace=True modifies input."""
-        import mlx_compat
-        import mlx_compat.nn as nn
+        import flashlight
+        import flashlight.nn as nn
 
         relu = nn.ReLU(inplace=True)
-        x = mlx_compat.tensor([-1.0, 0.0, 1.0])
+        x = flashlight.tensor([-1.0, 0.0, 1.0])
 
         # Store original data reference
         relu(x)
 
         # After inplace ReLU, negative values should be 0
-        passed = bool(mlx_compat.allclose(x, mlx_compat.tensor([0.0, 0.0, 1.0])))
+        passed = bool(flashlight.allclose(x, flashlight.tensor([0.0, 0.0, 1.0])))
 
         return BehavioralTestResult(
             category="activation_inplace",
@@ -1735,17 +1735,17 @@ class BehavioralParityValidator:
 
     def _test_leaky_relu_inplace(self) -> BehavioralTestResult:
         """Test LeakyReLU with inplace=True."""
-        import mlx_compat
-        import mlx_compat.nn as nn
+        import flashlight
+        import flashlight.nn as nn
 
         leaky_relu = nn.LeakyReLU(negative_slope=0.1, inplace=True)
-        x = mlx_compat.tensor([-10.0, 0.0, 10.0])
+        x = flashlight.tensor([-10.0, 0.0, 10.0])
 
         leaky_relu(x)
 
         # After inplace LeakyReLU: [-10*0.1, 0, 10] = [-1, 0, 10]
-        expected = mlx_compat.tensor([-1.0, 0.0, 10.0])
-        passed = bool(mlx_compat.allclose(x, expected))
+        expected = flashlight.tensor([-1.0, 0.0, 10.0])
+        passed = bool(flashlight.allclose(x, expected))
 
         return BehavioralTestResult(
             category="activation_inplace",
@@ -1760,22 +1760,22 @@ class BehavioralParityValidator:
 
     def _test_batchnorm_running_stats(self) -> BehavioralTestResult:
         """Test that BatchNorm updates running statistics."""
-        import mlx_compat
-        import mlx_compat.nn as nn
+        import flashlight
+        import flashlight.nn as nn
 
         bn = nn.BatchNorm1d(10, track_running_stats=True)
         bn.train()
 
         # Initial running mean should be zeros
-        initial_mean = mlx_compat.clone(bn.running_mean)
+        initial_mean = flashlight.clone(bn.running_mean)
 
         # Forward pass should update stats
-        x = mlx_compat.randn(32, 10) * 2 + 5
+        x = flashlight.randn(32, 10) * 2 + 5
         _ = bn(x)
 
         updated_mean = bn.running_mean
 
-        passed = not bool(mlx_compat.allclose(initial_mean, updated_mean))
+        passed = not bool(flashlight.allclose(initial_mean, updated_mean))
 
         return BehavioralTestResult(
             category="normalization_stats",
@@ -1786,8 +1786,8 @@ class BehavioralParityValidator:
 
     def _test_batchnorm_momentum(self) -> BehavioralTestResult:
         """Test that BatchNorm momentum affects running stats update rate."""
-        import mlx_compat
-        import mlx_compat.nn as nn
+        import flashlight
+        import flashlight.nn as nn
 
         # High momentum = fast update
         bn_fast = nn.BatchNorm1d(10, momentum=0.9)
@@ -1796,7 +1796,7 @@ class BehavioralParityValidator:
         bn_fast.train()
         bn_slow.train()
 
-        x = mlx_compat.randn(32, 10) * 2 + 5  # Mean around 5
+        x = flashlight.randn(32, 10) * 2 + 5  # Mean around 5
 
         _ = bn_fast(x)
         _ = bn_slow(x)
@@ -1816,7 +1816,7 @@ class BehavioralParityValidator:
 
     def _test_batchnorm_affine(self) -> BehavioralTestResult:
         """Test BatchNorm with affine=False has no learnable parameters."""
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
 
         bn_affine = nn.BatchNorm1d(10, affine=True)
         bn_no_affine = nn.BatchNorm1d(10, affine=False)
@@ -1839,13 +1839,13 @@ class BehavioralParityValidator:
 
     def _test_register_buffer(self) -> BehavioralTestResult:
         """Test that register_buffer adds non-parameter state."""
-        import mlx_compat
-        import mlx_compat.nn as nn
+        import flashlight
+        import flashlight.nn as nn
 
         class TestModule(nn.Module):
             def __init__(self):
                 super().__init__()
-                self.register_buffer("my_buffer", mlx_compat.zeros(5))
+                self.register_buffer("my_buffer", flashlight.zeros(5))
 
         model = TestModule()
 
@@ -1869,13 +1869,13 @@ class BehavioralParityValidator:
 
     def _test_register_parameter(self) -> BehavioralTestResult:
         """Test that register_parameter adds learnable parameters."""
-        import mlx_compat
-        import mlx_compat.nn as nn
+        import flashlight
+        import flashlight.nn as nn
 
         class TestModule(nn.Module):
             def __init__(self):
                 super().__init__()
-                self.register_parameter("my_param", nn.Parameter(mlx_compat.zeros(5)))
+                self.register_parameter("my_param", nn.Parameter(flashlight.zeros(5)))
 
         model = TestModule()
 
@@ -1896,14 +1896,14 @@ class BehavioralParityValidator:
 
     def _test_load_state_dict_strict(self) -> BehavioralTestResult:
         """Test load_state_dict strict mode behavior."""
-        import mlx_compat
-        import mlx_compat.nn as nn
+        import flashlight
+        import flashlight.nn as nn
 
         model = nn.Linear(10, 5)
 
         # Try loading state dict with extra key (should fail with strict=True)
         state = model.state_dict()
-        state["extra_key"] = mlx_compat.zeros(1)
+        state["extra_key"] = flashlight.zeros(1)
 
         strict_failed = False
         try:
@@ -1934,15 +1934,15 @@ class BehavioralParityValidator:
 
     def _test_boolean_mask(self) -> BehavioralTestResult:
         """Test boolean mask indexing."""
-        import mlx_compat
+        import flashlight
 
-        x = mlx_compat.tensor([1.0, 2.0, 3.0, 4.0, 5.0])
-        mask = mlx_compat.tensor([True, False, True, False, True])
+        x = flashlight.tensor([1.0, 2.0, 3.0, 4.0, 5.0])
+        mask = flashlight.tensor([True, False, True, False, True])
 
         result = x[mask]
 
-        expected = mlx_compat.tensor([1.0, 3.0, 5.0])
-        passed = bool(mlx_compat.allclose(result, expected))
+        expected = flashlight.tensor([1.0, 3.0, 5.0])
+        passed = bool(flashlight.allclose(result, expected))
 
         return BehavioralTestResult(
             category="attention_masks",
@@ -1953,13 +1953,13 @@ class BehavioralParityValidator:
 
     def _test_float_mask(self) -> BehavioralTestResult:
         """Test float mask (additive attention mask style)."""
-        import mlx_compat
+        import flashlight
 
         # Simulate attention scores
-        scores = mlx_compat.ones(3, 3)
+        scores = flashlight.ones(3, 3)
 
         # Float mask with -inf for masked positions
-        mask = mlx_compat.tensor([
+        mask = flashlight.tensor([
             [0.0, float('-inf'), float('-inf')],
             [0.0, 0.0, float('-inf')],
             [0.0, 0.0, 0.0],
@@ -1968,7 +1968,7 @@ class BehavioralParityValidator:
         masked_scores = scores + mask
 
         # After softmax, -inf positions should be ~0
-        softmax_scores = mlx_compat.softmax(masked_scores, dim=-1)
+        softmax_scores = flashlight.softmax(masked_scores, dim=-1)
 
         # First row should have all attention on first position
         first_row = softmax_scores[0]
@@ -1987,20 +1987,20 @@ class BehavioralParityValidator:
 
     def _test_save_load_roundtrip(self) -> BehavioralTestResult:
         """Test tensor save/load round-trip."""
-        import mlx_compat
+        import flashlight
         import tempfile
         import os
 
-        x = mlx_compat.randn(5, 5)
+        x = flashlight.randn(5, 5)
 
         with tempfile.NamedTemporaryFile(suffix='.pt', delete=False) as f:
             filepath = f.name
 
         try:
-            mlx_compat.save(x, filepath)
-            loaded = mlx_compat.load(filepath)
+            flashlight.save(x, filepath)
+            loaded = flashlight.load(filepath)
 
-            passed = bool(mlx_compat.allclose(x, loaded))
+            passed = bool(flashlight.allclose(x, loaded))
         except Exception as e:
             passed = False
         finally:
@@ -2016,18 +2016,18 @@ class BehavioralParityValidator:
 
     def _test_dtype_preservation(self) -> BehavioralTestResult:
         """Test that dtype is preserved through serialization."""
-        import mlx_compat
+        import flashlight
         import tempfile
         import os
 
-        x = mlx_compat.tensor([1.0, 2.0], dtype=mlx_compat.float32)
+        x = flashlight.tensor([1.0, 2.0], dtype=flashlight.float32)
 
         with tempfile.NamedTemporaryFile(suffix='.pt', delete=False) as f:
             filepath = f.name
 
         try:
-            mlx_compat.save(x, filepath)
-            loaded = mlx_compat.load(filepath)
+            flashlight.save(x, filepath)
+            loaded = flashlight.load(filepath)
 
             passed = loaded.dtype == x.dtype
         except Exception as e:
@@ -2049,9 +2049,9 @@ class BehavioralParityValidator:
 
     def _test_squeeze_behavior(self) -> BehavioralTestResult:
         """Test squeeze removes size-1 dimensions."""
-        import mlx_compat
+        import flashlight
 
-        x = mlx_compat.zeros(1, 3, 1, 4)
+        x = flashlight.zeros(1, 3, 1, 4)
 
         # Squeeze all
         squeezed = x.squeeze()
@@ -2072,9 +2072,9 @@ class BehavioralParityValidator:
 
     def _test_unsqueeze_behavior(self) -> BehavioralTestResult:
         """Test unsqueeze adds size-1 dimension."""
-        import mlx_compat
+        import flashlight
 
-        x = mlx_compat.zeros(3, 4)
+        x = flashlight.zeros(3, 4)
 
         unsqueezed = x.unsqueeze(0)
         passed = unsqueezed.shape == (1, 3, 4)
@@ -2088,9 +2088,9 @@ class BehavioralParityValidator:
 
     def _test_flatten_behavior(self) -> BehavioralTestResult:
         """Test flatten collapses dimensions."""
-        import mlx_compat
+        import flashlight
 
-        x = mlx_compat.zeros(2, 3, 4)
+        x = flashlight.zeros(2, 3, 4)
 
         # Flatten all
         flat = x.flatten()
@@ -2115,9 +2115,9 @@ class BehavioralParityValidator:
 
     def _test_item_scalar(self) -> BehavioralTestResult:
         """Test .item() extracts scalar value."""
-        import mlx_compat
+        import flashlight
 
-        scalar = mlx_compat.tensor(42.0)
+        scalar = flashlight.tensor(42.0)
         value = scalar.item()
 
         passed = isinstance(value, float) and abs(value - 42.0) < 0.001
@@ -2131,9 +2131,9 @@ class BehavioralParityValidator:
 
     def _test_tolist_behavior(self) -> BehavioralTestResult:
         """Test .tolist() converts tensor to Python list."""
-        import mlx_compat
+        import flashlight
 
-        x = mlx_compat.tensor([[1.0, 2.0], [3.0, 4.0]])
+        x = flashlight.tensor([[1.0, 2.0], [3.0, 4.0]])
         result = x.tolist()
 
         expected = [[1.0, 2.0], [3.0, 4.0]]

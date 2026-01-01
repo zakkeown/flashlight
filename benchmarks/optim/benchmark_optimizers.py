@@ -15,9 +15,9 @@ from typing import Dict, List, Tuple, Any
 # MLX imports
 try:
     import mlx.core as mx
-    import mlx_compat
-    import mlx_compat.nn as nn
-    import mlx_compat.optim as optim
+    import flashlight
+    import flashlight.nn as nn
+    import flashlight.optim as optim
     MLX_AVAILABLE = True
 except ImportError:
     MLX_AVAILABLE = False
@@ -40,8 +40,8 @@ def create_mlx_params(sizes: List[Tuple[int, ...]], seed: int = 42) -> List[Any]
     params = []
     for size in sizes:
         data = np.random.randn(*size).astype(np.float32)
-        param = nn.Parameter(mlx_compat.tensor(data))
-        param.grad = mlx_compat.tensor(np.random.randn(*size).astype(np.float32))
+        param = nn.Parameter(flashlight.tensor(data))
+        param.grad = flashlight.tensor(np.random.randn(*size).astype(np.float32))
         params.append(param)
     return params
 

@@ -19,7 +19,7 @@ import pytest
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
-    import mlx_compat
+    import flashlight
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -37,34 +37,34 @@ class TestFlatten(TestCase):
 
     def test_creation(self):
         """Test Flatten creation with default parameters."""
-        flatten = mlx_compat.nn.Flatten()
+        flatten = flashlight.nn.Flatten()
         self.assertEqual(flatten.start_dim, 1)
         self.assertEqual(flatten.end_dim, -1)
 
     def test_creation_with_dims(self):
         """Test Flatten creation with custom dimensions."""
-        flatten = mlx_compat.nn.Flatten(start_dim=2, end_dim=3)
+        flatten = flashlight.nn.Flatten(start_dim=2, end_dim=3)
         self.assertEqual(flatten.start_dim, 2)
         self.assertEqual(flatten.end_dim, 3)
 
     def test_forward_default(self):
         """Test Flatten forward with default dims."""
-        flatten = mlx_compat.nn.Flatten()
-        x = mlx_compat.randn(4, 3, 8, 8)  # batch, channels, height, width
+        flatten = flashlight.nn.Flatten()
+        x = flashlight.randn(4, 3, 8, 8)  # batch, channels, height, width
         output = flatten(x)
         self.assertEqual(output.shape, (4, 192))
 
     def test_forward_custom_dims(self):
         """Test Flatten forward with custom dims."""
-        flatten = mlx_compat.nn.Flatten(start_dim=2, end_dim=3)
-        x = mlx_compat.randn(4, 3, 8, 8)
+        flatten = flashlight.nn.Flatten(start_dim=2, end_dim=3)
+        x = flashlight.randn(4, 3, 8, 8)
         output = flatten(x)
         self.assertEqual(output.shape, (4, 3, 64))
 
     def test_forward_1d_input(self):
         """Test Flatten with 1D input."""
-        flatten = mlx_compat.nn.Flatten(start_dim=0, end_dim=-1)
-        x = mlx_compat.randn(10)
+        flatten = flashlight.nn.Flatten(start_dim=0, end_dim=-1)
+        x = flashlight.randn(10)
         output = flatten(x)
         self.assertEqual(output.shape, (10,))
 
@@ -76,10 +76,10 @@ class TestFlatten(TestCase):
         x_np = np.random.randn(4, 3, 8, 8).astype(np.float32)
 
         flatten_torch = torch.nn.Flatten()
-        flatten_mlx = mlx_compat.nn.Flatten()
+        flatten_mlx = flashlight.nn.Flatten()
 
         out_torch = flatten_torch(torch.tensor(x_np))
-        out_mlx = flatten_mlx(mlx_compat.tensor(x_np))
+        out_mlx = flatten_mlx(flashlight.tensor(x_np))
 
         np.testing.assert_allclose(
             out_torch.numpy(), out_mlx.numpy(),
@@ -93,23 +93,23 @@ class TestUnflatten(TestCase):
 
     def test_creation(self):
         """Test Unflatten creation."""
-        unflatten = mlx_compat.nn.Unflatten(dim=1, unflattened_size=(3, 8, 8))
+        unflatten = flashlight.nn.Unflatten(dim=1, unflattened_size=(3, 8, 8))
         self.assertEqual(unflatten.dim, 1)
         self.assertEqual(unflatten.unflattened_size, (3, 8, 8))
 
     def test_forward_shape(self):
         """Test Unflatten forward pass."""
-        unflatten = mlx_compat.nn.Unflatten(dim=1, unflattened_size=(3, 8, 8))
-        x = mlx_compat.randn(4, 192)  # Flattened input
+        unflatten = flashlight.nn.Unflatten(dim=1, unflattened_size=(3, 8, 8))
+        x = flashlight.randn(4, 192)  # Flattened input
         output = unflatten(x)
         self.assertEqual(output.shape, (4, 3, 8, 8))
 
     def test_round_trip_with_flatten(self):
         """Test Flatten followed by Unflatten restores shape."""
-        flatten = mlx_compat.nn.Flatten()
-        unflatten = mlx_compat.nn.Unflatten(dim=1, unflattened_size=(3, 8, 8))
+        flatten = flashlight.nn.Flatten()
+        unflatten = flashlight.nn.Unflatten(dim=1, unflattened_size=(3, 8, 8))
 
-        x = mlx_compat.randn(4, 3, 8, 8)
+        x = flashlight.randn(4, 3, 8, 8)
         flattened = flatten(x)
         unflattened = unflatten(flattened)
 
@@ -122,20 +122,20 @@ class TestIdentity(TestCase):
 
     def test_creation(self):
         """Test Identity creation."""
-        identity = mlx_compat.nn.Identity()
+        identity = flashlight.nn.Identity()
         self.assertIsNotNone(identity)
 
     def test_forward_pass_through(self):
         """Test Identity passes input unchanged."""
-        identity = mlx_compat.nn.Identity()
-        x = mlx_compat.randn(4, 10)
+        identity = flashlight.nn.Identity()
+        x = flashlight.randn(4, 10)
         output = identity(x)
         np.testing.assert_array_equal(x.numpy(), output.numpy())
 
     def test_forward_with_args(self):
         """Test Identity ignores extra arguments."""
-        identity = mlx_compat.nn.Identity()
-        x = mlx_compat.randn(4, 10)
+        identity = flashlight.nn.Identity()
+        x = flashlight.randn(4, 10)
         output = identity(x)  # Should still work
         self.assertEqual(output.shape, (4, 10))
 
@@ -146,15 +146,15 @@ class TestFold(TestCase):
 
     def test_creation(self):
         """Test Fold creation."""
-        fold = mlx_compat.nn.Fold(output_size=(4, 4), kernel_size=(2, 2))
+        fold = flashlight.nn.Fold(output_size=(4, 4), kernel_size=(2, 2))
         self.assertEqual(fold.output_size, (4, 4))
 
     def test_forward_shape(self):
         """Test Fold forward pass."""
-        fold = mlx_compat.nn.Fold(output_size=(4, 4), kernel_size=(2, 2))
+        fold = flashlight.nn.Fold(output_size=(4, 4), kernel_size=(2, 2))
         # Input: (batch, C * kernel_size[0] * kernel_size[1], L)
         # For 4x4 output with 2x2 kernel: L = (4-2+1) * (4-2+1) = 9
-        x = mlx_compat.randn(1, 12, 9)  # 3 channels, 2x2 kernel, 9 patches
+        x = flashlight.randn(1, 12, 9)  # 3 channels, 2x2 kernel, 9 patches
         output = fold(x)
         self.assertEqual(output.shape, (1, 3, 4, 4))
 
@@ -165,13 +165,13 @@ class TestUnfold(TestCase):
 
     def test_creation(self):
         """Test Unfold creation."""
-        unfold = mlx_compat.nn.Unfold(kernel_size=(2, 2))
+        unfold = flashlight.nn.Unfold(kernel_size=(2, 2))
         self.assertEqual(unfold.kernel_size, (2, 2))
 
     def test_forward_shape(self):
         """Test Unfold forward pass."""
-        unfold = mlx_compat.nn.Unfold(kernel_size=(2, 2))
-        x = mlx_compat.randn(1, 3, 4, 4)  # batch, channels, height, width
+        unfold = flashlight.nn.Unfold(kernel_size=(2, 2))
+        x = flashlight.randn(1, 3, 4, 4)  # batch, channels, height, width
         output = unfold(x)
         # Output: (batch, C * kernel_size[0] * kernel_size[1], L)
         # L = (4-2+1) * (4-2+1) = 9
@@ -179,16 +179,16 @@ class TestUnfold(TestCase):
 
     def test_with_stride(self):
         """Test Unfold with stride."""
-        unfold = mlx_compat.nn.Unfold(kernel_size=(2, 2), stride=(2, 2))
-        x = mlx_compat.randn(1, 3, 4, 4)
+        unfold = flashlight.nn.Unfold(kernel_size=(2, 2), stride=(2, 2))
+        x = flashlight.randn(1, 3, 4, 4)
         output = unfold(x)
         # L = (4-2)/2 + 1) * ((4-2)/2 + 1) = 4
         self.assertEqual(output.shape, (1, 12, 4))
 
     def test_with_padding(self):
         """Test Unfold with padding."""
-        unfold = mlx_compat.nn.Unfold(kernel_size=(2, 2), padding=(1, 1))
-        x = mlx_compat.randn(1, 3, 4, 4)
+        unfold = flashlight.nn.Unfold(kernel_size=(2, 2), padding=(1, 1))
+        x = flashlight.randn(1, 3, 4, 4)
         output = unfold(x)
         # With padding=1: (4+2-2+1) * (4+2-2+1) = 25
         self.assertEqual(output.shape, (1, 12, 25))
@@ -200,32 +200,32 @@ class TestUpsample(TestCase):
 
     def test_creation_with_scale_factor(self):
         """Test Upsample creation with scale_factor."""
-        upsample = mlx_compat.nn.Upsample(scale_factor=2)
+        upsample = flashlight.nn.Upsample(scale_factor=2)
         self.assertEqual(upsample.scale_factor, 2)
 
     def test_creation_with_size(self):
         """Test Upsample creation with size."""
-        upsample = mlx_compat.nn.Upsample(size=(8, 8))
+        upsample = flashlight.nn.Upsample(size=(8, 8))
         self.assertEqual(upsample.size, (8, 8))
 
     def test_forward_with_scale_factor(self):
         """Test Upsample forward with scale_factor."""
-        upsample = mlx_compat.nn.Upsample(scale_factor=2, mode='nearest')
-        x = mlx_compat.randn(1, 3, 4, 4)
+        upsample = flashlight.nn.Upsample(scale_factor=2, mode='nearest')
+        x = flashlight.randn(1, 3, 4, 4)
         output = upsample(x)
         self.assertEqual(output.shape, (1, 3, 8, 8))
 
     def test_forward_with_size(self):
         """Test Upsample forward with size."""
-        upsample = mlx_compat.nn.Upsample(size=(8, 8), mode='nearest')
-        x = mlx_compat.randn(1, 3, 4, 4)
+        upsample = flashlight.nn.Upsample(size=(8, 8), mode='nearest')
+        x = flashlight.randn(1, 3, 4, 4)
         output = upsample(x)
         self.assertEqual(output.shape, (1, 3, 8, 8))
 
     def test_bilinear_mode(self):
         """Test Upsample with bilinear mode."""
-        upsample = mlx_compat.nn.Upsample(scale_factor=2, mode='bilinear')
-        x = mlx_compat.randn(1, 3, 4, 4)
+        upsample = flashlight.nn.Upsample(scale_factor=2, mode='bilinear')
+        x = flashlight.randn(1, 3, 4, 4)
         output = upsample(x)
         self.assertEqual(output.shape, (1, 3, 8, 8))
 
@@ -236,13 +236,13 @@ class TestUpsamplingNearest2d(TestCase):
 
     def test_creation(self):
         """Test UpsamplingNearest2d creation."""
-        upsample = mlx_compat.nn.UpsamplingNearest2d(scale_factor=2)
+        upsample = flashlight.nn.UpsamplingNearest2d(scale_factor=2)
         self.assertIsNotNone(upsample)
 
     def test_forward_shape(self):
         """Test UpsamplingNearest2d forward pass."""
-        upsample = mlx_compat.nn.UpsamplingNearest2d(scale_factor=2)
-        x = mlx_compat.randn(1, 3, 4, 4)
+        upsample = flashlight.nn.UpsamplingNearest2d(scale_factor=2)
+        x = flashlight.randn(1, 3, 4, 4)
         output = upsample(x)
         self.assertEqual(output.shape, (1, 3, 8, 8))
 
@@ -253,13 +253,13 @@ class TestUpsamplingBilinear2d(TestCase):
 
     def test_creation(self):
         """Test UpsamplingBilinear2d creation."""
-        upsample = mlx_compat.nn.UpsamplingBilinear2d(scale_factor=2)
+        upsample = flashlight.nn.UpsamplingBilinear2d(scale_factor=2)
         self.assertIsNotNone(upsample)
 
     def test_forward_shape(self):
         """Test UpsamplingBilinear2d forward pass."""
-        upsample = mlx_compat.nn.UpsamplingBilinear2d(scale_factor=2)
-        x = mlx_compat.randn(1, 3, 4, 4)
+        upsample = flashlight.nn.UpsamplingBilinear2d(scale_factor=2)
+        x = flashlight.randn(1, 3, 4, 4)
         output = upsample(x)
         self.assertEqual(output.shape, (1, 3, 8, 8))
 
@@ -270,14 +270,14 @@ class TestPixelShuffle(TestCase):
 
     def test_creation(self):
         """Test PixelShuffle creation."""
-        shuffle = mlx_compat.nn.PixelShuffle(upscale_factor=2)
+        shuffle = flashlight.nn.PixelShuffle(upscale_factor=2)
         self.assertEqual(shuffle.upscale_factor, 2)
 
     def test_forward_shape(self):
         """Test PixelShuffle forward pass."""
-        shuffle = mlx_compat.nn.PixelShuffle(upscale_factor=2)
+        shuffle = flashlight.nn.PixelShuffle(upscale_factor=2)
         # Input: (N, C * r^2, H, W) -> Output: (N, C, H*r, W*r)
-        x = mlx_compat.randn(1, 12, 4, 4)  # 12 = 3 * 2^2
+        x = flashlight.randn(1, 12, 4, 4)  # 12 = 3 * 2^2
         output = shuffle(x)
         self.assertEqual(output.shape, (1, 3, 8, 8))
 
@@ -289,10 +289,10 @@ class TestPixelShuffle(TestCase):
         x_np = np.random.randn(1, 12, 4, 4).astype(np.float32)
 
         shuffle_torch = torch.nn.PixelShuffle(2)
-        shuffle_mlx = mlx_compat.nn.PixelShuffle(2)
+        shuffle_mlx = flashlight.nn.PixelShuffle(2)
 
         out_torch = shuffle_torch(torch.tensor(x_np))
-        out_mlx = shuffle_mlx(mlx_compat.tensor(x_np))
+        out_mlx = shuffle_mlx(flashlight.tensor(x_np))
 
         np.testing.assert_allclose(
             out_torch.numpy(), out_mlx.numpy(),
@@ -306,23 +306,23 @@ class TestPixelUnshuffle(TestCase):
 
     def test_creation(self):
         """Test PixelUnshuffle creation."""
-        unshuffle = mlx_compat.nn.PixelUnshuffle(downscale_factor=2)
+        unshuffle = flashlight.nn.PixelUnshuffle(downscale_factor=2)
         self.assertEqual(unshuffle.downscale_factor, 2)
 
     def test_forward_shape(self):
         """Test PixelUnshuffle forward pass."""
-        unshuffle = mlx_compat.nn.PixelUnshuffle(downscale_factor=2)
+        unshuffle = flashlight.nn.PixelUnshuffle(downscale_factor=2)
         # Input: (N, C, H, W) -> Output: (N, C * r^2, H/r, W/r)
-        x = mlx_compat.randn(1, 3, 8, 8)
+        x = flashlight.randn(1, 3, 8, 8)
         output = unshuffle(x)
         self.assertEqual(output.shape, (1, 12, 4, 4))
 
     def test_round_trip_with_pixel_shuffle(self):
         """Test PixelShuffle followed by PixelUnshuffle."""
-        shuffle = mlx_compat.nn.PixelShuffle(2)
-        unshuffle = mlx_compat.nn.PixelUnshuffle(2)
+        shuffle = flashlight.nn.PixelShuffle(2)
+        unshuffle = flashlight.nn.PixelUnshuffle(2)
 
-        x = mlx_compat.randn(1, 12, 4, 4)
+        x = flashlight.randn(1, 12, 4, 4)
         shuffled = shuffle(x)
         unshuffled = unshuffle(shuffled)
 

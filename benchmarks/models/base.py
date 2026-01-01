@@ -21,7 +21,7 @@ class ModelBenchmark(BaseBenchmark):
 
     Subclasses should implement:
     - get_input_configs(): Return configurations to benchmark
-    - create_mlx_model(config): Create mlx_compat model
+    - create_mlx_model(config): Create flashlight model
     - create_pytorch_model(config, device): Create PyTorch model
     - create_mlx_input(config): Create input tensor
     - create_pytorch_input(config, device): Create input tensor
@@ -31,7 +31,7 @@ class ModelBenchmark(BaseBenchmark):
     mode: str = "forward"  # "forward" or "training"
 
     def create_mlx_model(self, config: Dict[str, Any]):
-        """Create mlx_compat model."""
+        """Create flashlight model."""
         raise NotImplementedError
 
     def create_pytorch_model(self, config: Dict[str, Any], device: str):
@@ -39,7 +39,7 @@ class ModelBenchmark(BaseBenchmark):
         raise NotImplementedError
 
     def create_mlx_input(self, config: Dict[str, Any]):
-        """Create mlx_compat input tensor."""
+        """Create flashlight input tensor."""
         raise NotImplementedError
 
     def create_pytorch_input(self, config: Dict[str, Any], device: str):
@@ -47,7 +47,7 @@ class ModelBenchmark(BaseBenchmark):
         raise NotImplementedError
 
     def create_mlx_target(self, config: Dict[str, Any]):
-        """Create mlx_compat target for training."""
+        """Create flashlight target for training."""
         return None
 
     def create_pytorch_target(self, config: Dict[str, Any], device: str):
@@ -88,9 +88,9 @@ class ModelBenchmark(BaseBenchmark):
             return model(x)
         else:
             # Training step
-            import mlx_compat
-            import mlx_compat.nn as nn
-            import mlx_compat.optim as optim
+            import flashlight
+            import flashlight.nn as nn
+            import flashlight.optim as optim
 
             optimizer = optim.SGD(model.parameters(), lr=0.01)
             criterion = nn.CrossEntropyLoss()

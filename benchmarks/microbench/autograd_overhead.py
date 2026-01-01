@@ -34,16 +34,16 @@ class NoGradVsGradBenchmark(BaseBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
+        import flashlight
         shape = config["shape"]
         requires_grad = config["mode"] == "grad"
 
         if config["op"] == "matmul":
-            a = mlx_compat.randn(shape[0], shape[0], requires_grad=requires_grad)
-            b = mlx_compat.randn(shape[0], shape[0], requires_grad=requires_grad)
+            a = flashlight.randn(shape[0], shape[0], requires_grad=requires_grad)
+            b = flashlight.randn(shape[0], shape[0], requires_grad=requires_grad)
         else:
-            a = mlx_compat.randn(*shape, requires_grad=requires_grad)
-            b = mlx_compat.randn(*shape, requires_grad=requires_grad)
+            a = flashlight.randn(*shape, requires_grad=requires_grad)
+            b = flashlight.randn(*shape, requires_grad=requires_grad)
 
         return (a, b, config["op"], config["mode"])
 
@@ -62,10 +62,10 @@ class NoGradVsGradBenchmark(BaseBenchmark):
         return (a, b, config["op"], config["mode"])
 
     def mlx_operation(self, a, b, op, mode):
-        import mlx_compat
+        import flashlight
 
         if mode == "no_grad":
-            with mlx_compat.no_grad():
+            with flashlight.no_grad():
                 if op == "add":
                     return a + b
                 elif op == "mul":
@@ -119,8 +119,8 @@ class TapeConstructionBenchmark(BaseBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
-        x = mlx_compat.randn(*config["shape"], requires_grad=True)
+        import flashlight
+        x = flashlight.randn(*config["shape"], requires_grad=True)
         return (x, config["op_count"])
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:
@@ -170,8 +170,8 @@ class BackwardPassBenchmark(BaseBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
-        x = mlx_compat.randn(*config["shape"], requires_grad=True)
+        import flashlight
+        x = flashlight.randn(*config["shape"], requires_grad=True)
         return (x, config["op_count"])
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:

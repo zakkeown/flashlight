@@ -16,10 +16,10 @@ A PyTorch-compatible API layer for Apple's MLX framework, enabling PyTorch code 
 ## 🚀 Quick Start
 
 ```python
-import mlx_compat
+import flashlight
 
 # Create tensors (PyTorch-like API)
-x = mlx_compat.tensor([1.0, 2.0, 3.0], requires_grad=True)
+x = flashlight.tensor([1.0, 2.0, 3.0], requires_grad=True)
 y = x * 2 + 1
 
 # Automatic differentiation
@@ -28,15 +28,15 @@ loss.backward()
 print(x.grad)  # [2.0, 2.0, 2.0]
 
 # Neural networks
-model = mlx_compat.nn.Sequential(
-    mlx_compat.nn.Linear(784, 256),
-    mlx_compat.nn.ReLU(),
-    mlx_compat.nn.Linear(256, 10),
+model = flashlight.nn.Sequential(
+    flashlight.nn.Linear(784, 256),
+    flashlight.nn.ReLU(),
+    flashlight.nn.Linear(256, 10),
 )
 
 # Training
-optimizer = mlx_compat.optim.Adam(model.parameters(), lr=1e-3)
-criterion = mlx_compat.nn.CrossEntropyLoss()
+optimizer = flashlight.optim.Adam(model.parameters(), lr=1e-3)
+criterion = flashlight.nn.CrossEntropyLoss()
 
 for batch_x, batch_y in dataloader:
     optimizer.zero_grad()
@@ -159,7 +159,7 @@ pytest tests/phase1_tensor_core/
 pytest tests/phase2_operators/
 
 # Run with coverage
-pytest tests/ --cov=mlx_compat --cov-report=html
+pytest tests/ --cov=flashlight --cov-report=html
 
 # Run integration tests
 pytest tests/integration/ -m integration
@@ -218,11 +218,11 @@ examples/
 
 ```bash
 # Format code
-black mlx_compat tests
-isort mlx_compat tests
+black flashlight tests
+isort flashlight tests
 
 # Lint
-flake8 mlx_compat tests
+flake8 flashlight tests
 ```
 
 ### Contributing

@@ -1,5 +1,5 @@
 """
-Framework comparison harness for mlx_compat vs PyTorch.
+Framework comparison harness for flashlight vs PyTorch.
 
 Handles equivalent tensor creation, synchronized timing,
 numerical parity checking, and side-by-side comparison.
@@ -93,7 +93,7 @@ class ComparisonResult:
 
 class FrameworkComparator:
     """
-    Compares mlx_compat operations against PyTorch.
+    Compares flashlight operations against PyTorch.
 
     Handles:
     - Equivalent tensor creation between frameworks
@@ -170,10 +170,10 @@ class FrameworkComparator:
         interleaved: bool = True,
     ) -> ComparisonResult:
         """
-        Run comparison benchmark between mlx_compat and PyTorch.
+        Run comparison benchmark between flashlight and PyTorch.
 
         Args:
-            mlx_fn: mlx_compat function to benchmark (no args, use closure)
+            mlx_fn: flashlight function to benchmark (no args, use closure)
             pytorch_fn: PyTorch function to benchmark
             check_numerical: Whether to check numerical parity
             interleaved: Use interleaved benchmarking for fairness
@@ -240,7 +240,7 @@ class FrameworkComparator:
         Compare functions with explicit inputs.
 
         Args:
-            mlx_fn: mlx_compat function
+            mlx_fn: flashlight function
             pytorch_fn: PyTorch function
             mlx_inputs: Inputs for mlx_fn
             pytorch_inputs: Inputs for pytorch_fn
@@ -402,14 +402,14 @@ class FrameworkComparator:
         Returns:
             Tuple of (mlx_tensor, pytorch_tensor)
         """
-        import mlx_compat
+        import flashlight
         import torch
 
         # Create numpy source for reproducibility
         np_data = np.random.randn(*shape).astype(dtype)
 
         # Create MLX tensor
-        mlx_tensor = mlx_compat.tensor(np_data)
+        mlx_tensor = flashlight.tensor(np_data)
 
         # Create PyTorch tensor
         pytorch_tensor = torch.from_numpy(np_data).to(self.pytorch_device)
@@ -420,7 +420,7 @@ class FrameworkComparator:
         self,
         mlx_tensor: Any,
     ) -> Any:
-        """Convert mlx_compat tensor to equivalent PyTorch tensor."""
+        """Convert flashlight tensor to equivalent PyTorch tensor."""
         import torch
 
         np_array = mlx_tensor.numpy()
@@ -430,11 +430,11 @@ class FrameworkComparator:
         self,
         pytorch_tensor: Any,
     ) -> Any:
-        """Convert PyTorch tensor to equivalent mlx_compat tensor."""
-        import mlx_compat
+        """Convert PyTorch tensor to equivalent flashlight tensor."""
+        import flashlight
 
         np_array = pytorch_tensor.detach().cpu().numpy()
-        return mlx_compat.tensor(np_array)
+        return flashlight.tensor(np_array)
 
 
 def compare_operations(

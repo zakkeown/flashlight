@@ -1,14 +1,14 @@
 """
-Tests for mlx_compat.utils.mobile_optimizer module.
+Tests for flashlight.utils.mobile_optimizer module.
 
 Tests mobile optimization utilities.
 """
 
 import unittest
 
-import mlx_compat
-import mlx_compat.nn as nn
-from mlx_compat.utils.mobile_optimizer import (
+import flashlight
+import flashlight.nn as nn
+from flashlight.utils.mobile_optimizer import (
     optimize_for_mobile,
     generate_mobile_module_lints,
     MobileOptimizerType,
@@ -96,7 +96,7 @@ class TestOptimizeForMobile(unittest.TestCase):
         optimized = optimize_for_mobile(model)
 
         # Test forward pass still works
-        x = mlx_compat.randn(2, 10)
+        x = flashlight.randn(2, 10)
         out = optimized(x)
 
         self.assertEqual(out.shape, (2, 5))
@@ -159,7 +159,7 @@ class TestConvBnFusion(unittest.TestCase):
         model.eval()
 
         # Create test input
-        x = mlx_compat.randn(1, 3, 8, 8)
+        x = flashlight.randn(1, 3, 8, 8)
 
         # Get original output
         original_out = model(x)

@@ -19,8 +19,8 @@ import pytest
 from tests.common_utils import TestCase, skipIfNoMLX, skipIfNoTorch
 
 try:
-    import mlx_compat
-    from mlx_compat.data import (
+    import flashlight
+    from flashlight.data import (
         TensorDataset,
         SequentialSampler, RandomSampler, SubsetRandomSampler,
         WeightedRandomSampler, BatchSampler

@@ -28,7 +28,7 @@ class MultiHeadAttentionBenchmark(LayerBenchmark):
         ]
 
     def create_mlx_layer(self, config: Dict[str, Any]):
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
         return nn.MultiheadAttention(
             config["embed_dim"],
             config["num_heads"],
@@ -45,8 +45,8 @@ class MultiHeadAttentionBenchmark(LayerBenchmark):
         return layer.to(device)
 
     def create_mlx_input(self, config: Dict[str, Any]):
-        import mlx_compat
-        x = mlx_compat.randn(config["batch"], config["seq_len"], config["embed_dim"])
+        import flashlight
+        x = flashlight.randn(config["batch"], config["seq_len"], config["embed_dim"])
         return x
 
     def create_pytorch_input(self, config: Dict[str, Any], device: str):
@@ -105,7 +105,7 @@ class SelfAttentionBenchmark(LayerBenchmark):
         ]
 
     def create_mlx_layer(self, config: Dict[str, Any]):
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
         return nn.MultiheadAttention(
             config["embed_dim"],
             config["num_heads"],
@@ -122,8 +122,8 @@ class SelfAttentionBenchmark(LayerBenchmark):
         return layer.to(device)
 
     def create_mlx_input(self, config: Dict[str, Any]):
-        import mlx_compat
-        return mlx_compat.randn(config["batch"], config["seq_len"], config["embed_dim"])
+        import flashlight
+        return flashlight.randn(config["batch"], config["seq_len"], config["embed_dim"])
 
     def create_pytorch_input(self, config: Dict[str, Any], device: str):
         import torch

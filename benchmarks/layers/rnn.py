@@ -27,7 +27,7 @@ class LSTMBenchmark(LayerBenchmark):
         ]
 
     def create_mlx_layer(self, config: Dict[str, Any]):
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
         return nn.LSTM(config["input_size"], config["hidden_size"], batch_first=True)
 
     def create_pytorch_layer(self, config: Dict[str, Any], device: str):
@@ -36,8 +36,8 @@ class LSTMBenchmark(LayerBenchmark):
         return layer.to(device)
 
     def create_mlx_input(self, config: Dict[str, Any]):
-        import mlx_compat
-        return mlx_compat.randn(config["batch"], config["seq_len"], config["input_size"])
+        import flashlight
+        return flashlight.randn(config["batch"], config["seq_len"], config["input_size"])
 
     def create_pytorch_input(self, config: Dict[str, Any], device: str):
         import torch
@@ -88,7 +88,7 @@ class GRUBenchmark(LSTMBenchmark):
     name = "GRU"
 
     def create_mlx_layer(self, config: Dict[str, Any]):
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
         return nn.GRU(config["input_size"], config["hidden_size"], batch_first=True)
 
     def create_pytorch_layer(self, config: Dict[str, Any], device: str):

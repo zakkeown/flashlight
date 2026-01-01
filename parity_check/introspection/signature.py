@@ -125,7 +125,7 @@ def _defaults_match(pytorch_default: str, mlx_default: str) -> bool:
 
     Args:
         pytorch_default: Default value string from PyTorch
-        mlx_default: Default value string from mlx_compat
+        mlx_default: Default value string from flashlight
 
     Returns:
         True if the defaults are semantically equivalent
@@ -135,7 +135,7 @@ def _defaults_match(pytorch_default: str, mlx_default: str) -> bool:
         return True
 
     # PyTorch stubs use ... (ellipsis) to indicate "has a default but unspecified"
-    # If PyTorch has ..., accept any default value from mlx_compat
+    # If PyTorch has ..., accept any default value from flashlight
     if pytorch_default == "..." or pytorch_default == "Ellipsis":
         return True
 
@@ -262,7 +262,7 @@ def compare_signatures(
 
     Args:
         pytorch_sig: Signature info from PyTorch API
-        mlx_sig: Signature info from mlx_compat API
+        mlx_sig: Signature info from flashlight API
         strict_defaults: If True, default values must match exactly
         strict_annotations: If True, type annotations must match
         ignore_out_param: If True, ignore missing 'out' parameter (MLX doesn't support)
@@ -405,7 +405,7 @@ def compare_signatures(
         if p["kind"] not in ("VAR_POSITIONAL", "VAR_KEYWORD")
     ]
 
-    # Check for missing parameters in mlx_compat
+    # Check for missing parameters in flashlight
     for name in pytorch_param_dict:
         normalized = normalize_name(name)
         # Check if param exists (possibly with different name)
@@ -421,7 +421,7 @@ def compare_signatures(
             if not has_var:
                 differences.append(f"Missing parameter: '{name}'")
 
-    # Check for extra parameters in mlx_compat
+    # Check for extra parameters in flashlight
     for name in mlx_param_dict:
         # Skip ignored params - if PyTorch has device param ignored, mlx can have it too
         if name in ignored_params:
@@ -479,9 +479,9 @@ def compare_signatures(
                     if not _defaults_match(pytorch_default, mlx_default):
                         differences.append(
                             f"Default value mismatch for '{name}': "
-                            f"PyTorch={pytorch_default}, mlx_compat={mlx_default}"
+                            f"PyTorch={pytorch_default}, flashlight={mlx_default}"
                         )
-                # Having an extra default in mlx_compat is OK
+                # Having an extra default in flashlight is OK
 
     # Check annotations if strict
     if strict_annotations:
@@ -494,7 +494,7 @@ def compare_signatures(
                 if pytorch_ann and mlx_ann and pytorch_ann != mlx_ann:
                     differences.append(
                         f"Type annotation mismatch for '{name}': "
-                        f"PyTorch={pytorch_ann}, mlx_compat={mlx_ann}"
+                        f"PyTorch={pytorch_ann}, flashlight={mlx_ann}"
                     )
 
     return {

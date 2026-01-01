@@ -79,7 +79,7 @@ class BartlettBenchmark(WindowBenchmark):
     window_name = "bartlett"
 
     def mlx_operation(self, M):
-        from mlx_compat.signal import windows
+        from flashlight.signal import windows
         return windows.bartlett(M)
 
     def pytorch_operation(self, M):
@@ -93,7 +93,7 @@ class BlackmanBenchmark(WindowBenchmark):
     window_name = "blackman"
 
     def mlx_operation(self, M):
-        from mlx_compat.signal import windows
+        from flashlight.signal import windows
         return windows.blackman(M)
 
     def pytorch_operation(self, M):
@@ -107,7 +107,7 @@ class CosineBenchmark(WindowBenchmark):
     window_name = "cosine"
 
     def mlx_operation(self, M):
-        from mlx_compat.signal import windows
+        from flashlight.signal import windows
         return windows.cosine(M)
 
     def pytorch_operation(self, M):
@@ -121,7 +121,7 @@ class ExponentialBenchmark(WindowBenchmark):
     window_name = "exponential"
 
     def mlx_operation(self, M):
-        from mlx_compat.signal import windows
+        from flashlight.signal import windows
         return windows.exponential(M, tau=1.0)
 
     def pytorch_operation(self, M):
@@ -135,7 +135,7 @@ class GaussianBenchmark(WindowBenchmark):
     window_name = "gaussian"
 
     def mlx_operation(self, M):
-        from mlx_compat.signal import windows
+        from flashlight.signal import windows
         return windows.gaussian(M, std=7.0)
 
     def pytorch_operation(self, M):
@@ -149,7 +149,7 @@ class GeneralCosineBenchmark(WindowBenchmark):
     window_name = "general_cosine"
 
     def mlx_operation(self, M):
-        from mlx_compat.signal import windows
+        from flashlight.signal import windows
         # Use Blackman coefficients as representative case
         return windows.general_cosine(M, a=[0.42, 0.5, 0.08])
 
@@ -164,7 +164,7 @@ class GeneralHammingBenchmark(WindowBenchmark):
     window_name = "general_hamming"
 
     def mlx_operation(self, M):
-        from mlx_compat.signal import windows
+        from flashlight.signal import windows
         return windows.general_hamming(M, alpha=0.54)
 
     def pytorch_operation(self, M):
@@ -178,7 +178,7 @@ class HammingBenchmark(WindowBenchmark):
     window_name = "hamming"
 
     def mlx_operation(self, M):
-        from mlx_compat.signal import windows
+        from flashlight.signal import windows
         return windows.hamming(M)
 
     def pytorch_operation(self, M):
@@ -192,7 +192,7 @@ class HannBenchmark(WindowBenchmark):
     window_name = "hann"
 
     def mlx_operation(self, M):
-        from mlx_compat.signal import windows
+        from flashlight.signal import windows
         return windows.hann(M)
 
     def pytorch_operation(self, M):
@@ -206,7 +206,7 @@ class KaiserBenchmark(WindowBenchmark):
     window_name = "kaiser"
 
     def mlx_operation(self, M):
-        from mlx_compat.signal import windows
+        from flashlight.signal import windows
         return windows.kaiser(M, beta=12.0)
 
     def pytorch_operation(self, M):
@@ -220,7 +220,7 @@ class NuttallBenchmark(WindowBenchmark):
     window_name = "nuttall"
 
     def mlx_operation(self, M):
-        from mlx_compat.signal import windows
+        from flashlight.signal import windows
         return windows.nuttall(M)
 
     def pytorch_operation(self, M):

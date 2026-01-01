@@ -11,8 +11,8 @@ sys.path.insert(0, '../..')
 import numpy as np
 
 try:
-    import mlx_compat
-    from mlx_compat.data import TensorDataset, DataLoader
+    import flashlight
+    from flashlight.data import TensorDataset, DataLoader
     MLX_AVAILABLE = True
 except ImportError:
     MLX_AVAILABLE = False
@@ -32,8 +32,8 @@ def benchmark_mlx_dataloader(dataset_size, feature_dim, batch_size, shuffle, num
         return None
 
     # Create dataset
-    x = mlx_compat.randn(dataset_size, feature_dim)
-    y = mlx_compat.randint(0, 10, (dataset_size,))
+    x = flashlight.randn(dataset_size, feature_dim)
+    y = flashlight.randint(0, 10, (dataset_size,))
     dataset = TensorDataset(x, y)
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
 

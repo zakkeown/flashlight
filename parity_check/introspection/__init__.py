@@ -1,5 +1,5 @@
 """
-API introspection utilities for PyTorch and mlx_compat.
+API introspection utilities for PyTorch and flashlight.
 """
 
 from .pytorch_api import enumerate_pytorch_api, get_pytorch_api_info

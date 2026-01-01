@@ -1,7 +1,7 @@
 """
 Test Autograd Parity with PyTorch
 
-Comprehensive numerical parity tests comparing mlx_compat autograd
+Comprehensive numerical parity tests comparing flashlight autograd
 to PyTorch autograd. All tests verify gradient computation matches
 within tolerance (1e-5 by default, 1e-4 for some operations).
 """
@@ -16,7 +16,7 @@ import pytest
 from tests.common_utils import TestCase, skipIfNoMLX, skipIfNoTorch
 
 try:
-    import mlx_compat
+    import flashlight
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -41,7 +41,7 @@ class TestMaxBackwardParity(TestCase):
         torch_y.backward()
 
         # MLX Compat
-        mlx_x = mlx_compat.tensor(data, requires_grad=True)
+        mlx_x = flashlight.tensor(data, requires_grad=True)
         mlx_y = mlx_x.max()
         mlx_y.backward()
 
@@ -64,9 +64,9 @@ class TestMaxBackwardParity(TestCase):
             torch_y.sum().backward()
 
             # MLX Compat
-            mlx_x = mlx_compat.tensor(data, requires_grad=True)
+            mlx_x = flashlight.tensor(data, requires_grad=True)
             mlx_y = mlx_x.max(dim=dim).values
-            mlx_compat.sum(mlx_y).backward()
+            flashlight.sum(mlx_y).backward()
 
             np.testing.assert_allclose(
                 mlx_x.grad.numpy(), torch_x.grad.numpy(),
@@ -86,7 +86,7 @@ class TestMaxBackwardParity(TestCase):
         torch_x.max().backward()
 
         # MLX Compat
-        mlx_x = mlx_compat.tensor(data, requires_grad=True)
+        mlx_x = flashlight.tensor(data, requires_grad=True)
         mlx_x.max().backward()
 
         np.testing.assert_allclose(
@@ -113,8 +113,8 @@ class TestSumMeanBackwardParity(TestCase):
         torch_x.sum().backward()
 
         # MLX Compat
-        mlx_x = mlx_compat.tensor(data, requires_grad=True)
-        mlx_compat.sum(mlx_x).backward()
+        mlx_x = flashlight.tensor(data, requires_grad=True)
+        flashlight.sum(mlx_x).backward()
 
         np.testing.assert_allclose(
             mlx_x.grad.numpy(), torch_x.grad.numpy(),
@@ -134,8 +134,8 @@ class TestSumMeanBackwardParity(TestCase):
             torch_x.sum(dim=dim).sum().backward()
 
             # MLX Compat
-            mlx_x = mlx_compat.tensor(data, requires_grad=True)
-            mlx_compat.sum(mlx_compat.sum(mlx_x, dim=dim)).backward()
+            mlx_x = flashlight.tensor(data, requires_grad=True)
+            flashlight.sum(flashlight.sum(mlx_x, dim=dim)).backward()
 
             np.testing.assert_allclose(
                 mlx_x.grad.numpy(), torch_x.grad.numpy(),
@@ -155,8 +155,8 @@ class TestSumMeanBackwardParity(TestCase):
         torch_x.mean().backward()
 
         # MLX Compat
-        mlx_x = mlx_compat.tensor(data, requires_grad=True)
-        mlx_compat.mean(mlx_x).backward()
+        mlx_x = flashlight.tensor(data, requires_grad=True)
+        flashlight.mean(mlx_x).backward()
 
         np.testing.assert_allclose(
             mlx_x.grad.numpy(), torch_x.grad.numpy(),
@@ -184,9 +184,9 @@ class TestArithmeticBackwardParity(TestCase):
         (torch_a + torch_b).sum().backward()
 
         # MLX Compat
-        mlx_a = mlx_compat.tensor(a, requires_grad=True)
-        mlx_b = mlx_compat.tensor(b, requires_grad=True)
-        mlx_compat.sum(mlx_a + mlx_b).backward()
+        mlx_a = flashlight.tensor(a, requires_grad=True)
+        mlx_b = flashlight.tensor(b, requires_grad=True)
+        flashlight.sum(mlx_a + mlx_b).backward()
 
         np.testing.assert_allclose(mlx_a.grad.numpy(), torch_a.grad.numpy(), rtol=1e-5, atol=1e-5)
         np.testing.assert_allclose(mlx_b.grad.numpy(), torch_b.grad.numpy(), rtol=1e-5, atol=1e-5)
@@ -205,9 +205,9 @@ class TestArithmeticBackwardParity(TestCase):
         (torch_a * torch_b).sum().backward()
 
         # MLX Compat
-        mlx_a = mlx_compat.tensor(a, requires_grad=True)
-        mlx_b = mlx_compat.tensor(b, requires_grad=True)
-        mlx_compat.sum(mlx_a * mlx_b).backward()
+        mlx_a = flashlight.tensor(a, requires_grad=True)
+        mlx_b = flashlight.tensor(b, requires_grad=True)
+        flashlight.sum(mlx_a * mlx_b).backward()
 
         np.testing.assert_allclose(mlx_a.grad.numpy(), torch_a.grad.numpy(), rtol=1e-5, atol=1e-5)
         np.testing.assert_allclose(mlx_b.grad.numpy(), torch_b.grad.numpy(), rtol=1e-5, atol=1e-5)
@@ -226,9 +226,9 @@ class TestArithmeticBackwardParity(TestCase):
         (torch_a @ torch_b).sum().backward()
 
         # MLX Compat
-        mlx_a = mlx_compat.tensor(a, requires_grad=True)
-        mlx_b = mlx_compat.tensor(b, requires_grad=True)
-        mlx_compat.sum(mlx_a @ mlx_b).backward()
+        mlx_a = flashlight.tensor(a, requires_grad=True)
+        mlx_b = flashlight.tensor(b, requires_grad=True)
+        flashlight.sum(mlx_a @ mlx_b).backward()
 
         np.testing.assert_allclose(mlx_a.grad.numpy(), torch_a.grad.numpy(), rtol=1e-5, atol=1e-5)
         np.testing.assert_allclose(mlx_b.grad.numpy(), torch_b.grad.numpy(), rtol=1e-5, atol=1e-5)
@@ -245,8 +245,8 @@ class TestArithmeticBackwardParity(TestCase):
         (torch_x ** 2.5).sum().backward()
 
         # MLX Compat
-        mlx_x = mlx_compat.tensor(data, requires_grad=True)
-        mlx_compat.sum(mlx_x ** 2.5).backward()
+        mlx_x = flashlight.tensor(data, requires_grad=True)
+        flashlight.sum(mlx_x ** 2.5).backward()
 
         np.testing.assert_allclose(mlx_x.grad.numpy(), torch_x.grad.numpy(), rtol=1e-4, atol=1e-4)
 
@@ -269,8 +269,8 @@ class TestActivationBackwardParity(TestCase):
         torch.relu(torch_x).sum().backward()
 
         # MLX Compat
-        mlx_x = mlx_compat.tensor(data, requires_grad=True)
-        mlx_compat.sum(mlx_compat.relu(mlx_x)).backward()
+        mlx_x = flashlight.tensor(data, requires_grad=True)
+        flashlight.sum(flashlight.relu(mlx_x)).backward()
 
         np.testing.assert_allclose(mlx_x.grad.numpy(), torch_x.grad.numpy(), rtol=1e-5, atol=1e-5)
 
@@ -286,8 +286,8 @@ class TestActivationBackwardParity(TestCase):
         torch.sigmoid(torch_x).sum().backward()
 
         # MLX Compat
-        mlx_x = mlx_compat.tensor(data, requires_grad=True)
-        mlx_compat.sum(mlx_compat.sigmoid(mlx_x)).backward()
+        mlx_x = flashlight.tensor(data, requires_grad=True)
+        flashlight.sum(flashlight.sigmoid(mlx_x)).backward()
 
         np.testing.assert_allclose(mlx_x.grad.numpy(), torch_x.grad.numpy(), rtol=1e-5, atol=1e-5)
 
@@ -303,8 +303,8 @@ class TestActivationBackwardParity(TestCase):
         torch.tanh(torch_x).sum().backward()
 
         # MLX Compat
-        mlx_x = mlx_compat.tensor(data, requires_grad=True)
-        mlx_compat.sum(mlx_compat.tanh(mlx_x)).backward()
+        mlx_x = flashlight.tensor(data, requires_grad=True)
+        flashlight.sum(flashlight.tanh(mlx_x)).backward()
 
         np.testing.assert_allclose(mlx_x.grad.numpy(), torch_x.grad.numpy(), rtol=1e-5, atol=1e-5)
 
@@ -321,8 +321,8 @@ class TestActivationBackwardParity(TestCase):
         F.softmax(torch_x, dim=-1).sum().backward()
 
         # MLX Compat
-        mlx_x = mlx_compat.tensor(data, requires_grad=True)
-        mlx_compat.sum(mlx_compat.softmax(mlx_x, dim=-1)).backward()
+        mlx_x = flashlight.tensor(data, requires_grad=True)
+        flashlight.sum(flashlight.softmax(mlx_x, dim=-1)).backward()
 
         np.testing.assert_allclose(mlx_x.grad.numpy(), torch_x.grad.numpy(), rtol=1e-5, atol=1e-5)
 
@@ -339,8 +339,8 @@ class TestActivationBackwardParity(TestCase):
         F.gelu(torch_x, approximate='tanh').sum().backward()
 
         # MLX Compat
-        mlx_x = mlx_compat.tensor(data, requires_grad=True)
-        mlx_compat.sum(mlx_compat.gelu(mlx_x)).backward()
+        mlx_x = flashlight.tensor(data, requires_grad=True)
+        flashlight.sum(flashlight.gelu(mlx_x)).backward()
 
         np.testing.assert_allclose(mlx_x.grad.numpy(), torch_x.grad.numpy(), rtol=1e-4, atol=1e-4)
 
@@ -363,8 +363,8 @@ class TestTrigBackwardParity(TestCase):
         torch.sin(torch_x).sum().backward()
 
         # MLX Compat
-        mlx_x = mlx_compat.tensor(data, requires_grad=True)
-        mlx_compat.sum(mlx_compat.sin(mlx_x)).backward()
+        mlx_x = flashlight.tensor(data, requires_grad=True)
+        flashlight.sum(flashlight.sin(mlx_x)).backward()
 
         np.testing.assert_allclose(mlx_x.grad.numpy(), torch_x.grad.numpy(), rtol=1e-5, atol=1e-5)
 
@@ -380,8 +380,8 @@ class TestTrigBackwardParity(TestCase):
         torch.cos(torch_x).sum().backward()
 
         # MLX Compat
-        mlx_x = mlx_compat.tensor(data, requires_grad=True)
-        mlx_compat.sum(mlx_compat.cos(mlx_x)).backward()
+        mlx_x = flashlight.tensor(data, requires_grad=True)
+        flashlight.sum(flashlight.cos(mlx_x)).backward()
 
         np.testing.assert_allclose(mlx_x.grad.numpy(), torch_x.grad.numpy(), rtol=1e-5, atol=1e-5)
 
@@ -404,8 +404,8 @@ class TestExpLogBackwardParity(TestCase):
         torch.exp(torch_x).sum().backward()
 
         # MLX Compat
-        mlx_x = mlx_compat.tensor(data, requires_grad=True)
-        mlx_compat.sum(mlx_compat.exp(mlx_x)).backward()
+        mlx_x = flashlight.tensor(data, requires_grad=True)
+        flashlight.sum(flashlight.exp(mlx_x)).backward()
 
         np.testing.assert_allclose(mlx_x.grad.numpy(), torch_x.grad.numpy(), rtol=1e-5, atol=1e-5)
 
@@ -421,8 +421,8 @@ class TestExpLogBackwardParity(TestCase):
         torch.log(torch_x).sum().backward()
 
         # MLX Compat
-        mlx_x = mlx_compat.tensor(data, requires_grad=True)
-        mlx_compat.sum(mlx_compat.log(mlx_x)).backward()
+        mlx_x = flashlight.tensor(data, requires_grad=True)
+        flashlight.sum(flashlight.log(mlx_x)).backward()
 
         np.testing.assert_allclose(mlx_x.grad.numpy(), torch_x.grad.numpy(), rtol=1e-5, atol=1e-5)
 
@@ -445,8 +445,8 @@ class TestTransposeBackwardParity(TestCase):
         torch_x.transpose(0, 1).sum().backward()
 
         # MLX Compat
-        mlx_x = mlx_compat.tensor(data, requires_grad=True)
-        mlx_compat.sum(mlx_x.transpose(0, 1)).backward()
+        mlx_x = flashlight.tensor(data, requires_grad=True)
+        flashlight.sum(mlx_x.transpose(0, 1)).backward()
 
         np.testing.assert_allclose(mlx_x.grad.numpy(), torch_x.grad.numpy(), rtol=1e-5, atol=1e-5)
 
@@ -462,8 +462,8 @@ class TestTransposeBackwardParity(TestCase):
         torch_x.transpose(0, 2).sum().backward()
 
         # MLX Compat
-        mlx_x = mlx_compat.tensor(data, requires_grad=True)
-        mlx_compat.sum(mlx_x.transpose(0, 2)).backward()
+        mlx_x = flashlight.tensor(data, requires_grad=True)
+        flashlight.sum(mlx_x.transpose(0, 2)).backward()
 
         np.testing.assert_allclose(mlx_x.grad.numpy(), torch_x.grad.numpy(), rtol=1e-5, atol=1e-5)
 
@@ -494,13 +494,13 @@ class TestConv2dBackwardParity(TestCase):
         torch_conv(torch_x).sum().backward()
 
         # MLX Compat
-        mlx_conv = mlx_compat.nn.Conv2d(3, 4, kernel_size=3, padding=1)
-        with mlx_compat.no_grad():
-            mlx_conv.weight = mlx_compat.tensor(weight)
-            mlx_conv.bias = mlx_compat.tensor(bias)
+        mlx_conv = flashlight.nn.Conv2d(3, 4, kernel_size=3, padding=1)
+        with flashlight.no_grad():
+            mlx_conv.weight = flashlight.tensor(weight)
+            mlx_conv.bias = flashlight.tensor(bias)
 
-        mlx_x = mlx_compat.tensor(data, requires_grad=True)
-        mlx_compat.sum(mlx_conv(mlx_x)).backward()
+        mlx_x = flashlight.tensor(data, requires_grad=True)
+        flashlight.sum(mlx_conv(mlx_x)).backward()
 
         np.testing.assert_allclose(
             mlx_x.grad.numpy(), torch_x.grad.numpy(),
@@ -527,9 +527,9 @@ class TestComplexGraphParity(TestCase):
         torch_y.sum().backward()
 
         # MLX Compat
-        mlx_x = mlx_compat.tensor(data, requires_grad=True)
+        mlx_x = flashlight.tensor(data, requires_grad=True)
         mlx_y = mlx_x * mlx_x + mlx_x
-        mlx_compat.sum(mlx_y).backward()
+        flashlight.sum(mlx_y).backward()
 
         np.testing.assert_allclose(mlx_x.grad.numpy(), torch_x.grad.numpy(), rtol=1e-5, atol=1e-5)
 
@@ -546,9 +546,9 @@ class TestComplexGraphParity(TestCase):
         torch_y.sum().backward()
 
         # MLX Compat
-        mlx_x = mlx_compat.tensor(data, requires_grad=True)
-        mlx_y = mlx_compat.relu(mlx_compat.sigmoid(mlx_x * 2))
-        mlx_compat.sum(mlx_y).backward()
+        mlx_x = flashlight.tensor(data, requires_grad=True)
+        mlx_y = flashlight.relu(flashlight.sigmoid(mlx_x * 2))
+        flashlight.sum(mlx_y).backward()
 
         np.testing.assert_allclose(mlx_x.grad.numpy(), torch_x.grad.numpy(), rtol=1e-5, atol=1e-5)
 
@@ -573,9 +573,9 @@ class TestSubDivBackwardParity(TestCase):
         (torch_a - torch_b).sum().backward()
 
         # MLX Compat
-        mlx_a = mlx_compat.tensor(a, requires_grad=True)
-        mlx_b = mlx_compat.tensor(b, requires_grad=True)
-        mlx_compat.sum(mlx_a - mlx_b).backward()
+        mlx_a = flashlight.tensor(a, requires_grad=True)
+        mlx_b = flashlight.tensor(b, requires_grad=True)
+        flashlight.sum(mlx_a - mlx_b).backward()
 
         np.testing.assert_allclose(mlx_a.grad.numpy(), torch_a.grad.numpy(), rtol=1e-5, atol=1e-5)
         np.testing.assert_allclose(mlx_b.grad.numpy(), torch_b.grad.numpy(), rtol=1e-5, atol=1e-5)
@@ -594,9 +594,9 @@ class TestSubDivBackwardParity(TestCase):
         (torch_a / torch_b).sum().backward()
 
         # MLX Compat
-        mlx_a = mlx_compat.tensor(a, requires_grad=True)
-        mlx_b = mlx_compat.tensor(b, requires_grad=True)
-        mlx_compat.sum(mlx_a / mlx_b).backward()
+        mlx_a = flashlight.tensor(a, requires_grad=True)
+        mlx_b = flashlight.tensor(b, requires_grad=True)
+        flashlight.sum(mlx_a / mlx_b).backward()
 
         np.testing.assert_allclose(mlx_a.grad.numpy(), torch_a.grad.numpy(), rtol=1e-5, atol=1e-5)
         np.testing.assert_allclose(mlx_b.grad.numpy(), torch_b.grad.numpy(), rtol=1e-5, atol=1e-5)
@@ -620,8 +620,8 @@ class TestSqrtAbsNegBackwardParity(TestCase):
         torch.sqrt(torch_x).sum().backward()
 
         # MLX Compat
-        mlx_x = mlx_compat.tensor(data, requires_grad=True)
-        mlx_compat.sum(mlx_compat.sqrt(mlx_x)).backward()
+        mlx_x = flashlight.tensor(data, requires_grad=True)
+        flashlight.sum(flashlight.sqrt(mlx_x)).backward()
 
         np.testing.assert_allclose(mlx_x.grad.numpy(), torch_x.grad.numpy(), rtol=1e-5, atol=1e-5)
 
@@ -639,8 +639,8 @@ class TestSqrtAbsNegBackwardParity(TestCase):
         torch.abs(torch_x).sum().backward()
 
         # MLX Compat
-        mlx_x = mlx_compat.tensor(data, requires_grad=True)
-        mlx_compat.sum(mlx_compat.abs(mlx_x)).backward()
+        mlx_x = flashlight.tensor(data, requires_grad=True)
+        flashlight.sum(flashlight.abs(mlx_x)).backward()
 
         np.testing.assert_allclose(mlx_x.grad.numpy(), torch_x.grad.numpy(), rtol=1e-5, atol=1e-5)
 
@@ -656,8 +656,8 @@ class TestSqrtAbsNegBackwardParity(TestCase):
         (-torch_x).sum().backward()
 
         # MLX Compat
-        mlx_x = mlx_compat.tensor(data, requires_grad=True)
-        mlx_compat.sum(-mlx_x).backward()
+        mlx_x = flashlight.tensor(data, requires_grad=True)
+        flashlight.sum(-mlx_x).backward()
 
         np.testing.assert_allclose(mlx_x.grad.numpy(), torch_x.grad.numpy(), rtol=1e-5, atol=1e-5)
 
@@ -681,8 +681,8 @@ class TestMoreActivationBackwardParity(TestCase):
         F.log_softmax(torch_x, dim=-1).sum().backward()
 
         # MLX Compat
-        mlx_x = mlx_compat.tensor(data, requires_grad=True)
-        mlx_compat.sum(mlx_compat.log_softmax(mlx_x, dim=-1)).backward()
+        mlx_x = flashlight.tensor(data, requires_grad=True)
+        flashlight.sum(flashlight.log_softmax(mlx_x, dim=-1)).backward()
 
         np.testing.assert_allclose(mlx_x.grad.numpy(), torch_x.grad.numpy(), rtol=1e-5, atol=1e-5)
 
@@ -699,8 +699,8 @@ class TestMoreActivationBackwardParity(TestCase):
         F.silu(torch_x).sum().backward()
 
         # MLX Compat
-        mlx_x = mlx_compat.tensor(data, requires_grad=True)
-        mlx_compat.sum(mlx_compat.silu(mlx_x)).backward()
+        mlx_x = flashlight.tensor(data, requires_grad=True)
+        flashlight.sum(flashlight.silu(mlx_x)).backward()
 
         np.testing.assert_allclose(mlx_x.grad.numpy(), torch_x.grad.numpy(), rtol=1e-5, atol=1e-5)
 
@@ -717,8 +717,8 @@ class TestMoreActivationBackwardParity(TestCase):
         F.leaky_relu(torch_x, negative_slope=0.01).sum().backward()
 
         # MLX Compat
-        mlx_x = mlx_compat.tensor(data, requires_grad=True)
-        mlx_compat.sum(mlx_compat.leaky_relu(mlx_x, negative_slope=0.01)).backward()
+        mlx_x = flashlight.tensor(data, requires_grad=True)
+        flashlight.sum(flashlight.leaky_relu(mlx_x, negative_slope=0.01)).backward()
 
         np.testing.assert_allclose(mlx_x.grad.numpy(), torch_x.grad.numpy(), rtol=1e-5, atol=1e-5)
 
@@ -735,8 +735,8 @@ class TestMoreActivationBackwardParity(TestCase):
         F.elu(torch_x, alpha=1.0).sum().backward()
 
         # MLX Compat
-        mlx_x = mlx_compat.tensor(data, requires_grad=True)
-        mlx_compat.sum(mlx_compat.elu(mlx_x, alpha=1.0)).backward()
+        mlx_x = flashlight.tensor(data, requires_grad=True)
+        flashlight.sum(flashlight.elu(mlx_x, alpha=1.0)).backward()
 
         np.testing.assert_allclose(mlx_x.grad.numpy(), torch_x.grad.numpy(), rtol=1e-5, atol=1e-5)
 
@@ -761,9 +761,9 @@ class TestShapeBackwardParity(TestCase):
         torch.cat([torch_a, torch_b], dim=0).sum().backward()
 
         # MLX Compat
-        mlx_a = mlx_compat.tensor(a, requires_grad=True)
-        mlx_b = mlx_compat.tensor(b, requires_grad=True)
-        mlx_compat.sum(mlx_compat.cat([mlx_a, mlx_b], dim=0)).backward()
+        mlx_a = flashlight.tensor(a, requires_grad=True)
+        mlx_b = flashlight.tensor(b, requires_grad=True)
+        flashlight.sum(flashlight.cat([mlx_a, mlx_b], dim=0)).backward()
 
         np.testing.assert_allclose(mlx_a.grad.numpy(), torch_a.grad.numpy(), rtol=1e-5, atol=1e-5)
         np.testing.assert_allclose(mlx_b.grad.numpy(), torch_b.grad.numpy(), rtol=1e-5, atol=1e-5)
@@ -780,8 +780,8 @@ class TestShapeBackwardParity(TestCase):
         torch_x.view(6, 4).sum().backward()
 
         # MLX Compat
-        mlx_x = mlx_compat.tensor(data, requires_grad=True)
-        mlx_compat.sum(mlx_x.view(6, 4)).backward()
+        mlx_x = flashlight.tensor(data, requires_grad=True)
+        flashlight.sum(mlx_x.view(6, 4)).backward()
 
         np.testing.assert_allclose(mlx_x.grad.numpy(), torch_x.grad.numpy(), rtol=1e-5, atol=1e-5)
 
@@ -806,9 +806,9 @@ class TestPoolingBackwardParity(TestCase):
         torch_pool(torch_x).sum().backward()
 
         # MLX Compat
-        mlx_pool = mlx_compat.nn.MaxPool2d(kernel_size=2, stride=2)
-        mlx_x = mlx_compat.tensor(data, requires_grad=True)
-        mlx_compat.sum(mlx_pool(mlx_x)).backward()
+        mlx_pool = flashlight.nn.MaxPool2d(kernel_size=2, stride=2)
+        mlx_x = flashlight.tensor(data, requires_grad=True)
+        flashlight.sum(mlx_pool(mlx_x)).backward()
 
         np.testing.assert_allclose(
             mlx_x.grad.numpy(), torch_x.grad.numpy(),
@@ -829,9 +829,9 @@ class TestPoolingBackwardParity(TestCase):
         torch_pool(torch_x).sum().backward()
 
         # MLX Compat
-        mlx_pool = mlx_compat.nn.AvgPool2d(kernel_size=2, stride=2)
-        mlx_x = mlx_compat.tensor(data, requires_grad=True)
-        mlx_compat.sum(mlx_pool(mlx_x)).backward()
+        mlx_pool = flashlight.nn.AvgPool2d(kernel_size=2, stride=2)
+        mlx_x = flashlight.tensor(data, requires_grad=True)
+        flashlight.sum(mlx_pool(mlx_x)).backward()
 
         np.testing.assert_allclose(
             mlx_x.grad.numpy(), torch_x.grad.numpy(),
@@ -863,12 +863,12 @@ class TestEmbeddingBackwardParity(TestCase):
         torch_out.sum().backward()
 
         # MLX Compat - use Parameter to ensure requires_grad=True
-        from mlx_compat.nn.parameter import Parameter
-        mlx_emb = mlx_compat.nn.Embedding(10, 5)
-        mlx_emb.weight = Parameter(mlx_compat.tensor(weight, requires_grad=True))
-        mlx_indices = mlx_compat.tensor(indices, dtype=mlx_compat.int32)
+        from flashlight.nn.parameter import Parameter
+        mlx_emb = flashlight.nn.Embedding(10, 5)
+        mlx_emb.weight = Parameter(flashlight.tensor(weight, requires_grad=True))
+        mlx_indices = flashlight.tensor(indices, dtype=flashlight.int32)
         mlx_out = mlx_emb(mlx_indices)
-        mlx_compat.sum(mlx_out).backward()
+        flashlight.sum(mlx_out).backward()
 
         np.testing.assert_allclose(
             mlx_emb.weight.grad.numpy(), torch_emb.weight.grad.numpy(),
@@ -885,7 +885,7 @@ class TestCustomFunctionBackwardParity(TestCase):
     def test_custom_function_parity(self):
         """Test custom Function gradient matches PyTorch custom function."""
         import torch
-        from mlx_compat.autograd import Function
+        from flashlight.autograd import Function
 
         np.random.seed(42)
         data = np.random.randn(4, 5).astype(np.float32)
@@ -914,15 +914,15 @@ class TestCustomFunctionBackwardParity(TestCase):
             def backward(ctx, grad_output):
                 import mlx.core as mx
                 x, = ctx.saved_tensors
-                return mlx_compat.tensor(grad_output._mlx_array * 2 * x._mlx_array)
+                return flashlight.tensor(grad_output._mlx_array * 2 * x._mlx_array)
 
         # PyTorch
         torch_x = torch.tensor(data, requires_grad=True)
         TorchSquare.apply(torch_x).sum().backward()
 
         # MLX Compat
-        mlx_x = mlx_compat.tensor(data, requires_grad=True)
-        mlx_compat.sum(MLXSquare.apply(mlx_x)).backward()
+        mlx_x = flashlight.tensor(data, requires_grad=True)
+        flashlight.sum(MLXSquare.apply(mlx_x)).backward()
 
         np.testing.assert_allclose(mlx_x.grad.numpy(), torch_x.grad.numpy(), rtol=1e-5, atol=1e-5)
 

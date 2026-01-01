@@ -31,9 +31,9 @@ class FFT1DBenchmark(OperatorBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
+        import flashlight
 
-        x = mlx_compat.randn(config["size"])
+        x = flashlight.randn(config["size"])
         return (x,)
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:
@@ -43,9 +43,9 @@ class FFT1DBenchmark(OperatorBenchmark):
         return (x,)
 
     def mlx_operation(self, x):
-        import mlx_compat
+        import flashlight
 
-        return mlx_compat.fft.fft(x)
+        return flashlight.fft.fft(x)
 
     def pytorch_operation(self, x):
         import torch
@@ -69,13 +69,13 @@ class IFFT1DBenchmark(OperatorBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
+        import flashlight
         import mlx.core as mx
 
         # Complex input
-        x_real = mlx_compat.randn(config["size"])
-        x_imag = mlx_compat.randn(config["size"])
-        x = mlx_compat.tensor(x_real._mlx_array + 1j * x_imag._mlx_array)
+        x_real = flashlight.randn(config["size"])
+        x_imag = flashlight.randn(config["size"])
+        x = flashlight.tensor(x_real._mlx_array + 1j * x_imag._mlx_array)
         return (x,)
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:
@@ -85,9 +85,9 @@ class IFFT1DBenchmark(OperatorBenchmark):
         return (x,)
 
     def mlx_operation(self, x):
-        import mlx_compat
+        import flashlight
 
-        return mlx_compat.fft.ifft(x)
+        return flashlight.fft.ifft(x)
 
     def pytorch_operation(self, x):
         import torch
@@ -111,9 +111,9 @@ class RFFT1DBenchmark(OperatorBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
+        import flashlight
 
-        x = mlx_compat.randn(config["size"])
+        x = flashlight.randn(config["size"])
         return (x,)
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:
@@ -123,9 +123,9 @@ class RFFT1DBenchmark(OperatorBenchmark):
         return (x,)
 
     def mlx_operation(self, x):
-        import mlx_compat
+        import flashlight
 
-        return mlx_compat.fft.rfft(x)
+        return flashlight.fft.rfft(x)
 
     def pytorch_operation(self, x):
         import torch
@@ -149,9 +149,9 @@ class FFT2DBenchmark(OperatorBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
+        import flashlight
 
-        x = mlx_compat.randn(config["height"], config["width"])
+        x = flashlight.randn(config["height"], config["width"])
         return (x,)
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:
@@ -161,9 +161,9 @@ class FFT2DBenchmark(OperatorBenchmark):
         return (x,)
 
     def mlx_operation(self, x):
-        import mlx_compat
+        import flashlight
 
-        return mlx_compat.fft.fft2(x)
+        return flashlight.fft.fft2(x)
 
     def pytorch_operation(self, x):
         import torch
@@ -187,9 +187,9 @@ class RFFT2DBenchmark(OperatorBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
+        import flashlight
 
-        x = mlx_compat.randn(config["height"], config["width"])
+        x = flashlight.randn(config["height"], config["width"])
         return (x,)
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:
@@ -199,9 +199,9 @@ class RFFT2DBenchmark(OperatorBenchmark):
         return (x,)
 
     def mlx_operation(self, x):
-        import mlx_compat
+        import flashlight
 
-        return mlx_compat.fft.rfft2(x)
+        return flashlight.fft.rfft2(x)
 
     def pytorch_operation(self, x):
         import torch
@@ -223,9 +223,9 @@ class FFTNDBenchmark(OperatorBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
+        import flashlight
 
-        x = mlx_compat.randn(*config["shape"])
+        x = flashlight.randn(*config["shape"])
         return (x,)
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:
@@ -235,9 +235,9 @@ class FFTNDBenchmark(OperatorBenchmark):
         return (x,)
 
     def mlx_operation(self, x):
-        import mlx_compat
+        import flashlight
 
-        return mlx_compat.fft.fftn(x)
+        return flashlight.fft.fftn(x)
 
     def pytorch_operation(self, x):
         import torch
@@ -260,9 +260,9 @@ class FFTShiftBenchmark(OperatorBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
+        import flashlight
 
-        x = mlx_compat.randn(*config["shape"])
+        x = flashlight.randn(*config["shape"])
         return (x,)
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:
@@ -272,9 +272,9 @@ class FFTShiftBenchmark(OperatorBenchmark):
         return (x,)
 
     def mlx_operation(self, x):
-        import mlx_compat
+        import flashlight
 
-        return mlx_compat.fft.fftshift(x)
+        return flashlight.fft.fftshift(x)
 
     def pytorch_operation(self, x):
         import torch
@@ -304,9 +304,9 @@ class FFTFreqBenchmark(OperatorBenchmark):
         return (config["n"], device)
 
     def mlx_operation(self, n):
-        import mlx_compat
+        import flashlight
 
-        return mlx_compat.fft.fftfreq(n)
+        return flashlight.fft.fftfreq(n)
 
     def pytorch_operation(self, n, device):
         import torch

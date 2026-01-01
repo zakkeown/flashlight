@@ -29,7 +29,7 @@ class CrossEntropyLossBenchmark(LayerBenchmark):
         ]
 
     def create_mlx_layer(self, config: Dict[str, Any]):
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
         return nn.CrossEntropyLoss()
 
     def create_pytorch_layer(self, config: Dict[str, Any], device: str):
@@ -37,10 +37,10 @@ class CrossEntropyLossBenchmark(LayerBenchmark):
         return nn.CrossEntropyLoss()
 
     def create_mlx_input(self, config: Dict[str, Any]):
-        import mlx_compat
+        import flashlight
         import mlx.core as mx
-        logits = mlx_compat.randn(config["batch"], config["num_classes"])
-        targets = mlx_compat.tensor(
+        logits = flashlight.randn(config["batch"], config["num_classes"])
+        targets = flashlight.tensor(
             mx.random.randint(0, config["num_classes"], (config["batch"],))
         )
         return (logits, targets)
@@ -98,7 +98,7 @@ class MSELossBenchmark(LayerBenchmark):
         ]
 
     def create_mlx_layer(self, config: Dict[str, Any]):
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
         return nn.MSELoss()
 
     def create_pytorch_layer(self, config: Dict[str, Any], device: str):
@@ -106,9 +106,9 @@ class MSELossBenchmark(LayerBenchmark):
         return nn.MSELoss()
 
     def create_mlx_input(self, config: Dict[str, Any]):
-        import mlx_compat
-        pred = mlx_compat.randn(config["batch"], config["features"])
-        target = mlx_compat.randn(config["batch"], config["features"])
+        import flashlight
+        pred = flashlight.randn(config["batch"], config["features"])
+        target = flashlight.randn(config["batch"], config["features"])
         return (pred, target)
 
     def create_pytorch_input(self, config: Dict[str, Any], device: str):

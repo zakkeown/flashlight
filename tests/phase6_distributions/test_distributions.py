@@ -1,7 +1,7 @@
 """
 Test Phase 6: Probability Distributions
 
-Tests for all probability distributions in mlx_compat.distributions.
+Tests for all probability distributions in flashlight.distributions.
 Includes numerical parity tests against PyTorch.
 """
 
@@ -21,8 +21,8 @@ except ImportError:
     TORCH_AVAILABLE = False
 
 try:
-    import mlx_compat
-    from mlx_compat import distributions as dist
+    import flashlight
+    from flashlight import distributions as dist
     import mlx.core as mx
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
@@ -64,7 +64,7 @@ class TestNormal(TestCase):
 
         test_vals = [0.0, 1.0, 2.0, -1.0, 5.0]
         for v in test_vals:
-            mlx_lp = float(mlx_n.log_prob(mlx_compat.tensor(v)).numpy())
+            mlx_lp = float(mlx_n.log_prob(flashlight.tensor(v)).numpy())
             torch_lp = float(torch_n.log_prob(torch.tensor(v)))
             self.assertAlmostEqual(mlx_lp, torch_lp, places=5)
 
@@ -84,11 +84,11 @@ class TestNormal(TestCase):
         n = dist.Normal(0.0, 1.0)
 
         # CDF at 0 should be 0.5
-        cdf_0 = float(n.cdf(mlx_compat.tensor(0.0)).numpy())
+        cdf_0 = float(n.cdf(flashlight.tensor(0.0)).numpy())
         self.assertAlmostEqual(cdf_0, 0.5, places=5)
 
         # ICDF at 0.5 should be 0
-        icdf_05 = float(n.icdf(mlx_compat.tensor(0.5)).numpy())
+        icdf_05 = float(n.icdf(flashlight.tensor(0.5)).numpy())
         self.assertAlmostEqual(icdf_05, 0.0, places=4)
 
 
@@ -140,7 +140,7 @@ class TestGamma(TestCase):
 
         test_vals = [0.5, 1.0, 2.0, 5.0]
         for v in test_vals:
-            mlx_lp = float(mlx_g.log_prob(mlx_compat.tensor(v)).numpy())
+            mlx_lp = float(mlx_g.log_prob(flashlight.tensor(v)).numpy())
             torch_lp = float(torch_g.log_prob(torch.tensor(v)))
             self.assertAlmostEqual(mlx_lp, torch_lp, places=4)
 
@@ -187,7 +187,7 @@ class TestBeta(TestCase):
 
         test_vals = [0.1, 0.3, 0.5, 0.7, 0.9]
         for v in test_vals:
-            mlx_lp = float(mlx_beta.log_prob(mlx_compat.tensor(v)).numpy())
+            mlx_lp = float(mlx_beta.log_prob(flashlight.tensor(v)).numpy())
             torch_lp = float(torch_beta.log_prob(torch.tensor(v)))
             self.assertAlmostEqual(mlx_lp, torch_lp, places=4)
 
@@ -233,7 +233,7 @@ class TestPoisson(TestCase):
 
         test_vals = [0, 1, 2, 3, 5, 10]
         for v in test_vals:
-            mlx_lp = float(mlx_p.log_prob(mlx_compat.tensor(float(v))).numpy())
+            mlx_lp = float(mlx_p.log_prob(flashlight.tensor(float(v))).numpy())
             torch_lp = float(torch_p.log_prob(torch.tensor(float(v))))
             self.assertAlmostEqual(mlx_lp, torch_lp, places=4)
 
@@ -272,7 +272,7 @@ class TestBinomial(TestCase):
 
         test_vals = [0, 2, 4, 6, 10]
         for v in test_vals:
-            mlx_lp = float(mlx_b.log_prob(mlx_compat.tensor(float(v))).numpy())
+            mlx_lp = float(mlx_b.log_prob(flashlight.tensor(float(v))).numpy())
             torch_lp = float(torch_b.log_prob(torch.tensor(float(v))))
             self.assertAlmostEqual(mlx_lp, torch_lp, places=4)
 
@@ -283,7 +283,7 @@ class TestDirichlet(TestCase):
 
     def test_sample_simplex(self):
         """Test samples sum to 1."""
-        alpha = mlx_compat.tensor([1.0, 2.0, 3.0])
+        alpha = flashlight.tensor([1.0, 2.0, 3.0])
         d = dist.Dirichlet(alpha)
         samples = d.sample((100,))
 
@@ -293,7 +293,7 @@ class TestDirichlet(TestCase):
 
     def test_mean(self):
         """Test mean is normalized concentration."""
-        alpha = mlx_compat.tensor([2.0, 4.0, 4.0])
+        alpha = flashlight.tensor([2.0, 4.0, 4.0])
         d = dist.Dirichlet(alpha)
 
         expected_mean = [0.2, 0.4, 0.4]
@@ -306,11 +306,11 @@ class TestDirichlet(TestCase):
     def test_log_prob_parity(self):
         """Test log_prob matches PyTorch."""
         alpha = [2.0, 3.0, 5.0]
-        mlx_d = dist.Dirichlet(mlx_compat.tensor(alpha))
+        mlx_d = dist.Dirichlet(flashlight.tensor(alpha))
         torch_d = td.Dirichlet(torch.tensor(alpha))
 
         test_val = [0.2, 0.3, 0.5]
-        mlx_lp = float(mlx_d.log_prob(mlx_compat.tensor(test_val)).numpy())
+        mlx_lp = float(mlx_d.log_prob(flashlight.tensor(test_val)).numpy())
         torch_lp = float(torch_d.log_prob(torch.tensor(test_val)))
         self.assertAlmostEqual(mlx_lp, torch_lp, places=4)
 
@@ -321,7 +321,7 @@ class TestSpecialFunctions(TestCase):
 
     def test_lgamma(self):
         """Test lgamma function."""
-        from mlx_compat.ops.special import lgamma
+        from flashlight.ops.special import lgamma
         from scipy import special as sp
 
         test_vals = [0.5, 1.0, 2.0, 5.0, 10.0]
@@ -332,7 +332,7 @@ class TestSpecialFunctions(TestCase):
 
     def test_digamma(self):
         """Test digamma function."""
-        from mlx_compat.ops.special import digamma
+        from flashlight.ops.special import digamma
         from scipy import special as sp
 
         test_vals = [0.5, 1.0, 2.0, 5.0, 10.0]
@@ -343,7 +343,7 @@ class TestSpecialFunctions(TestCase):
 
     def test_betaln(self):
         """Test betaln function."""
-        from mlx_compat.ops.special import betaln
+        from flashlight.ops.special import betaln
         from scipy import special as sp
 
         test_pairs = [(1.0, 1.0), (2.0, 3.0), (0.5, 0.5), (5.0, 2.0)]
@@ -354,7 +354,7 @@ class TestSpecialFunctions(TestCase):
 
     def test_gammainc(self):
         """Test gammainc function."""
-        from mlx_compat.ops.special import gammainc
+        from flashlight.ops.special import gammainc
         from scipy import special as sp
 
         test_pairs = [(1.0, 1.0), (2.0, 3.0), (0.5, 0.5), (5.0, 2.0)]
@@ -365,7 +365,7 @@ class TestSpecialFunctions(TestCase):
 
     def test_i0(self):
         """Test Bessel I0 function."""
-        from mlx_compat.ops.special import i0
+        from flashlight.ops.special import i0
         from scipy import special as sp
 
         test_vals = [0.0, 0.5, 1.0, 2.0, 5.0]
@@ -377,7 +377,7 @@ class TestSpecialFunctions(TestCase):
 
     def test_i1(self):
         """Test Bessel I1 function."""
-        from mlx_compat.ops.special import i1
+        from flashlight.ops.special import i1
         from scipy import special as sp
 
         test_vals = [0.5, 1.0, 2.0, 5.0]
@@ -408,16 +408,16 @@ class TestNoScipyDependency(TestCase):
         # Create and use distributions
         n = dist.Normal(0.0, 1.0)
         _ = n.sample((10,))
-        _ = n.log_prob(mlx_compat.tensor(0.0))
+        _ = n.log_prob(flashlight.tensor(0.0))
         _ = n.entropy()
 
         g = dist.Gamma(2.0, 1.0)
         _ = g.sample((10,))
-        _ = g.log_prob(mlx_compat.tensor(1.0))
+        _ = g.log_prob(flashlight.tensor(1.0))
 
         b = dist.Beta(2.0, 3.0)
         _ = b.sample((10,))
-        _ = b.log_prob(mlx_compat.tensor(0.5))
+        _ = b.log_prob(flashlight.tensor(0.5))
 
         # Check scipy was not imported
         scipy_loaded = any(k.startswith('scipy') for k in sys.modules.keys())

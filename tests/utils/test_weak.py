@@ -1,5 +1,5 @@
 """
-Tests for mlx_compat.utils.weak module.
+Tests for flashlight.utils.weak module.
 
 Tests weak reference utilities for tensors.
 """
@@ -8,7 +8,7 @@ import gc
 import unittest
 import weakref
 
-from mlx_compat.utils.weak import (
+from flashlight.utils.weak import (
     WeakRef,
     TensorWeakRef,
     WeakIdRef,
@@ -82,9 +82,9 @@ class TestTensorWeakRef(unittest.TestCase):
 
     def test_tensor_weakref(self):
         """Test weak reference to a tensor."""
-        import mlx_compat
+        import flashlight
 
-        tensor = mlx_compat.tensor([1.0, 2.0, 3.0])
+        tensor = flashlight.tensor([1.0, 2.0, 3.0])
         wr = TensorWeakRef(tensor)
 
         # tensor_id should be set
@@ -92,9 +92,9 @@ class TestTensorWeakRef(unittest.TestCase):
 
     def test_tensor_id_preserved(self):
         """Test tensor_id is preserved even after deletion."""
-        import mlx_compat
+        import flashlight
 
-        tensor = mlx_compat.tensor([1.0, 2.0])
+        tensor = flashlight.tensor([1.0, 2.0])
         original_id = id(tensor)
         wr = TensorWeakRef(tensor)
 
@@ -257,11 +257,11 @@ class TestWeakTensorKeyDictionary(unittest.TestCase):
 
     def test_tensor_as_key(self):
         """Test using tensors as keys."""
-        import mlx_compat
+        import flashlight
 
         d = WeakTensorKeyDictionary()
 
-        tensor = mlx_compat.tensor([1.0, 2.0])
+        tensor = flashlight.tensor([1.0, 2.0])
         d[tensor] = "value"
 
         self.assertEqual(d[tensor], "value")
@@ -276,12 +276,12 @@ class TestWeakTensorKeyDictionary(unittest.TestCase):
 
     def test_multiple_tensors(self):
         """Test multiple tensor keys."""
-        import mlx_compat
+        import flashlight
 
         d = WeakTensorKeyDictionary()
 
-        t1 = mlx_compat.tensor([1.0])
-        t2 = mlx_compat.tensor([2.0])
+        t1 = flashlight.tensor([1.0])
+        t2 = flashlight.tensor([2.0])
 
         d[t1] = "one"
         d[t2] = "two"

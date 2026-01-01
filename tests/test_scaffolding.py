@@ -10,7 +10,7 @@ import sys
 # Add parent directory to path for imports
 sys.path.insert(0, '..')
 
-import mlx_compat
+import flashlight
 from tests.common_utils import TestCase
 
 
@@ -18,31 +18,31 @@ class TestScaffolding(TestCase):
     """Test project scaffolding and basic imports."""
 
     def test_package_import(self):
-        """Test that mlx_compat package imports successfully."""
-        self.assertIsNotNone(mlx_compat)
+        """Test that flashlight package imports successfully."""
+        self.assertIsNotNone(flashlight)
 
     def test_version(self):
         """Test that package version is defined."""
-        self.assertEqual(mlx_compat.__version__, "0.1.0")
+        self.assertEqual(flashlight.__version__, "0.1.0")
 
     def test_submodules_exist(self):
         """Test that all submodules can be imported."""
         # These should all import without errors (even if empty)
-        import mlx_compat.ops
-        import mlx_compat.autograd
-        import mlx_compat.nn
-        import mlx_compat.optim
-        import mlx_compat.utils
+        import flashlight.ops
+        import flashlight.autograd
+        import flashlight.nn
+        import flashlight.optim
+        import flashlight.utils
 
-        self.assertIsNotNone(mlx_compat.ops)
-        self.assertIsNotNone(mlx_compat.autograd)
-        self.assertIsNotNone(mlx_compat.nn)
-        self.assertIsNotNone(mlx_compat.optim)
-        self.assertIsNotNone(mlx_compat.utils)
+        self.assertIsNotNone(flashlight.ops)
+        self.assertIsNotNone(flashlight.autograd)
+        self.assertIsNotNone(flashlight.nn)
+        self.assertIsNotNone(flashlight.optim)
+        self.assertIsNotNone(flashlight.utils)
 
     def test_implementation_status(self):
         """Test that implementation status can be retrieved."""
-        status = mlx_compat._get_implementation_status()
+        status = flashlight._get_implementation_status()
         self.assertIsInstance(status, dict)
         self.assertEqual(status["phase_0_scaffolding"], "✓ Complete")
         self.assertEqual(status["phase_1_tensor_core"], "✓ Complete")

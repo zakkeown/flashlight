@@ -24,7 +24,7 @@ class BatchNorm2dBenchmark(LayerBenchmark):
         ]
 
     def create_mlx_layer(self, config: Dict[str, Any]):
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
         layer = nn.BatchNorm2d(config["channels"])
         layer.eval()  # Use eval mode for consistent benchmarking
         return layer
@@ -36,8 +36,8 @@ class BatchNorm2dBenchmark(LayerBenchmark):
         return layer.to(device)
 
     def create_mlx_input(self, config: Dict[str, Any]):
-        import mlx_compat
-        return mlx_compat.randn(config["batch"], config["channels"], config["h"], config["w"])
+        import flashlight
+        return flashlight.randn(config["batch"], config["channels"], config["h"], config["w"])
 
     def create_pytorch_input(self, config: Dict[str, Any], device: str):
         import torch
@@ -81,7 +81,7 @@ class BatchNorm1dBenchmark(LayerBenchmark):
         ]
 
     def create_mlx_layer(self, config: Dict[str, Any]):
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
         layer = nn.BatchNorm1d(config["features"])
         layer.eval()
         return layer
@@ -93,8 +93,8 @@ class BatchNorm1dBenchmark(LayerBenchmark):
         return layer.to(device)
 
     def create_mlx_input(self, config: Dict[str, Any]):
-        import mlx_compat
-        return mlx_compat.randn(config["batch"], config["features"])
+        import flashlight
+        return flashlight.randn(config["batch"], config["features"])
 
     def create_pytorch_input(self, config: Dict[str, Any], device: str):
         import torch
@@ -119,7 +119,7 @@ class LayerNormBenchmark(LayerBenchmark):
         ]
 
     def create_mlx_layer(self, config: Dict[str, Any]):
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
         return nn.LayerNorm(config["hidden"])
 
     def create_pytorch_layer(self, config: Dict[str, Any], device: str):
@@ -127,8 +127,8 @@ class LayerNormBenchmark(LayerBenchmark):
         return nn.LayerNorm(config["hidden"]).to(device)
 
     def create_mlx_input(self, config: Dict[str, Any]):
-        import mlx_compat
-        return mlx_compat.randn(config["batch"], config["seq_len"], config["hidden"])
+        import flashlight
+        return flashlight.randn(config["batch"], config["seq_len"], config["hidden"])
 
     def create_pytorch_input(self, config: Dict[str, Any], device: str):
         import torch
@@ -166,7 +166,7 @@ class GroupNormBenchmark(LayerBenchmark):
         ]
 
     def create_mlx_layer(self, config: Dict[str, Any]):
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
         return nn.GroupNorm(config["groups"], config["channels"])
 
     def create_pytorch_layer(self, config: Dict[str, Any], device: str):
@@ -174,8 +174,8 @@ class GroupNormBenchmark(LayerBenchmark):
         return nn.GroupNorm(config["groups"], config["channels"]).to(device)
 
     def create_mlx_input(self, config: Dict[str, Any]):
-        import mlx_compat
-        return mlx_compat.randn(config["batch"], config["channels"], config["h"], config["w"])
+        import flashlight
+        return flashlight.randn(config["batch"], config["channels"], config["h"], config["w"])
 
     def create_pytorch_input(self, config: Dict[str, Any], device: str):
         import torch

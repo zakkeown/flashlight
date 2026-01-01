@@ -14,8 +14,8 @@ import pytest
 from tests.common_utils import TestCase, skipIfNoMLX, skipIfNoTorch
 
 try:
-    import mlx_compat
-    from mlx_compat.data import TensorDataset, DistributedSampler
+    import flashlight
+    from flashlight.data import TensorDataset, DistributedSampler
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -27,7 +27,7 @@ class TestDistributedSampler(TestCase):
 
     def test_single_replica(self):
         """Test with single replica (default behavior)."""
-        x = mlx_compat.randn(100, 10)
+        x = flashlight.randn(100, 10)
         dataset = TensorDataset(x)
 
         sampler = DistributedSampler(dataset, num_replicas=1, rank=0)
@@ -37,7 +37,7 @@ class TestDistributedSampler(TestCase):
 
     def test_partition_coverage(self):
         """Verify all indices covered across replicas."""
-        x = mlx_compat.randn(100, 10)
+        x = flashlight.randn(100, 10)
         dataset = TensorDataset(x)
 
         num_replicas = 4
@@ -55,7 +55,7 @@ class TestDistributedSampler(TestCase):
 
     def test_partition_sizes(self):
         """Verify each replica gets same number of samples."""
-        x = mlx_compat.randn(100, 10)
+        x = flashlight.randn(100, 10)
         dataset = TensorDataset(x)
 
         num_replicas = 4
@@ -72,7 +72,7 @@ class TestDistributedSampler(TestCase):
 
     def test_set_epoch_changes_order(self):
         """Verify set_epoch produces different shuffle."""
-        x = mlx_compat.randn(100, 10)
+        x = flashlight.randn(100, 10)
         dataset = TensorDataset(x)
 
         sampler = DistributedSampler(dataset, shuffle=True, seed=42)
@@ -88,7 +88,7 @@ class TestDistributedSampler(TestCase):
 
     def test_shuffle_reproducibility(self):
         """Verify same seed + epoch produces same shuffle."""
-        x = mlx_compat.randn(100, 10)
+        x = flashlight.randn(100, 10)
         dataset = TensorDataset(x)
 
         sampler1 = DistributedSampler(dataset, shuffle=True, seed=42)
@@ -104,7 +104,7 @@ class TestDistributedSampler(TestCase):
 
     def test_no_shuffle(self):
         """Verify shuffle=False produces sequential order."""
-        x = mlx_compat.randn(100, 10)
+        x = flashlight.randn(100, 10)
         dataset = TensorDataset(x)
 
         sampler = DistributedSampler(
@@ -119,7 +119,7 @@ class TestDistributedSampler(TestCase):
         # 103 samples, 4 replicas
         # Without drop_last: each gets 26 (104 total, with padding)
         # With drop_last: each gets 25 (100 total)
-        x = mlx_compat.randn(103, 10)
+        x = flashlight.randn(103, 10)
         dataset = TensorDataset(x)
 
         sampler_no_drop = DistributedSampler(
@@ -135,7 +135,7 @@ class TestDistributedSampler(TestCase):
     def test_padding_when_needed(self):
         """Verify padding added when dataset size not divisible by replicas."""
         # 10 samples, 4 replicas = need 12 samples total (3 per replica)
-        x = mlx_compat.randn(10, 5)
+        x = flashlight.randn(10, 5)
         dataset = TensorDataset(x)
 
         num_replicas = 4
@@ -153,7 +153,7 @@ class TestDistributedSampler(TestCase):
 
     def test_length(self):
         """Test __len__ method."""
-        x = mlx_compat.randn(100, 10)
+        x = flashlight.randn(100, 10)
         dataset = TensorDataset(x)
 
         sampler = DistributedSampler(dataset, num_replicas=4, rank=0)
@@ -164,7 +164,7 @@ class TestDistributedSampler(TestCase):
 
     def test_default_values(self):
         """Test default num_replicas and rank."""
-        x = mlx_compat.randn(50, 10)
+        x = flashlight.randn(50, 10)
         dataset = TensorDataset(x)
 
         # Default should be 1 replica, rank 0
@@ -187,7 +187,7 @@ class TestDistributedSamplerParity(TestCase):
         from torch.utils.data.distributed import DistributedSampler as TorchDistributedSampler
 
         # MLX version
-        x_mlx = mlx_compat.randn(100, 10)
+        x_mlx = flashlight.randn(100, 10)
         dataset_mlx = TensorDataset(x_mlx)
 
         # PyTorch version
@@ -224,7 +224,7 @@ class TestDistributedSamplerParity(TestCase):
         for dataset_size in [97, 100, 103]:
             for num_replicas in [1, 2, 4, 8]:
                 # MLX
-                x_mlx = mlx_compat.randn(dataset_size, 10)
+                x_mlx = flashlight.randn(dataset_size, 10)
                 dataset_mlx = TensorDataset(x_mlx)
                 mlx_sampler = DistributedSampler(
                     dataset_mlx, num_replicas=num_replicas, rank=0

@@ -20,7 +20,7 @@ from .runner import ParityRunner
 def parse_args(args: Optional[List[str]] = None) -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="Check mlx_compat API parity with PyTorch",
+        description="Check flashlight API parity with PyTorch",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -185,7 +185,7 @@ def main(args: Optional[List[str]] = None) -> int:
         report = runner.run()
     except ImportError as e:
         print(f"Error: {e}", file=sys.stderr)
-        print("Make sure PyTorch and mlx_compat are installed.", file=sys.stderr)
+        print("Make sure PyTorch and flashlight are installed.", file=sys.stderr)
         return 1
 
     # Format output

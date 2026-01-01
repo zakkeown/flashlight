@@ -27,7 +27,7 @@ class MaxPool2dBenchmark(LayerBenchmark):
         ]
 
     def create_mlx_layer(self, config: Dict[str, Any]):
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
         return nn.MaxPool2d(kernel_size=config["kernel"], stride=config["stride"])
 
     def create_pytorch_layer(self, config: Dict[str, Any], device: str):
@@ -36,8 +36,8 @@ class MaxPool2dBenchmark(LayerBenchmark):
         return layer.to(device)
 
     def create_mlx_input(self, config: Dict[str, Any]):
-        import mlx_compat
-        return mlx_compat.randn(
+        import flashlight
+        return flashlight.randn(
             config["batch"], config["channels"], config["height"], config["width"]
         )
 
@@ -82,7 +82,7 @@ class AvgPool2dBenchmark(MaxPool2dBenchmark):
     name = "AvgPool2d"
 
     def create_mlx_layer(self, config: Dict[str, Any]):
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
         return nn.AvgPool2d(kernel_size=config["kernel"], stride=config["stride"])
 
     def create_pytorch_layer(self, config: Dict[str, Any], device: str):
@@ -106,7 +106,7 @@ class AdaptiveAvgPool2dBenchmark(LayerBenchmark):
         ]
 
     def create_mlx_layer(self, config: Dict[str, Any]):
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
         return nn.AdaptiveAvgPool2d((config["out_size"], config["out_size"]))
 
     def create_pytorch_layer(self, config: Dict[str, Any], device: str):
@@ -115,8 +115,8 @@ class AdaptiveAvgPool2dBenchmark(LayerBenchmark):
         return layer.to(device)
 
     def create_mlx_input(self, config: Dict[str, Any]):
-        import mlx_compat
-        return mlx_compat.randn(
+        import flashlight
+        return flashlight.randn(
             config["batch"], config["channels"], config["height"], config["width"]
         )
 

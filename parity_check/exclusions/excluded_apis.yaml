@@ -1,7 +1,7 @@
-# Excluded APIs for mlx_compat parity checking
+# Excluded APIs for flashlight parity checking
 #
 # This file lists PyTorch APIs that are intentionally NOT implemented
-# in mlx_compat. Each exclusion must include a reason.
+# in flashlight. Each exclusion must include a reason.
 #
 # Format:
 #   module_name:

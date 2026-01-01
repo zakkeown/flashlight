@@ -1,8 +1,8 @@
 """
-PyTorch API Parity Validation System for mlx_compat.
+PyTorch API Parity Validation System for flashlight.
 
 This module provides tools to automatically detect PyTorch's public API
-and validate that mlx_compat implements matching functions with compatible signatures.
+and validate that flashlight implements matching functions with compatible signatures.
 
 Usage:
     python -m parity_check              # Console output

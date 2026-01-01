@@ -1,7 +1,7 @@
 """
 Test Phase 7: Signal Processing - Window Functions
 
-Comprehensive tests for mlx_compat.signal.windows module.
+Comprehensive tests for flashlight.signal.windows module.
 Includes numerical parity tests against PyTorch.
 """
 
@@ -23,9 +23,9 @@ except ImportError:
     TORCH_AVAILABLE = False
 
 try:
-    import mlx_compat
-    from mlx_compat import signal
-    from mlx_compat.signal import windows
+    import flashlight
+    from flashlight import signal
+    from flashlight.signal import windows
     import mlx.core as mx
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
@@ -82,8 +82,8 @@ class TestBartlettWindow(TestCase):
 
     def test_dtype(self):
         """Test dtype parameter."""
-        win32 = windows.bartlett(64, dtype=mlx_compat.float32)
-        self.assertEqual(win32.dtype, mlx_compat.float32)
+        win32 = windows.bartlett(64, dtype=flashlight.float32)
+        self.assertEqual(win32.dtype, flashlight.float32)
 
     def test_requires_grad(self):
         """Test requires_grad parameter."""

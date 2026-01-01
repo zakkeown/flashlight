@@ -558,7 +558,7 @@ NN_MODULE_SPECS: Dict[str, ModuleSpec] = {
         init_kwargs={"size": 5},
         input_shape=(2, 8, 16, 16),
     ),
-    # RMSNorm (if available in mlx_compat)
+    # RMSNorm (if available in flashlight)
     "RMSNorm": ModuleSpec(
         init_kwargs={"normalized_shape": 8},
         input_shape=(4, 6, 8),
@@ -1072,7 +1072,7 @@ class InputGeneratorRegistry:
     """
     Registry mapping API patterns to input generators.
 
-    Provides default test inputs for various PyTorch/mlx_compat operations.
+    Provides default test inputs for various PyTorch/flashlight operations.
     """
 
     def __init__(self):
@@ -1864,7 +1864,7 @@ class InputGeneratorRegistry:
         self._generators["torch.cholesky_inverse"] = lambda: {
             "input": np.linalg.cholesky(_make_positive_definite(4)).astype(np.float32),
         }
-        # cholesky_solve - use positional args (PyTorch uses B/L, mlx_compat uses b/u)
+        # cholesky_solve - use positional args (PyTorch uses B/L, flashlight uses b/u)
         self._generators["torch.cholesky_solve"] = lambda: {
             "_positional": [
                 np.random.randn(4, 2).astype(np.float32),
@@ -2811,7 +2811,7 @@ class InputGeneratorRegistry:
             "input": np.array([1, 2, 2, 3, 3, 3, 4]).astype(np.float32),
         }
 
-        # Expand/broadcast - use positional args (PyTorch uses "size", mlx_compat uses "shape")
+        # Expand/broadcast - use positional args (PyTorch uses "size", flashlight uses "shape")
         self._generators["torch.broadcast_to"] = lambda: {
             "_positional": [
                 np.random.randn(1, 8).astype(np.float32),
@@ -3705,7 +3705,7 @@ class InputGeneratorRegistry:
             "length": 4,
         }
 
-        # permute - use positional args since mlx_compat doesn't accept dims=
+        # permute - use positional args since flashlight doesn't accept dims=
         self._generators["torch.permute"] = lambda: {
             "_positional": [
                 np.random.randn(2, 4, 8).astype(np.float32),
@@ -3720,7 +3720,7 @@ class InputGeneratorRegistry:
             "index": 2,
         }
 
-        # swapdims/swapaxes - use positional args since mlx_compat doesn't accept dim0=/dim1=
+        # swapdims/swapaxes - use positional args since flashlight doesn't accept dim0=/dim1=
         self._generators["torch.swapdims"] = lambda: {
             "_positional": [
                 np.random.randn(2, 4, 8).astype(np.float32),
@@ -3920,7 +3920,7 @@ class InputGeneratorRegistry:
             "_positional": [np.random.randn(4, 8).astype(np.float32)],
         }
 
-        # as_tensor / asarray - use positional since mlx_compat doesn't accept obj=
+        # as_tensor / asarray - use positional since flashlight doesn't accept obj=
         self._generators["torch.as_tensor"] = lambda: {
             "data": np.random.randn(4, 8).astype(np.float32),
         }
@@ -3928,7 +3928,7 @@ class InputGeneratorRegistry:
             "_positional": [np.random.randn(4, 8).astype(np.float32)],
         }
 
-        # tensor / scalar_tensor - use positional since mlx_compat doesn't accept s=
+        # tensor / scalar_tensor - use positional since flashlight doesn't accept s=
         self._generators["torch.tensor"] = lambda: {
             "data": np.random.randn(4, 8).astype(np.float32).tolist(),
         }
@@ -4153,7 +4153,7 @@ class InputGeneratorRegistry:
 
         # RNN functions are defined later in the file with proper generators
 
-        # dropout variants - use positional args (PyTorch uses 'train', mlx_compat uses 'training')
+        # dropout variants - use positional args (PyTorch uses 'train', flashlight uses 'training')
         self._generators["torch.dropout"] = lambda: {
             "_positional": [
                 np.random.randn(4, 8).astype(np.float32),

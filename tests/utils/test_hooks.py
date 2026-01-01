@@ -1,5 +1,5 @@
 """
-Tests for mlx_compat.utils.hooks module.
+Tests for flashlight.utils.hooks module.
 
 Tests RemovableHandle, BackwardHook, and hook utilities.
 """
@@ -8,7 +8,7 @@ import unittest
 import warnings
 from collections import OrderedDict
 
-from mlx_compat.utils.hooks import (
+from flashlight.utils.hooks import (
     RemovableHandle,
     BackwardHook,
     unserializable_hook,
@@ -228,14 +228,14 @@ class TestBackwardHook(unittest.TestCase):
 
     def test_setup_input_hook(self):
         """Test input hook setup."""
-        import mlx_compat
+        import flashlight
 
         module = object()
         hook = BackwardHook(module, {}, {})
 
         # Create some tensors
-        t1 = mlx_compat.tensor([1.0, 2.0])
-        t2 = mlx_compat.tensor([3.0, 4.0])
+        t1 = flashlight.tensor([1.0, 2.0])
+        t2 = flashlight.tensor([3.0, 4.0])
         args = (t1, "non_tensor", t2)
 
         result = hook.setup_input_hook(args)
@@ -246,12 +246,12 @@ class TestBackwardHook(unittest.TestCase):
 
     def test_setup_output_hook_single(self):
         """Test output hook setup with single tensor."""
-        import mlx_compat
+        import flashlight
 
         module = object()
         hook = BackwardHook(module, {}, {})
 
-        output = mlx_compat.tensor([1.0, 2.0])
+        output = flashlight.tensor([1.0, 2.0])
         result = hook.setup_output_hook(output)
 
         self.assertIs(result, output)
@@ -260,13 +260,13 @@ class TestBackwardHook(unittest.TestCase):
 
     def test_setup_output_hook_tuple(self):
         """Test output hook setup with tuple of outputs."""
-        import mlx_compat
+        import flashlight
 
         module = object()
         hook = BackwardHook(module, {}, {})
 
-        t1 = mlx_compat.tensor([1.0])
-        t2 = mlx_compat.tensor([2.0])
+        t1 = flashlight.tensor([1.0])
+        t2 = flashlight.tensor([2.0])
         outputs = (t1, t2)
 
         result = hook.setup_output_hook(outputs)
@@ -295,7 +295,7 @@ class TestBackwardHook(unittest.TestCase):
 
     def test_call_executes_hooks(self):
         """Test that __call__ executes hooks."""
-        import mlx_compat
+        import flashlight
 
         module = object()
 
@@ -313,8 +313,8 @@ class TestBackwardHook(unittest.TestCase):
         user_hooks = {0: hook1, 1: hook2}
         backward_hook = BackwardHook(module, user_hooks, {})
 
-        grad_in = (mlx_compat.tensor([1.0]),)
-        grad_out = (mlx_compat.tensor([2.0]),)
+        grad_in = (flashlight.tensor([1.0]),)
+        grad_out = (flashlight.tensor([2.0]),)
 
         result = backward_hook(grad_in, grad_out)
 

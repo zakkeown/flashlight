@@ -1,7 +1,7 @@
 """
 Special Functions Parity Tests
 
-Tests numerical parity between mlx_compat.special and PyTorch torch.special.
+Tests numerical parity between flashlight.special and PyTorch torch.special.
 """
 
 import pytest
@@ -9,7 +9,7 @@ import numpy as np
 
 torch = pytest.importorskip("torch")
 
-import mlx_compat
+import flashlight
 
 
 class TestGammaFunctionsParity:
@@ -22,7 +22,7 @@ class TestGammaFunctionsParity:
         x_np = np.abs(np.random.randn(100).astype(np.float32)) + 0.1
 
         torch_out = torch.special.gammaln(torch.tensor(x_np))
-        mlx_out = mlx_compat.special.gammaln(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.special.gammaln(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-4, f"gammaln mismatch: {max_diff}"
@@ -34,7 +34,7 @@ class TestGammaFunctionsParity:
         x_np = np.abs(np.random.randn(100).astype(np.float32)) + 1.0
 
         torch_out = torch.special.digamma(torch.tensor(x_np))
-        mlx_out = mlx_compat.special.digamma(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.special.digamma(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-4, f"digamma mismatch: {max_diff}"
@@ -46,7 +46,7 @@ class TestGammaFunctionsParity:
         x_np = np.abs(np.random.randn(50).astype(np.float32)) + 1.0
 
         torch_out = torch.special.polygamma(1, torch.tensor(x_np))
-        mlx_out = mlx_compat.special.polygamma(1, mlx_compat.tensor(x_np))
+        mlx_out = flashlight.special.polygamma(1, flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-4, f"polygamma mismatch: {max_diff}"
@@ -58,7 +58,7 @@ class TestGammaFunctionsParity:
 
         for p in [2, 3, 4]:
             torch_out = torch.special.multigammaln(torch.tensor(x_np), p)
-            mlx_out = mlx_compat.special.multigammaln(mlx_compat.tensor(x_np), p)
+            mlx_out = flashlight.special.multigammaln(flashlight.tensor(x_np), p)
 
             max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
             assert max_diff < 1e-4, f"multigammaln (p={p}) mismatch: {max_diff}"
@@ -74,8 +74,8 @@ class TestIncompleteGammaParity:
         x_np = np.array([0.5, 1.0, 2.0, 3.0], dtype=np.float32)
 
         torch_out = torch.special.gammainc(torch.tensor(a_np), torch.tensor(x_np))
-        mlx_out = mlx_compat.special.gammainc(
-            mlx_compat.tensor(a_np), mlx_compat.tensor(x_np)
+        mlx_out = flashlight.special.gammainc(
+            flashlight.tensor(a_np), flashlight.tensor(x_np)
         )
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
@@ -88,8 +88,8 @@ class TestIncompleteGammaParity:
         x_np = np.array([0.5, 1.0, 2.0, 3.0], dtype=np.float32)
 
         torch_out = torch.special.gammaincc(torch.tensor(a_np), torch.tensor(x_np))
-        mlx_out = mlx_compat.special.gammaincc(
-            mlx_compat.tensor(a_np), mlx_compat.tensor(x_np)
+        mlx_out = flashlight.special.gammaincc(
+            flashlight.tensor(a_np), flashlight.tensor(x_np)
         )
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
@@ -105,7 +105,7 @@ class TestBesselFunctionsParity:
         x_np = np.linspace(0, 10, 50).astype(np.float32)
 
         torch_out = torch.special.bessel_j0(torch.tensor(x_np))
-        mlx_out = mlx_compat.special.bessel_j0(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.special.bessel_j0(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-5, f"bessel_j0 mismatch: {max_diff}"
@@ -116,7 +116,7 @@ class TestBesselFunctionsParity:
         x_np = np.linspace(0, 10, 50).astype(np.float32)
 
         torch_out = torch.special.bessel_j1(torch.tensor(x_np))
-        mlx_out = mlx_compat.special.bessel_j1(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.special.bessel_j1(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-5, f"bessel_j1 mismatch: {max_diff}"
@@ -127,7 +127,7 @@ class TestBesselFunctionsParity:
         x_np = np.linspace(0.5, 10, 50).astype(np.float32)
 
         torch_out = torch.special.bessel_y0(torch.tensor(x_np))
-        mlx_out = mlx_compat.special.bessel_y0(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.special.bessel_y0(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-4, f"bessel_y0 mismatch: {max_diff}"
@@ -138,7 +138,7 @@ class TestBesselFunctionsParity:
         x_np = np.linspace(0.5, 10, 50).astype(np.float32)
 
         torch_out = torch.special.bessel_y1(torch.tensor(x_np))
-        mlx_out = mlx_compat.special.bessel_y1(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.special.bessel_y1(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-2, f"bessel_y1 mismatch: {max_diff}"
@@ -153,7 +153,7 @@ class TestModifiedBesselParity:
         x_np = np.linspace(0, 5, 50).astype(np.float32)
 
         torch_out = torch.special.i0(torch.tensor(x_np))
-        mlx_out = mlx_compat.special.modified_bessel_i0(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.special.modified_bessel_i0(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-4, f"i0 mismatch: {max_diff}"
@@ -164,7 +164,7 @@ class TestModifiedBesselParity:
         x_np = np.linspace(0, 5, 50).astype(np.float32)
 
         torch_out = torch.special.i1(torch.tensor(x_np))
-        mlx_out = mlx_compat.special.modified_bessel_i1(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.special.modified_bessel_i1(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-4, f"i1 mismatch: {max_diff}"
@@ -175,7 +175,7 @@ class TestModifiedBesselParity:
         x_np = np.linspace(0, 10, 50).astype(np.float32)
 
         torch_out = torch.special.i0e(torch.tensor(x_np))
-        mlx_out = mlx_compat.special.i0e(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.special.i0e(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-4, f"i0e mismatch: {max_diff}"
@@ -186,7 +186,7 @@ class TestModifiedBesselParity:
         x_np = np.linspace(0, 10, 50).astype(np.float32)
 
         torch_out = torch.special.i1e(torch.tensor(x_np))
-        mlx_out = mlx_compat.special.i1e(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.special.i1e(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-4, f"i1e mismatch: {max_diff}"
@@ -201,7 +201,7 @@ class TestNormalDistParity:
         x_np = np.linspace(-3, 3, 50).astype(np.float32)
 
         torch_out = torch.special.ndtr(torch.tensor(x_np))
-        mlx_out = mlx_compat.special.ndtr(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.special.ndtr(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-5, f"ndtr mismatch: {max_diff}"
@@ -212,7 +212,7 @@ class TestNormalDistParity:
         x_np = np.linspace(0.01, 0.99, 50).astype(np.float32)
 
         torch_out = torch.special.ndtri(torch.tensor(x_np))
-        mlx_out = mlx_compat.special.ndtri(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.special.ndtri(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-4, f"ndtri mismatch: {max_diff}"
@@ -223,7 +223,7 @@ class TestNormalDistParity:
         x_np = np.linspace(-3, 3, 50).astype(np.float32)
 
         torch_out = torch.special.log_ndtr(torch.tensor(x_np))
-        mlx_out = mlx_compat.special.log_ndtr(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.special.log_ndtr(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-4, f"log_ndtr mismatch: {max_diff}"
@@ -242,8 +242,8 @@ class TestPolynomialsParity:
             torch_out = torch.special.chebyshev_polynomial_t(
                 torch.tensor(x_np), torch.tensor(n_np)
             )
-            mlx_out = mlx_compat.special.chebyshev_polynomial_t(
-                mlx_compat.tensor(x_np), mlx_compat.tensor(n_np)
+            mlx_out = flashlight.special.chebyshev_polynomial_t(
+                flashlight.tensor(x_np), flashlight.tensor(n_np)
             )
 
             max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
@@ -259,8 +259,8 @@ class TestPolynomialsParity:
             torch_out = torch.special.chebyshev_polynomial_u(
                 torch.tensor(x_np), torch.tensor(n_np)
             )
-            mlx_out = mlx_compat.special.chebyshev_polynomial_u(
-                mlx_compat.tensor(x_np), mlx_compat.tensor(n_np)
+            mlx_out = flashlight.special.chebyshev_polynomial_u(
+                flashlight.tensor(x_np), flashlight.tensor(n_np)
             )
 
             max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
@@ -276,8 +276,8 @@ class TestPolynomialsParity:
             torch_out = torch.special.hermite_polynomial_h(
                 torch.tensor(x_np), torch.tensor(n_np)
             )
-            mlx_out = mlx_compat.special.hermite_polynomial_h(
-                mlx_compat.tensor(x_np), mlx_compat.tensor(n_np)
+            mlx_out = flashlight.special.hermite_polynomial_h(
+                flashlight.tensor(x_np), flashlight.tensor(n_np)
             )
 
             max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
@@ -293,8 +293,8 @@ class TestPolynomialsParity:
             torch_out = torch.special.hermite_polynomial_he(
                 torch.tensor(x_np), torch.tensor(n_np)
             )
-            mlx_out = mlx_compat.special.hermite_polynomial_he(
-                mlx_compat.tensor(x_np), mlx_compat.tensor(n_np)
+            mlx_out = flashlight.special.hermite_polynomial_he(
+                flashlight.tensor(x_np), flashlight.tensor(n_np)
             )
 
             max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
@@ -310,8 +310,8 @@ class TestPolynomialsParity:
             torch_out = torch.special.laguerre_polynomial_l(
                 torch.tensor(x_np), torch.tensor(n_np)
             )
-            mlx_out = mlx_compat.special.laguerre_polynomial_l(
-                mlx_compat.tensor(x_np), mlx_compat.tensor(n_np)
+            mlx_out = flashlight.special.laguerre_polynomial_l(
+                flashlight.tensor(x_np), flashlight.tensor(n_np)
             )
 
             max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
@@ -327,8 +327,8 @@ class TestPolynomialsParity:
             torch_out = torch.special.legendre_polynomial_p(
                 torch.tensor(x_np), torch.tensor(n_np)
             )
-            mlx_out = mlx_compat.special.legendre_polynomial_p(
-                mlx_compat.tensor(x_np), mlx_compat.tensor(n_np)
+            mlx_out = flashlight.special.legendre_polynomial_p(
+                flashlight.tensor(x_np), flashlight.tensor(n_np)
             )
 
             max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
@@ -344,7 +344,7 @@ class TestErrorFunctionsParity:
         x_np = np.linspace(-3, 3, 100).astype(np.float32)
 
         torch_out = torch.erf(torch.tensor(x_np))
-        mlx_out = mlx_compat.special.erf(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.special.erf(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-5, f"erf mismatch: {max_diff}"
@@ -355,7 +355,7 @@ class TestErrorFunctionsParity:
         x_np = np.linspace(-3, 3, 100).astype(np.float32)
 
         torch_out = torch.erfc(torch.tensor(x_np))
-        mlx_out = mlx_compat.special.erfc(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.special.erfc(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-5, f"erfc mismatch: {max_diff}"
@@ -366,7 +366,7 @@ class TestErrorFunctionsParity:
         x_np = np.linspace(-0.9, 0.9, 50).astype(np.float32)
 
         torch_out = torch.erfinv(torch.tensor(x_np))
-        mlx_out = mlx_compat.special.erfinv(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.special.erfinv(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-5, f"erfinv mismatch: {max_diff}"
@@ -377,7 +377,7 @@ class TestErrorFunctionsParity:
         x_np = np.linspace(0, 3, 50).astype(np.float32)
 
         torch_out = torch.special.erfcx(torch.tensor(x_np))
-        mlx_out = mlx_compat.special.erfcx(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.special.erfcx(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-3, f"erfcx mismatch: {max_diff}"
@@ -392,7 +392,7 @@ class TestSimpleFunctionsParity:
         x_np = np.linspace(-5, 5, 50).astype(np.float32)
 
         torch_out = torch.sigmoid(torch.tensor(x_np))
-        mlx_out = mlx_compat.special.expit(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.special.expit(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-5, f"expit mismatch: {max_diff}"
@@ -403,7 +403,7 @@ class TestSimpleFunctionsParity:
         x_np = np.linspace(0.1, 0.9, 50).astype(np.float32)
 
         torch_out = torch.logit(torch.tensor(x_np))
-        mlx_out = mlx_compat.special.logit(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.special.logit(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-5, f"logit mismatch: {max_diff}"
@@ -414,7 +414,7 @@ class TestSimpleFunctionsParity:
         x_np = np.random.randn(10, 5).astype(np.float32)
 
         torch_out = torch.softmax(torch.tensor(x_np), dim=-1)
-        mlx_out = mlx_compat.special.softmax(mlx_compat.tensor(x_np), dim=-1)
+        mlx_out = flashlight.special.softmax(flashlight.tensor(x_np), dim=-1)
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-5, f"softmax mismatch: {max_diff}"
@@ -425,7 +425,7 @@ class TestSimpleFunctionsParity:
         x_np = np.random.randn(10, 5).astype(np.float32)
 
         torch_out = torch.log_softmax(torch.tensor(x_np), dim=-1)
-        mlx_out = mlx_compat.special.log_softmax(mlx_compat.tensor(x_np), dim=-1)
+        mlx_out = flashlight.special.log_softmax(flashlight.tensor(x_np), dim=-1)
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-5, f"log_softmax mismatch: {max_diff}"
@@ -437,8 +437,8 @@ class TestSimpleFunctionsParity:
         y_np = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float32)
 
         torch_out = torch.special.xlogy(torch.tensor(x_np), torch.tensor(y_np))
-        mlx_out = mlx_compat.special.xlogy(
-            mlx_compat.tensor(x_np), mlx_compat.tensor(y_np)
+        mlx_out = flashlight.special.xlogy(
+            flashlight.tensor(x_np), flashlight.tensor(y_np)
         )
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
@@ -451,8 +451,8 @@ class TestSimpleFunctionsParity:
         y_np = np.array([0.5, 1.0, 2.0, 3.0], dtype=np.float32)
 
         torch_out = torch.special.xlog1py(torch.tensor(x_np), torch.tensor(y_np))
-        mlx_out = mlx_compat.special.xlog1py(
-            mlx_compat.tensor(x_np), mlx_compat.tensor(y_np)
+        mlx_out = flashlight.special.xlog1py(
+            flashlight.tensor(x_np), flashlight.tensor(y_np)
         )
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
@@ -464,7 +464,7 @@ class TestSimpleFunctionsParity:
         x_np = np.array([0.0, 0.5, 1.0, 2.0], dtype=np.float32)
 
         torch_out = torch.special.entr(torch.tensor(x_np))
-        mlx_out = mlx_compat.special.entr(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.special.entr(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-5, f"entr mismatch: {max_diff}"

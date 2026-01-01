@@ -10,7 +10,7 @@ from benchmarks.models.base import ModelBenchmark
 
 
 def _create_basic_block_mlx(nn, in_channels, out_channels, stride=1):
-    """Create a basic residual block for mlx_compat."""
+    """Create a basic residual block for flashlight."""
     class BasicBlock(nn.Module):
         def __init__(self):
             super().__init__()
@@ -83,7 +83,7 @@ class ResNetForwardBenchmark(ModelBenchmark):
         ]
 
     def create_mlx_model(self, config: Dict[str, Any]):
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
 
         class SmallResNet(nn.Module):
             def __init__(self, num_classes, num_blocks):
@@ -166,8 +166,8 @@ class ResNetForwardBenchmark(ModelBenchmark):
         return model.to(device)
 
     def create_mlx_input(self, config: Dict[str, Any]):
-        import mlx_compat
-        return mlx_compat.randn(config["batch"], config["channels"], config["height"], config["width"])
+        import flashlight
+        return flashlight.randn(config["batch"], config["channels"], config["height"], config["width"])
 
     def create_pytorch_input(self, config: Dict[str, Any], device: str):
         import torch
@@ -197,17 +197,17 @@ class ResNetTrainingBenchmark(ModelBenchmark):
         return forward_bench.create_pytorch_model(config, device)
 
     def create_mlx_input(self, config: Dict[str, Any]):
-        import mlx_compat
-        return mlx_compat.randn(config["batch"], config["channels"], config["height"], config["width"])
+        import flashlight
+        return flashlight.randn(config["batch"], config["channels"], config["height"], config["width"])
 
     def create_pytorch_input(self, config: Dict[str, Any], device: str):
         import torch
         return torch.randn(config["batch"], config["channels"], config["height"], config["width"], device=device)
 
     def create_mlx_target(self, config: Dict[str, Any]):
-        import mlx_compat
+        import flashlight
         labels = np.random.randint(0, config["num_classes"], config["batch"])
-        return mlx_compat.tensor(labels)
+        return flashlight.tensor(labels)
 
     def create_pytorch_target(self, config: Dict[str, Any], device: str):
         import torch

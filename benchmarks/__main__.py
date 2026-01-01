@@ -1,5 +1,5 @@
 """
-mlx_compat Benchmarking Suite CLI
+flashlight Benchmarking Suite CLI
 
 Usage:
     python -m benchmarks [OPTIONS]
@@ -82,7 +82,7 @@ def create_parser() -> argparse.ArgumentParser:
     """Create argument parser."""
     parser = argparse.ArgumentParser(
         prog="python -m benchmarks",
-        description="mlx_compat Benchmarking Suite - Performance comparison with PyTorch MPS",
+        description="flashlight Benchmarking Suite - Performance comparison with PyTorch MPS",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

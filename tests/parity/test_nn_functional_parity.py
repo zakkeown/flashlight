@@ -1,7 +1,7 @@
 """
 Parity tests for nn.functional APIs.
 
-Tests that mlx_compat.nn.functional produces identical outputs to torch.nn.functional.
+Tests that flashlight.nn.functional produces identical outputs to torch.nn.functional.
 """
 
 import pytest
@@ -15,8 +15,8 @@ try:
 except ImportError:
     TORCH_AVAILABLE = False
 
-import mlx_compat
-import mlx_compat.nn.functional as F_mlx
+import flashlight
+import flashlight.nn.functional as F_mlx
 
 
 @pytest.mark.skipif(not TORCH_AVAILABLE, reason="PyTorch required for parity tests")
@@ -27,7 +27,7 @@ class TestActivationParity:
         """Test relu produces matching outputs."""
         x_np = np.random.randn(10, 20).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.relu(x_torch)
         out_mlx = F_mlx.relu(x_mlx)
@@ -42,7 +42,7 @@ class TestActivationParity:
         """Test relu correctly zeros negative values."""
         x_np = np.array([-2.0, -1.0, 0.0, 1.0, 2.0], dtype=np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.relu(x_torch)
         out_mlx = F_mlx.relu(x_mlx)
@@ -57,7 +57,7 @@ class TestActivationParity:
         """Test gelu produces matching outputs."""
         x_np = np.random.randn(10, 20).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.gelu(x_torch)
         out_mlx = F_mlx.gelu(x_mlx)
@@ -73,7 +73,7 @@ class TestActivationParity:
         """Test sigmoid produces matching outputs."""
         x_np = np.random.randn(10, 20).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.sigmoid(x_torch)
         out_mlx = F_mlx.sigmoid(x_mlx)
@@ -88,7 +88,7 @@ class TestActivationParity:
         """Test tanh produces matching outputs."""
         x_np = np.random.randn(10, 20).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.tanh(x_torch)
         out_mlx = F_mlx.tanh(x_mlx)
@@ -103,7 +103,7 @@ class TestActivationParity:
         """Test softmax produces matching outputs."""
         x_np = np.random.randn(5, 10).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.softmax(x_torch, dim=-1)
         out_mlx = F_mlx.softmax(x_mlx, dim=-1)
@@ -117,7 +117,7 @@ class TestActivationParity:
     def test_softmax_sums_to_one(self):
         """Test softmax outputs sum to 1."""
         x_np = np.random.randn(5, 10).astype(np.float32)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_mlx = F_mlx.softmax(x_mlx, dim=-1)
         sums = out_mlx.numpy().sum(axis=-1)
@@ -128,7 +128,7 @@ class TestActivationParity:
         """Test log_softmax produces matching outputs."""
         x_np = np.random.randn(5, 10).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.log_softmax(x_torch, dim=-1)
         out_mlx = F_mlx.log_softmax(x_mlx, dim=-1)
@@ -143,7 +143,7 @@ class TestActivationParity:
         """Test silu (swish) produces matching outputs."""
         x_np = np.random.randn(10, 20).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.silu(x_torch)
         out_mlx = F_mlx.silu(x_mlx)
@@ -158,7 +158,7 @@ class TestActivationParity:
         """Test leaky_relu produces matching outputs."""
         x_np = np.random.randn(10, 20).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         for negative_slope in [0.01, 0.1, 0.3]:
             out_torch = F_torch.leaky_relu(x_torch, negative_slope=negative_slope)
@@ -174,7 +174,7 @@ class TestActivationParity:
         """Test elu produces matching outputs."""
         x_np = np.random.randn(10, 20).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         for alpha in [0.5, 1.0, 2.0]:
             out_torch = F_torch.elu(x_torch, alpha=alpha)
@@ -201,9 +201,9 @@ class TestLinearParity:
         w_torch = torch.tensor(w_np)
         b_torch = torch.tensor(b_np)
 
-        x_mlx = mlx_compat.tensor(x_np)
-        w_mlx = mlx_compat.tensor(w_np)
-        b_mlx = mlx_compat.tensor(b_np)
+        x_mlx = flashlight.tensor(x_np)
+        w_mlx = flashlight.tensor(w_np)
+        b_mlx = flashlight.tensor(b_np)
 
         out_torch = F_torch.linear(x_torch, w_torch, b_torch)
         out_mlx = F_mlx.linear(x_mlx, w_mlx, b_mlx)
@@ -222,8 +222,8 @@ class TestLinearParity:
         x_torch = torch.tensor(x_np)
         w_torch = torch.tensor(w_np)
 
-        x_mlx = mlx_compat.tensor(x_np)
-        w_mlx = mlx_compat.tensor(w_np)
+        x_mlx = flashlight.tensor(x_np)
+        w_mlx = flashlight.tensor(w_np)
 
         out_torch = F_torch.linear(x_torch, w_torch)
         out_mlx = F_mlx.linear(x_mlx, w_mlx)
@@ -249,9 +249,9 @@ class TestNormalizationParity:
         w_torch = torch.tensor(w_np)
         b_torch = torch.tensor(b_np)
 
-        x_mlx = mlx_compat.tensor(x_np)
-        w_mlx = mlx_compat.tensor(w_np)
-        b_mlx = mlx_compat.tensor(b_np)
+        x_mlx = flashlight.tensor(x_np)
+        w_mlx = flashlight.tensor(w_np)
+        b_mlx = flashlight.tensor(b_np)
 
         out_torch = F_torch.layer_norm(x_torch, [10], weight=w_torch, bias=b_torch)
         out_mlx = F_mlx.layer_norm(x_mlx, [10], weight=w_mlx, bias=b_mlx)
@@ -267,7 +267,7 @@ class TestNormalizationParity:
         x_np = np.random.randn(2, 5, 10).astype(np.float32)
 
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.layer_norm(x_torch, [10])
         out_mlx = F_mlx.layer_norm(x_mlx, [10])
@@ -291,8 +291,8 @@ class TestLossFunctionParity:
         pred_torch = torch.tensor(pred_np)
         target_torch = torch.tensor(target_np)
 
-        pred_mlx = mlx_compat.tensor(pred_np)
-        target_mlx = mlx_compat.tensor(target_np)
+        pred_mlx = flashlight.tensor(pred_np)
+        target_mlx = flashlight.tensor(target_np)
 
         for reduction in ['mean', 'sum', 'none']:
             out_torch = F_torch.mse_loss(pred_torch, target_torch, reduction=reduction)
@@ -312,8 +312,8 @@ class TestLossFunctionParity:
         pred_torch = torch.tensor(pred_np)
         target_torch = torch.tensor(target_np)
 
-        pred_mlx = mlx_compat.tensor(pred_np)
-        target_mlx = mlx_compat.tensor(target_np)
+        pred_mlx = flashlight.tensor(pred_np)
+        target_mlx = flashlight.tensor(target_np)
 
         for reduction in ['mean', 'sum', 'none']:
             out_torch = F_torch.l1_loss(pred_torch, target_torch, reduction=reduction)
@@ -333,8 +333,8 @@ class TestLossFunctionParity:
         logits_torch = torch.tensor(logits_np)
         target_torch = torch.tensor(target_np)
 
-        logits_mlx = mlx_compat.tensor(logits_np)
-        target_mlx = mlx_compat.tensor(target_np)
+        logits_mlx = flashlight.tensor(logits_np)
+        target_mlx = flashlight.tensor(target_np)
 
         out_torch = F_torch.cross_entropy(logits_torch, target_torch)
         out_mlx = F_mlx.cross_entropy(logits_mlx, target_mlx)
@@ -353,8 +353,8 @@ class TestLossFunctionParity:
         logits_torch = torch.tensor(logits_np)
         target_torch = torch.tensor(target_np)
 
-        logits_mlx = mlx_compat.tensor(logits_np)
-        target_mlx = mlx_compat.tensor(target_np)
+        logits_mlx = flashlight.tensor(logits_np)
+        target_mlx = flashlight.tensor(target_np)
 
         out_torch = F_torch.binary_cross_entropy_with_logits(logits_torch, target_torch)
         out_mlx = F_mlx.binary_cross_entropy_with_logits(logits_mlx, target_mlx)
@@ -373,8 +373,8 @@ class TestLossFunctionParity:
         pred_torch = torch.tensor(pred_np)
         target_torch = torch.tensor(target_np)
 
-        pred_mlx = mlx_compat.tensor(pred_np)
-        target_mlx = mlx_compat.tensor(target_np)
+        pred_mlx = flashlight.tensor(pred_np)
+        target_mlx = flashlight.tensor(target_np)
 
         for beta in [0.5, 1.0, 2.0]:
             out_torch = F_torch.smooth_l1_loss(pred_torch, target_torch, beta=beta)
@@ -396,7 +396,7 @@ class TestPoolingParity:
         x_np = np.random.randn(2, 3, 8, 8).astype(np.float32)
 
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.max_pool2d(x_torch, kernel_size=2, stride=2)
         out_mlx = F_mlx.max_pool2d(x_mlx, kernel_size=2, stride=2)
@@ -412,7 +412,7 @@ class TestPoolingParity:
         x_np = np.random.randn(2, 3, 8, 8).astype(np.float32)
 
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.avg_pool2d(x_torch, kernel_size=2, stride=2)
         out_mlx = F_mlx.avg_pool2d(x_mlx, kernel_size=2, stride=2)
@@ -428,7 +428,7 @@ class TestPoolingParity:
         x_np = np.random.randn(2, 3, 8, 8).astype(np.float32)
 
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.adaptive_avg_pool2d(x_torch, (1, 1))
         out_mlx = F_mlx.adaptive_avg_pool2d(x_mlx, (1, 1))
@@ -455,8 +455,8 @@ class TestEmbeddingParity:
         weight_torch = torch.tensor(weight_np)
         indices_torch = torch.tensor(indices_np)
 
-        weight_mlx = mlx_compat.tensor(weight_np)
-        indices_mlx = mlx_compat.tensor(indices_np)
+        weight_mlx = flashlight.tensor(weight_np)
+        indices_mlx = flashlight.tensor(indices_np)
 
         out_torch = F_torch.embedding(indices_torch, weight_torch)
         out_mlx = F_mlx.embedding(indices_mlx, weight_mlx)
@@ -477,7 +477,7 @@ class TestPaddingParity:
         x_np = np.random.randn(2, 3, 8, 8).astype(np.float32)
 
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         # Pad last two dimensions: (left, right, top, bottom)
         out_torch = F_torch.pad(x_torch, (1, 2, 3, 4), mode='constant', value=0.0)
@@ -499,7 +499,7 @@ class TestNormalizeParity:
         x_np = np.random.randn(5, 10).astype(np.float32)
 
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.normalize(x_torch, p=2, dim=1)
         out_mlx = F_mlx.normalize(x_mlx, p=2, dim=1)
@@ -520,8 +520,8 @@ class TestSignatureCompatibility:
         pred_np = np.random.randn(10, 5).astype(np.float32)
         target_np = np.random.randn(10, 5).astype(np.float32)
 
-        pred_mlx = mlx_compat.tensor(pred_np)
-        target_mlx = mlx_compat.tensor(target_np)
+        pred_mlx = flashlight.tensor(pred_np)
+        target_mlx = flashlight.tensor(target_np)
 
         # Should emit deprecation warning but work
         with pytest.warns(DeprecationWarning):
@@ -536,8 +536,8 @@ class TestSignatureCompatibility:
         pred_np = np.random.randn(10, 5).astype(np.float32)
         target_np = np.random.randn(10, 5).astype(np.float32)
 
-        pred_mlx = mlx_compat.tensor(pred_np)
-        target_mlx = mlx_compat.tensor(target_np)
+        pred_mlx = flashlight.tensor(pred_np)
+        target_mlx = flashlight.tensor(target_np)
 
         # reduce=False should be equivalent to reduction='none'
         with pytest.warns(DeprecationWarning):
@@ -551,8 +551,8 @@ class TestSignatureCompatibility:
         logits_np = np.random.randn(10, 5).astype(np.float32)
         target_np = np.random.randint(0, 5, size=(10,)).astype(np.int64)
 
-        logits_mlx = mlx_compat.tensor(logits_np)
-        target_mlx = mlx_compat.tensor(target_np)
+        logits_mlx = flashlight.tensor(logits_np)
+        target_mlx = flashlight.tensor(target_np)
 
         with pytest.warns(DeprecationWarning):
             loss = F_mlx.cross_entropy(logits_mlx, target_mlx, size_average=True)
@@ -563,7 +563,7 @@ class TestSignatureCompatibility:
     def test_softmax_dtype_param(self):
         """Test softmax accepts dtype parameter."""
         x_np = np.random.randn(5, 10).astype(np.float32)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         # Should accept dtype parameter without error
         out = F_mlx.softmax(x_mlx, dim=-1, dtype=None)
@@ -572,7 +572,7 @@ class TestSignatureCompatibility:
     def test_log_softmax_dtype_param(self):
         """Test log_softmax accepts dtype parameter."""
         x_np = np.random.randn(5, 10).astype(np.float32)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         # Should accept dtype parameter without error
         out = F_mlx.log_softmax(x_mlx, dim=-1, dtype=None)
@@ -581,7 +581,7 @@ class TestSignatureCompatibility:
     def test_silu_inplace_param(self):
         """Test silu accepts inplace parameter."""
         x_np = np.random.randn(10, 20).astype(np.float32)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         # Should accept inplace parameter without error (even though it's ignored)
         out = F_mlx.silu(x_mlx, inplace=False)
@@ -590,7 +590,7 @@ class TestSignatureCompatibility:
     def test_interpolate_antialias_param(self):
         """Test interpolate accepts antialias parameter."""
         x_np = np.random.randn(2, 3, 8, 8).astype(np.float32)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         # Should accept antialias parameter (with warning)
         out = F_mlx.interpolate(x_mlx, size=(4, 4), antialias=False)
@@ -599,7 +599,7 @@ class TestSignatureCompatibility:
     def test_normalize_out_param(self):
         """Test normalize raises for out parameter."""
         x_np = np.random.randn(5, 10).astype(np.float32)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         # out=None should work fine
         out = F_mlx.normalize(x_mlx, p=2, dim=1, out=None)
@@ -612,7 +612,7 @@ class TestSignatureCompatibility:
     def test_pad_value_none(self):
         """Test pad accepts value=None (defaults to 0)."""
         x_np = np.random.randn(2, 3, 8, 8).astype(np.float32)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         # value=None should default to 0.0
         out = F_mlx.pad(x_mlx, (1, 1, 1, 1), mode='constant', value=None)
@@ -620,9 +620,9 @@ class TestSignatureCompatibility:
 
     def test_triplet_margin_loss_deprecated_params(self):
         """Test triplet_margin_loss accepts deprecated parameters."""
-        anchor = mlx_compat.randn(10, 128)
-        positive = mlx_compat.randn(10, 128)
-        negative = mlx_compat.randn(10, 128)
+        anchor = flashlight.randn(10, 128)
+        positive = flashlight.randn(10, 128)
+        negative = flashlight.randn(10, 128)
 
         with pytest.warns(DeprecationWarning):
             loss = F_mlx.triplet_margin_loss(
@@ -636,9 +636,9 @@ class TestSignatureCompatibility:
 
     def test_margin_ranking_loss_deprecated_params(self):
         """Test margin_ranking_loss accepts deprecated parameters."""
-        x1 = mlx_compat.randn(10)
-        x2 = mlx_compat.randn(10)
-        target = mlx_compat.tensor(np.random.choice([-1, 1], size=10).astype(np.float32))
+        x1 = flashlight.randn(10)
+        x2 = flashlight.randn(10)
+        target = flashlight.tensor(np.random.choice([-1, 1], size=10).astype(np.float32))
 
         with pytest.warns(DeprecationWarning):
             loss = F_mlx.margin_ranking_loss(x1, x2, target, size_average=True)
@@ -664,8 +664,8 @@ class TestGridSample3DParity:
         x_torch = torch.tensor(x_np)
         grid_torch = torch.tensor(grid_np)
 
-        x_mlx = mlx_compat.tensor(x_np)
-        grid_mlx = mlx_compat.tensor(grid_np)
+        x_mlx = flashlight.tensor(x_np)
+        grid_mlx = flashlight.tensor(grid_np)
 
         out_torch = F_torch.grid_sample(
             x_torch, grid_torch, mode='bilinear', padding_mode='zeros', align_corners=False
@@ -691,8 +691,8 @@ class TestGridSample3DParity:
         x_torch = torch.tensor(x_np)
         grid_torch = torch.tensor(grid_np)
 
-        x_mlx = mlx_compat.tensor(x_np)
-        grid_mlx = mlx_compat.tensor(grid_np)
+        x_mlx = flashlight.tensor(x_np)
+        grid_mlx = flashlight.tensor(grid_np)
 
         out_torch = F_torch.grid_sample(
             x_torch, grid_torch, mode='bilinear', padding_mode='zeros', align_corners=True
@@ -719,8 +719,8 @@ class TestGridSample3DParity:
         x_torch = torch.tensor(x_np)
         grid_torch = torch.tensor(grid_np)
 
-        x_mlx = mlx_compat.tensor(x_np)
-        grid_mlx = mlx_compat.tensor(grid_np)
+        x_mlx = flashlight.tensor(x_np)
+        grid_mlx = flashlight.tensor(grid_np)
 
         out_torch = F_torch.grid_sample(
             x_torch, grid_torch, mode='bilinear', padding_mode='border', align_corners=False
@@ -747,8 +747,8 @@ class TestGridSample3DParity:
         x_torch = torch.tensor(x_np)
         grid_torch = torch.tensor(grid_np)
 
-        x_mlx = mlx_compat.tensor(x_np)
-        grid_mlx = mlx_compat.tensor(grid_np)
+        x_mlx = flashlight.tensor(x_np)
+        grid_mlx = flashlight.tensor(grid_np)
 
         out_torch = F_torch.grid_sample(
             x_torch, grid_torch, mode='bilinear', padding_mode='reflection', align_corners=False
@@ -774,8 +774,8 @@ class TestGridSample3DParity:
         x_torch = torch.tensor(x_np)
         grid_torch = torch.tensor(grid_np)
 
-        x_mlx = mlx_compat.tensor(x_np)
-        grid_mlx = mlx_compat.tensor(grid_np)
+        x_mlx = flashlight.tensor(x_np)
+        grid_mlx = flashlight.tensor(grid_np)
 
         out_torch = F_torch.grid_sample(
             x_torch, grid_torch, mode='nearest', padding_mode='zeros', align_corners=False
@@ -801,8 +801,8 @@ class TestGridSample3DParity:
         x_torch = torch.tensor(x_np)
         grid_torch = torch.tensor(grid_np)
 
-        x_mlx = mlx_compat.tensor(x_np)
-        grid_mlx = mlx_compat.tensor(grid_np)
+        x_mlx = flashlight.tensor(x_np)
+        grid_mlx = flashlight.tensor(grid_np)
 
         out_torch = F_torch.grid_sample(
             x_torch, grid_torch, mode='nearest', padding_mode='border', align_corners=False
@@ -835,8 +835,8 @@ class TestGridSample3DParity:
         x_torch = torch.tensor(x_np)
         grid_torch = torch.tensor(grid_np)
 
-        x_mlx = mlx_compat.tensor(x_np)
-        grid_mlx = mlx_compat.tensor(grid_np)
+        x_mlx = flashlight.tensor(x_np)
+        grid_mlx = flashlight.tensor(grid_np)
 
         out_torch = F_torch.grid_sample(
             x_torch, grid_torch, mode='bilinear', padding_mode='zeros', align_corners=True
@@ -870,8 +870,8 @@ class TestGridSample3DParity:
         x_torch = torch.tensor(x_np)
         grid_torch = torch.tensor(grid_np)
 
-        x_mlx = mlx_compat.tensor(x_np)
-        grid_mlx = mlx_compat.tensor(grid_np)
+        x_mlx = flashlight.tensor(x_np)
+        grid_mlx = flashlight.tensor(grid_np)
 
         out_torch = F_torch.grid_sample(
             x_torch, grid_torch, mode='bilinear', padding_mode='zeros', align_corners=False
@@ -901,7 +901,7 @@ class TestInterpolateParity:
         """Test nearest interpolation upsampling for 3D input (NCL)."""
         x_np = np.random.randn(2, 3, 8).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.interpolate(x_torch, size=(16,), mode='nearest')
         out_mlx = F_mlx.interpolate(x_mlx, size=(16,), mode='nearest')
@@ -917,7 +917,7 @@ class TestInterpolateParity:
         """Test nearest interpolation downsampling for 3D input (NCL)."""
         x_np = np.random.randn(2, 3, 16).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.interpolate(x_torch, size=(8,), mode='nearest')
         out_mlx = F_mlx.interpolate(x_mlx, size=(8,), mode='nearest')
@@ -933,7 +933,7 @@ class TestInterpolateParity:
         """Test nearest interpolation upsampling for 4D input (NCHW)."""
         x_np = np.random.randn(2, 3, 8, 8).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.interpolate(x_torch, size=(16, 16), mode='nearest')
         out_mlx = F_mlx.interpolate(x_mlx, size=(16, 16), mode='nearest')
@@ -949,7 +949,7 @@ class TestInterpolateParity:
         """Test nearest interpolation downsampling for 4D input (NCHW)."""
         x_np = np.random.randn(2, 3, 16, 16).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.interpolate(x_torch, size=(8, 8), mode='nearest')
         out_mlx = F_mlx.interpolate(x_mlx, size=(8, 8), mode='nearest')
@@ -965,7 +965,7 @@ class TestInterpolateParity:
         """Test nearest interpolation upsampling for 5D input (NCDHW)."""
         x_np = np.random.randn(2, 3, 4, 8, 8).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.interpolate(x_torch, size=(8, 16, 16), mode='nearest')
         out_mlx = F_mlx.interpolate(x_mlx, size=(8, 16, 16), mode='nearest')
@@ -981,7 +981,7 @@ class TestInterpolateParity:
         """Test nearest interpolation downsampling for 5D input (NCDHW)."""
         x_np = np.random.randn(2, 3, 8, 16, 16).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.interpolate(x_torch, size=(4, 8, 8), mode='nearest')
         out_mlx = F_mlx.interpolate(x_mlx, size=(4, 8, 8), mode='nearest')
@@ -1001,7 +1001,7 @@ class TestInterpolateParity:
         """Test nearest-exact interpolation upsampling for 3D input (NCL)."""
         x_np = np.random.randn(2, 3, 8).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.interpolate(x_torch, size=(16,), mode='nearest-exact')
         out_mlx = F_mlx.interpolate(x_mlx, size=(16,), mode='nearest-exact')
@@ -1017,7 +1017,7 @@ class TestInterpolateParity:
         """Test nearest-exact interpolation downsampling for 3D input (NCL)."""
         x_np = np.random.randn(2, 3, 16).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.interpolate(x_torch, size=(8,), mode='nearest-exact')
         out_mlx = F_mlx.interpolate(x_mlx, size=(8,), mode='nearest-exact')
@@ -1033,7 +1033,7 @@ class TestInterpolateParity:
         """Test nearest-exact interpolation upsampling for 4D input (NCHW)."""
         x_np = np.random.randn(2, 3, 8, 8).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.interpolate(x_torch, size=(16, 16), mode='nearest-exact')
         out_mlx = F_mlx.interpolate(x_mlx, size=(16, 16), mode='nearest-exact')
@@ -1049,7 +1049,7 @@ class TestInterpolateParity:
         """Test nearest-exact interpolation downsampling for 4D input (NCHW)."""
         x_np = np.random.randn(2, 3, 16, 16).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.interpolate(x_torch, size=(8, 8), mode='nearest-exact')
         out_mlx = F_mlx.interpolate(x_mlx, size=(8, 8), mode='nearest-exact')
@@ -1065,7 +1065,7 @@ class TestInterpolateParity:
         """Test nearest-exact interpolation upsampling for 5D input (NCDHW)."""
         x_np = np.random.randn(2, 3, 4, 8, 8).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.interpolate(x_torch, size=(8, 16, 16), mode='nearest-exact')
         out_mlx = F_mlx.interpolate(x_mlx, size=(8, 16, 16), mode='nearest-exact')
@@ -1081,7 +1081,7 @@ class TestInterpolateParity:
         """Test nearest-exact interpolation downsampling for 5D input (NCDHW)."""
         x_np = np.random.randn(2, 3, 8, 16, 16).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.interpolate(x_torch, size=(4, 8, 8), mode='nearest-exact')
         out_mlx = F_mlx.interpolate(x_mlx, size=(4, 8, 8), mode='nearest-exact')
@@ -1101,7 +1101,7 @@ class TestInterpolateParity:
         """Test linear interpolation upsampling for 3D input (NCL)."""
         x_np = np.random.randn(2, 3, 8).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.interpolate(x_torch, size=(16,), mode='linear', align_corners=False)
         out_mlx = F_mlx.interpolate(x_mlx, size=(16,), mode='linear', align_corners=False)
@@ -1117,7 +1117,7 @@ class TestInterpolateParity:
         """Test linear interpolation with align_corners=True for 3D input."""
         x_np = np.random.randn(2, 3, 8).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.interpolate(x_torch, size=(16,), mode='linear', align_corners=True)
         out_mlx = F_mlx.interpolate(x_mlx, size=(16,), mode='linear', align_corners=True)
@@ -1133,7 +1133,7 @@ class TestInterpolateParity:
         """Test linear interpolation downsampling for 3D input (NCL)."""
         x_np = np.random.randn(2, 3, 16).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.interpolate(x_torch, size=(8,), mode='linear', align_corners=False)
         out_mlx = F_mlx.interpolate(x_mlx, size=(8,), mode='linear', align_corners=False)
@@ -1153,7 +1153,7 @@ class TestInterpolateParity:
         """Test bilinear interpolation upsampling for 4D input (NCHW)."""
         x_np = np.random.randn(2, 3, 8, 8).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.interpolate(x_torch, size=(16, 16), mode='bilinear', align_corners=False)
         out_mlx = F_mlx.interpolate(x_mlx, size=(16, 16), mode='bilinear', align_corners=False)
@@ -1169,7 +1169,7 @@ class TestInterpolateParity:
         """Test bilinear interpolation with align_corners=True for 4D input."""
         x_np = np.random.randn(2, 3, 8, 8).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.interpolate(x_torch, size=(16, 16), mode='bilinear', align_corners=True)
         out_mlx = F_mlx.interpolate(x_mlx, size=(16, 16), mode='bilinear', align_corners=True)
@@ -1185,7 +1185,7 @@ class TestInterpolateParity:
         """Test bilinear interpolation downsampling for 4D input (NCHW)."""
         x_np = np.random.randn(2, 3, 16, 16).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.interpolate(x_torch, size=(8, 8), mode='bilinear', align_corners=False)
         out_mlx = F_mlx.interpolate(x_mlx, size=(8, 8), mode='bilinear', align_corners=False)
@@ -1205,7 +1205,7 @@ class TestInterpolateParity:
         """Test bicubic interpolation upsampling for 4D input (NCHW)."""
         x_np = np.random.randn(2, 3, 8, 8).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.interpolate(x_torch, size=(16, 16), mode='bicubic', align_corners=False)
         out_mlx = F_mlx.interpolate(x_mlx, size=(16, 16), mode='bicubic', align_corners=False)
@@ -1221,7 +1221,7 @@ class TestInterpolateParity:
         """Test bicubic interpolation with align_corners=True for 4D input."""
         x_np = np.random.randn(2, 3, 8, 8).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.interpolate(x_torch, size=(16, 16), mode='bicubic', align_corners=True)
         out_mlx = F_mlx.interpolate(x_mlx, size=(16, 16), mode='bicubic', align_corners=True)
@@ -1237,7 +1237,7 @@ class TestInterpolateParity:
         """Test bicubic interpolation downsampling for 4D input (NCHW)."""
         x_np = np.random.randn(2, 3, 16, 16).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.interpolate(x_torch, size=(8, 8), mode='bicubic', align_corners=False)
         out_mlx = F_mlx.interpolate(x_mlx, size=(8, 8), mode='bicubic', align_corners=False)
@@ -1257,7 +1257,7 @@ class TestInterpolateParity:
         """Test trilinear interpolation upsampling for 5D input (NCDHW)."""
         x_np = np.random.randn(2, 3, 4, 8, 8).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.interpolate(x_torch, size=(8, 16, 16), mode='trilinear', align_corners=False)
         out_mlx = F_mlx.interpolate(x_mlx, size=(8, 16, 16), mode='trilinear', align_corners=False)
@@ -1273,7 +1273,7 @@ class TestInterpolateParity:
         """Test trilinear interpolation with align_corners=True for 5D input."""
         x_np = np.random.randn(2, 3, 4, 8, 8).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.interpolate(x_torch, size=(8, 16, 16), mode='trilinear', align_corners=True)
         out_mlx = F_mlx.interpolate(x_mlx, size=(8, 16, 16), mode='trilinear', align_corners=True)
@@ -1289,7 +1289,7 @@ class TestInterpolateParity:
         """Test trilinear interpolation downsampling for 5D input (NCDHW)."""
         x_np = np.random.randn(2, 3, 8, 16, 16).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.interpolate(x_torch, size=(4, 8, 8), mode='trilinear', align_corners=False)
         out_mlx = F_mlx.interpolate(x_mlx, size=(4, 8, 8), mode='trilinear', align_corners=False)
@@ -1309,7 +1309,7 @@ class TestInterpolateParity:
         """Test area interpolation downsampling for 3D input (NCL)."""
         x_np = np.random.randn(2, 3, 16).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.interpolate(x_torch, size=(8,), mode='area')
         out_mlx = F_mlx.interpolate(x_mlx, size=(8,), mode='area')
@@ -1325,7 +1325,7 @@ class TestInterpolateParity:
         """Test area interpolation downsampling for 4D input (NCHW)."""
         x_np = np.random.randn(2, 3, 16, 16).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.interpolate(x_torch, size=(8, 8), mode='area')
         out_mlx = F_mlx.interpolate(x_mlx, size=(8, 8), mode='area')
@@ -1341,7 +1341,7 @@ class TestInterpolateParity:
         """Test area interpolation downsampling for 5D input (NCDHW)."""
         x_np = np.random.randn(2, 3, 8, 16, 16).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.interpolate(x_torch, size=(4, 8, 8), mode='area')
         out_mlx = F_mlx.interpolate(x_mlx, size=(4, 8, 8), mode='area')
@@ -1361,7 +1361,7 @@ class TestInterpolateParity:
         """Test interpolation with scale_factor for 3D input."""
         x_np = np.random.randn(2, 3, 8).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.interpolate(x_torch, scale_factor=2.0, mode='nearest')
         out_mlx = F_mlx.interpolate(x_mlx, scale_factor=2.0, mode='nearest')
@@ -1377,7 +1377,7 @@ class TestInterpolateParity:
         """Test interpolation with scale_factor for 4D input."""
         x_np = np.random.randn(2, 3, 8, 8).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.interpolate(x_torch, scale_factor=2.0, mode='nearest')
         out_mlx = F_mlx.interpolate(x_mlx, scale_factor=2.0, mode='nearest')
@@ -1393,7 +1393,7 @@ class TestInterpolateParity:
         """Test interpolation with scale_factor for 5D input."""
         x_np = np.random.randn(2, 3, 4, 8, 8).astype(np.float32)
         x_torch = torch.tensor(x_np)
-        x_mlx = mlx_compat.tensor(x_np)
+        x_mlx = flashlight.tensor(x_np)
 
         out_torch = F_torch.interpolate(x_torch, scale_factor=2.0, mode='nearest')
         out_mlx = F_mlx.interpolate(x_mlx, scale_factor=2.0, mode='nearest')

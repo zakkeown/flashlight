@@ -19,7 +19,7 @@ import pytest
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
-    import mlx_compat
+    import flashlight
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -37,25 +37,25 @@ class TestZeroPad1d(TestCase):
 
     def test_creation(self):
         """Test ZeroPad1d creation."""
-        pad = mlx_compat.nn.ZeroPad1d(2)
+        pad = flashlight.nn.ZeroPad1d(2)
         self.assertEqual(pad.padding, (2, 2))
 
     def test_creation_asymmetric(self):
         """Test ZeroPad1d with asymmetric padding."""
-        pad = mlx_compat.nn.ZeroPad1d((1, 3))
+        pad = flashlight.nn.ZeroPad1d((1, 3))
         self.assertEqual(pad.padding, (1, 3))
 
     def test_forward_shape(self):
         """Test ZeroPad1d forward pass output shape."""
-        pad = mlx_compat.nn.ZeroPad1d(2)
-        x = mlx_compat.randn(2, 3, 10)
+        pad = flashlight.nn.ZeroPad1d(2)
+        x = flashlight.randn(2, 3, 10)
         output = pad(x)
         self.assertEqual(output.shape, (2, 3, 14))
 
     def test_values(self):
         """Test that padded values are zeros."""
-        pad = mlx_compat.nn.ZeroPad1d(2)
-        x = mlx_compat.ones(1, 1, 5)
+        pad = flashlight.nn.ZeroPad1d(2)
+        x = flashlight.ones(1, 1, 5)
         output = pad(x)
         # Check padded regions are zero
         np.testing.assert_array_equal(output[:, :, :2].numpy(), 0)
@@ -68,13 +68,13 @@ class TestZeroPad2d(TestCase):
 
     def test_creation(self):
         """Test ZeroPad2d creation."""
-        pad = mlx_compat.nn.ZeroPad2d(2)
+        pad = flashlight.nn.ZeroPad2d(2)
         self.assertEqual(pad.padding, (2, 2, 2, 2))
 
     def test_forward_shape(self):
         """Test ZeroPad2d forward pass output shape."""
-        pad = mlx_compat.nn.ZeroPad2d((1, 2, 3, 4))
-        x = mlx_compat.randn(2, 3, 10, 10)
+        pad = flashlight.nn.ZeroPad2d((1, 2, 3, 4))
+        x = flashlight.randn(2, 3, 10, 10)
         output = pad(x)
         self.assertEqual(output.shape, (2, 3, 17, 13))  # H+3+4, W+1+2
 
@@ -85,13 +85,13 @@ class TestZeroPad3d(TestCase):
 
     def test_creation(self):
         """Test ZeroPad3d creation."""
-        pad = mlx_compat.nn.ZeroPad3d(2)
+        pad = flashlight.nn.ZeroPad3d(2)
         self.assertEqual(pad.padding, (2, 2, 2, 2, 2, 2))
 
     def test_forward_shape(self):
         """Test ZeroPad3d forward pass output shape."""
-        pad = mlx_compat.nn.ZeroPad3d(1)
-        x = mlx_compat.randn(2, 3, 8, 8, 8)
+        pad = flashlight.nn.ZeroPad3d(1)
+        x = flashlight.randn(2, 3, 8, 8, 8)
         output = pad(x)
         self.assertEqual(output.shape, (2, 3, 10, 10, 10))
 
@@ -102,20 +102,20 @@ class TestConstantPad1d(TestCase):
 
     def test_creation(self):
         """Test ConstantPad1d creation."""
-        pad = mlx_compat.nn.ConstantPad1d(2, value=3.14)
+        pad = flashlight.nn.ConstantPad1d(2, value=3.14)
         self.assertEqual(pad.value, 3.14)
 
     def test_forward_shape(self):
         """Test ConstantPad1d forward pass output shape."""
-        pad = mlx_compat.nn.ConstantPad1d(2, value=0)
-        x = mlx_compat.randn(2, 3, 10)
+        pad = flashlight.nn.ConstantPad1d(2, value=0)
+        x = flashlight.randn(2, 3, 10)
         output = pad(x)
         self.assertEqual(output.shape, (2, 3, 14))
 
     def test_values(self):
         """Test that padded values are the constant."""
-        pad = mlx_compat.nn.ConstantPad1d(2, value=5.0)
-        x = mlx_compat.ones(1, 1, 5)
+        pad = flashlight.nn.ConstantPad1d(2, value=5.0)
+        x = flashlight.ones(1, 1, 5)
         output = pad(x)
         np.testing.assert_array_almost_equal(output[:, :, :2].numpy(), 5.0)
         np.testing.assert_array_almost_equal(output[:, :, -2:].numpy(), 5.0)
@@ -127,8 +127,8 @@ class TestConstantPad2d(TestCase):
 
     def test_forward_shape(self):
         """Test ConstantPad2d forward pass output shape."""
-        pad = mlx_compat.nn.ConstantPad2d(2, value=0)
-        x = mlx_compat.randn(2, 3, 10, 10)
+        pad = flashlight.nn.ConstantPad2d(2, value=0)
+        x = flashlight.randn(2, 3, 10, 10)
         output = pad(x)
         self.assertEqual(output.shape, (2, 3, 14, 14))
 
@@ -139,8 +139,8 @@ class TestConstantPad3d(TestCase):
 
     def test_forward_shape(self):
         """Test ConstantPad3d forward pass output shape."""
-        pad = mlx_compat.nn.ConstantPad3d(1, value=0)
-        x = mlx_compat.randn(2, 3, 8, 8, 8)
+        pad = flashlight.nn.ConstantPad3d(1, value=0)
+        x = flashlight.randn(2, 3, 8, 8, 8)
         output = pad(x)
         self.assertEqual(output.shape, (2, 3, 10, 10, 10))
 
@@ -151,13 +151,13 @@ class TestReflectionPad1d(TestCase):
 
     def test_creation(self):
         """Test ReflectionPad1d creation."""
-        pad = mlx_compat.nn.ReflectionPad1d(2)
+        pad = flashlight.nn.ReflectionPad1d(2)
         self.assertEqual(pad.padding, (2, 2))
 
     def test_forward_shape(self):
         """Test ReflectionPad1d forward pass output shape."""
-        pad = mlx_compat.nn.ReflectionPad1d(2)
-        x = mlx_compat.randn(2, 3, 10)
+        pad = flashlight.nn.ReflectionPad1d(2)
+        x = flashlight.randn(2, 3, 10)
         output = pad(x)
         self.assertEqual(output.shape, (2, 3, 14))
 
@@ -166,11 +166,11 @@ class TestReflectionPad1d(TestCase):
     def test_parity_with_pytorch(self):
         """Test numerical parity with PyTorch."""
         pad_torch = torch.nn.ReflectionPad1d(2)
-        pad_mlx = mlx_compat.nn.ReflectionPad1d(2)
+        pad_mlx = flashlight.nn.ReflectionPad1d(2)
 
         x_np = np.random.randn(2, 3, 10).astype(np.float32)
         out_torch = pad_torch(torch.tensor(x_np))
-        out_mlx = pad_mlx(mlx_compat.tensor(x_np))
+        out_mlx = pad_mlx(flashlight.tensor(x_np))
 
         np.testing.assert_allclose(
             out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6
@@ -183,8 +183,8 @@ class TestReflectionPad2d(TestCase):
 
     def test_forward_shape(self):
         """Test ReflectionPad2d forward pass output shape."""
-        pad = mlx_compat.nn.ReflectionPad2d(2)
-        x = mlx_compat.randn(2, 3, 10, 10)
+        pad = flashlight.nn.ReflectionPad2d(2)
+        x = flashlight.randn(2, 3, 10, 10)
         output = pad(x)
         self.assertEqual(output.shape, (2, 3, 14, 14))
 
@@ -195,8 +195,8 @@ class TestReflectionPad3d(TestCase):
 
     def test_forward_shape(self):
         """Test ReflectionPad3d forward pass output shape."""
-        pad = mlx_compat.nn.ReflectionPad3d(1)
-        x = mlx_compat.randn(2, 3, 8, 8, 8)
+        pad = flashlight.nn.ReflectionPad3d(1)
+        x = flashlight.randn(2, 3, 8, 8, 8)
         output = pad(x)
         self.assertEqual(output.shape, (2, 3, 10, 10, 10))
 
@@ -205,11 +205,11 @@ class TestReflectionPad3d(TestCase):
     def test_parity_with_pytorch(self):
         """Test numerical parity with PyTorch."""
         pad_torch = torch.nn.ReflectionPad3d(1)
-        pad_mlx = mlx_compat.nn.ReflectionPad3d(1)
+        pad_mlx = flashlight.nn.ReflectionPad3d(1)
 
         x_np = np.random.randn(2, 3, 6, 6, 6).astype(np.float32)
         out_torch = pad_torch(torch.tensor(x_np))
-        out_mlx = pad_mlx(mlx_compat.tensor(x_np))
+        out_mlx = pad_mlx(flashlight.tensor(x_np))
 
         np.testing.assert_allclose(
             out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6
@@ -222,8 +222,8 @@ class TestReplicationPad1d(TestCase):
 
     def test_forward_shape(self):
         """Test ReplicationPad1d forward pass output shape."""
-        pad = mlx_compat.nn.ReplicationPad1d(2)
-        x = mlx_compat.randn(2, 3, 10)
+        pad = flashlight.nn.ReplicationPad1d(2)
+        x = flashlight.randn(2, 3, 10)
         output = pad(x)
         self.assertEqual(output.shape, (2, 3, 14))
 
@@ -234,8 +234,8 @@ class TestReplicationPad2d(TestCase):
 
     def test_forward_shape(self):
         """Test ReplicationPad2d forward pass output shape."""
-        pad = mlx_compat.nn.ReplicationPad2d(2)
-        x = mlx_compat.randn(2, 3, 10, 10)
+        pad = flashlight.nn.ReplicationPad2d(2)
+        x = flashlight.randn(2, 3, 10, 10)
         output = pad(x)
         self.assertEqual(output.shape, (2, 3, 14, 14))
 
@@ -246,8 +246,8 @@ class TestReplicationPad3d(TestCase):
 
     def test_forward_shape(self):
         """Test ReplicationPad3d forward pass output shape."""
-        pad = mlx_compat.nn.ReplicationPad3d(1)
-        x = mlx_compat.randn(2, 3, 8, 8, 8)
+        pad = flashlight.nn.ReplicationPad3d(1)
+        x = flashlight.randn(2, 3, 8, 8, 8)
         output = pad(x)
         self.assertEqual(output.shape, (2, 3, 10, 10, 10))
 
@@ -258,8 +258,8 @@ class TestCircularPad1d(TestCase):
 
     def test_forward_shape(self):
         """Test CircularPad1d forward pass output shape."""
-        pad = mlx_compat.nn.CircularPad1d(2)
-        x = mlx_compat.randn(2, 3, 10)
+        pad = flashlight.nn.CircularPad1d(2)
+        x = flashlight.randn(2, 3, 10)
         output = pad(x)
         self.assertEqual(output.shape, (2, 3, 14))
 
@@ -270,8 +270,8 @@ class TestCircularPad2d(TestCase):
 
     def test_forward_shape(self):
         """Test CircularPad2d forward pass output shape."""
-        pad = mlx_compat.nn.CircularPad2d(2)
-        x = mlx_compat.randn(2, 3, 10, 10)
+        pad = flashlight.nn.CircularPad2d(2)
+        x = flashlight.randn(2, 3, 10, 10)
         output = pad(x)
         self.assertEqual(output.shape, (2, 3, 14, 14))
 
@@ -282,8 +282,8 @@ class TestCircularPad3d(TestCase):
 
     def test_forward_shape(self):
         """Test CircularPad3d forward pass output shape."""
-        pad = mlx_compat.nn.CircularPad3d(1)
-        x = mlx_compat.randn(2, 3, 8, 8, 8)
+        pad = flashlight.nn.CircularPad3d(1)
+        x = flashlight.randn(2, 3, 8, 8, 8)
         output = pad(x)
         self.assertEqual(output.shape, (2, 3, 10, 10, 10))
 

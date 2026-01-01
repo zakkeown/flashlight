@@ -1,7 +1,7 @@
 """
-mlx_compat API introspection utilities.
+flashlight API introspection utilities.
 
-Extracts the public API from mlx_compat modules for comparison with PyTorch.
+Extracts the public API from flashlight modules for comparison with PyTorch.
 """
 
 import importlib
@@ -52,7 +52,7 @@ def get_public_names(module) -> List[str]:
 
 def get_mlx_api_info(obj: Any, name: str) -> Dict[str, Any]:
     """
-    Extract detailed information about an mlx_compat API.
+    Extract detailed information about an flashlight API.
 
     Args:
         obj: The API object
@@ -79,7 +79,7 @@ def get_mlx_api_info(obj: Any, name: str) -> Dict[str, Any]:
 
 def enumerate_mlx_api(modules: Optional[List[str]] = None) -> Dict[str, Dict[str, Any]]:
     """
-    Enumerate the public API of mlx_compat modules.
+    Enumerate the public API of flashlight modules.
 
     Args:
         modules: List of module names to inspect. If None, uses default list.
@@ -90,7 +90,7 @@ def enumerate_mlx_api(modules: Optional[List[str]] = None) -> Dict[str, Dict[str
 
     Note:
         The returned module names use the PyTorch naming convention (e.g., "torch.nn")
-        for easy comparison, even though the actual modules are from mlx_compat.
+        for easy comparison, even though the actual modules are from flashlight.
     """
     from ..config import MODULE_MAPPING, PYTORCH_MODULES
 
@@ -100,7 +100,7 @@ def enumerate_mlx_api(modules: Optional[List[str]] = None) -> Dict[str, Dict[str
     result = {}
 
     for pytorch_module_name in modules:
-        # Map PyTorch module name to mlx_compat module name
+        # Map PyTorch module name to flashlight module name
         mlx_module_name = MODULE_MAPPING.get(pytorch_module_name)
         if mlx_module_name is None:
             continue

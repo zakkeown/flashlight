@@ -19,7 +19,7 @@ import pytest
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
-    import mlx_compat
+    import flashlight
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -41,13 +41,13 @@ class TestMaxPool1d(TestCase):
 
     def test_creation(self):
         """Test MaxPool1d creation."""
-        pool = mlx_compat.nn.MaxPool1d(kernel_size=3)
+        pool = flashlight.nn.MaxPool1d(kernel_size=3)
         self.assertEqual(pool.kernel_size, 3)
 
     def test_forward_shape(self):
         """Test MaxPool1d forward pass output shape."""
-        pool = mlx_compat.nn.MaxPool1d(kernel_size=3, stride=2)
-        x = mlx_compat.randn(2, 3, 20)
+        pool = flashlight.nn.MaxPool1d(kernel_size=3, stride=2)
+        x = flashlight.randn(2, 3, 20)
         output = pool(x)
         self.assertEqual(output.shape[0], 2)
         self.assertEqual(output.shape[1], 3)
@@ -59,13 +59,13 @@ class TestMaxPool3d(TestCase):
 
     def test_creation(self):
         """Test MaxPool3d creation."""
-        pool = mlx_compat.nn.MaxPool3d(kernel_size=3)
+        pool = flashlight.nn.MaxPool3d(kernel_size=3)
         self.assertIsNotNone(pool)
 
     def test_forward_shape(self):
         """Test MaxPool3d forward pass output shape."""
-        pool = mlx_compat.nn.MaxPool3d(kernel_size=2)
-        x = mlx_compat.randn(2, 3, 8, 8, 8)
+        pool = flashlight.nn.MaxPool3d(kernel_size=2)
+        x = flashlight.randn(2, 3, 8, 8, 8)
         output = pool(x)
         self.assertEqual(output.shape[:2], (2, 3))
 
@@ -80,8 +80,8 @@ class TestAvgPool1d(TestCase):
 
     def test_forward_shape(self):
         """Test AvgPool1d forward pass output shape."""
-        pool = mlx_compat.nn.AvgPool1d(kernel_size=3, stride=2)
-        x = mlx_compat.randn(2, 3, 20)
+        pool = flashlight.nn.AvgPool1d(kernel_size=3, stride=2)
+        x = flashlight.randn(2, 3, 20)
         output = pool(x)
         self.assertEqual(output.shape[:2], (2, 3))
 
@@ -92,8 +92,8 @@ class TestAvgPool3d(TestCase):
 
     def test_forward_shape(self):
         """Test AvgPool3d forward pass output shape."""
-        pool = mlx_compat.nn.AvgPool3d(kernel_size=2)
-        x = mlx_compat.randn(2, 3, 8, 8, 8)
+        pool = flashlight.nn.AvgPool3d(kernel_size=2)
+        x = flashlight.randn(2, 3, 8, 8, 8)
         output = pool(x)
         self.assertEqual(output.shape[:2], (2, 3))
 
@@ -108,8 +108,8 @@ class TestAdaptiveMaxPool1d(TestCase):
 
     def test_forward_shape(self):
         """Test AdaptiveMaxPool1d forward pass output shape."""
-        pool = mlx_compat.nn.AdaptiveMaxPool1d(output_size=5)
-        x = mlx_compat.randn(2, 3, 20)
+        pool = flashlight.nn.AdaptiveMaxPool1d(output_size=5)
+        x = flashlight.randn(2, 3, 20)
         output = pool(x)
         self.assertEqual(output.shape, (2, 3, 5))
 
@@ -120,8 +120,8 @@ class TestAdaptiveMaxPool3d(TestCase):
 
     def test_forward_shape(self):
         """Test AdaptiveMaxPool3d forward pass output shape."""
-        pool = mlx_compat.nn.AdaptiveMaxPool3d(output_size=(2, 2, 2))
-        x = mlx_compat.randn(2, 3, 8, 8, 8)
+        pool = flashlight.nn.AdaptiveMaxPool3d(output_size=(2, 2, 2))
+        x = flashlight.randn(2, 3, 8, 8, 8)
         output = pool(x)
         self.assertEqual(output.shape, (2, 3, 2, 2, 2))
 
@@ -132,8 +132,8 @@ class TestAdaptiveAvgPool1d(TestCase):
 
     def test_forward_shape(self):
         """Test AdaptiveAvgPool1d forward pass output shape."""
-        pool = mlx_compat.nn.AdaptiveAvgPool1d(output_size=5)
-        x = mlx_compat.randn(2, 3, 20)
+        pool = flashlight.nn.AdaptiveAvgPool1d(output_size=5)
+        x = flashlight.randn(2, 3, 20)
         output = pool(x)
         self.assertEqual(output.shape, (2, 3, 5))
 
@@ -144,8 +144,8 @@ class TestAdaptiveAvgPool3d(TestCase):
 
     def test_forward_shape(self):
         """Test AdaptiveAvgPool3d forward pass output shape."""
-        pool = mlx_compat.nn.AdaptiveAvgPool3d(output_size=(2, 2, 2))
-        x = mlx_compat.randn(2, 3, 8, 8, 8)
+        pool = flashlight.nn.AdaptiveAvgPool3d(output_size=(2, 2, 2))
+        x = flashlight.randn(2, 3, 8, 8, 8)
         output = pool(x)
         self.assertEqual(output.shape, (2, 3, 2, 2, 2))
 
@@ -160,13 +160,13 @@ class TestLPPool1d(TestCase):
 
     def test_creation(self):
         """Test LPPool1d creation."""
-        pool = mlx_compat.nn.LPPool1d(norm_type=2, kernel_size=3)
+        pool = flashlight.nn.LPPool1d(norm_type=2, kernel_size=3)
         self.assertEqual(pool.norm_type, 2)
 
     def test_forward_shape(self):
         """Test LPPool1d forward pass output shape."""
-        pool = mlx_compat.nn.LPPool1d(norm_type=2, kernel_size=3, stride=2)
-        x = mlx_compat.randn(2, 3, 20)
+        pool = flashlight.nn.LPPool1d(norm_type=2, kernel_size=3, stride=2)
+        x = flashlight.randn(2, 3, 20)
         output = pool(x)
         self.assertEqual(output.shape[:2], (2, 3))
 
@@ -177,13 +177,13 @@ class TestLPPool2d(TestCase):
 
     def test_creation(self):
         """Test LPPool2d creation."""
-        pool = mlx_compat.nn.LPPool2d(norm_type=2, kernel_size=3)
+        pool = flashlight.nn.LPPool2d(norm_type=2, kernel_size=3)
         self.assertEqual(pool.norm_type, 2)
 
     def test_forward_shape(self):
         """Test LPPool2d forward pass output shape."""
-        pool = mlx_compat.nn.LPPool2d(norm_type=2, kernel_size=3, stride=2)
-        x = mlx_compat.randn(2, 3, 16, 16)
+        pool = flashlight.nn.LPPool2d(norm_type=2, kernel_size=3, stride=2)
+        x = flashlight.randn(2, 3, 16, 16)
         output = pool(x)
         self.assertEqual(output.shape[:2], (2, 3))
 
@@ -194,13 +194,13 @@ class TestLPPool3d(TestCase):
 
     def test_creation(self):
         """Test LPPool3d creation."""
-        pool = mlx_compat.nn.LPPool3d(norm_type=2, kernel_size=2)
+        pool = flashlight.nn.LPPool3d(norm_type=2, kernel_size=2)
         self.assertEqual(pool.norm_type, 2)
 
     def test_forward_shape(self):
         """Test LPPool3d forward pass output shape."""
-        pool = mlx_compat.nn.LPPool3d(norm_type=2, kernel_size=2, stride=2)
-        x = mlx_compat.randn(2, 3, 8, 8, 8)
+        pool = flashlight.nn.LPPool3d(norm_type=2, kernel_size=2, stride=2)
+        x = flashlight.randn(2, 3, 8, 8, 8)
         output = pool(x)
         self.assertEqual(output.shape[:2], (2, 3))
         self.assertEqual(output.shape[2:], (4, 4, 4))
@@ -208,8 +208,8 @@ class TestLPPool3d(TestCase):
     def test_different_norm_types(self):
         """Test LPPool3d with different norm types."""
         for norm_type in [1, 2, 3]:
-            pool = mlx_compat.nn.LPPool3d(norm_type=norm_type, kernel_size=2)
-            x = mlx_compat.randn(1, 2, 4, 4, 4)
+            pool = flashlight.nn.LPPool3d(norm_type=norm_type, kernel_size=2)
+            x = flashlight.randn(1, 2, 4, 4, 4)
             output = pool(x)
             self.assertEqual(output.shape, (1, 2, 2, 2, 2))
 
@@ -224,25 +224,25 @@ class TestFractionalMaxPool2d(TestCase):
 
     def test_creation_with_output_size(self):
         """Test FractionalMaxPool2d creation with output_size."""
-        pool = mlx_compat.nn.FractionalMaxPool2d(kernel_size=3, output_size=(5, 5))
+        pool = flashlight.nn.FractionalMaxPool2d(kernel_size=3, output_size=(5, 5))
         self.assertEqual(pool.output_size, (5, 5))
 
     def test_creation_with_output_ratio(self):
         """Test FractionalMaxPool2d creation with output_ratio."""
-        pool = mlx_compat.nn.FractionalMaxPool2d(kernel_size=3, output_ratio=(0.5, 0.5))
+        pool = flashlight.nn.FractionalMaxPool2d(kernel_size=3, output_ratio=(0.5, 0.5))
         self.assertEqual(pool.output_ratio, (0.5, 0.5))
 
     def test_forward_shape_with_output_size(self):
         """Test FractionalMaxPool2d forward pass with output_size."""
-        pool = mlx_compat.nn.FractionalMaxPool2d(kernel_size=3, output_size=(5, 5))
-        x = mlx_compat.randn(2, 3, 16, 16)
+        pool = flashlight.nn.FractionalMaxPool2d(kernel_size=3, output_size=(5, 5))
+        x = flashlight.randn(2, 3, 16, 16)
         output = pool(x)
         self.assertEqual(output.shape, (2, 3, 5, 5))
 
     def test_forward_shape_with_output_ratio(self):
         """Test FractionalMaxPool2d forward pass with output_ratio."""
-        pool = mlx_compat.nn.FractionalMaxPool2d(kernel_size=3, output_ratio=(0.5, 0.5))
-        x = mlx_compat.randn(2, 3, 16, 16)
+        pool = flashlight.nn.FractionalMaxPool2d(kernel_size=3, output_ratio=(0.5, 0.5))
+        x = flashlight.randn(2, 3, 16, 16)
         output = pool(x)
         self.assertEqual(output.shape, (2, 3, 8, 8))
 
@@ -253,13 +253,13 @@ class TestFractionalMaxPool3d(TestCase):
 
     def test_creation(self):
         """Test FractionalMaxPool3d creation."""
-        pool = mlx_compat.nn.FractionalMaxPool3d(kernel_size=3, output_size=(4, 4, 4))
+        pool = flashlight.nn.FractionalMaxPool3d(kernel_size=3, output_size=(4, 4, 4))
         self.assertEqual(pool.output_size, (4, 4, 4))
 
     def test_forward_shape(self):
         """Test FractionalMaxPool3d forward pass."""
-        pool = mlx_compat.nn.FractionalMaxPool3d(kernel_size=2, output_size=(4, 4, 4))
-        x = mlx_compat.randn(2, 3, 8, 8, 8)
+        pool = flashlight.nn.FractionalMaxPool3d(kernel_size=2, output_size=(4, 4, 4))
+        x = flashlight.randn(2, 3, 8, 8, 8)
         output = pool(x)
         self.assertEqual(output.shape, (2, 3, 4, 4, 4))
 
@@ -274,18 +274,18 @@ class TestMaxUnpool1d(TestCase):
 
     def test_creation(self):
         """Test MaxUnpool1d creation."""
-        unpool = mlx_compat.nn.MaxUnpool1d(kernel_size=2, stride=2)
+        unpool = flashlight.nn.MaxUnpool1d(kernel_size=2, stride=2)
         self.assertEqual(unpool.kernel_size, 2)
 
     def test_forward_shape(self):
         """Test MaxUnpool1d forward pass."""
         # First do max pooling with return_indices
-        pool = mlx_compat.nn.MaxPool1d(kernel_size=2, stride=2, return_indices=True)
-        x = mlx_compat.randn(2, 3, 8)
+        pool = flashlight.nn.MaxPool1d(kernel_size=2, stride=2, return_indices=True)
+        x = flashlight.randn(2, 3, 8)
         pooled, indices = pool(x)
 
         # Then unpool
-        unpool = mlx_compat.nn.MaxUnpool1d(kernel_size=2, stride=2)
+        unpool = flashlight.nn.MaxUnpool1d(kernel_size=2, stride=2)
         output = unpool(pooled, indices)
         self.assertEqual(output.shape, (2, 3, 8))
 
@@ -296,16 +296,16 @@ class TestMaxUnpool2d(TestCase):
 
     def test_creation(self):
         """Test MaxUnpool2d creation."""
-        unpool = mlx_compat.nn.MaxUnpool2d(kernel_size=2, stride=2)
+        unpool = flashlight.nn.MaxUnpool2d(kernel_size=2, stride=2)
         self.assertEqual(unpool.kernel_size, (2, 2))
 
     def test_forward_shape(self):
         """Test MaxUnpool2d forward pass."""
-        pool = mlx_compat.nn.MaxPool2d(kernel_size=2, stride=2, return_indices=True)
-        x = mlx_compat.randn(2, 3, 8, 8)
+        pool = flashlight.nn.MaxPool2d(kernel_size=2, stride=2, return_indices=True)
+        x = flashlight.randn(2, 3, 8, 8)
         pooled, indices = pool(x)
 
-        unpool = mlx_compat.nn.MaxUnpool2d(kernel_size=2, stride=2)
+        unpool = flashlight.nn.MaxUnpool2d(kernel_size=2, stride=2)
         output = unpool(pooled, indices)
         self.assertEqual(output.shape, (2, 3, 8, 8))
 
@@ -316,16 +316,16 @@ class TestMaxUnpool3d(TestCase):
 
     def test_creation(self):
         """Test MaxUnpool3d creation."""
-        unpool = mlx_compat.nn.MaxUnpool3d(kernel_size=2, stride=2)
+        unpool = flashlight.nn.MaxUnpool3d(kernel_size=2, stride=2)
         self.assertEqual(unpool.kernel_size, (2, 2, 2))
 
     def test_forward_shape(self):
         """Test MaxUnpool3d forward pass."""
-        pool = mlx_compat.nn.MaxPool3d(kernel_size=2, stride=2, return_indices=True)
-        x = mlx_compat.randn(2, 3, 8, 8, 8)
+        pool = flashlight.nn.MaxPool3d(kernel_size=2, stride=2, return_indices=True)
+        x = flashlight.randn(2, 3, 8, 8, 8)
         pooled, indices = pool(x)
 
-        unpool = mlx_compat.nn.MaxUnpool3d(kernel_size=2, stride=2)
+        unpool = flashlight.nn.MaxUnpool3d(kernel_size=2, stride=2)
         output = unpool(pooled, indices)
         self.assertEqual(output.shape, (2, 3, 8, 8, 8))
 

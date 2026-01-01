@@ -11,8 +11,8 @@ sys.path.insert(0, '../..')
 import numpy as np
 
 try:
-    import mlx_compat
-    from mlx_compat.data import (
+    import flashlight
+    from flashlight.data import (
         SequentialSampler, RandomSampler, WeightedRandomSampler, BatchSampler
     )
     MLX_AVAILABLE = True

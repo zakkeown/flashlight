@@ -13,7 +13,7 @@ import numpy as np
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
-    import mlx_compat
+    import flashlight
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -31,30 +31,30 @@ class TestEinsum(TestCase):
 
     def test_einsum_matmul(self):
         """Test einsum for matrix multiplication."""
-        a = mlx_compat.tensor([[1.0, 2.0], [3.0, 4.0]])
-        b = mlx_compat.tensor([[5.0, 6.0], [7.0, 8.0]])
-        c = mlx_compat.einsum('ij,jk->ik', a, b)
+        a = flashlight.tensor([[1.0, 2.0], [3.0, 4.0]])
+        b = flashlight.tensor([[5.0, 6.0], [7.0, 8.0]])
+        c = flashlight.einsum('ij,jk->ik', a, b)
         expected = np.array([[19.0, 22.0], [43.0, 50.0]])
         np.testing.assert_allclose(c.numpy(), expected, rtol=1e-5)
 
     def test_einsum_batch_matmul(self):
         """Test einsum for batch matrix multiplication."""
-        a = mlx_compat.randn(2, 3, 4)
-        b = mlx_compat.randn(2, 4, 5)
-        c = mlx_compat.einsum('bij,bjk->bik', a, b)
+        a = flashlight.randn(2, 3, 4)
+        b = flashlight.randn(2, 4, 5)
+        c = flashlight.einsum('bij,bjk->bik', a, b)
         self.assertEqual(c.shape, (2, 3, 5))
 
     def test_einsum_trace(self):
         """Test einsum for trace."""
-        a = mlx_compat.tensor([[1.0, 2.0], [3.0, 4.0]])
-        trace = mlx_compat.einsum('ii->', a)
+        a = flashlight.tensor([[1.0, 2.0], [3.0, 4.0]])
+        trace = flashlight.einsum('ii->', a)
         self.assertAlmostEqual(trace.numpy().item(), 5.0)
 
     def test_einsum_outer(self):
         """Test einsum for outer product."""
-        a = mlx_compat.tensor([1.0, 2.0, 3.0])
-        b = mlx_compat.tensor([4.0, 5.0])
-        c = mlx_compat.einsum('i,j->ij', a, b)
+        a = flashlight.tensor([1.0, 2.0, 3.0])
+        b = flashlight.tensor([4.0, 5.0])
+        c = flashlight.einsum('i,j->ij', a, b)
         expected = np.array([[4.0, 5.0], [8.0, 10.0], [12.0, 15.0]])
         np.testing.assert_allclose(c.numpy(), expected, rtol=1e-5)
 
@@ -65,12 +65,12 @@ class TestEinsum(TestCase):
         a_data = np.random.randn(3, 4).astype(np.float32)
         b_data = np.random.randn(4, 5).astype(np.float32)
 
-        mlx_a = mlx_compat.tensor(a_data)
-        mlx_b = mlx_compat.tensor(b_data)
+        mlx_a = flashlight.tensor(a_data)
+        mlx_b = flashlight.tensor(b_data)
         torch_a = torch.tensor(a_data)
         torch_b = torch.tensor(b_data)
 
-        mlx_result = mlx_compat.einsum('ij,jk->ik', mlx_a, mlx_b)
+        mlx_result = flashlight.einsum('ij,jk->ik', mlx_a, mlx_b)
         torch_result = torch.einsum('ij,jk->ik', torch_a, torch_b)
 
         np.testing.assert_allclose(
@@ -84,17 +84,17 @@ class TestTensordot(TestCase):
 
     def test_tensordot_1d(self):
         """Test tensordot on 1D tensors (dot product)."""
-        a = mlx_compat.tensor([1.0, 2.0, 3.0])
-        b = mlx_compat.tensor([4.0, 5.0, 6.0])
-        c = mlx_compat.tensordot(a, b, dims=1)
+        a = flashlight.tensor([1.0, 2.0, 3.0])
+        b = flashlight.tensor([4.0, 5.0, 6.0])
+        c = flashlight.tensordot(a, b, dims=1)
         # 1*4 + 2*5 + 3*6 = 32
         self.assertAlmostEqual(c.numpy().item(), 32.0)
 
     def test_tensordot_matmul(self):
         """Test tensordot for matrix multiplication."""
-        a = mlx_compat.tensor([[1.0, 2.0], [3.0, 4.0]])
-        b = mlx_compat.tensor([[5.0, 6.0], [7.0, 8.0]])
-        c = mlx_compat.tensordot(a, b, dims=1)
+        a = flashlight.tensor([[1.0, 2.0], [3.0, 4.0]])
+        b = flashlight.tensor([[5.0, 6.0], [7.0, 8.0]])
+        c = flashlight.tensordot(a, b, dims=1)
         expected = np.array([[19.0, 22.0], [43.0, 50.0]])
         np.testing.assert_allclose(c.numpy(), expected, rtol=1e-5)
 
@@ -105,29 +105,29 @@ class TestDiag(TestCase):
 
     def test_diag_vector_to_matrix(self):
         """Test creating diagonal matrix from vector."""
-        v = mlx_compat.tensor([1.0, 2.0, 3.0])
-        m = mlx_compat.diag(v)
+        v = flashlight.tensor([1.0, 2.0, 3.0])
+        m = flashlight.diag(v)
         expected = np.array([[1., 0., 0.], [0., 2., 0.], [0., 0., 3.]])
         np.testing.assert_array_equal(m.numpy(), expected)
 
     def test_diag_matrix_to_vector(self):
         """Test extracting diagonal from matrix."""
-        m = mlx_compat.tensor([[1., 2., 3.], [4., 5., 6.], [7., 8., 9.]])
-        v = mlx_compat.diag(m)
+        m = flashlight.tensor([[1., 2., 3.], [4., 5., 6.], [7., 8., 9.]])
+        v = flashlight.diag(m)
         expected = np.array([1., 5., 9.])
         np.testing.assert_array_equal(v.numpy(), expected)
 
     def test_diag_offset_positive(self):
         """Test diag with positive offset."""
-        m = mlx_compat.tensor([[1., 2., 3.], [4., 5., 6.], [7., 8., 9.]])
-        v = mlx_compat.diag(m, diagonal=1)
+        m = flashlight.tensor([[1., 2., 3.], [4., 5., 6.], [7., 8., 9.]])
+        v = flashlight.diag(m, diagonal=1)
         expected = np.array([2., 6.])
         np.testing.assert_array_equal(v.numpy(), expected)
 
     def test_diag_offset_negative(self):
         """Test diag with negative offset."""
-        m = mlx_compat.tensor([[1., 2., 3.], [4., 5., 6.], [7., 8., 9.]])
-        v = mlx_compat.diag(m, diagonal=-1)
+        m = flashlight.tensor([[1., 2., 3.], [4., 5., 6.], [7., 8., 9.]])
+        v = flashlight.diag(m, diagonal=-1)
         expected = np.array([4., 8.])
         np.testing.assert_array_equal(v.numpy(), expected)
 
@@ -138,15 +138,15 @@ class TestDiagonal(TestCase):
 
     def test_diagonal_basic(self):
         """Test basic diagonal extraction."""
-        m = mlx_compat.tensor([[1., 2., 3.], [4., 5., 6.], [7., 8., 9.]])
-        d = mlx_compat.diagonal(m)
+        m = flashlight.tensor([[1., 2., 3.], [4., 5., 6.], [7., 8., 9.]])
+        d = flashlight.diagonal(m)
         expected = np.array([1., 5., 9.])
         np.testing.assert_array_equal(d.numpy(), expected)
 
     def test_diagonal_offset(self):
         """Test diagonal with offset."""
-        m = mlx_compat.tensor([[1., 2., 3.], [4., 5., 6.], [7., 8., 9.]])
-        d = mlx_compat.diagonal(m, offset=1)
+        m = flashlight.tensor([[1., 2., 3.], [4., 5., 6.], [7., 8., 9.]])
+        d = flashlight.diagonal(m, offset=1)
         expected = np.array([2., 6.])
         np.testing.assert_array_equal(d.numpy(), expected)
 
@@ -157,29 +157,29 @@ class TestTriuTril(TestCase):
 
     def test_triu_basic(self):
         """Test basic upper triangular."""
-        m = mlx_compat.tensor([[1., 2., 3.], [4., 5., 6.], [7., 8., 9.]])
-        u = mlx_compat.triu(m)
+        m = flashlight.tensor([[1., 2., 3.], [4., 5., 6.], [7., 8., 9.]])
+        u = flashlight.triu(m)
         expected = np.array([[1., 2., 3.], [0., 5., 6.], [0., 0., 9.]])
         np.testing.assert_array_equal(u.numpy(), expected)
 
     def test_triu_diagonal_1(self):
         """Test upper triangular with diagonal offset 1."""
-        m = mlx_compat.tensor([[1., 2., 3.], [4., 5., 6.], [7., 8., 9.]])
-        u = mlx_compat.triu(m, diagonal=1)
+        m = flashlight.tensor([[1., 2., 3.], [4., 5., 6.], [7., 8., 9.]])
+        u = flashlight.triu(m, diagonal=1)
         expected = np.array([[0., 2., 3.], [0., 0., 6.], [0., 0., 0.]])
         np.testing.assert_array_equal(u.numpy(), expected)
 
     def test_tril_basic(self):
         """Test basic lower triangular."""
-        m = mlx_compat.tensor([[1., 2., 3.], [4., 5., 6.], [7., 8., 9.]])
-        l = mlx_compat.tril(m)
+        m = flashlight.tensor([[1., 2., 3.], [4., 5., 6.], [7., 8., 9.]])
+        l = flashlight.tril(m)
         expected = np.array([[1., 0., 0.], [4., 5., 0.], [7., 8., 9.]])
         np.testing.assert_array_equal(l.numpy(), expected)
 
     def test_tril_diagonal_neg1(self):
         """Test lower triangular with diagonal offset -1."""
-        m = mlx_compat.tensor([[1., 2., 3.], [4., 5., 6.], [7., 8., 9.]])
-        l = mlx_compat.tril(m, diagonal=-1)
+        m = flashlight.tensor([[1., 2., 3.], [4., 5., 6.], [7., 8., 9.]])
+        l = flashlight.tril(m, diagonal=-1)
         expected = np.array([[0., 0., 0.], [4., 0., 0.], [7., 8., 0.]])
         np.testing.assert_array_equal(l.numpy(), expected)
 
@@ -190,15 +190,15 @@ class TestTrace(TestCase):
 
     def test_trace_basic(self):
         """Test basic trace (sum of diagonal)."""
-        m = mlx_compat.tensor([[1., 2., 3.], [4., 5., 6.], [7., 8., 9.]])
-        t = mlx_compat.trace(m)
+        m = flashlight.tensor([[1., 2., 3.], [4., 5., 6.], [7., 8., 9.]])
+        t = flashlight.trace(m)
         # 1 + 5 + 9 = 15
         self.assertAlmostEqual(t.numpy().item(), 15.0)
 
     def test_trace_identity(self):
         """Test trace of identity matrix."""
-        m = mlx_compat.eye(5)
-        t = mlx_compat.trace(m)
+        m = flashlight.eye(5)
+        t = flashlight.trace(m)
         self.assertAlmostEqual(t.numpy().item(), 5.0)
 
 
@@ -208,9 +208,9 @@ class TestOuter(TestCase):
 
     def test_outer_basic(self):
         """Test basic outer product."""
-        a = mlx_compat.tensor([1., 2., 3.])
-        b = mlx_compat.tensor([4., 5.])
-        c = mlx_compat.outer(a, b)
+        a = flashlight.tensor([1., 2., 3.])
+        b = flashlight.tensor([4., 5.])
+        c = flashlight.outer(a, b)
         expected = np.array([[4., 5.], [8., 10.], [12., 15.]])
         np.testing.assert_array_equal(c.numpy(), expected)
 
@@ -220,12 +220,12 @@ class TestOuter(TestCase):
         a_data = np.array([1., 2., 3., 4.], dtype=np.float32)
         b_data = np.array([5., 6., 7.], dtype=np.float32)
 
-        mlx_a = mlx_compat.tensor(a_data)
-        mlx_b = mlx_compat.tensor(b_data)
+        mlx_a = flashlight.tensor(a_data)
+        mlx_b = flashlight.tensor(b_data)
         torch_a = torch.tensor(a_data)
         torch_b = torch.tensor(b_data)
 
-        mlx_result = mlx_compat.outer(mlx_a, mlx_b)
+        mlx_result = flashlight.outer(mlx_a, mlx_b)
         torch_result = torch.outer(torch_a, torch_b)
 
         np.testing.assert_allclose(
@@ -239,9 +239,9 @@ class TestInner(TestCase):
 
     def test_inner_1d(self):
         """Test inner product of 1D vectors (dot product)."""
-        a = mlx_compat.tensor([1., 2., 3.])
-        b = mlx_compat.tensor([4., 5., 6.])
-        c = mlx_compat.inner(a, b)
+        a = flashlight.tensor([1., 2., 3.])
+        b = flashlight.tensor([4., 5., 6.])
+        c = flashlight.inner(a, b)
         # 1*4 + 2*5 + 3*6 = 32
         self.assertAlmostEqual(c.numpy().item(), 32.0)
 
@@ -252,9 +252,9 @@ class TestDot(TestCase):
 
     def test_dot_1d(self):
         """Test dot product of 1D vectors."""
-        a = mlx_compat.tensor([1., 2., 3.])
-        b = mlx_compat.tensor([4., 5., 6.])
-        c = mlx_compat.dot(a, b)
+        a = flashlight.tensor([1., 2., 3.])
+        b = flashlight.tensor([4., 5., 6.])
+        c = flashlight.dot(a, b)
         # 1*4 + 2*5 + 3*6 = 32
         self.assertAlmostEqual(c.numpy().item(), 32.0)
 
@@ -265,9 +265,9 @@ class TestKron(TestCase):
 
     def test_kron_basic(self):
         """Test basic Kronecker product."""
-        a = mlx_compat.tensor([[1., 2.], [3., 4.]])
-        b = mlx_compat.tensor([[0., 5.], [6., 7.]])
-        c = mlx_compat.kron(a, b)
+        a = flashlight.tensor([[1., 2.], [3., 4.]])
+        b = flashlight.tensor([[0., 5.], [6., 7.]])
+        c = flashlight.kron(a, b)
         # Result is 4x4
         self.assertEqual(c.shape, (4, 4))
         # Check some values

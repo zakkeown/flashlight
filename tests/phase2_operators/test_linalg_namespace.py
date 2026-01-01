@@ -13,7 +13,7 @@ import numpy as np
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
-    import mlx_compat
+    import flashlight
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -31,37 +31,37 @@ class TestLinalgNorm(TestCase):
 
     def test_norm_frobenius(self):
         """Test Frobenius norm (default for matrices)."""
-        m = mlx_compat.tensor([[1., 2.], [3., 4.]])
-        n = mlx_compat.linalg.norm(m)
+        m = flashlight.tensor([[1., 2.], [3., 4.]])
+        n = flashlight.linalg.norm(m)
         # sqrt(1 + 4 + 9 + 16) = sqrt(30) = 5.477...
         expected = np.sqrt(30)
         self.assertAlmostEqual(n.numpy().item(), expected, places=4)
 
     def test_norm_vector_2(self):
         """Test 2-norm for vectors."""
-        v = mlx_compat.tensor([3., 4.])
-        n = mlx_compat.linalg.norm(v, ord=2)
+        v = flashlight.tensor([3., 4.])
+        n = flashlight.linalg.norm(v, ord=2)
         # sqrt(9 + 16) = 5
         self.assertAlmostEqual(n.numpy().item(), 5.0)
 
     def test_norm_vector_1(self):
         """Test 1-norm for vectors."""
-        v = mlx_compat.tensor([1., -2., 3.])
-        n = mlx_compat.linalg.norm(v, ord=1)
+        v = flashlight.tensor([1., -2., 3.])
+        n = flashlight.linalg.norm(v, ord=1)
         # |1| + |-2| + |3| = 6
         self.assertAlmostEqual(n.numpy().item(), 6.0)
 
     def test_norm_vector_inf(self):
         """Test infinity norm for vectors."""
-        v = mlx_compat.tensor([1., -5., 3.])
-        n = mlx_compat.linalg.norm(v, ord=float('inf'))
+        v = flashlight.tensor([1., -5., 3.])
+        n = flashlight.linalg.norm(v, ord=float('inf'))
         # max(|1|, |-5|, |3|) = 5
         self.assertAlmostEqual(n.numpy().item(), 5.0)
 
     def test_norm_keepdim(self):
         """Test norm with keepdim."""
-        m = mlx_compat.tensor([[1., 2.], [3., 4.]])
-        n = mlx_compat.linalg.norm(m, dim=1, keepdim=True)
+        m = flashlight.tensor([[1., 2.], [3., 4.]])
+        n = flashlight.linalg.norm(m, dim=1, keepdim=True)
         self.assertEqual(n.shape, (2, 1))
 
     @unittest.skipUnless(TORCH_AVAILABLE, "PyTorch not available")
@@ -70,10 +70,10 @@ class TestLinalgNorm(TestCase):
         np.random.seed(42)
         data = np.random.randn(3, 4).astype(np.float32)
 
-        mlx_x = mlx_compat.tensor(data)
+        mlx_x = flashlight.tensor(data)
         torch_x = torch.tensor(data)
 
-        mlx_result = mlx_compat.linalg.norm(mlx_x)
+        mlx_result = flashlight.linalg.norm(mlx_x)
         torch_result = torch.linalg.norm(torch_x)
 
         np.testing.assert_allclose(
@@ -89,8 +89,8 @@ class TestLinalgSVD(TestCase):
         """Test basic SVD."""
         np.random.seed(42)
         data = np.random.randn(3, 4).astype(np.float32)
-        m = mlx_compat.tensor(data)
-        U, S, Vh = mlx_compat.linalg.svd(m)
+        m = flashlight.tensor(data)
+        U, S, Vh = flashlight.linalg.svd(m)
 
         # U should be (3, 3), S should be (3,), Vh should be (4, 4) for full
         # But MLX returns reduced SVD
@@ -101,8 +101,8 @@ class TestLinalgSVD(TestCase):
         """Test that SVD can reconstruct the matrix."""
         np.random.seed(42)
         data = np.random.randn(3, 4).astype(np.float32)
-        m = mlx_compat.tensor(data)
-        U, S, Vh = mlx_compat.linalg.svd(m)
+        m = flashlight.tensor(data)
+        U, S, Vh = flashlight.linalg.svd(m)
 
         # Reconstruct: U @ diag(S) @ Vh
         # Note: need to handle dimensions properly
@@ -110,8 +110,8 @@ class TestLinalgSVD(TestCase):
         U_k = U[:, :k] if len(U.shape) > 1 else U
         Vh_k = Vh[:k, :] if len(Vh.shape) > 1 else Vh
 
-        reconstructed = mlx_compat.matmul(
-            mlx_compat.matmul(U_k, mlx_compat.diag(S)),
+        reconstructed = flashlight.matmul(
+            flashlight.matmul(U_k, flashlight.diag(S)),
             Vh_k
         )
         np.testing.assert_allclose(
@@ -127,8 +127,8 @@ class TestLinalgSvdvals(TestCase):
         """Test svdvals returns singular values only."""
         np.random.seed(42)
         data = np.random.randn(3, 4).astype(np.float32)
-        m = mlx_compat.tensor(data)
-        S = mlx_compat.linalg.svdvals(m)
+        m = flashlight.tensor(data)
+        S = flashlight.linalg.svdvals(m)
         self.assertEqual(len(S.shape), 1)
 
 
@@ -140,12 +140,12 @@ class TestLinalgQR(TestCase):
         """Test basic QR decomposition."""
         np.random.seed(42)
         data = np.random.randn(4, 3).astype(np.float32)
-        m = mlx_compat.tensor(data)
-        Q, R = mlx_compat.linalg.qr(m)
+        m = flashlight.tensor(data)
+        Q, R = flashlight.linalg.qr(m)
 
         # Q should be orthogonal, R should be upper triangular
         # Check Q @ R = M
-        reconstructed = mlx_compat.matmul(Q, R)
+        reconstructed = flashlight.matmul(Q, R)
         np.testing.assert_allclose(
             reconstructed.numpy(), data, rtol=1e-4, atol=1e-4
         )
@@ -154,10 +154,10 @@ class TestLinalgQR(TestCase):
         """Test that Q is orthogonal (Q^T @ Q = I)."""
         np.random.seed(42)
         data = np.random.randn(4, 3).astype(np.float32)
-        m = mlx_compat.tensor(data)
-        Q, R = mlx_compat.linalg.qr(m)
+        m = flashlight.tensor(data)
+        Q, R = flashlight.linalg.qr(m)
 
-        QtQ = mlx_compat.matmul(Q.transpose(-1, -2), Q)
+        QtQ = flashlight.matmul(Q.transpose(-1, -2), Q)
         k = min(4, 3)
         expected_I = np.eye(k, dtype=np.float32)
         np.testing.assert_allclose(
@@ -172,12 +172,12 @@ class TestLinalgCholesky(TestCase):
     def test_cholesky_basic(self):
         """Test basic Cholesky decomposition."""
         # Create a positive definite matrix
-        m = mlx_compat.tensor([[4., 2.], [2., 5.]])
-        L = mlx_compat.linalg.cholesky(m)
+        m = flashlight.tensor([[4., 2.], [2., 5.]])
+        L = flashlight.linalg.cholesky(m)
 
         # L should be lower triangular
         # Check L @ L^T = M
-        reconstructed = mlx_compat.matmul(L, L.transpose(-1, -2))
+        reconstructed = flashlight.matmul(L, L.transpose(-1, -2))
         np.testing.assert_allclose(
             reconstructed.numpy(), m.numpy(), rtol=1e-4, atol=1e-4
         )
@@ -189,10 +189,10 @@ class TestLinalgCholesky(TestCase):
         # Make positive definite: A^T @ A + small diagonal
         data = A.T @ A + 0.1 * np.eye(4, dtype=np.float32)
 
-        m = mlx_compat.tensor(data)
-        L = mlx_compat.linalg.cholesky(m)
+        m = flashlight.tensor(data)
+        L = flashlight.linalg.cholesky(m)
 
-        reconstructed = mlx_compat.matmul(L, L.transpose(-1, -2))
+        reconstructed = flashlight.matmul(L, L.transpose(-1, -2))
         np.testing.assert_allclose(
             reconstructed.numpy(), data, rtol=1e-4, atol=1e-4
         )
@@ -204,11 +204,11 @@ class TestLinalgInv(TestCase):
 
     def test_inv_basic(self):
         """Test basic matrix inverse."""
-        m = mlx_compat.tensor([[1., 2.], [3., 4.]])
-        m_inv = mlx_compat.linalg.inv(m)
+        m = flashlight.tensor([[1., 2.], [3., 4.]])
+        m_inv = flashlight.linalg.inv(m)
 
         # M @ M_inv should be identity
-        product = mlx_compat.matmul(m, m_inv)
+        product = flashlight.matmul(m, m_inv)
         expected = np.eye(2, dtype=np.float32)
         np.testing.assert_allclose(
             product.numpy(), expected, rtol=1e-4, atol=1e-4
@@ -221,10 +221,10 @@ class TestLinalgInv(TestCase):
         # Make invertible by adding to diagonal
         data += np.eye(4, dtype=np.float32) * 2
 
-        m = mlx_compat.tensor(data)
-        m_inv = mlx_compat.linalg.inv(m)
+        m = flashlight.tensor(data)
+        m_inv = flashlight.linalg.inv(m)
 
-        product = mlx_compat.matmul(m, m_inv)
+        product = flashlight.matmul(m, m_inv)
         expected = np.eye(4, dtype=np.float32)
         np.testing.assert_allclose(
             product.numpy(), expected, rtol=1e-4, atol=1e-5
@@ -238,12 +238,12 @@ class TestLinalgSolve(TestCase):
     def test_solve_basic(self):
         """Test basic linear system solve."""
         # Solve Ax = b
-        A = mlx_compat.tensor([[3., 1.], [1., 2.]])
-        b = mlx_compat.tensor([[9.], [8.]])
-        x = mlx_compat.linalg.solve(A, b)
+        A = flashlight.tensor([[3., 1.], [1., 2.]])
+        b = flashlight.tensor([[9.], [8.]])
+        x = flashlight.linalg.solve(A, b)
 
         # Check A @ x = b
-        result = mlx_compat.matmul(A, x)
+        result = flashlight.matmul(A, x)
         np.testing.assert_allclose(
             result.numpy(), b.numpy(), rtol=1e-4, atol=1e-4
         )
@@ -255,11 +255,11 @@ class TestLinalgSolve(TestCase):
         A_data += np.eye(3) * 2  # Make well-conditioned
         b_data = np.random.randn(3, 2).astype(np.float32)
 
-        A = mlx_compat.tensor(A_data)
-        b = mlx_compat.tensor(b_data)
-        x = mlx_compat.linalg.solve(A, b)
+        A = flashlight.tensor(A_data)
+        b = flashlight.tensor(b_data)
+        x = flashlight.linalg.solve(A, b)
 
-        result = mlx_compat.matmul(A, x)
+        result = flashlight.matmul(A, x)
         np.testing.assert_allclose(
             result.numpy(), b_data, rtol=1e-4, atol=1e-5
         )
@@ -272,8 +272,8 @@ class TestLinalgEig(TestCase):
     def test_eig_basic(self):
         """Test basic eigenvalue decomposition."""
         # Simple matrix with known eigenvalues
-        m = mlx_compat.tensor([[2., 0.], [0., 3.]])
-        eigenvalues, eigenvectors = mlx_compat.linalg.eig(m)
+        m = flashlight.tensor([[2., 0.], [0., 3.]])
+        eigenvalues, eigenvectors = flashlight.linalg.eig(m)
 
         # Eigenvalues should be 2 and 3
         eig_vals = np.sort(np.abs(eigenvalues.numpy()))
@@ -287,13 +287,13 @@ class TestLinalgEigh(TestCase):
     def test_eigh_basic(self):
         """Test eigenvalue decomposition of symmetric matrix."""
         # Symmetric matrix
-        m = mlx_compat.tensor([[4., 2.], [2., 3.]])
-        eigenvalues, eigenvectors = mlx_compat.linalg.eigh(m)
+        m = flashlight.tensor([[4., 2.], [2., 3.]])
+        eigenvalues, eigenvectors = flashlight.linalg.eigh(m)
 
         # Check V @ diag(eigenvalues) @ V^T = M
         # For symmetric matrices, eigenvectors are orthonormal
-        reconstructed = mlx_compat.matmul(
-            mlx_compat.matmul(eigenvectors, mlx_compat.diag(eigenvalues)),
+        reconstructed = flashlight.matmul(
+            flashlight.matmul(eigenvectors, flashlight.diag(eigenvalues)),
             eigenvectors.transpose(-1, -2)
         )
         np.testing.assert_allclose(
@@ -307,21 +307,21 @@ class TestLinalgDet(TestCase):
 
     def test_det_basic(self):
         """Test basic determinant."""
-        m = mlx_compat.tensor([[1., 2.], [3., 4.]])
-        d = mlx_compat.linalg.det(m)
+        m = flashlight.tensor([[1., 2.], [3., 4.]])
+        d = flashlight.linalg.det(m)
         # det = 1*4 - 2*3 = -2
         self.assertAlmostEqual(d.numpy().item(), -2.0, places=4)
 
     def test_det_identity(self):
         """Test determinant of identity matrix."""
-        m = mlx_compat.eye(4)
-        d = mlx_compat.linalg.det(m)
+        m = flashlight.eye(4)
+        d = flashlight.linalg.det(m)
         self.assertAlmostEqual(d.numpy().item(), 1.0, places=4)
 
     def test_det_singular(self):
         """Test determinant of singular matrix."""
-        m = mlx_compat.tensor([[1., 2.], [2., 4.]])  # Rows are multiples
-        d = mlx_compat.linalg.det(m)
+        m = flashlight.tensor([[1., 2.], [2., 4.]])  # Rows are multiples
+        d = flashlight.linalg.det(m)
         self.assertAlmostEqual(d.numpy().item(), 0.0, places=4)
 
 
@@ -331,8 +331,8 @@ class TestLinalgSlogdet(TestCase):
 
     def test_slogdet_basic(self):
         """Test sign and log determinant."""
-        m = mlx_compat.tensor([[1., 2.], [3., 4.]])
-        sign, logabsdet = mlx_compat.linalg.slogdet(m)
+        m = flashlight.tensor([[1., 2.], [3., 4.]])
+        sign, logabsdet = flashlight.linalg.slogdet(m)
         # det = -2, so sign = -1, log|det| = log(2)
         self.assertAlmostEqual(sign.numpy().item(), -1.0, places=4)
         self.assertAlmostEqual(logabsdet.numpy().item(), np.log(2), places=4)
@@ -340,8 +340,8 @@ class TestLinalgSlogdet(TestCase):
     def test_slogdet_positive(self):
         """Test slogdet with positive determinant."""
         # Create positive definite matrix
-        m = mlx_compat.tensor([[4., 2.], [2., 5.]])
-        sign, logabsdet = mlx_compat.linalg.slogdet(m)
+        m = flashlight.tensor([[4., 2.], [2., 5.]])
+        sign, logabsdet = flashlight.linalg.slogdet(m)
         # det = 4*5 - 2*2 = 16, so sign = 1, log|det| = log(16)
         self.assertAlmostEqual(sign.numpy().item(), 1.0, places=4)
         self.assertAlmostEqual(logabsdet.numpy().item(), np.log(16), places=3)
@@ -353,12 +353,12 @@ class TestLinalgPinv(TestCase):
 
     def test_pinv_square(self):
         """Test pseudoinverse of square matrix."""
-        m = mlx_compat.tensor([[1., 2.], [3., 4.]])
-        m_pinv = mlx_compat.linalg.pinv(m)
+        m = flashlight.tensor([[1., 2.], [3., 4.]])
+        m_pinv = flashlight.linalg.pinv(m)
 
         # For invertible matrix, pinv = inv
         # M @ M_pinv should be close to identity
-        product = mlx_compat.matmul(m, m_pinv)
+        product = flashlight.matmul(m, m_pinv)
         expected = np.eye(2, dtype=np.float32)
         np.testing.assert_allclose(
             product.numpy(), expected, rtol=1e-4, atol=1e-5
@@ -368,11 +368,11 @@ class TestLinalgPinv(TestCase):
         """Test pseudoinverse of tall matrix (more rows than cols)."""
         np.random.seed(42)
         data = np.random.randn(6, 3).astype(np.float32)
-        m = mlx_compat.tensor(data)
-        m_pinv = mlx_compat.linalg.pinv(m)
+        m = flashlight.tensor(data)
+        m_pinv = flashlight.linalg.pinv(m)
 
         # For tall matrix: pinv(M) @ M should be close to identity (3x3)
-        product = mlx_compat.matmul(m_pinv, m)
+        product = flashlight.matmul(m_pinv, m)
         expected = np.eye(3, dtype=np.float32)
         np.testing.assert_allclose(
             product.numpy(), expected, rtol=1e-4, atol=1e-5
@@ -382,11 +382,11 @@ class TestLinalgPinv(TestCase):
         """Test pseudoinverse of wide matrix (more cols than rows)."""
         np.random.seed(42)
         data = np.random.randn(3, 6).astype(np.float32)
-        m = mlx_compat.tensor(data)
-        m_pinv = mlx_compat.linalg.pinv(m)
+        m = flashlight.tensor(data)
+        m_pinv = flashlight.linalg.pinv(m)
 
         # For wide matrix: M @ pinv(M) should be close to identity (3x3)
-        product = mlx_compat.matmul(m, m_pinv)
+        product = flashlight.matmul(m, m_pinv)
         expected = np.eye(3, dtype=np.float32)
         np.testing.assert_allclose(
             product.numpy(), expected, rtol=1e-4, atol=1e-5
@@ -396,10 +396,10 @@ class TestLinalgPinv(TestCase):
         """Test that M @ pinv(M) @ M = M."""
         np.random.seed(42)
         data = np.random.randn(4, 3).astype(np.float32)
-        m = mlx_compat.tensor(data)
-        m_pinv = mlx_compat.linalg.pinv(m)
+        m = flashlight.tensor(data)
+        m_pinv = flashlight.linalg.pinv(m)
 
-        reconstructed = mlx_compat.matmul(mlx_compat.matmul(m, m_pinv), m)
+        reconstructed = flashlight.matmul(flashlight.matmul(m, m_pinv), m)
         np.testing.assert_allclose(
             reconstructed.numpy(), data, rtol=1e-4, atol=1e-5
         )
@@ -411,18 +411,18 @@ class TestLinalgCross(TestCase):
 
     def test_cross_basic(self):
         """Test basic cross product."""
-        a = mlx_compat.tensor([1., 0., 0.])
-        b = mlx_compat.tensor([0., 1., 0.])
-        c = mlx_compat.linalg.cross(a, b)
+        a = flashlight.tensor([1., 0., 0.])
+        b = flashlight.tensor([0., 1., 0.])
+        c = flashlight.linalg.cross(a, b)
         # i x j = k
         expected = np.array([0., 0., 1.])
         np.testing.assert_allclose(c.numpy(), expected, rtol=1e-5)
 
     def test_cross_another(self):
         """Test another cross product."""
-        a = mlx_compat.tensor([1., 2., 3.])
-        b = mlx_compat.tensor([4., 5., 6.])
-        c = mlx_compat.linalg.cross(a, b)
+        a = flashlight.tensor([1., 2., 3.])
+        b = flashlight.tensor([4., 5., 6.])
+        c = flashlight.linalg.cross(a, b)
         # [2*6 - 3*5, 3*4 - 1*6, 1*5 - 2*4] = [-3, 6, -3]
         expected = np.array([-3., 6., -3.])
         np.testing.assert_allclose(c.numpy(), expected, rtol=1e-5)

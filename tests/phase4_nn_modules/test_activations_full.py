@@ -20,7 +20,7 @@ import pytest
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
-    import mlx_compat
+    import flashlight
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -38,8 +38,8 @@ class TestReLU(TestCase):
 
     def test_forward(self):
         """Test ReLU forward pass."""
-        relu = mlx_compat.nn.ReLU()
-        x = mlx_compat.tensor([-2.0, -1.0, 0.0, 1.0, 2.0])
+        relu = flashlight.nn.ReLU()
+        x = flashlight.tensor([-2.0, -1.0, 0.0, 1.0, 2.0])
         output = relu(x)
         expected = np.array([0.0, 0.0, 0.0, 1.0, 2.0])
         np.testing.assert_array_almost_equal(output.numpy(), expected)
@@ -51,8 +51,8 @@ class TestLeakyReLU(TestCase):
 
     def test_forward(self):
         """Test LeakyReLU forward pass."""
-        lrelu = mlx_compat.nn.LeakyReLU(negative_slope=0.1)
-        x = mlx_compat.tensor([-2.0, -1.0, 0.0, 1.0, 2.0])
+        lrelu = flashlight.nn.LeakyReLU(negative_slope=0.1)
+        x = flashlight.tensor([-2.0, -1.0, 0.0, 1.0, 2.0])
         output = lrelu(x)
         expected = np.array([-0.2, -0.1, 0.0, 1.0, 2.0])
         np.testing.assert_array_almost_equal(output.numpy(), expected)
@@ -64,8 +64,8 @@ class TestELU(TestCase):
 
     def test_forward(self):
         """Test ELU forward pass."""
-        elu = mlx_compat.nn.ELU(alpha=1.0)
-        x = mlx_compat.randn(2, 3)
+        elu = flashlight.nn.ELU(alpha=1.0)
+        x = flashlight.randn(2, 3)
         output = elu(x)
         self.assertEqual(output.shape, (2, 3))
 
@@ -76,8 +76,8 @@ class TestReLU6(TestCase):
 
     def test_forward(self):
         """Test ReLU6 forward pass (clips at 6)."""
-        relu6 = mlx_compat.nn.ReLU6()
-        x = mlx_compat.tensor([-1.0, 0.0, 3.0, 6.0, 10.0])
+        relu6 = flashlight.nn.ReLU6()
+        x = flashlight.tensor([-1.0, 0.0, 3.0, 6.0, 10.0])
         output = relu6(x)
         expected = np.array([0.0, 0.0, 3.0, 6.0, 6.0])
         np.testing.assert_array_almost_equal(output.numpy(), expected)
@@ -89,8 +89,8 @@ class TestSELU(TestCase):
 
     def test_forward(self):
         """Test SELU forward pass."""
-        selu = mlx_compat.nn.SELU()
-        x = mlx_compat.randn(2, 3)
+        selu = flashlight.nn.SELU()
+        x = flashlight.randn(2, 3)
         output = selu(x)
         self.assertEqual(output.shape, (2, 3))
 
@@ -101,8 +101,8 @@ class TestCELU(TestCase):
 
     def test_forward(self):
         """Test CELU forward pass."""
-        celu = mlx_compat.nn.CELU(alpha=1.0)
-        x = mlx_compat.randn(2, 3)
+        celu = flashlight.nn.CELU(alpha=1.0)
+        x = flashlight.randn(2, 3)
         output = celu(x)
         self.assertEqual(output.shape, (2, 3))
 
@@ -113,8 +113,8 @@ class TestSigmoid(TestCase):
 
     def test_forward(self):
         """Test Sigmoid forward pass."""
-        sigmoid = mlx_compat.nn.Sigmoid()
-        x = mlx_compat.tensor([0.0])
+        sigmoid = flashlight.nn.Sigmoid()
+        x = flashlight.tensor([0.0])
         output = sigmoid(x)
         np.testing.assert_almost_equal(output.numpy()[0], 0.5)
 
@@ -125,8 +125,8 @@ class TestTanh(TestCase):
 
     def test_forward(self):
         """Test Tanh forward pass."""
-        tanh = mlx_compat.nn.Tanh()
-        x = mlx_compat.tensor([0.0])
+        tanh = flashlight.nn.Tanh()
+        x = flashlight.tensor([0.0])
         output = tanh(x)
         np.testing.assert_almost_equal(output.numpy()[0], 0.0)
 
@@ -137,8 +137,8 @@ class TestGELU(TestCase):
 
     def test_forward(self):
         """Test GELU forward pass."""
-        gelu = mlx_compat.nn.GELU()
-        x = mlx_compat.randn(2, 3)
+        gelu = flashlight.nn.GELU()
+        x = flashlight.randn(2, 3)
         output = gelu(x)
         self.assertEqual(output.shape, (2, 3))
 
@@ -149,8 +149,8 @@ class TestSiLU(TestCase):
 
     def test_forward(self):
         """Test SiLU forward pass."""
-        silu = mlx_compat.nn.SiLU()
-        x = mlx_compat.randn(2, 3)
+        silu = flashlight.nn.SiLU()
+        x = flashlight.randn(2, 3)
         output = silu(x)
         self.assertEqual(output.shape, (2, 3))
 
@@ -161,8 +161,8 @@ class TestMish(TestCase):
 
     def test_forward(self):
         """Test Mish forward pass."""
-        mish = mlx_compat.nn.Mish()
-        x = mlx_compat.randn(2, 3)
+        mish = flashlight.nn.Mish()
+        x = flashlight.randn(2, 3)
         output = mish(x)
         self.assertEqual(output.shape, (2, 3))
 
@@ -173,8 +173,8 @@ class TestSoftmax(TestCase):
 
     def test_forward(self):
         """Test Softmax forward pass."""
-        softmax = mlx_compat.nn.Softmax(dim=1)
-        x = mlx_compat.randn(2, 5)
+        softmax = flashlight.nn.Softmax(dim=1)
+        x = flashlight.randn(2, 5)
         output = softmax(x)
         # Softmax should sum to 1 along dim=1
         sums = output.numpy().sum(axis=1)
@@ -187,8 +187,8 @@ class TestLogSoftmax(TestCase):
 
     def test_forward(self):
         """Test LogSoftmax forward pass."""
-        logsoftmax = mlx_compat.nn.LogSoftmax(dim=1)
-        x = mlx_compat.randn(2, 5)
+        logsoftmax = flashlight.nn.LogSoftmax(dim=1)
+        x = flashlight.randn(2, 5)
         output = logsoftmax(x)
         # exp(LogSoftmax) should sum to 1
         sums = np.exp(output.numpy()).sum(axis=1)
@@ -201,8 +201,8 @@ class TestSoftmin(TestCase):
 
     def test_forward(self):
         """Test Softmin forward pass."""
-        softmin = mlx_compat.nn.Softmin(dim=1)
-        x = mlx_compat.randn(2, 5)
+        softmin = flashlight.nn.Softmin(dim=1)
+        x = flashlight.randn(2, 5)
         output = softmin(x)
         sums = output.numpy().sum(axis=1)
         np.testing.assert_array_almost_equal(sums, [1.0, 1.0])
@@ -214,8 +214,8 @@ class TestHardtanh(TestCase):
 
     def test_forward(self):
         """Test Hardtanh forward pass."""
-        hardtanh = mlx_compat.nn.Hardtanh(min_val=-1, max_val=1)
-        x = mlx_compat.tensor([-2.0, 0.0, 2.0])
+        hardtanh = flashlight.nn.Hardtanh(min_val=-1, max_val=1)
+        x = flashlight.tensor([-2.0, 0.0, 2.0])
         output = hardtanh(x)
         expected = np.array([-1.0, 0.0, 1.0])
         np.testing.assert_array_almost_equal(output.numpy(), expected)
@@ -227,8 +227,8 @@ class TestHardsigmoid(TestCase):
 
     def test_forward(self):
         """Test Hardsigmoid forward pass."""
-        hardsigmoid = mlx_compat.nn.Hardsigmoid()
-        x = mlx_compat.randn(2, 3)
+        hardsigmoid = flashlight.nn.Hardsigmoid()
+        x = flashlight.randn(2, 3)
         output = hardsigmoid(x)
         self.assertEqual(output.shape, (2, 3))
         # Output should be in [0, 1]
@@ -242,8 +242,8 @@ class TestHardswish(TestCase):
 
     def test_forward(self):
         """Test Hardswish forward pass."""
-        hardswish = mlx_compat.nn.Hardswish()
-        x = mlx_compat.randn(2, 3)
+        hardswish = flashlight.nn.Hardswish()
+        x = flashlight.randn(2, 3)
         output = hardswish(x)
         self.assertEqual(output.shape, (2, 3))
 
@@ -254,8 +254,8 @@ class TestSoftplus(TestCase):
 
     def test_forward(self):
         """Test Softplus forward pass."""
-        softplus = mlx_compat.nn.Softplus()
-        x = mlx_compat.randn(2, 3)
+        softplus = flashlight.nn.Softplus()
+        x = flashlight.randn(2, 3)
         output = softplus(x)
         # Softplus output is always positive
         self.assertTrue((output.numpy() > 0).all())
@@ -267,13 +267,13 @@ class TestPReLU(TestCase):
 
     def test_creation(self):
         """Test PReLU creation."""
-        prelu = mlx_compat.nn.PReLU()
+        prelu = flashlight.nn.PReLU()
         self.assertIsNotNone(prelu)
 
     def test_forward(self):
         """Test PReLU forward pass."""
-        prelu = mlx_compat.nn.PReLU()
-        x = mlx_compat.randn(2, 3)
+        prelu = flashlight.nn.PReLU()
+        x = flashlight.randn(2, 3)
         output = prelu(x)
         self.assertEqual(output.shape, (2, 3))
 
@@ -284,8 +284,8 @@ class TestGLU(TestCase):
 
     def test_forward(self):
         """Test GLU forward pass."""
-        glu = mlx_compat.nn.GLU(dim=1)
-        x = mlx_compat.randn(2, 6)  # dim=1 will split 6 -> 3
+        glu = flashlight.nn.GLU(dim=1)
+        x = flashlight.randn(2, 6)  # dim=1 will split 6 -> 3
         output = glu(x)
         self.assertEqual(output.shape, (2, 3))
 
@@ -296,8 +296,8 @@ class TestThreshold(TestCase):
 
     def test_forward(self):
         """Test Threshold forward pass."""
-        threshold = mlx_compat.nn.Threshold(threshold=0.5, value=0.0)
-        x = mlx_compat.tensor([0.0, 0.5, 1.0])
+        threshold = flashlight.nn.Threshold(threshold=0.5, value=0.0)
+        x = flashlight.tensor([0.0, 0.5, 1.0])
         output = threshold(x)
         # Values <= threshold should be set to value
         expected = np.array([0.0, 0.0, 1.0])

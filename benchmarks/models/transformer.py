@@ -28,7 +28,7 @@ class TransformerEncoderBenchmark(ModelBenchmark):
         ]
 
     def create_mlx_model(self, config: Dict[str, Any]):
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
         return nn.TransformerEncoderLayer(
             d_model=config["d_model"],
             nhead=config["nhead"],
@@ -47,8 +47,8 @@ class TransformerEncoderBenchmark(ModelBenchmark):
         return layer.to(device)
 
     def create_mlx_input(self, config: Dict[str, Any]):
-        import mlx_compat
-        return mlx_compat.randn(config["batch"], config["seq_len"], config["d_model"])
+        import flashlight
+        return flashlight.randn(config["batch"], config["seq_len"], config["d_model"])
 
     def create_pytorch_input(self, config: Dict[str, Any], device: str):
         import torch
@@ -108,7 +108,7 @@ class TransformerStackBenchmark(ModelBenchmark):
         ]
 
     def create_mlx_model(self, config: Dict[str, Any]):
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
 
         encoder_layer = nn.TransformerEncoderLayer(
             d_model=config["d_model"],
@@ -131,8 +131,8 @@ class TransformerStackBenchmark(ModelBenchmark):
         return model.to(device)
 
     def create_mlx_input(self, config: Dict[str, Any]):
-        import mlx_compat
-        return mlx_compat.randn(config["batch"], config["seq_len"], config["d_model"])
+        import flashlight
+        return flashlight.randn(config["batch"], config["seq_len"], config["d_model"])
 
     def create_pytorch_input(self, config: Dict[str, Any], device: str):
         import torch

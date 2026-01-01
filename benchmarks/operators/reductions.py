@@ -30,8 +30,8 @@ class SumBenchmark(OperatorBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
-        x = mlx_compat.randn(*config["shape"])
+        import flashlight
+        x = flashlight.randn(*config["shape"])
         return (x, config["dim"])
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:
@@ -135,8 +135,8 @@ class ArgmaxBenchmark(OperatorBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
-        x = mlx_compat.randn(*config["shape"])
+        import flashlight
+        x = flashlight.randn(*config["shape"])
         return (x, config["dim"])
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:

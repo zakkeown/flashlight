@@ -1,7 +1,7 @@
 """
 Normalization Layer Parity Tests
 
-Tests numerical parity between mlx_compat normalization layers and PyTorch.
+Tests numerical parity between flashlight normalization layers and PyTorch.
 """
 
 import pytest
@@ -9,25 +9,25 @@ import numpy as np
 
 torch = pytest.importorskip("torch")
 
-import mlx_compat
-import mlx_compat.nn as nn
+import flashlight
+import flashlight.nn as nn
 
 
 def copy_norm_weights(mlx_layer, torch_layer):
-    """Copy weights from PyTorch normalization layer to mlx_compat."""
+    """Copy weights from PyTorch normalization layer to flashlight."""
     if hasattr(torch_layer, 'weight') and torch_layer.weight is not None:
         mlx_layer.weight = nn.Parameter(
-            mlx_compat.tensor(torch_layer.weight.detach().numpy())
+            flashlight.tensor(torch_layer.weight.detach().numpy())
         )
     if hasattr(torch_layer, 'bias') and torch_layer.bias is not None:
         mlx_layer.bias = nn.Parameter(
-            mlx_compat.tensor(torch_layer.bias.detach().numpy())
+            flashlight.tensor(torch_layer.bias.detach().numpy())
         )
     # Copy running stats for BatchNorm
     if hasattr(torch_layer, 'running_mean') and torch_layer.running_mean is not None:
-        mlx_layer.running_mean = mlx_compat.tensor(torch_layer.running_mean.detach().numpy())
+        mlx_layer.running_mean = flashlight.tensor(torch_layer.running_mean.detach().numpy())
     if hasattr(torch_layer, 'running_var') and torch_layer.running_var is not None:
-        mlx_layer.running_var = mlx_compat.tensor(torch_layer.running_var.detach().numpy())
+        mlx_layer.running_var = flashlight.tensor(torch_layer.running_var.detach().numpy())
 
 
 class TestBatchNormParity:
@@ -48,7 +48,7 @@ class TestBatchNormParity:
         x_np = np.random.randn(batch, features).astype(np.float32)
 
         torch_out = torch_bn(torch.tensor(x_np))
-        mlx_out = mlx_bn(mlx_compat.tensor(x_np))
+        mlx_out = mlx_bn(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.detach().numpy() - np.array(mlx_out.tolist())))
         assert max_diff < 1e-5, f"BatchNorm1d mismatch: {max_diff}"
@@ -68,7 +68,7 @@ class TestBatchNormParity:
         x_np = np.random.randn(batch, channels, h, w).astype(np.float32)
 
         torch_out = torch_bn(torch.tensor(x_np))
-        mlx_out = mlx_bn(mlx_compat.tensor(x_np))
+        mlx_out = mlx_bn(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.detach().numpy() - np.array(mlx_out.tolist())))
         assert max_diff < 1e-5, f"BatchNorm2d mismatch: {max_diff}"
@@ -88,7 +88,7 @@ class TestBatchNormParity:
         x_np = np.random.randn(batch, channels, h, w).astype(np.float32)
 
         torch_out = torch_bn(torch.tensor(x_np))
-        mlx_out = mlx_bn(mlx_compat.tensor(x_np))
+        mlx_out = mlx_bn(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.detach().numpy() - np.array(mlx_out.tolist())))
         assert max_diff < 1e-5, f"BatchNorm2d training mismatch: {max_diff}"
@@ -108,7 +108,7 @@ class TestBatchNormParity:
         x_np = np.random.randn(batch, channels, d, h, w).astype(np.float32)
 
         torch_out = torch_bn(torch.tensor(x_np))
-        mlx_out = mlx_bn(mlx_compat.tensor(x_np))
+        mlx_out = mlx_bn(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.detach().numpy() - np.array(mlx_out.tolist())))
         assert max_diff < 1e-5, f"BatchNorm3d mismatch: {max_diff}"
@@ -130,7 +130,7 @@ class TestLayerNormParity:
         x_np = np.random.randn(batch, seq, features).astype(np.float32)
 
         torch_out = torch_ln(torch.tensor(x_np))
-        mlx_out = mlx_ln(mlx_compat.tensor(x_np))
+        mlx_out = mlx_ln(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.detach().numpy() - np.array(mlx_out.tolist())))
         assert max_diff < 1e-5, f"LayerNorm 1D mismatch: {max_diff}"
@@ -148,7 +148,7 @@ class TestLayerNormParity:
         x_np = np.random.randn(batch, h, w).astype(np.float32)
 
         torch_out = torch_ln(torch.tensor(x_np))
-        mlx_out = mlx_ln(mlx_compat.tensor(x_np))
+        mlx_out = mlx_ln(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.detach().numpy() - np.array(mlx_out.tolist())))
         assert max_diff < 1e-5, f"LayerNorm 2D mismatch: {max_diff}"
@@ -167,7 +167,7 @@ class TestLayerNormParity:
             x_np = np.random.randn(batch, features).astype(np.float32)
 
             torch_out = torch_ln(torch.tensor(x_np))
-            mlx_out = mlx_ln(mlx_compat.tensor(x_np))
+            mlx_out = mlx_ln(flashlight.tensor(x_np))
 
             max_diff = np.max(np.abs(torch_out.detach().numpy() - np.array(mlx_out.tolist())))
             assert max_diff < 1e-5, f"LayerNorm eps={eps} mismatch: {max_diff}"
@@ -190,7 +190,7 @@ class TestGroupNormParity:
         x_np = np.random.randn(batch, channels, h, w).astype(np.float32)
 
         torch_out = torch_gn(torch.tensor(x_np))
-        mlx_out = mlx_gn(mlx_compat.tensor(x_np))
+        mlx_out = mlx_gn(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.detach().numpy() - np.array(mlx_out.tolist())))
         assert max_diff < 1e-5, f"GroupNorm mismatch: {max_diff}"
@@ -209,7 +209,7 @@ class TestGroupNormParity:
             x_np = np.random.randn(batch, channels, h, w).astype(np.float32)
 
             torch_out = torch_gn(torch.tensor(x_np))
-            mlx_out = mlx_gn(mlx_compat.tensor(x_np))
+            mlx_out = mlx_gn(flashlight.tensor(x_np))
 
             max_diff = np.max(np.abs(torch_out.detach().numpy() - np.array(mlx_out.tolist())))
             assert max_diff < 1e-5, f"GroupNorm groups={num_groups} mismatch: {max_diff}"
@@ -231,7 +231,7 @@ class TestInstanceNormParity:
         x_np = np.random.randn(batch, channels, h, w).astype(np.float32)
 
         torch_out = torch_in(torch.tensor(x_np))
-        mlx_out = mlx_in(mlx_compat.tensor(x_np))
+        mlx_out = mlx_in(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.detach().numpy() - np.array(mlx_out.tolist())))
         assert max_diff < 1e-5, f"InstanceNorm2d mismatch: {max_diff}"
@@ -249,7 +249,7 @@ class TestInstanceNormParity:
         x_np = np.random.randn(batch, channels, length).astype(np.float32)
 
         torch_out = torch_in(torch.tensor(x_np))
-        mlx_out = mlx_in(mlx_compat.tensor(x_np))
+        mlx_out = mlx_in(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.detach().numpy() - np.array(mlx_out.tolist())))
         assert max_diff < 1e-5, f"InstanceNorm1d mismatch: {max_diff}"
@@ -273,7 +273,7 @@ class TestRMSNormParity:
         rms = torch.sqrt(torch.mean(x_torch ** 2, dim=-1, keepdim=True) + 1e-5)
         torch_out = x_torch / rms
 
-        mlx_out = mlx_rms(mlx_compat.tensor(x_np))
+        mlx_out = mlx_rms(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out.tolist())))
         assert max_diff < 1e-4, f"RMSNorm mismatch: {max_diff}"

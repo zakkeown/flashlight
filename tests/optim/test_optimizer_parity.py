@@ -1,7 +1,7 @@
 """
 Optimizer Parity Tests
 
-Comprehensive tests comparing mlx_compat optimizers against PyTorch implementations.
+Comprehensive tests comparing flashlight optimizers against PyTorch implementations.
 All tests use strict tolerance: rtol=1e-5, atol=1e-6
 """
 
@@ -15,9 +15,9 @@ import numpy as np
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
-    import mlx_compat
-    import mlx_compat.nn as nn
-    import mlx_compat.optim as optim
+    import flashlight
+    import flashlight.nn as nn
+    import flashlight.optim as optim
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -74,7 +74,7 @@ def run_optimizer_parity_test(
     opt_torch = torch_optimizer_class([param_torch], **optimizer_kwargs)
 
     # MLX setup
-    param_mlx = nn.Parameter(mlx_compat.tensor(param_np.copy()))
+    param_mlx = nn.Parameter(flashlight.tensor(param_np.copy()))
     opt_mlx = mlx_optimizer_class([param_mlx], **optimizer_kwargs)
 
     # Run optimization steps
@@ -86,7 +86,7 @@ def run_optimizer_parity_test(
 
         # MLX step
         opt_mlx.zero_grad()
-        param_mlx.grad = mlx_compat.tensor(grad_np)
+        param_mlx.grad = flashlight.tensor(grad_np)
         opt_mlx.step()
 
         # Compare after each step for debugging

@@ -1,5 +1,5 @@
 """
-Micro-benchmarks for measuring specific performance overhead in mlx_compat.
+Micro-benchmarks for measuring specific performance overhead in flashlight.
 
 These benchmarks are designed to isolate and measure:
 - Layout conversion overhead (NCHW <-> NHWC)

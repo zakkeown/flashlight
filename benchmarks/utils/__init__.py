@@ -1,1 +1,1 @@
-"""Benchmarks for mlx_compat.utils module."""
+"""Benchmarks for flashlight.utils module."""

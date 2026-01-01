@@ -1,5 +1,5 @@
 """
-mlx_compat Benchmarking Suite
+flashlight Benchmarking Suite
 
 Comprehensive performance benchmarking with PyTorch MPS comparison.
 

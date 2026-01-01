@@ -7,8 +7,8 @@ A simple feedforward neural network for classifying MNIST digits.
 import sys
 sys.path.insert(0, '../..')
 
-import mlx_compat as mx
-import mlx_compat.nn as nn
+import flashlight as mx
+import flashlight.nn as nn
 
 
 class MLP(nn.Module):

@@ -1,5 +1,5 @@
 """
-PyTorch parity tests for mlx_compat.utils module.
+PyTorch parity tests for flashlight.utils module.
 
 Compares behavior and numerical results against PyTorch.
 """
@@ -16,8 +16,8 @@ try:
 except ImportError:
     HAS_TORCH = False
 
-import mlx_compat
-from mlx_compat.utils.benchmark import Timer, Measurement, Compare, select_unit, trim_sigfig
+import flashlight
+from flashlight.utils.benchmark import Timer, Measurement, Compare, select_unit, trim_sigfig
 
 
 @pytest.mark.parity
@@ -77,7 +77,7 @@ class TestBenchmarkParity(unittest.TestCase):
 
     def test_measurement_statistics(self):
         """Test Measurement statistics are reasonable."""
-        from mlx_compat.utils.benchmark import TaskSpec
+        from flashlight.utils.benchmark import TaskSpec
 
         spec = TaskSpec(stmt="pass")
         times = [0.1, 0.11, 0.09, 0.105, 0.095]
@@ -106,15 +106,15 @@ class TestCheckpointParity(unittest.TestCase):
 
         # MLX function
         def mlx_fn(x):
-            return mlx_compat.relu(x * 2 + 1)
+            return flashlight.relu(x * 2 + 1)
 
         # PyTorch function
         def torch_fn(x):
             return torch.relu(x * 2 + 1)
 
         # MLX
-        mlx_x = mlx_compat.tensor(data, requires_grad=True)
-        from mlx_compat.utils import checkpoint as mlx_checkpoint
+        mlx_x = flashlight.tensor(data, requires_grad=True)
+        from flashlight.utils import checkpoint as mlx_checkpoint
         mlx_result = mlx_checkpoint(mlx_fn, mlx_x)
 
         # PyTorch
@@ -143,10 +143,10 @@ class TestCheckpointParity(unittest.TestCase):
         weight2 = np.random.randn(5, 10).astype(np.float32)   # 10 -> 5
 
         # MLX layers
-        mlx_linear1 = mlx_compat.nn.Linear(10, 10, bias=False)
-        mlx_linear1.weight = mlx_compat.nn.Parameter(mlx_compat.tensor(weight1))
-        mlx_linear2 = mlx_compat.nn.Linear(10, 5, bias=False)
-        mlx_linear2.weight = mlx_compat.nn.Parameter(mlx_compat.tensor(weight2))
+        mlx_linear1 = flashlight.nn.Linear(10, 10, bias=False)
+        mlx_linear1.weight = flashlight.nn.Parameter(flashlight.tensor(weight1))
+        mlx_linear2 = flashlight.nn.Linear(10, 5, bias=False)
+        mlx_linear2.weight = flashlight.nn.Parameter(flashlight.tensor(weight2))
 
         mlx_layers = [mlx_linear1, mlx_linear2]
 
@@ -159,8 +159,8 @@ class TestCheckpointParity(unittest.TestCase):
         torch_layers = [torch_linear1, torch_linear2]
 
         # MLX checkpoint_sequential
-        mlx_x = mlx_compat.tensor(data, requires_grad=True)
-        from mlx_compat.utils.checkpoint import checkpoint_sequential
+        mlx_x = flashlight.tensor(data, requires_grad=True)
+        from flashlight.utils.checkpoint import checkpoint_sequential
         mlx_result = checkpoint_sequential(mlx_layers, segments=2, input=mlx_x)
 
         # PyTorch checkpoint_sequential
@@ -191,7 +191,7 @@ class TestHooksParity(unittest.TestCase):
 
     def test_removable_handle_api(self):
         """Test RemovableHandle has PyTorch-compatible API."""
-        from mlx_compat.utils.hooks import RemovableHandle
+        from flashlight.utils.hooks import RemovableHandle
         from collections import OrderedDict
 
         # Both should support the same basic operations
@@ -209,7 +209,7 @@ class TestHooksParity(unittest.TestCase):
 
     def test_unserializable_hook_decorator(self):
         """Test unserializable_hook decorator marks functions."""
-        from mlx_compat.utils.hooks import unserializable_hook
+        from flashlight.utils.hooks import unserializable_hook
 
         @unserializable_hook
         def my_hook(grad):
@@ -231,9 +231,9 @@ class TestDataParity(unittest.TestCase):
         labels = np.random.randint(0, 5, (100,)).astype(np.int64)
 
         # MLX
-        from mlx_compat.utils.data import DataLoader, TensorDataset
-        mlx_x = mlx_compat.tensor(data)
-        mlx_y = mlx_compat.tensor(labels)
+        from flashlight.utils.data import DataLoader, TensorDataset
+        mlx_x = flashlight.tensor(data)
+        mlx_y = flashlight.tensor(labels)
         mlx_dataset = TensorDataset(mlx_x, mlx_y)
         mlx_loader = DataLoader(mlx_dataset, batch_size=10, shuffle=False)
 
@@ -255,12 +255,12 @@ class TestDataParity(unittest.TestCase):
 
     def test_sequential_sampler_parity(self):
         """Test SequentialSampler matches PyTorch."""
-        from mlx_compat.utils.data import SequentialSampler, TensorDataset
+        from flashlight.utils.data import SequentialSampler, TensorDataset
 
         data = np.random.randn(50, 5).astype(np.float32)
 
         # MLX
-        mlx_dataset = TensorDataset(mlx_compat.tensor(data))
+        mlx_dataset = TensorDataset(flashlight.tensor(data))
         mlx_sampler = SequentialSampler(mlx_dataset)
         mlx_indices = list(mlx_sampler)
 
@@ -273,12 +273,12 @@ class TestDataParity(unittest.TestCase):
 
     def test_random_split_lengths(self):
         """Test random_split produces correct split sizes."""
-        from mlx_compat.utils.data import random_split, TensorDataset
+        from flashlight.utils.data import random_split, TensorDataset
 
         data = np.random.randn(100, 5).astype(np.float32)
 
         # MLX
-        mlx_dataset = TensorDataset(mlx_compat.tensor(data))
+        mlx_dataset = TensorDataset(flashlight.tensor(data))
         mlx_train, mlx_val = random_split(mlx_dataset, [70, 30])
 
         # PyTorch
@@ -296,7 +296,7 @@ class TestModelZooParity(unittest.TestCase):
 
     def test_get_dir_api_parity(self):
         """Test get_dir has same API as torch.hub.get_dir."""
-        from mlx_compat.utils.model_zoo import get_dir, set_dir
+        from flashlight.utils.model_zoo import get_dir, set_dir
 
         # Both should return a string path
         mlx_dir = get_dir()
@@ -311,7 +311,7 @@ class TestModelZooParity(unittest.TestCase):
 
     def test_set_dir_api_parity(self):
         """Test set_dir has same API as torch.hub.set_dir."""
-        from mlx_compat.utils.model_zoo import get_dir, set_dir
+        from flashlight.utils.model_zoo import get_dir, set_dir
 
         original = get_dir()
 
@@ -329,7 +329,7 @@ class TestWeakParity(unittest.TestCase):
 
     def test_weak_tensor_key_dict_api(self):
         """Test WeakTensorKeyDictionary has similar API to torch.utils.weak."""
-        from mlx_compat.utils.weak import WeakTensorKeyDictionary
+        from flashlight.utils.weak import WeakTensorKeyDictionary
 
         # Create dict
         d = WeakTensorKeyDictionary()
@@ -344,7 +344,7 @@ class TestWeakParity(unittest.TestCase):
 
     def test_weak_id_key_dict_matches_torch(self):
         """Test WeakIdKeyDictionary behaves like torch version."""
-        from mlx_compat.utils.weak import WeakIdKeyDictionary
+        from flashlight.utils.weak import WeakIdKeyDictionary
         import torch.utils.weak as torch_weak
 
         # Both should handle objects as keys by identity
@@ -370,7 +370,7 @@ class TestMobileOptimizerParity(unittest.TestCase):
 
     def test_optimizer_type_enum_values(self):
         """Test MobileOptimizerType has same values as PyTorch."""
-        from mlx_compat.utils.mobile_optimizer import MobileOptimizerType
+        from flashlight.utils.mobile_optimizer import MobileOptimizerType
 
         # Check common optimization types exist
         self.assertTrue(hasattr(MobileOptimizerType, 'CONV_BN_FUSION'))
@@ -379,8 +379,8 @@ class TestMobileOptimizerParity(unittest.TestCase):
 
     def test_optimize_for_mobile_removes_dropout(self):
         """Test optimize_for_mobile removes dropout like PyTorch."""
-        from mlx_compat.utils.mobile_optimizer import optimize_for_mobile
-        import mlx_compat.nn as nn
+        from flashlight.utils.mobile_optimizer import optimize_for_mobile
+        import flashlight.nn as nn
 
         # MLX model with dropout
         mlx_model = nn.Sequential(
@@ -423,7 +423,7 @@ class TestCollectEnvParity(unittest.TestCase):
 
     def test_get_env_info_returns_namedtuple(self):
         """Test get_env_info returns structured data like PyTorch."""
-        from mlx_compat.utils.collect_env import get_env_info, SystemEnv
+        from flashlight.utils.collect_env import get_env_info, SystemEnv
 
         env = get_env_info()
 
@@ -436,7 +436,7 @@ class TestCollectEnvParity(unittest.TestCase):
 
     def test_get_pretty_env_info_returns_string(self):
         """Test get_pretty_env_info returns formatted string like PyTorch."""
-        from mlx_compat.utils.collect_env import get_pretty_env_info
+        from flashlight.utils.collect_env import get_pretty_env_info
 
         # MLX version
         mlx_info = get_pretty_env_info()

@@ -1,7 +1,7 @@
 """
 Numerical parity validator.
 
-Tests functional equivalence between mlx_compat and PyTorch by executing
+Tests functional equivalence between flashlight and PyTorch by executing
 APIs with generated test inputs and comparing outputs within tolerances.
 """
 
@@ -87,14 +87,14 @@ class NumericalValidationResult:
 
 class NumericalParityValidator:
     """
-    Validates numerical parity between mlx_compat and PyTorch.
+    Validates numerical parity between flashlight and PyTorch.
 
     Tests that implemented APIs produce numerically equivalent results
     when given the same inputs.
 
     Args:
         pytorch_apis: Dictionary of PyTorch APIs by module
-        mlx_apis: Dictionary of mlx_compat APIs by module
+        mlx_apis: Dictionary of flashlight APIs by module
         rtol: Relative tolerance for comparison (default: 1e-5)
         atol: Absolute tolerance for comparison (default: 1e-6)
         seed: Random seed for reproducibility (default: 42)
@@ -148,7 +148,7 @@ class NumericalParityValidator:
 
         # Lazy-loaded modules
         self._torch = None
-        self._mlx_compat = None
+        self._flashlight = None
 
     @property
     def torch(self):
@@ -159,12 +159,12 @@ class NumericalParityValidator:
         return self._torch
 
     @property
-    def mlx_compat(self):
-        """Lazy-load mlx_compat."""
-        if self._mlx_compat is None:
-            import mlx_compat
-            self._mlx_compat = mlx_compat
-        return self._mlx_compat
+    def flashlight(self):
+        """Lazy-load flashlight."""
+        if self._flashlight is None:
+            import flashlight
+            self._flashlight = flashlight
+        return self._flashlight
 
     def validate(self) -> NumericalValidationResult:
         """
@@ -179,7 +179,7 @@ class NumericalParityValidator:
             mlx_module_apis = self.mlx_apis.get(module, {})
 
             for api_name, pytorch_info in apis.items():
-                # Skip if not in mlx_compat
+                # Skip if not in flashlight
                 if api_name not in mlx_module_apis:
                     continue
 
@@ -346,7 +346,7 @@ class NumericalParityValidator:
         if mlx_fn is None:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"Could not find mlx_compat API: {module}.{api_name}",
+                error=f"Could not find flashlight API: {module}.{api_name}",
             )
 
         # Check for skip flag
@@ -382,7 +382,7 @@ class NumericalParityValidator:
         except Exception as e:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"mlx_compat execution failed: {type(e).__name__}: {str(e)}",
+                error=f"flashlight execution failed: {type(e).__name__}: {str(e)}",
             )
 
         # Compare outputs
@@ -436,7 +436,7 @@ class NumericalParityValidator:
         if mlx_cls is None:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"Could not find mlx_compat class: torch.nn.{api_name}",
+                error=f"Could not find flashlight class: torch.nn.{api_name}",
             )
 
         # Prepare init kwargs (may need special handling for some modules)
@@ -453,8 +453,8 @@ class NumericalParityValidator:
             # Create the encoder layer for PyTorch
             torch_encoder_layer = self.torch.nn.TransformerEncoderLayer(**layer_kwargs)
             torch_init_kwargs["encoder_layer"] = torch_encoder_layer
-            # Create the encoder layer for mlx_compat
-            mlx_nn = importlib.import_module("mlx_compat.nn")
+            # Create the encoder layer for flashlight
+            mlx_nn = importlib.import_module("flashlight.nn")
             mlx_encoder_layer = mlx_nn.TransformerEncoderLayer(**layer_kwargs)
             mlx_init_kwargs["encoder_layer"] = mlx_encoder_layer
 
@@ -465,8 +465,8 @@ class NumericalParityValidator:
             # Create the decoder layer for PyTorch
             torch_decoder_layer = self.torch.nn.TransformerDecoderLayer(**layer_kwargs)
             torch_init_kwargs["decoder_layer"] = torch_decoder_layer
-            # Create the decoder layer for mlx_compat
-            mlx_nn = importlib.import_module("mlx_compat.nn")
+            # Create the decoder layer for flashlight
+            mlx_nn = importlib.import_module("flashlight.nn")
             mlx_decoder_layer = mlx_nn.TransformerDecoderLayer(**layer_kwargs)
             mlx_init_kwargs["decoder_layer"] = mlx_decoder_layer
 
@@ -488,10 +488,10 @@ class NumericalParityValidator:
         except Exception as e:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"mlx_compat instantiation failed: {type(e).__name__}: {str(e)}",
+                error=f"flashlight instantiation failed: {type(e).__name__}: {str(e)}",
             )
 
-        # Sync weights from PyTorch to mlx_compat
+        # Sync weights from PyTorch to flashlight
         try:
             self._sync_weights(torch_module, mlx_module)
         except Exception as e:
@@ -523,7 +523,7 @@ class NumericalParityValidator:
 
         # Create tensors
         torch_input = self.torch.from_numpy(input_np.copy())
-        mlx_input = self.mlx_compat.tensor(input_np.copy())
+        mlx_input = self.flashlight.tensor(input_np.copy())
 
         # Handle extra inputs (for loss functions, attention, etc.)
         torch_extras = {}
@@ -537,13 +537,13 @@ class NumericalParityValidator:
             # Get the appropriate max_pool function
             if unpool_type == "1d":
                 torch_maxpool = self.torch.nn.functional.max_pool1d
-                mlx_maxpool = importlib.import_module("mlx_compat.nn.functional").max_pool1d
+                mlx_maxpool = importlib.import_module("flashlight.nn.functional").max_pool1d
             elif unpool_type == "2d":
                 torch_maxpool = self.torch.nn.functional.max_pool2d
-                mlx_maxpool = importlib.import_module("mlx_compat.nn.functional").max_pool2d
+                mlx_maxpool = importlib.import_module("flashlight.nn.functional").max_pool2d
             else:  # 3d
                 torch_maxpool = self.torch.nn.functional.max_pool3d
-                mlx_maxpool = importlib.import_module("mlx_compat.nn.functional").max_pool3d
+                mlx_maxpool = importlib.import_module("flashlight.nn.functional").max_pool3d
 
             # Run max_pool with return_indices=True
             torch_pooled, torch_indices = torch_maxpool(torch_input, kernel_size, return_indices=True)
@@ -596,49 +596,49 @@ class NumericalParityValidator:
             torch_extras["target"] = self.torch.from_numpy(target_np.copy())
             if target_dtype == np.int64:
                 torch_extras["target"] = torch_extras["target"].long()
-            mlx_extras["target"] = self.mlx_compat.tensor(target_np.copy())
+            mlx_extras["target"] = self.flashlight.tensor(target_np.copy())
 
         if "input2_shape" in extra:
             input2_np = np.random.randn(*extra["input2_shape"]).astype(np.float32)
             torch_extras["input2"] = self.torch.from_numpy(input2_np.copy())
-            mlx_extras["input2"] = self.mlx_compat.tensor(input2_np.copy())
+            mlx_extras["input2"] = self.flashlight.tensor(input2_np.copy())
 
         if "memory_shape" in extra:
             memory_np = np.random.randn(*extra["memory_shape"]).astype(np.float32)
             torch_extras["memory"] = self.torch.from_numpy(memory_np.copy())
-            mlx_extras["memory"] = self.mlx_compat.tensor(memory_np.copy())
+            mlx_extras["memory"] = self.flashlight.tensor(memory_np.copy())
 
         if "key_shape" in extra:
             key_np = np.random.randn(*extra["key_shape"]).astype(np.float32)
             torch_extras["key"] = self.torch.from_numpy(key_np.copy())
-            mlx_extras["key"] = self.mlx_compat.tensor(key_np.copy())
+            mlx_extras["key"] = self.flashlight.tensor(key_np.copy())
 
         if "value_shape" in extra:
             value_np = np.random.randn(*extra["value_shape"]).astype(np.float32)
             torch_extras["value"] = self.torch.from_numpy(value_np.copy())
-            mlx_extras["value"] = self.mlx_compat.tensor(value_np.copy())
+            mlx_extras["value"] = self.flashlight.tensor(value_np.copy())
 
         if "hidden_shape" in extra:
             hidden_np = np.random.randn(*extra["hidden_shape"]).astype(np.float32)
             torch_extras["hx"] = self.torch.from_numpy(hidden_np.copy())
-            mlx_extras["hx"] = self.mlx_compat.tensor(hidden_np.copy())
+            mlx_extras["hx"] = self.flashlight.tensor(hidden_np.copy())
 
         if "cell_shape" in extra:
             cell_np = np.random.randn(*extra["cell_shape"]).astype(np.float32)
             # For LSTM, hidden state is tuple (h, c)
             if "hx" in torch_extras:
                 torch_extras["hx"] = (torch_extras["hx"], self.torch.from_numpy(cell_np.copy()))
-                mlx_extras["hx"] = (mlx_extras["hx"], self.mlx_compat.tensor(cell_np.copy()))
+                mlx_extras["hx"] = (mlx_extras["hx"], self.flashlight.tensor(cell_np.copy()))
 
         if "positive_shape" in extra:
             positive_np = np.random.randn(*extra["positive_shape"]).astype(np.float32)
             torch_extras["positive"] = self.torch.from_numpy(positive_np.copy())
-            mlx_extras["positive"] = self.mlx_compat.tensor(positive_np.copy())
+            mlx_extras["positive"] = self.flashlight.tensor(positive_np.copy())
 
         if "negative_shape" in extra:
             negative_np = np.random.randn(*extra["negative_shape"]).astype(np.float32)
             torch_extras["negative"] = self.torch.from_numpy(negative_np.copy())
-            mlx_extras["negative"] = self.mlx_compat.tensor(negative_np.copy())
+            mlx_extras["negative"] = self.flashlight.tensor(negative_np.copy())
 
         if "var_shape" in extra:
             # Variance must be positive
@@ -647,25 +647,25 @@ class NumericalParityValidator:
             else:
                 var_np = np.random.randn(*extra["var_shape"]).astype(np.float32)
             torch_extras["var"] = self.torch.from_numpy(var_np.copy())
-            mlx_extras["var"] = self.mlx_compat.tensor(var_np.copy())
+            mlx_extras["var"] = self.flashlight.tensor(var_np.copy())
 
         if "input_lengths" in extra:
             # For CTCLoss: input_lengths specifies length of each sequence
             input_lengths = extra["input_lengths"]
             torch_extras["input_lengths"] = self.torch.tensor(input_lengths, dtype=self.torch.long)
-            mlx_extras["input_lengths"] = self.mlx_compat.tensor(input_lengths)
+            mlx_extras["input_lengths"] = self.flashlight.tensor(input_lengths)
 
         if "target_lengths" in extra:
             # For CTCLoss: target_lengths specifies length of each target sequence
             target_lengths = extra["target_lengths"]
             torch_extras["target_lengths"] = self.torch.tensor(target_lengths, dtype=self.torch.long)
-            mlx_extras["target_lengths"] = self.mlx_compat.tensor(target_lengths)
+            mlx_extras["target_lengths"] = self.flashlight.tensor(target_lengths)
 
         if "tgt_shape" in extra:
             # For Transformer: tgt is the target sequence
             tgt_np = np.random.randn(*extra["tgt_shape"]).astype(np.float32)
             torch_extras["tgt"] = self.torch.from_numpy(tgt_np.copy())
-            mlx_extras["tgt"] = self.mlx_compat.tensor(tgt_np.copy())
+            mlx_extras["tgt"] = self.flashlight.tensor(tgt_np.copy())
 
         # Forward pass
         try:
@@ -761,7 +761,7 @@ class NumericalParityValidator:
         except Exception as e:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"mlx_compat forward failed: {type(e).__name__}: {str(e)}",
+                error=f"flashlight forward failed: {type(e).__name__}: {str(e)}",
             )
 
         return self._compare_outputs(module, api_name, torch_output, mlx_output)
@@ -779,7 +779,7 @@ class NumericalParityValidator:
 
         # Get optimizer classes
         torch_optim = getattr(self.torch.optim, api_name, None)
-        mlx_optim_module = importlib.import_module("mlx_compat.optim")
+        mlx_optim_module = importlib.import_module("flashlight.optim")
         mlx_optim = getattr(mlx_optim_module, api_name, None)
 
         if torch_optim is None:
@@ -790,7 +790,7 @@ class NumericalParityValidator:
         if mlx_optim is None:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"Could not find mlx_compat optimizer: {api_name}",
+                error=f"Could not find flashlight optimizer: {api_name}",
             )
 
         # Create parameters
@@ -802,10 +802,10 @@ class NumericalParityValidator:
         torch_param.grad = self.torch.from_numpy(grad_np.copy())
         torch_opt = torch_optim([torch_param], **spec.init_kwargs)
 
-        # mlx_compat
-        mlx_nn = importlib.import_module("mlx_compat.nn")
-        mlx_param = mlx_nn.Parameter(self.mlx_compat.tensor(param_np.copy()))
-        mlx_param.grad = self.mlx_compat.tensor(grad_np.copy())
+        # flashlight
+        mlx_nn = importlib.import_module("flashlight.nn")
+        mlx_param = mlx_nn.Parameter(self.flashlight.tensor(param_np.copy()))
+        mlx_param.grad = self.flashlight.tensor(grad_np.copy())
         mlx_opt = mlx_optim([mlx_param], **spec.init_kwargs)
 
         # Step
@@ -824,7 +824,7 @@ class NumericalParityValidator:
         except Exception as e:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"mlx_compat optimizer step failed: {type(e).__name__}: {str(e)}",
+                error=f"flashlight optimizer step failed: {type(e).__name__}: {str(e)}",
             )
 
         # Compare parameters after step
@@ -843,7 +843,7 @@ class NumericalParityValidator:
 
         # Get scheduler classes
         torch_scheduler_cls = getattr(self.torch.optim.lr_scheduler, api_name, None)
-        mlx_lr_scheduler = importlib.import_module("mlx_compat.optim.lr_scheduler")
+        mlx_lr_scheduler = importlib.import_module("flashlight.optim.lr_scheduler")
         mlx_scheduler_cls = getattr(mlx_lr_scheduler, api_name, None)
 
         if torch_scheduler_cls is None:
@@ -854,7 +854,7 @@ class NumericalParityValidator:
         if mlx_scheduler_cls is None:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"Could not find mlx_compat scheduler: {api_name}",
+                error=f"Could not find flashlight scheduler: {api_name}",
             )
 
         # Create parameters and optimizers
@@ -864,10 +864,10 @@ class NumericalParityValidator:
         torch_param = self.torch.from_numpy(param_np.copy()).requires_grad_(True)
         torch_opt = self.torch.optim.SGD([torch_param], **spec.optimizer_kwargs)
 
-        # mlx_compat setup
-        mlx_nn = importlib.import_module("mlx_compat.nn")
-        mlx_optim = importlib.import_module("mlx_compat.optim")
-        mlx_param = mlx_nn.Parameter(self.mlx_compat.tensor(param_np.copy()))
+        # flashlight setup
+        mlx_nn = importlib.import_module("flashlight.nn")
+        mlx_optim = importlib.import_module("flashlight.optim")
+        mlx_param = mlx_nn.Parameter(self.flashlight.tensor(param_np.copy()))
         mlx_opt = mlx_optim.SGD([mlx_param], **spec.optimizer_kwargs)
 
         # Create schedulers
@@ -884,7 +884,7 @@ class NumericalParityValidator:
         except Exception as e:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"mlx_compat scheduler creation failed: {type(e).__name__}: {str(e)}",
+                error=f"flashlight scheduler creation failed: {type(e).__name__}: {str(e)}",
             )
 
         # Step through the schedulers and collect learning rates
@@ -931,7 +931,7 @@ class NumericalParityValidator:
         except Exception as e:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"mlx_compat scheduler step failed: {type(e).__name__}: {str(e)}",
+                error=f"flashlight scheduler step failed: {type(e).__name__}: {str(e)}",
             )
 
         # Compare learning rate sequences
@@ -1038,10 +1038,10 @@ class NumericalParityValidator:
         torch_param = self.torch.from_numpy(param_np.copy()).requires_grad_(True)
         torch_param.grad = self.torch.from_numpy(grad_np.copy())
 
-        # mlx_compat
-        mlx_nn = importlib.import_module("mlx_compat.nn")
-        mlx_param = mlx_nn.Parameter(self.mlx_compat.tensor(param_np.copy()))
-        mlx_param.grad = self.mlx_compat.tensor(grad_np.copy())
+        # flashlight
+        mlx_nn = importlib.import_module("flashlight.nn")
+        mlx_param = mlx_nn.Parameter(self.flashlight.tensor(param_np.copy()))
+        mlx_param.grad = self.flashlight.tensor(grad_np.copy())
 
         # Get functions
         torch_fn = self._get_pytorch_api(module, api_name)
@@ -1067,7 +1067,7 @@ class NumericalParityValidator:
         except Exception as e:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"mlx_compat execution failed: {type(e).__name__}: {str(e)}",
+                error=f"flashlight execution failed: {type(e).__name__}: {str(e)}",
             )
 
         # Compare returned norm and clipped gradients
@@ -1085,10 +1085,10 @@ class NumericalParityValidator:
         torch_param = self.torch.from_numpy(param_np.copy()).requires_grad_(True)
         torch_param.grad = self.torch.from_numpy(grad_np.copy())
 
-        # mlx_compat
-        mlx_nn = importlib.import_module("mlx_compat.nn")
-        mlx_param = mlx_nn.Parameter(self.mlx_compat.tensor(param_np.copy()))
-        mlx_param.grad = self.mlx_compat.tensor(grad_np.copy())
+        # flashlight
+        mlx_nn = importlib.import_module("flashlight.nn")
+        mlx_param = mlx_nn.Parameter(self.flashlight.tensor(param_np.copy()))
+        mlx_param.grad = self.flashlight.tensor(grad_np.copy())
 
         # Get functions
         torch_fn = self._get_pytorch_api(module, api_name)
@@ -1114,7 +1114,7 @@ class NumericalParityValidator:
         except Exception as e:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"mlx_compat execution failed: {type(e).__name__}: {str(e)}",
+                error=f"flashlight execution failed: {type(e).__name__}: {str(e)}",
             )
 
         # Compare clipped gradients
@@ -1135,11 +1135,11 @@ class NumericalParityValidator:
             self.torch.stack([self.torch.norm(torch_param.grad, 2)]), 2
         )
 
-        # mlx_compat
-        mlx_nn = importlib.import_module("mlx_compat.nn")
-        mlx_utils = importlib.import_module("mlx_compat.nn.utils")
-        mlx_param = mlx_nn.Parameter(self.mlx_compat.tensor(param_np.copy()))
-        mlx_param.grad = self.mlx_compat.tensor(grad_np.copy())
+        # flashlight
+        mlx_nn = importlib.import_module("flashlight.nn")
+        mlx_utils = importlib.import_module("flashlight.nn.utils")
+        mlx_param = mlx_nn.Parameter(self.flashlight.tensor(param_np.copy()))
+        mlx_param.grad = self.flashlight.tensor(grad_np.copy())
         mlx_total_norm = mlx_utils.get_total_norm([mlx_param.grad], norm_type=2.0)
 
         # Get functions
@@ -1166,7 +1166,7 @@ class NumericalParityValidator:
         except Exception as e:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"mlx_compat execution failed: {type(e).__name__}: {str(e)}",
+                error=f"flashlight execution failed: {type(e).__name__}: {str(e)}",
             )
 
         # Compare clipped gradients
@@ -1186,10 +1186,10 @@ class NumericalParityValidator:
             self.torch.from_numpy(grad_np2.copy()),
         ]
 
-        # mlx_compat
+        # flashlight
         mlx_grads = [
-            self.mlx_compat.tensor(grad_np1.copy()),
-            self.mlx_compat.tensor(grad_np2.copy()),
+            self.flashlight.tensor(grad_np1.copy()),
+            self.flashlight.tensor(grad_np2.copy()),
         ]
 
         # Get functions
@@ -1216,7 +1216,7 @@ class NumericalParityValidator:
         except Exception as e:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"mlx_compat execution failed: {type(e).__name__}: {str(e)}",
+                error=f"flashlight execution failed: {type(e).__name__}: {str(e)}",
             )
 
         return self._compare_outputs(module, api_name, torch_norm, mlx_norm)
@@ -1233,11 +1233,11 @@ class NumericalParityValidator:
             self.torch.nn.Parameter(self.torch.from_numpy(param_np2.copy())),
         ]
 
-        # mlx_compat
-        mlx_nn = importlib.import_module("mlx_compat.nn")
+        # flashlight
+        mlx_nn = importlib.import_module("flashlight.nn")
         mlx_params = [
-            mlx_nn.Parameter(self.mlx_compat.tensor(param_np1.copy())),
-            mlx_nn.Parameter(self.mlx_compat.tensor(param_np2.copy())),
+            mlx_nn.Parameter(self.flashlight.tensor(param_np1.copy())),
+            mlx_nn.Parameter(self.flashlight.tensor(param_np2.copy())),
         ]
 
         # Get functions
@@ -1264,7 +1264,7 @@ class NumericalParityValidator:
         except Exception as e:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"mlx_compat execution failed: {type(e).__name__}: {str(e)}",
+                error=f"flashlight execution failed: {type(e).__name__}: {str(e)}",
             )
 
         return self._compare_outputs(module, api_name, torch_vec, mlx_vec)
@@ -1286,13 +1286,13 @@ class NumericalParityValidator:
         ]
         torch_vec = self.torch.from_numpy(vec_np.copy())
 
-        # mlx_compat
-        mlx_nn = importlib.import_module("mlx_compat.nn")
+        # flashlight
+        mlx_nn = importlib.import_module("flashlight.nn")
         mlx_params = [
-            mlx_nn.Parameter(self.mlx_compat.tensor(param_np1.copy())),
-            mlx_nn.Parameter(self.mlx_compat.tensor(param_np2.copy())),
+            mlx_nn.Parameter(self.flashlight.tensor(param_np1.copy())),
+            mlx_nn.Parameter(self.flashlight.tensor(param_np2.copy())),
         ]
-        mlx_vec = self.mlx_compat.tensor(vec_np.copy())
+        mlx_vec = self.flashlight.tensor(vec_np.copy())
 
         # Get functions
         torch_fn = self._get_pytorch_api(module, api_name)
@@ -1318,12 +1318,12 @@ class NumericalParityValidator:
         except Exception as e:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"mlx_compat execution failed: {type(e).__name__}: {str(e)}",
+                error=f"flashlight execution failed: {type(e).__name__}: {str(e)}",
             )
 
         # Compare the parameter values after update
         torch_result = self.torch.cat([p.flatten() for p in torch_params])
-        mlx_result = self.mlx_compat.cat([p.flatten() for p in mlx_params])
+        mlx_result = self.flashlight.cat([p.flatten() for p in mlx_params])
 
         return self._compare_outputs(module, api_name, torch_result, mlx_result)
 
@@ -1343,7 +1343,7 @@ class NumericalParityValidator:
                 config.get("in_features", 10),
                 config.get("out_features", 5)
             )
-            mlx_linear = importlib.import_module("mlx_compat.nn").Linear
+            mlx_linear = importlib.import_module("flashlight.nn").Linear
             mlx_module = mlx_linear(
                 config.get("in_features", 10),
                 config.get("out_features", 5)
@@ -1378,7 +1378,7 @@ class NumericalParityValidator:
                 except Exception as e:
                     return NumericalTestResult(
                         module=module, api=api_name, passed=False,
-                        error=f"mlx_compat norm application failed: {type(e).__name__}: {str(e)}",
+                        error=f"flashlight norm application failed: {type(e).__name__}: {str(e)}",
                     )
 
         # Get functions
@@ -1408,7 +1408,7 @@ class NumericalParityValidator:
         except Exception as e:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"mlx_compat execution failed: {type(e).__name__}: {str(e)}",
+                error=f"flashlight execution failed: {type(e).__name__}: {str(e)}",
             )
 
         # For stub implementations, just verify both return modules
@@ -1444,7 +1444,7 @@ class NumericalParityValidator:
             torch_conv.eval()
             torch_bn.eval()
 
-            mlx_nn = importlib.import_module("mlx_compat.nn")
+            mlx_nn = importlib.import_module("flashlight.nn")
             mlx_conv = mlx_nn.Conv2d(
                 config.get("in_channels", 3),
                 config.get("out_channels", 16),
@@ -1466,7 +1466,7 @@ class NumericalParityValidator:
             torch_linear.eval()
             torch_bn.eval()
 
-            mlx_nn = importlib.import_module("mlx_compat.nn")
+            mlx_nn = importlib.import_module("flashlight.nn")
             mlx_linear = mlx_nn.Linear(
                 config.get("in_features", 10),
                 config.get("out_features", 5)
@@ -1523,7 +1523,7 @@ class NumericalParityValidator:
         except Exception as e:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"mlx_compat execution failed: {type(e).__name__}: {str(e)}",
+                error=f"flashlight execution failed: {type(e).__name__}: {str(e)}",
             )
 
         # For stub implementations, just verify both return modules
@@ -1553,7 +1553,7 @@ class NumericalParityValidator:
                 config.get("out_channels", 16),
                 config.get("kernel_size", 3),
             )
-            mlx_nn = importlib.import_module("mlx_compat.nn")
+            mlx_nn = importlib.import_module("flashlight.nn")
             mlx_module = mlx_nn.Conv2d(
                 config.get("in_channels", 3),
                 config.get("out_channels", 16),
@@ -1565,7 +1565,7 @@ class NumericalParityValidator:
                 config.get("out_channels", 8),
                 config.get("kernel_size", 3),
             )
-            mlx_nn = importlib.import_module("mlx_compat.nn")
+            mlx_nn = importlib.import_module("flashlight.nn")
             mlx_module = mlx_nn.Conv3d(
                 config.get("in_channels", 3),
                 config.get("out_channels", 8),
@@ -1603,7 +1603,7 @@ class NumericalParityValidator:
         except Exception as e:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"mlx_compat execution failed: {type(e).__name__}: {str(e)}",
+                error=f"flashlight execution failed: {type(e).__name__}: {str(e)}",
             )
 
         # Both should return modules
@@ -1626,7 +1626,7 @@ class NumericalParityValidator:
         # Get the module class
         if module_type == "Linear":
             torch_cls = self.torch.nn.Linear
-            mlx_cls = importlib.import_module("mlx_compat.nn").Linear
+            mlx_cls = importlib.import_module("flashlight.nn").Linear
             init_kwargs = {
                 "in_features": config.get("in_features", 10),
                 "out_features": config.get("out_features", 5),
@@ -1661,7 +1661,7 @@ class NumericalParityValidator:
         except Exception as e:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"mlx_compat execution failed: {type(e).__name__}: {str(e)}",
+                error=f"flashlight execution failed: {type(e).__name__}: {str(e)}",
             )
 
         # Both should return module instances
@@ -1719,12 +1719,12 @@ class NumericalParityValidator:
         torch_data = self.torch.from_numpy(data_np.copy())
         torch_batch_sizes = self.torch.from_numpy(batch_sizes_np.copy())
 
-        # mlx_compat
-        mlx_data = self.mlx_compat.tensor(data_np.copy())
-        mlx_batch_sizes = self.mlx_compat.tensor(batch_sizes_np.copy())
+        # flashlight
+        mlx_data = self.flashlight.tensor(data_np.copy())
+        mlx_batch_sizes = self.flashlight.tensor(batch_sizes_np.copy())
 
         import torch.nn.utils.rnn as torch_rnn
-        import mlx_compat.nn.utils.rnn as mlx_rnn
+        import flashlight.nn.utils.rnn as mlx_rnn
 
         # Test instantiation
         try:
@@ -1740,7 +1740,7 @@ class NumericalParityValidator:
         except Exception as e:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"mlx_compat instantiation failed: {type(e).__name__}: {str(e)}",
+                error=f"flashlight instantiation failed: {type(e).__name__}: {str(e)}",
             )
 
         # Verify both have the data attribute and it contains valid data
@@ -1776,13 +1776,13 @@ class NumericalParityValidator:
         torch_input = self.torch.from_numpy(input_np.copy())
         torch_lengths = self.torch.from_numpy(lengths.copy())
 
-        # mlx_compat
-        mlx_input = self.mlx_compat.tensor(input_np.copy())
-        mlx_lengths = self.mlx_compat.tensor(lengths.copy())
+        # flashlight
+        mlx_input = self.flashlight.tensor(input_np.copy())
+        mlx_lengths = self.flashlight.tensor(lengths.copy())
 
         # Get functions
         import torch.nn.utils.rnn as torch_rnn
-        import mlx_compat.nn.utils.rnn as mlx_rnn
+        import flashlight.nn.utils.rnn as mlx_rnn
 
         # Execute
         try:
@@ -1804,7 +1804,7 @@ class NumericalParityValidator:
         except Exception as e:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"mlx_compat execution failed: {type(e).__name__}: {str(e)}",
+                error=f"flashlight execution failed: {type(e).__name__}: {str(e)}",
             )
 
         # For stub implementations, just verify both returned PackedSequence objects with data
@@ -1841,12 +1841,12 @@ class NumericalParityValidator:
         torch_input = self.torch.from_numpy(input_np.copy())
         torch_lengths = self.torch.from_numpy(lengths.copy())
 
-        # mlx_compat
-        mlx_input = self.mlx_compat.tensor(input_np.copy())
-        mlx_lengths = self.mlx_compat.tensor(lengths.copy())
+        # flashlight
+        mlx_input = self.flashlight.tensor(input_np.copy())
+        mlx_lengths = self.flashlight.tensor(lengths.copy())
 
         import torch.nn.utils.rnn as torch_rnn
-        import mlx_compat.nn.utils.rnn as mlx_rnn
+        import flashlight.nn.utils.rnn as mlx_rnn
 
         try:
             import warnings
@@ -1869,7 +1869,7 @@ class NumericalParityValidator:
         except Exception as e:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"mlx_compat execution failed: {type(e).__name__}: {str(e)}",
+                error=f"flashlight execution failed: {type(e).__name__}: {str(e)}",
             )
 
         # For stub implementations, just verify both returned valid tensors
@@ -1899,11 +1899,11 @@ class NumericalParityValidator:
         # PyTorch
         torch_sequences = [self.torch.from_numpy(s.copy()) for s in sequences_np]
 
-        # mlx_compat
-        mlx_sequences = [self.mlx_compat.tensor(s.copy()) for s in sequences_np]
+        # flashlight
+        mlx_sequences = [self.flashlight.tensor(s.copy()) for s in sequences_np]
 
         import torch.nn.utils.rnn as torch_rnn
-        import mlx_compat.nn.utils.rnn as mlx_rnn
+        import flashlight.nn.utils.rnn as mlx_rnn
 
         try:
             torch_output = torch_rnn.pad_sequence(torch_sequences, batch_first=False)
@@ -1918,7 +1918,7 @@ class NumericalParityValidator:
         except Exception as e:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"mlx_compat execution failed: {type(e).__name__}: {str(e)}",
+                error=f"flashlight execution failed: {type(e).__name__}: {str(e)}",
             )
 
         return self._compare_outputs(module, api_name, torch_output, mlx_output)
@@ -1933,10 +1933,10 @@ class NumericalParityValidator:
 
         # PyTorch - pad first, then unpad
         torch_sequences = [self.torch.from_numpy(s.copy()) for s in sequences_np]
-        mlx_sequences = [self.mlx_compat.tensor(s.copy()) for s in sequences_np]
+        mlx_sequences = [self.flashlight.tensor(s.copy()) for s in sequences_np]
 
         import torch.nn.utils.rnn as torch_rnn
-        import mlx_compat.nn.utils.rnn as mlx_rnn
+        import flashlight.nn.utils.rnn as mlx_rnn
 
         try:
             torch_padded = torch_rnn.pad_sequence(torch_sequences, batch_first=False)
@@ -1950,12 +1950,12 @@ class NumericalParityValidator:
 
         try:
             mlx_padded = mlx_rnn.pad_sequence(mlx_sequences, batch_first=False)
-            mlx_lengths = self.mlx_compat.tensor(lengths)
+            mlx_lengths = self.flashlight.tensor(lengths)
             mlx_output = mlx_rnn.unpad_sequence(mlx_padded, mlx_lengths, batch_first=False)
         except Exception as e:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"mlx_compat execution failed: {type(e).__name__}: {str(e)}",
+                error=f"flashlight execution failed: {type(e).__name__}: {str(e)}",
             )
 
         # Compare each unpadded sequence
@@ -1998,11 +1998,11 @@ class NumericalParityValidator:
         # PyTorch
         torch_sequences = [self.torch.from_numpy(s.copy()) for s in sequences_np]
 
-        # mlx_compat
-        mlx_sequences = [self.mlx_compat.tensor(s.copy()) for s in sequences_np]
+        # flashlight
+        mlx_sequences = [self.flashlight.tensor(s.copy()) for s in sequences_np]
 
         import torch.nn.utils.rnn as torch_rnn
-        import mlx_compat.nn.utils.rnn as mlx_rnn
+        import flashlight.nn.utils.rnn as mlx_rnn
 
         try:
             import warnings
@@ -2023,7 +2023,7 @@ class NumericalParityValidator:
         except Exception as e:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"mlx_compat execution failed: {type(e).__name__}: {str(e)}",
+                error=f"flashlight execution failed: {type(e).__name__}: {str(e)}",
             )
 
         # For stub implementations, just verify both returned PackedSequence objects with data
@@ -2056,10 +2056,10 @@ class NumericalParityValidator:
 
         # PyTorch - pack first, then unpack
         torch_sequences = [self.torch.from_numpy(s.copy()) for s in sequences_np]
-        mlx_sequences = [self.mlx_compat.tensor(s.copy()) for s in sequences_np]
+        mlx_sequences = [self.flashlight.tensor(s.copy()) for s in sequences_np]
 
         import torch.nn.utils.rnn as torch_rnn
-        import mlx_compat.nn.utils.rnn as mlx_rnn
+        import flashlight.nn.utils.rnn as mlx_rnn
 
         try:
             import warnings
@@ -2082,7 +2082,7 @@ class NumericalParityValidator:
         except Exception as e:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"mlx_compat execution failed: {type(e).__name__}: {str(e)}",
+                error=f"flashlight execution failed: {type(e).__name__}: {str(e)}",
             )
 
         # For stub implementations, just verify both returned lists of tensors
@@ -2144,7 +2144,7 @@ class NumericalParityValidator:
                 config.get("in_features", 10),
                 config.get("out_features", 5)
             )
-            mlx_linear = importlib.import_module("mlx_compat.nn").Linear(
+            mlx_linear = importlib.import_module("flashlight.nn").Linear(
                 config.get("in_features", 10),
                 config.get("out_features", 5)
             )
@@ -2181,7 +2181,7 @@ class NumericalParityValidator:
         except Exception as e:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"mlx_compat execution failed: {type(e).__name__}: {str(e)}",
+                error=f"flashlight execution failed: {type(e).__name__}: {str(e)}",
             )
 
         # Both should return modules
@@ -2200,7 +2200,7 @@ class NumericalParityValidator:
         """Test is_parametrized function."""
         # Create a simple module
         torch_linear = self.torch.nn.Linear(10, 5)
-        mlx_linear = importlib.import_module("mlx_compat.nn").Linear(10, 5)
+        mlx_linear = importlib.import_module("flashlight.nn").Linear(10, 5)
 
         # Get functions
         torch_fn = self._get_pytorch_api(module, api_name)
@@ -2226,7 +2226,7 @@ class NumericalParityValidator:
         except Exception as e:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"mlx_compat execution failed: {type(e).__name__}: {str(e)}",
+                error=f"flashlight execution failed: {type(e).__name__}: {str(e)}",
             )
 
         # Both should return False for non-parametrized module
@@ -2245,7 +2245,7 @@ class NumericalParityValidator:
         """Test register_parametrization function."""
         # Create a simple module
         torch_linear = self.torch.nn.Linear(10, 5)
-        mlx_linear = importlib.import_module("mlx_compat.nn").Linear(10, 5)
+        mlx_linear = importlib.import_module("flashlight.nn").Linear(10, 5)
 
         # Get functions
         torch_fn = self._get_pytorch_api(module, api_name)
@@ -2262,7 +2262,7 @@ class NumericalParityValidator:
             def forward(self, x):
                 return x
 
-        class MLXIdentityParam(importlib.import_module("mlx_compat.nn").Module):
+        class MLXIdentityParam(importlib.import_module("flashlight.nn").Module):
             def forward(self, x):
                 return x
 
@@ -2280,7 +2280,7 @@ class NumericalParityValidator:
         except Exception as e:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"mlx_compat execution failed: {type(e).__name__}: {str(e)}",
+                error=f"flashlight execution failed: {type(e).__name__}: {str(e)}",
             )
 
         # Both should return the module
@@ -2299,7 +2299,7 @@ class NumericalParityValidator:
         """Test remove_parametrizations function."""
         # Create and parametrize a module first
         torch_linear = self.torch.nn.Linear(10, 5)
-        mlx_linear = importlib.import_module("mlx_compat.nn").Linear(10, 5)
+        mlx_linear = importlib.import_module("flashlight.nn").Linear(10, 5)
 
         # Get register and remove functions
         torch_register = self._get_pytorch_api("torch.nn.utils.parametrize", "register_parametrization")
@@ -2318,7 +2318,7 @@ class NumericalParityValidator:
             def forward(self, x):
                 return x
 
-        class MLXIdentityParam(importlib.import_module("mlx_compat.nn").Module):
+        class MLXIdentityParam(importlib.import_module("flashlight.nn").Module):
             def forward(self, x):
                 return x
 
@@ -2346,7 +2346,7 @@ class NumericalParityValidator:
         except Exception as e:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"mlx_compat execution failed: {type(e).__name__}: {str(e)}",
+                error=f"flashlight execution failed: {type(e).__name__}: {str(e)}",
             )
 
         # Both should return the module
@@ -2365,7 +2365,7 @@ class NumericalParityValidator:
         """Test type_before_parametrizations function."""
         # Create a simple module
         torch_linear = self.torch.nn.Linear(10, 5)
-        mlx_linear = importlib.import_module("mlx_compat.nn").Linear(10, 5)
+        mlx_linear = importlib.import_module("flashlight.nn").Linear(10, 5)
 
         # Get functions
         torch_fn = self._get_pytorch_api(module, api_name)
@@ -2391,7 +2391,7 @@ class NumericalParityValidator:
         except Exception as e:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"mlx_compat execution failed: {type(e).__name__}: {str(e)}",
+                error=f"flashlight execution failed: {type(e).__name__}: {str(e)}",
             )
 
         # Both should return the type of the module
@@ -2411,7 +2411,7 @@ class NumericalParityValidator:
         # Create two modules
         torch_linear1 = self.torch.nn.Linear(10, 5)
         torch_linear2 = self.torch.nn.Linear(10, 5)
-        mlx_nn = importlib.import_module("mlx_compat.nn")
+        mlx_nn = importlib.import_module("flashlight.nn")
         mlx_linear1 = mlx_nn.Linear(10, 5)
         mlx_linear2 = mlx_nn.Linear(10, 5)
 
@@ -2439,7 +2439,7 @@ class NumericalParityValidator:
         except Exception as e:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"mlx_compat execution failed: {type(e).__name__}: {str(e)}",
+                error=f"flashlight execution failed: {type(e).__name__}: {str(e)}",
             )
 
         # Both should return the target module
@@ -2463,7 +2463,7 @@ class NumericalParityValidator:
 
         # Create modules
         torch_linear = self.torch.nn.Linear(in_features, out_features)
-        mlx_nn = importlib.import_module("mlx_compat.nn")
+        mlx_nn = importlib.import_module("flashlight.nn")
         mlx_linear = mlx_nn.Linear(in_features, out_features)
 
         # Sync weights
@@ -2478,7 +2478,7 @@ class NumericalParityValidator:
         # Create input
         input_np = np.random.randn(batch_size, in_features).astype(np.float32)
         torch_input = self.torch.from_numpy(input_np.copy())
-        mlx_input = self.mlx_compat.tensor(input_np.copy())
+        mlx_input = self.flashlight.tensor(input_np.copy())
 
         # Create replacement parameters
         new_weight_np = np.random.randn(out_features, in_features).astype(np.float32)
@@ -2489,8 +2489,8 @@ class NumericalParityValidator:
             "bias": self.torch.from_numpy(new_bias_np.copy()),
         }
         mlx_params = {
-            "weight": self.mlx_compat.tensor(new_weight_np.copy()),
-            "bias": self.mlx_compat.tensor(new_bias_np.copy()),
+            "weight": self.flashlight.tensor(new_weight_np.copy()),
+            "bias": self.flashlight.tensor(new_bias_np.copy()),
         }
 
         # Get functions
@@ -2517,7 +2517,7 @@ class NumericalParityValidator:
         except Exception as e:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"mlx_compat execution failed: {type(e).__name__}: {str(e)}",
+                error=f"flashlight execution failed: {type(e).__name__}: {str(e)}",
             )
 
         # Compare outputs
@@ -2536,12 +2536,12 @@ class NumericalParityValidator:
         if mlx_const is None:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"Could not find mlx_compat constant: {module}.{api_name}",
+                error=f"Could not find flashlight constant: {module}.{api_name}",
             )
 
         # For dtypes, compare normalized string representation
         torch_str = str(torch_const).replace("torch.", "")
-        mlx_str = str(mlx_const).replace("mlx_compat.", "")
+        mlx_str = str(mlx_const).replace("flashlight.", "")
 
         # Consider match if core dtype name is the same
         passed = (
@@ -2570,10 +2570,10 @@ class NumericalParityValidator:
             return None
 
     def _get_mlx_api(self, module: str, api_name: str) -> Optional[Any]:
-        """Get an mlx_compat API by module and name."""
+        """Get an flashlight API by module and name."""
         try:
-            # Map torch module to mlx_compat module
-            mlx_module = module.replace("torch", "mlx_compat")
+            # Map torch module to flashlight module
+            mlx_module = module.replace("torch", "flashlight")
             mod = importlib.import_module(mlx_module)
             return getattr(mod, api_name, None)
         except Exception:
@@ -2595,18 +2595,18 @@ class NumericalParityValidator:
         return dtype_map.get(np_dtype, self.torch.float32)
 
     def _numpy_dtype_to_mlx(self, np_dtype):
-        """Convert numpy dtype to mlx_compat dtype."""
+        """Convert numpy dtype to flashlight dtype."""
         dtype_map = {
-            np.float32: self.mlx_compat.float32,
-            np.float16: self.mlx_compat.float16,
-            np.int32: self.mlx_compat.int32,
-            np.int64: self.mlx_compat.int64,
-            np.int16: self.mlx_compat.int16,
-            np.int8: self.mlx_compat.int8,
-            np.uint8: self.mlx_compat.uint8,
-            np.bool_: self.mlx_compat.bool,  # mlx_compat uses 'bool' not 'bool_'
+            np.float32: self.flashlight.float32,
+            np.float16: self.flashlight.float16,
+            np.int32: self.flashlight.int32,
+            np.int64: self.flashlight.int64,
+            np.int16: self.flashlight.int16,
+            np.int8: self.flashlight.int8,
+            np.uint8: self.flashlight.uint8,
+            np.bool_: self.flashlight.bool,  # flashlight uses 'bool' not 'bool_'
         }
-        return dtype_map.get(np_dtype, self.mlx_compat.float32)
+        return dtype_map.get(np_dtype, self.flashlight.float32)
 
     def _to_torch_inputs(self, inputs: Dict[str, Any]) -> Tuple[Dict[str, Any], List[Any]]:
         """Convert numpy inputs to PyTorch tensors.
@@ -2673,7 +2673,7 @@ class NumericalParityValidator:
         return result, positional_args
 
     def _to_mlx_inputs(self, inputs: Dict[str, Any]) -> Tuple[Dict[str, Any], List[Any]]:
-        """Convert numpy inputs to mlx_compat tensors.
+        """Convert numpy inputs to flashlight tensors.
 
         Returns:
             Tuple of (kwargs dict, positional args list)
@@ -2693,51 +2693,51 @@ class NumericalParityValidator:
                             # Keep as numpy array (for from_numpy, etc.)
                             positional_args.append(v.copy())
                         else:
-                            positional_args.append(self.mlx_compat.tensor(v.copy()))
+                            positional_args.append(self.flashlight.tensor(v.copy()))
                     elif isinstance(v, bytes) and raw_buffer:
                         # Keep bytes as-is for frombuffer
                         positional_args.append(v)
                     elif isinstance(v, tuple):
                         # Check if tuple contains numpy arrays (e.g., LSTM hidden state (h, c))
                         if len(v) > 0 and isinstance(v[0], np.ndarray):
-                            positional_args.append(tuple(self.mlx_compat.tensor(arr.copy()) for arr in v))
+                            positional_args.append(tuple(self.flashlight.tensor(arr.copy()) for arr in v))
                         else:
                             # Tuples like (4, 8) for size - keep as-is
                             positional_args.append(v)
                     elif isinstance(v, list) and len(v) > 0 and isinstance(v[0], np.ndarray):
                         # List of numpy arrays (e.g., for pad_sequence, pack_sequence)
-                        positional_args.append([self.mlx_compat.tensor(arr.copy()) for arr in v])
+                        positional_args.append([self.flashlight.tensor(arr.copy()) for arr in v])
                     else:
                         positional_args.append(v)
             elif key == "_tensor_list":
                 # Special case: list of tensors to be passed as "tensors" arg
-                result["tensors"] = [self.mlx_compat.tensor(v.copy()) for v in value]
+                result["tensors"] = [self.flashlight.tensor(v.copy()) for v in value]
             elif key == "_operands":
                 # Special case for einsum: convert operands and extend positional args
                 for v in value:
                     if isinstance(v, np.ndarray):
-                        positional_args.append(self.mlx_compat.tensor(v.copy()))
+                        positional_args.append(self.flashlight.tensor(v.copy()))
                     else:
                         positional_args.append(v)
             elif key.startswith("_"):
                 continue
             elif key == "dtype" and raw_buffer:
-                # Convert numpy dtype to mlx_compat dtype for frombuffer
+                # Convert numpy dtype to flashlight dtype for frombuffer
                 result[key] = self._numpy_dtype_to_mlx(value)
             elif isinstance(value, np.ndarray):
-                result[key] = self.mlx_compat.tensor(value.copy())
+                result[key] = self.flashlight.tensor(value.copy())
             elif isinstance(value, list) and len(value) > 0 and isinstance(value[0], np.ndarray):
                 # List of arrays
-                result[key] = [self.mlx_compat.tensor(v.copy()) for v in value]
+                result[key] = [self.flashlight.tensor(v.copy()) for v in value]
             elif isinstance(value, tuple) and len(value) > 0 and isinstance(value[0], np.ndarray):
                 # Tuple of arrays (e.g., for indices)
-                result[key] = tuple(self.mlx_compat.tensor(v.copy()) for v in value)
+                result[key] = tuple(self.flashlight.tensor(v.copy()) for v in value)
             else:
                 result[key] = value
         return result, positional_args
 
     def _sync_weights(self, torch_module, mlx_module):
-        """Copy weights from PyTorch module to mlx_compat module."""
+        """Copy weights from PyTorch module to flashlight module."""
         torch_state = torch_module.state_dict()
 
         for name, torch_param in torch_state.items():
@@ -2771,7 +2771,7 @@ class NumericalParityValidator:
         torch_output: Any,
         mlx_output: Any,
     ) -> NumericalTestResult:
-        """Compare outputs from PyTorch and mlx_compat."""
+        """Compare outputs from PyTorch and flashlight."""
         # Handle PackedSequence outputs by comparing their data tensors
         torch_type_name = type(torch_output).__name__
         mlx_type_name = type(mlx_output).__name__
@@ -2822,7 +2822,7 @@ class NumericalParityValidator:
         torch_output: Any,
         mlx_output: Any,
     ) -> NumericalTestResult:
-        """Compare a single tensor output from PyTorch and mlx_compat."""
+        """Compare a single tensor output from PyTorch and flashlight."""
         # Convert to numpy
         try:
             if hasattr(torch_output, "detach"):
@@ -2849,7 +2849,7 @@ class NumericalParityValidator:
         except Exception as e:
             return NumericalTestResult(
                 module=module, api=api_name, passed=False,
-                error=f"Could not convert mlx_compat output to numpy: {e}",
+                error=f"Could not convert flashlight output to numpy: {e}",
             )
 
         # Check shapes match

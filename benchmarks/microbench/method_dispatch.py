@@ -10,7 +10,7 @@ from benchmarks.core.runner import BaseBenchmark
 
 
 class MethodVsFunctionBenchmark(BaseBenchmark):
-    """Compare tensor.sum() method vs mlx_compat.sum(tensor) function."""
+    """Compare tensor.sum() method vs flashlight.sum(tensor) function."""
 
     name = "method_vs_function"
     level = BenchmarkLevel.OPERATOR
@@ -28,8 +28,8 @@ class MethodVsFunctionBenchmark(BaseBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
-        x = mlx_compat.randn(*config["shape"])
+        import flashlight
+        x = flashlight.randn(*config["shape"])
         return (x, config["op"])
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:
@@ -74,8 +74,8 @@ class FunctionCallBenchmark(BaseBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
-        x = mlx_compat.randn(*config["shape"])
+        import flashlight
+        x = flashlight.randn(*config["shape"])
         return (x, config["op"])
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:
@@ -85,13 +85,13 @@ class FunctionCallBenchmark(BaseBenchmark):
 
     def mlx_operation(self, x, op):
         """Use module function."""
-        import mlx_compat
+        import flashlight
         if op == "sum":
-            return mlx_compat.sum(x)
+            return flashlight.sum(x)
         elif op == "mean":
-            return mlx_compat.mean(x)
+            return flashlight.mean(x)
         elif op == "max":
-            return mlx_compat.max(x)
+            return flashlight.max(x)
 
     def pytorch_operation(self, x, op):
         """Use module function."""
@@ -132,8 +132,8 @@ class TensorCreationBenchmark(BaseBenchmark):
         return (data, device)
 
     def mlx_operation(self, data):
-        import mlx_compat
-        return mlx_compat.tensor(data)
+        import flashlight
+        return flashlight.tensor(data)
 
     def pytorch_operation(self, data, device):
         import torch
@@ -157,8 +157,8 @@ class PropertyAccessBenchmark(BaseBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
-        x = mlx_compat.randn(*config["shape"])
+        import flashlight
+        x = flashlight.randn(*config["shape"])
         return (x, config["property"])
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:

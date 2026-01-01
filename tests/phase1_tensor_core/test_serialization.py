@@ -1,7 +1,7 @@
 """
 Serialization Tests
 
-Tests for mlx_compat.save() and mlx_compat.load() functions.
+Tests for flashlight.save() and flashlight.load() functions.
 """
 
 import pytest
@@ -9,7 +9,7 @@ import numpy as np
 import tempfile
 import os
 
-import mlx_compat
+import flashlight
 
 
 class TestSaveTensor:
@@ -17,11 +17,11 @@ class TestSaveTensor:
 
     def test_save_1d_tensor(self):
         """Test saving a 1D tensor."""
-        x = mlx_compat.tensor([1.0, 2.0, 3.0, 4.0, 5.0])
+        x = flashlight.tensor([1.0, 2.0, 3.0, 4.0, 5.0])
         with tempfile.NamedTemporaryFile(suffix=".pt", delete=False) as f:
             path = f.name
         try:
-            mlx_compat.save(x, path)
+            flashlight.save(x, path)
             assert os.path.exists(path)
             assert os.path.getsize(path) > 0
         finally:
@@ -29,33 +29,33 @@ class TestSaveTensor:
 
     def test_save_2d_tensor(self):
         """Test saving a 2D tensor."""
-        x = mlx_compat.randn(10, 20)
+        x = flashlight.randn(10, 20)
         with tempfile.NamedTemporaryFile(suffix=".pt", delete=False) as f:
             path = f.name
         try:
-            mlx_compat.save(x, path)
+            flashlight.save(x, path)
             assert os.path.exists(path)
         finally:
             os.unlink(path)
 
     def test_save_nd_tensor(self):
         """Test saving an N-dimensional tensor."""
-        x = mlx_compat.randn(2, 3, 4, 5)
+        x = flashlight.randn(2, 3, 4, 5)
         with tempfile.NamedTemporaryFile(suffix=".pt", delete=False) as f:
             path = f.name
         try:
-            mlx_compat.save(x, path)
+            flashlight.save(x, path)
             assert os.path.exists(path)
         finally:
             os.unlink(path)
 
     def test_save_integer_tensor(self):
         """Test saving an integer tensor."""
-        x = mlx_compat.tensor([1, 2, 3, 4, 5], dtype=mlx_compat.int32)
+        x = flashlight.tensor([1, 2, 3, 4, 5], dtype=flashlight.int32)
         with tempfile.NamedTemporaryFile(suffix=".pt", delete=False) as f:
             path = f.name
         try:
-            mlx_compat.save(x, path)
+            flashlight.save(x, path)
             assert os.path.exists(path)
         finally:
             os.unlink(path)
@@ -66,12 +66,12 @@ class TestLoadTensor:
 
     def test_load_1d_tensor(self):
         """Test loading a 1D tensor."""
-        original = mlx_compat.tensor([1.0, 2.0, 3.0, 4.0, 5.0])
+        original = flashlight.tensor([1.0, 2.0, 3.0, 4.0, 5.0])
         with tempfile.NamedTemporaryFile(suffix=".pt", delete=False) as f:
             path = f.name
         try:
-            mlx_compat.save(original, path)
-            loaded = mlx_compat.load(path)
+            flashlight.save(original, path)
+            loaded = flashlight.load(path)
             np.testing.assert_allclose(
                 np.array(loaded._mlx_array),
                 np.array(original._mlx_array),
@@ -82,12 +82,12 @@ class TestLoadTensor:
 
     def test_load_2d_tensor(self):
         """Test loading a 2D tensor."""
-        original = mlx_compat.randn(10, 20)
+        original = flashlight.randn(10, 20)
         with tempfile.NamedTemporaryFile(suffix=".pt", delete=False) as f:
             path = f.name
         try:
-            mlx_compat.save(original, path)
-            loaded = mlx_compat.load(path)
+            flashlight.save(original, path)
+            loaded = flashlight.load(path)
             np.testing.assert_allclose(
                 np.array(loaded._mlx_array),
                 np.array(original._mlx_array),
@@ -98,24 +98,24 @@ class TestLoadTensor:
 
     def test_load_preserves_shape(self):
         """Test that loading preserves tensor shape."""
-        original = mlx_compat.randn(3, 4, 5)
+        original = flashlight.randn(3, 4, 5)
         with tempfile.NamedTemporaryFile(suffix=".pt", delete=False) as f:
             path = f.name
         try:
-            mlx_compat.save(original, path)
-            loaded = mlx_compat.load(path)
+            flashlight.save(original, path)
+            loaded = flashlight.load(path)
             assert loaded.shape == original.shape
         finally:
             os.unlink(path)
 
     def test_load_preserves_dtype(self):
         """Test that loading preserves tensor dtype."""
-        original = mlx_compat.tensor([1, 2, 3], dtype=mlx_compat.int32)
+        original = flashlight.tensor([1, 2, 3], dtype=flashlight.int32)
         with tempfile.NamedTemporaryFile(suffix=".pt", delete=False) as f:
             path = f.name
         try:
-            mlx_compat.save(original, path)
-            loaded = mlx_compat.load(path)
+            flashlight.save(original, path)
+            loaded = flashlight.load(path)
             assert loaded.dtype == original.dtype
         finally:
             os.unlink(path)
@@ -127,14 +127,14 @@ class TestSaveLoadDict:
     def test_save_load_simple_dict(self):
         """Test saving and loading a simple dictionary."""
         original = {
-            "weight": mlx_compat.randn(10, 5),
-            "bias": mlx_compat.randn(5),
+            "weight": flashlight.randn(10, 5),
+            "bias": flashlight.randn(5),
         }
         with tempfile.NamedTemporaryFile(suffix=".pt", delete=False) as f:
             path = f.name
         try:
-            mlx_compat.save(original, path)
-            loaded = mlx_compat.load(path)
+            flashlight.save(original, path)
+            loaded = flashlight.load(path)
             assert set(loaded.keys()) == set(original.keys())
             np.testing.assert_allclose(
                 np.array(loaded["weight"]._mlx_array),
@@ -153,19 +153,19 @@ class TestSaveLoadDict:
         """Test saving and loading a nested dictionary."""
         original = {
             "layer1": {
-                "weight": mlx_compat.randn(10, 5),
-                "bias": mlx_compat.randn(5),
+                "weight": flashlight.randn(10, 5),
+                "bias": flashlight.randn(5),
             },
             "layer2": {
-                "weight": mlx_compat.randn(5, 2),
-                "bias": mlx_compat.randn(2),
+                "weight": flashlight.randn(5, 2),
+                "bias": flashlight.randn(2),
             },
         }
         with tempfile.NamedTemporaryFile(suffix=".pt", delete=False) as f:
             path = f.name
         try:
-            mlx_compat.save(original, path)
-            loaded = mlx_compat.load(path)
+            flashlight.save(original, path)
+            loaded = flashlight.load(path)
             assert set(loaded.keys()) == set(original.keys())
             for layer in ["layer1", "layer2"]:
                 for param in ["weight", "bias"]:
@@ -182,14 +182,14 @@ class TestSaveLoadDict:
         original = {
             "epoch": 10,
             "loss": 0.5,
-            "weights": mlx_compat.randn(5, 5),
+            "weights": flashlight.randn(5, 5),
             "name": "my_model",
         }
         with tempfile.NamedTemporaryFile(suffix=".pt", delete=False) as f:
             path = f.name
         try:
-            mlx_compat.save(original, path)
-            loaded = mlx_compat.load(path)
+            flashlight.save(original, path)
+            loaded = flashlight.load(path)
             assert loaded["epoch"] == 10
             assert loaded["loss"] == 0.5
             assert loaded["name"] == "my_model"
@@ -208,15 +208,15 @@ class TestSaveLoadList:
     def test_save_load_list_of_tensors(self):
         """Test saving and loading a list of tensors."""
         original = [
-            mlx_compat.randn(5),
-            mlx_compat.randn(10),
-            mlx_compat.randn(3, 3),
+            flashlight.randn(5),
+            flashlight.randn(10),
+            flashlight.randn(3, 3),
         ]
         with tempfile.NamedTemporaryFile(suffix=".pt", delete=False) as f:
             path = f.name
         try:
-            mlx_compat.save(original, path)
-            loaded = mlx_compat.load(path)
+            flashlight.save(original, path)
+            loaded = flashlight.load(path)
             assert len(loaded) == len(original)
             for i in range(len(original)):
                 np.testing.assert_allclose(
@@ -229,12 +229,12 @@ class TestSaveLoadList:
 
     def test_save_load_tuple(self):
         """Test saving and loading a tuple of tensors."""
-        original = (mlx_compat.randn(5), mlx_compat.randn(10))
+        original = (flashlight.randn(5), flashlight.randn(10))
         with tempfile.NamedTemporaryFile(suffix=".pt", delete=False) as f:
             path = f.name
         try:
-            mlx_compat.save(original, path)
-            loaded = mlx_compat.load(path)
+            flashlight.save(original, path)
+            loaded = flashlight.load(path)
             assert isinstance(loaded, tuple)
             assert len(loaded) == 2
         finally:
@@ -246,17 +246,17 @@ class TestModelStateDict:
 
     def test_save_load_linear_state_dict(self):
         """Test saving and loading a Linear layer's state dict."""
-        model = mlx_compat.nn.Linear(10, 5)
+        model = flashlight.nn.Linear(10, 5)
         state_dict = model.state_dict()
 
         with tempfile.NamedTemporaryFile(suffix=".pt", delete=False) as f:
             path = f.name
         try:
-            mlx_compat.save(state_dict, path)
-            loaded_state = mlx_compat.load(path)
+            flashlight.save(state_dict, path)
+            loaded_state = flashlight.load(path)
 
             # Create new model and load state
-            new_model = mlx_compat.nn.Linear(10, 5)
+            new_model = flashlight.nn.Linear(10, 5)
             new_model.load_state_dict(loaded_state)
 
             # Check parameters match
@@ -272,28 +272,28 @@ class TestModelStateDict:
 
     def test_save_load_sequential_state_dict(self):
         """Test saving and loading a Sequential model's state dict."""
-        model = mlx_compat.nn.Sequential(
-            mlx_compat.nn.Linear(10, 20),
-            mlx_compat.nn.ReLU(),
-            mlx_compat.nn.Linear(20, 5),
+        model = flashlight.nn.Sequential(
+            flashlight.nn.Linear(10, 20),
+            flashlight.nn.ReLU(),
+            flashlight.nn.Linear(20, 5),
         )
         state_dict = model.state_dict()
 
         with tempfile.NamedTemporaryFile(suffix=".pt", delete=False) as f:
             path = f.name
         try:
-            mlx_compat.save(state_dict, path)
-            loaded_state = mlx_compat.load(path)
+            flashlight.save(state_dict, path)
+            loaded_state = flashlight.load(path)
 
-            new_model = mlx_compat.nn.Sequential(
-                mlx_compat.nn.Linear(10, 20),
-                mlx_compat.nn.ReLU(),
-                mlx_compat.nn.Linear(20, 5),
+            new_model = flashlight.nn.Sequential(
+                flashlight.nn.Linear(10, 20),
+                flashlight.nn.ReLU(),
+                flashlight.nn.Linear(20, 5),
             )
             new_model.load_state_dict(loaded_state)
 
             # Verify model works
-            x = mlx_compat.randn(2, 10)
+            x = flashlight.randn(2, 10)
             output = new_model(x)
             assert output.shape == (2, 5)
         finally:
@@ -305,7 +305,7 @@ class TestCheckpointing:
 
     def test_save_load_checkpoint(self):
         """Test saving and loading a full checkpoint."""
-        model = mlx_compat.nn.Linear(10, 5)
+        model = flashlight.nn.Linear(10, 5)
         optimizer_state = {"lr": 0.01, "step": 100}
 
         checkpoint = {
@@ -318,8 +318,8 @@ class TestCheckpointing:
         with tempfile.NamedTemporaryFile(suffix=".pt", delete=False) as f:
             path = f.name
         try:
-            mlx_compat.save(checkpoint, path)
-            loaded = mlx_compat.load(path)
+            flashlight.save(checkpoint, path)
+            loaded = flashlight.load(path)
 
             assert loaded["epoch"] == 50
             assert loaded["best_loss"] == 0.123
@@ -335,12 +335,12 @@ class TestFileObjects:
 
     def test_save_to_file_object(self):
         """Test saving to an open file object."""
-        x = mlx_compat.tensor([1.0, 2.0, 3.0])
+        x = flashlight.tensor([1.0, 2.0, 3.0])
         with tempfile.NamedTemporaryFile(suffix=".pt", delete=False) as f:
-            mlx_compat.save(x, f)
+            flashlight.save(x, f)
             path = f.name
         try:
-            loaded = mlx_compat.load(path)
+            loaded = flashlight.load(path)
             np.testing.assert_allclose(
                 np.array(loaded._mlx_array), [1.0, 2.0, 3.0], rtol=1e-5
             )
@@ -349,13 +349,13 @@ class TestFileObjects:
 
     def test_load_from_file_object(self):
         """Test loading from an open file object."""
-        x = mlx_compat.tensor([1.0, 2.0, 3.0])
+        x = flashlight.tensor([1.0, 2.0, 3.0])
         with tempfile.NamedTemporaryFile(suffix=".pt", delete=False) as f:
             path = f.name
         try:
-            mlx_compat.save(x, path)
+            flashlight.save(x, path)
             with open(path, "rb") as f:
-                loaded = mlx_compat.load(f)
+                loaded = flashlight.load(f)
             np.testing.assert_allclose(
                 np.array(loaded._mlx_array), [1.0, 2.0, 3.0], rtol=1e-5
             )
@@ -372,8 +372,8 @@ class TestEdgeCases:
         with tempfile.NamedTemporaryFile(suffix=".pt", delete=False) as f:
             path = f.name
         try:
-            mlx_compat.save(original, path)
-            loaded = mlx_compat.load(path)
+            flashlight.save(original, path)
+            loaded = flashlight.load(path)
             assert loaded == {}
         finally:
             os.unlink(path)
@@ -384,8 +384,8 @@ class TestEdgeCases:
         with tempfile.NamedTemporaryFile(suffix=".pt", delete=False) as f:
             path = f.name
         try:
-            mlx_compat.save(original, path)
-            loaded = mlx_compat.load(path)
+            flashlight.save(original, path)
+            loaded = flashlight.load(path)
             assert loaded == 42
         finally:
             os.unlink(path)
@@ -396,20 +396,20 @@ class TestEdgeCases:
         with tempfile.NamedTemporaryFile(suffix=".pt", delete=False) as f:
             path = f.name
         try:
-            mlx_compat.save(original, path)
-            loaded = mlx_compat.load(path)
+            flashlight.save(original, path)
+            loaded = flashlight.load(path)
             assert loaded == "hello world"
         finally:
             os.unlink(path)
 
     def test_requires_grad_preserved(self):
         """Test that requires_grad is preserved."""
-        x = mlx_compat.randn(5, 5, requires_grad=True)
+        x = flashlight.randn(5, 5, requires_grad=True)
         with tempfile.NamedTemporaryFile(suffix=".pt", delete=False) as f:
             path = f.name
         try:
-            mlx_compat.save(x, path)
-            loaded = mlx_compat.load(path)
+            flashlight.save(x, path)
+            loaded = flashlight.load(path)
             assert loaded.requires_grad == x.requires_grad
         finally:
             os.unlink(path)

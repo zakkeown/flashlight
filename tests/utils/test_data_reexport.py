@@ -1,5 +1,5 @@
 """
-Tests for mlx_compat.utils.data re-exports.
+Tests for flashlight.utils.data re-exports.
 
 Verifies that all data loading utilities are correctly re-exported
 from the utils.data namespace for PyTorch API compatibility.
@@ -13,7 +13,7 @@ class TestDataReexports(unittest.TestCase):
 
     def test_dataset_imports(self):
         """Test Dataset class imports."""
-        from mlx_compat.utils.data import (
+        from flashlight.utils.data import (
             Dataset,
             TensorDataset,
             IterableDataset,
@@ -33,7 +33,7 @@ class TestDataReexports(unittest.TestCase):
 
     def test_sampler_imports(self):
         """Test Sampler class imports."""
-        from mlx_compat.utils.data import (
+        from flashlight.utils.data import (
             Sampler,
             SequentialSampler,
             RandomSampler,
@@ -53,14 +53,14 @@ class TestDataReexports(unittest.TestCase):
 
     def test_dataloader_imports(self):
         """Test DataLoader imports."""
-        from mlx_compat.utils.data import DataLoader, default_collate
+        from flashlight.utils.data import DataLoader, default_collate
 
         self.assertIsNotNone(DataLoader)
         self.assertIsNotNone(default_collate)
 
     def test_utility_function_imports(self):
         """Test utility function imports."""
-        from mlx_compat.utils.data import (
+        from flashlight.utils.data import (
             get_worker_info,
             default_convert,
             random_split,
@@ -72,7 +72,7 @@ class TestDataReexports(unittest.TestCase):
 
     def test_datapipe_imports(self):
         """Test DataPipe imports."""
-        from mlx_compat.utils.data import (
+        from flashlight.utils.data import (
             IterDataPipe,
             MapDataPipe,
             DFIterDataPipe,
@@ -88,7 +88,7 @@ class TestDataReexports(unittest.TestCase):
 
     def test_validation_imports(self):
         """Test validation decorator imports."""
-        from mlx_compat.utils.data import (
+        from flashlight.utils.data import (
             argument_validation,
             runtime_validation,
             runtime_validation_disabled,
@@ -104,13 +104,13 @@ class TestDataReexports(unittest.TestCase):
 
     def test_internal_imports(self):
         """Test internal class imports."""
-        from mlx_compat.utils.data import _DatasetKind
+        from flashlight.utils.data import _DatasetKind
 
         self.assertIsNotNone(_DatasetKind)
 
     def test_all_exports(self):
         """Test that __all__ contains expected items."""
-        from mlx_compat.utils import data
+        from flashlight.utils import data
 
         expected_exports = [
             'Dataset', 'TensorDataset', 'IterableDataset',
@@ -126,10 +126,10 @@ class TestDataReexports(unittest.TestCase):
         for item in expected_exports:
             self.assertIn(item, data.__all__, f"{item} not in __all__")
 
-    def test_same_as_mlx_compat_data(self):
-        """Test that re-exports are identical to mlx_compat.data."""
-        from mlx_compat import data as direct_data
-        from mlx_compat.utils import data as utils_data
+    def test_same_as_flashlight_data(self):
+        """Test that re-exports are identical to flashlight.data."""
+        from flashlight import data as direct_data
+        from flashlight.utils import data as utils_data
 
         # Key classes should be the same object
         self.assertIs(utils_data.Dataset, direct_data.Dataset)
@@ -143,11 +143,11 @@ class TestDataFunctionality(unittest.TestCase):
 
     def test_tensor_dataset_works(self):
         """Test TensorDataset functionality through re-export."""
-        from mlx_compat.utils.data import TensorDataset
-        import mlx_compat
+        from flashlight.utils.data import TensorDataset
+        import flashlight
 
-        x = mlx_compat.randn(10, 5)
-        y = mlx_compat.randint(0, 2, (10,))
+        x = flashlight.randn(10, 5)
+        y = flashlight.randint(0, 2, (10,))
 
         dataset = TensorDataset(x, y)
 
@@ -157,11 +157,11 @@ class TestDataFunctionality(unittest.TestCase):
 
     def test_dataloader_works(self):
         """Test DataLoader functionality through re-export."""
-        from mlx_compat.utils.data import DataLoader, TensorDataset
-        import mlx_compat
+        from flashlight.utils.data import DataLoader, TensorDataset
+        import flashlight
 
-        x = mlx_compat.randn(100, 10)
-        y = mlx_compat.randint(0, 2, (100,))
+        x = flashlight.randn(100, 10)
+        y = flashlight.randint(0, 2, (100,))
 
         dataset = TensorDataset(x, y)
         loader = DataLoader(dataset, batch_size=16)
@@ -176,10 +176,10 @@ class TestDataFunctionality(unittest.TestCase):
 
     def test_random_sampler_works(self):
         """Test RandomSampler functionality through re-export."""
-        from mlx_compat.utils.data import RandomSampler, TensorDataset
-        import mlx_compat
+        from flashlight.utils.data import RandomSampler, TensorDataset
+        import flashlight
 
-        x = mlx_compat.randn(50, 5)
+        x = flashlight.randn(50, 5)
         dataset = TensorDataset(x)
 
         sampler = RandomSampler(dataset)
@@ -191,10 +191,10 @@ class TestDataFunctionality(unittest.TestCase):
 
     def test_sequential_sampler_works(self):
         """Test SequentialSampler functionality through re-export."""
-        from mlx_compat.utils.data import SequentialSampler, TensorDataset
-        import mlx_compat
+        from flashlight.utils.data import SequentialSampler, TensorDataset
+        import flashlight
 
-        x = mlx_compat.randn(20, 5)
+        x = flashlight.randn(20, 5)
         dataset = TensorDataset(x)
 
         sampler = SequentialSampler(dataset)
@@ -204,10 +204,10 @@ class TestDataFunctionality(unittest.TestCase):
 
     def test_random_split_works(self):
         """Test random_split functionality through re-export."""
-        from mlx_compat.utils.data import random_split, TensorDataset
-        import mlx_compat
+        from flashlight.utils.data import random_split, TensorDataset
+        import flashlight
 
-        x = mlx_compat.randn(100, 5)
+        x = flashlight.randn(100, 5)
         dataset = TensorDataset(x)
 
         train, val = random_split(dataset, [80, 20])

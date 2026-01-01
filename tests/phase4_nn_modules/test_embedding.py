@@ -16,7 +16,7 @@ import pytest
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
-    import mlx_compat
+    import flashlight
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -34,29 +34,29 @@ class TestEmbedding(TestCase):
 
     def test_creation(self):
         """Test Embedding creation."""
-        emb = mlx_compat.nn.Embedding(num_embeddings=100, embedding_dim=64)
+        emb = flashlight.nn.Embedding(num_embeddings=100, embedding_dim=64)
         self.assertEqual(emb.num_embeddings, 100)
         self.assertEqual(emb.embedding_dim, 64)
 
     def test_forward_shape(self):
         """Test Embedding forward pass output shape."""
-        emb = mlx_compat.nn.Embedding(num_embeddings=100, embedding_dim=64)
-        indices = mlx_compat.tensor([1, 5, 10, 20], dtype=mlx_compat.int32)
+        emb = flashlight.nn.Embedding(num_embeddings=100, embedding_dim=64)
+        indices = flashlight.tensor([1, 5, 10, 20], dtype=flashlight.int32)
         output = emb(indices)
         self.assertEqual(output.shape, (4, 64))
 
     def test_forward_2d_indices(self):
         """Test Embedding with 2D indices."""
-        emb = mlx_compat.nn.Embedding(num_embeddings=100, embedding_dim=64)
-        indices = mlx_compat.tensor([[1, 2, 3], [4, 5, 6]], dtype=mlx_compat.int32)
+        emb = flashlight.nn.Embedding(num_embeddings=100, embedding_dim=64)
+        indices = flashlight.tensor([[1, 2, 3], [4, 5, 6]], dtype=flashlight.int32)
         output = emb(indices)
         self.assertEqual(output.shape, (2, 3, 64))
 
     def test_with_padding_idx(self):
         """Test Embedding with padding_idx."""
-        emb = mlx_compat.nn.Embedding(num_embeddings=100, embedding_dim=64, padding_idx=0)
+        emb = flashlight.nn.Embedding(num_embeddings=100, embedding_dim=64, padding_idx=0)
         # The embedding at index 0 should be zeros
-        indices = mlx_compat.tensor([0], dtype=mlx_compat.int32)
+        indices = flashlight.tensor([0], dtype=flashlight.int32)
         output = emb(indices)
         np.testing.assert_array_almost_equal(output.numpy()[0], 0)
 
@@ -71,15 +71,15 @@ class TestEmbedding(TestCase):
         emb_torch = torch.nn.Embedding(num_emb, emb_dim)
 
         # Create MLX embedding with same weights
-        emb_mlx = mlx_compat.nn.Embedding(num_emb, emb_dim)
-        emb_mlx.weight._mlx_array = mlx_compat.tensor(
+        emb_mlx = flashlight.nn.Embedding(num_emb, emb_dim)
+        emb_mlx.weight._mlx_array = flashlight.tensor(
             emb_torch.weight.detach().numpy()
         )._mlx_array
 
         # Test
         indices = [1, 5, 10, 20, 50]
         out_torch = emb_torch(torch.tensor(indices, dtype=torch.long))
-        out_mlx = emb_mlx(mlx_compat.tensor(indices, dtype=mlx_compat.int32))
+        out_mlx = emb_mlx(flashlight.tensor(indices, dtype=flashlight.int32))
 
         np.testing.assert_allclose(
             out_torch.detach().numpy(),
@@ -94,32 +94,32 @@ class TestEmbeddingBag(TestCase):
 
     def test_creation(self):
         """Test EmbeddingBag creation."""
-        emb = mlx_compat.nn.EmbeddingBag(num_embeddings=100, embedding_dim=64)
+        emb = flashlight.nn.EmbeddingBag(num_embeddings=100, embedding_dim=64)
         self.assertEqual(emb.num_embeddings, 100)
         self.assertEqual(emb.embedding_dim, 64)
 
     def test_forward_with_offsets(self):
         """Test EmbeddingBag forward pass with offsets."""
-        emb = mlx_compat.nn.EmbeddingBag(num_embeddings=100, embedding_dim=64, mode='mean')
+        emb = flashlight.nn.EmbeddingBag(num_embeddings=100, embedding_dim=64, mode='mean')
         # Two bags: [1, 2, 3] and [4, 5]
-        indices = mlx_compat.tensor([1, 2, 3, 4, 5], dtype=mlx_compat.int32)
-        offsets = mlx_compat.tensor([0, 3], dtype=mlx_compat.int32)
+        indices = flashlight.tensor([1, 2, 3, 4, 5], dtype=flashlight.int32)
+        offsets = flashlight.tensor([0, 3], dtype=flashlight.int32)
         output = emb(indices, offsets=offsets)
         self.assertEqual(output.shape, (2, 64))
 
     def test_mode_sum(self):
         """Test EmbeddingBag with mode='sum'."""
-        emb = mlx_compat.nn.EmbeddingBag(num_embeddings=100, embedding_dim=64, mode='sum')
-        indices = mlx_compat.tensor([1, 2, 3], dtype=mlx_compat.int32)
-        offsets = mlx_compat.tensor([0], dtype=mlx_compat.int32)
+        emb = flashlight.nn.EmbeddingBag(num_embeddings=100, embedding_dim=64, mode='sum')
+        indices = flashlight.tensor([1, 2, 3], dtype=flashlight.int32)
+        offsets = flashlight.tensor([0], dtype=flashlight.int32)
         output = emb(indices, offsets=offsets)
         self.assertEqual(output.shape, (1, 64))
 
     def test_mode_max(self):
         """Test EmbeddingBag with mode='max'."""
-        emb = mlx_compat.nn.EmbeddingBag(num_embeddings=100, embedding_dim=64, mode='max')
-        indices = mlx_compat.tensor([1, 2, 3], dtype=mlx_compat.int32)
-        offsets = mlx_compat.tensor([0], dtype=mlx_compat.int32)
+        emb = flashlight.nn.EmbeddingBag(num_embeddings=100, embedding_dim=64, mode='max')
+        indices = flashlight.tensor([1, 2, 3], dtype=flashlight.int32)
+        offsets = flashlight.tensor([0], dtype=flashlight.int32)
         output = emb(indices, offsets=offsets)
         self.assertEqual(output.shape, (1, 64))
 

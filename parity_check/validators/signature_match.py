@@ -1,7 +1,7 @@
 """
 Signature matching validator.
 
-Validates that mlx_compat API signatures match PyTorch signatures.
+Validates that flashlight API signatures match PyTorch signatures.
 """
 
 from dataclasses import dataclass, field
@@ -40,11 +40,11 @@ class SignatureValidationResult:
 
 class SignatureValidator:
     """
-    Validates that mlx_compat API signatures match PyTorch.
+    Validates that flashlight API signatures match PyTorch.
 
     Args:
         pytorch_apis: Dictionary of PyTorch APIs by module
-        mlx_apis: Dictionary of mlx_compat APIs by module
+        mlx_apis: Dictionary of flashlight APIs by module
         strict_defaults: If True, default values must match
         strict_annotations: If True, type annotations must match
         use_source_fallback: If True, try AST-based source extraction when
@@ -109,7 +109,7 @@ class SignatureValidator:
             mlx_module_apis = self.mlx_apis.get(module, {})
 
             for api_name, pytorch_info in apis.items():
-                # Skip if not present in mlx_compat
+                # Skip if not present in flashlight
                 if api_name not in mlx_module_apis:
                     continue
 
@@ -209,7 +209,7 @@ class SignatureValidator:
         if pytorch_info is None:
             return {"error": f"API {module}.{api_name} not found in PyTorch"}
         if mlx_info is None:
-            return {"error": f"API {module}.{api_name} not found in mlx_compat"}
+            return {"error": f"API {module}.{api_name} not found in flashlight"}
 
         pytorch_sig = pytorch_info.get("signature")
         mlx_sig = mlx_info.get("signature")

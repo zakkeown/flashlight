@@ -11,8 +11,8 @@ import numpy as np
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
-    import mlx_compat
-    import mlx_compat.nn.functional as F
+    import flashlight
+    import flashlight.nn.functional as F
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -31,9 +31,9 @@ class TestTripletMarginLoss(TestCase):
 
     def test_triplet_loss_zero(self):
         """Test triplet loss when anchor=positive and negative is far."""
-        anchor = mlx_compat.tensor([[0., 0.]])
-        positive = mlx_compat.tensor([[0., 0.]])  # Same as anchor
-        negative = mlx_compat.tensor([[10., 10.]])  # Far away
+        anchor = flashlight.tensor([[0., 0.]])
+        positive = flashlight.tensor([[0., 0.]])  # Same as anchor
+        negative = flashlight.tensor([[10., 10.]])  # Far away
 
         loss = F.triplet_margin_loss(anchor, positive, negative, margin=1.0)
         # d(a,p) = 0, d(a,n) >> margin, so loss should be 0
@@ -41,9 +41,9 @@ class TestTripletMarginLoss(TestCase):
 
     def test_triplet_loss_positive(self):
         """Test triplet loss when positive is far and negative is close."""
-        anchor = mlx_compat.tensor([[0., 0.]])
-        positive = mlx_compat.tensor([[10., 0.]])  # Far from anchor
-        negative = mlx_compat.tensor([[1., 0.]])   # Close to anchor
+        anchor = flashlight.tensor([[0., 0.]])
+        positive = flashlight.tensor([[10., 0.]])  # Far from anchor
+        negative = flashlight.tensor([[1., 0.]])   # Close to anchor
 
         loss = F.triplet_margin_loss(anchor, positive, negative, margin=1.0)
         # d(a,p) = 10, d(a,n) = 1, loss = max(10 - 1 + 1, 0) = 10
@@ -52,9 +52,9 @@ class TestTripletMarginLoss(TestCase):
     def test_triplet_loss_batch(self):
         """Test triplet loss with batch."""
         np.random.seed(42)
-        anchor = mlx_compat.tensor(np.random.randn(10, 64).astype(np.float32))
-        positive = mlx_compat.tensor(np.random.randn(10, 64).astype(np.float32))
-        negative = mlx_compat.tensor(np.random.randn(10, 64).astype(np.float32))
+        anchor = flashlight.tensor(np.random.randn(10, 64).astype(np.float32))
+        positive = flashlight.tensor(np.random.randn(10, 64).astype(np.float32))
+        negative = flashlight.tensor(np.random.randn(10, 64).astype(np.float32))
 
         loss = F.triplet_margin_loss(anchor, positive, negative, margin=1.0)
         # Should return a scalar
@@ -68,9 +68,9 @@ class TestTripletMarginLoss(TestCase):
         positive_data = np.random.randn(10, 64).astype(np.float32)
         negative_data = np.random.randn(10, 64).astype(np.float32)
 
-        mlx_anchor = mlx_compat.tensor(anchor_data)
-        mlx_positive = mlx_compat.tensor(positive_data)
-        mlx_negative = mlx_compat.tensor(negative_data)
+        mlx_anchor = flashlight.tensor(anchor_data)
+        mlx_positive = flashlight.tensor(positive_data)
+        mlx_negative = flashlight.tensor(negative_data)
 
         torch_anchor = torch.tensor(anchor_data)
         torch_positive = torch.tensor(positive_data)
@@ -90,9 +90,9 @@ class TestMarginRankingLoss(TestCase):
 
     def test_margin_ranking_correct_order(self):
         """Test when x1 > x2 and target=1."""
-        x1 = mlx_compat.tensor([2.0])
-        x2 = mlx_compat.tensor([1.0])
-        target = mlx_compat.tensor([1.0])
+        x1 = flashlight.tensor([2.0])
+        x2 = flashlight.tensor([1.0])
+        target = flashlight.tensor([1.0])
 
         loss = F.margin_ranking_loss(x1, x2, target, margin=0.5)
         # loss = max(0, -1 * (2 - 1) + 0.5) = max(0, -0.5) = 0
@@ -100,9 +100,9 @@ class TestMarginRankingLoss(TestCase):
 
     def test_margin_ranking_wrong_order(self):
         """Test when x1 < x2 but target=1."""
-        x1 = mlx_compat.tensor([1.0])
-        x2 = mlx_compat.tensor([2.0])
-        target = mlx_compat.tensor([1.0])
+        x1 = flashlight.tensor([1.0])
+        x2 = flashlight.tensor([2.0])
+        target = flashlight.tensor([1.0])
 
         loss = F.margin_ranking_loss(x1, x2, target, margin=0.5)
         # loss = max(0, -1 * (1 - 2) + 0.5) = max(0, 1.5) = 1.5
@@ -117,9 +117,9 @@ class TestMarginRankingLoss(TestCase):
         target_data = np.sign(np.random.randn(10)).astype(np.float32)
         target_data[target_data == 0] = 1  # Ensure no zeros
 
-        mlx_x1 = mlx_compat.tensor(x1_data)
-        mlx_x2 = mlx_compat.tensor(x2_data)
-        mlx_target = mlx_compat.tensor(target_data)
+        mlx_x1 = flashlight.tensor(x1_data)
+        mlx_x2 = flashlight.tensor(x2_data)
+        mlx_target = flashlight.tensor(target_data)
 
         torch_x1 = torch.tensor(x1_data)
         torch_x2 = torch.tensor(x2_data)
@@ -139,8 +139,8 @@ class TestHingeEmbeddingLoss(TestCase):
 
     def test_hinge_positive(self):
         """Test with positive target (y=1)."""
-        x = mlx_compat.tensor([2.0])
-        target = mlx_compat.tensor([1.0])
+        x = flashlight.tensor([2.0])
+        target = flashlight.tensor([1.0])
 
         loss = F.hinge_embedding_loss(x, target, margin=1.0)
         # For y=1: loss = x = 2.0
@@ -148,8 +148,8 @@ class TestHingeEmbeddingLoss(TestCase):
 
     def test_hinge_negative_close(self):
         """Test with negative target (y=-1) and x close to margin."""
-        x = mlx_compat.tensor([0.5])
-        target = mlx_compat.tensor([-1.0])
+        x = flashlight.tensor([0.5])
+        target = flashlight.tensor([-1.0])
 
         loss = F.hinge_embedding_loss(x, target, margin=1.0)
         # For y=-1: loss = max(0, margin - x) = max(0, 1 - 0.5) = 0.5
@@ -157,8 +157,8 @@ class TestHingeEmbeddingLoss(TestCase):
 
     def test_hinge_negative_far(self):
         """Test with negative target (y=-1) and x > margin."""
-        x = mlx_compat.tensor([2.0])
-        target = mlx_compat.tensor([-1.0])
+        x = flashlight.tensor([2.0])
+        target = flashlight.tensor([-1.0])
 
         loss = F.hinge_embedding_loss(x, target, margin=1.0)
         # For y=-1: loss = max(0, 1 - 2) = 0
@@ -172,8 +172,8 @@ class TestHingeEmbeddingLoss(TestCase):
         target_data = np.sign(np.random.randn(10)).astype(np.float32)
         target_data[target_data == 0] = 1
 
-        mlx_x = mlx_compat.tensor(x_data)
-        mlx_target = mlx_compat.tensor(target_data)
+        mlx_x = flashlight.tensor(x_data)
+        mlx_target = flashlight.tensor(target_data)
 
         torch_x = torch.tensor(x_data)
         torch_target = torch.tensor(target_data)

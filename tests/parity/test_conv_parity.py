@@ -1,7 +1,7 @@
 """
 Convolution Layer Parity Tests
 
-Tests numerical parity between mlx_compat conv layers and PyTorch.
+Tests numerical parity between flashlight conv layers and PyTorch.
 """
 
 import pytest
@@ -9,18 +9,18 @@ import numpy as np
 
 torch = pytest.importorskip("torch")
 
-import mlx_compat
-import mlx_compat.nn as nn
+import flashlight
+import flashlight.nn as nn
 
 
 def copy_conv_weights(mlx_layer, torch_layer):
-    """Copy weights from PyTorch conv layer to mlx_compat."""
+    """Copy weights from PyTorch conv layer to flashlight."""
     mlx_layer.weight = nn.Parameter(
-        mlx_compat.tensor(torch_layer.weight.detach().numpy())
+        flashlight.tensor(torch_layer.weight.detach().numpy())
     )
     if torch_layer.bias is not None:
         mlx_layer.bias = nn.Parameter(
-            mlx_compat.tensor(torch_layer.bias.detach().numpy())
+            flashlight.tensor(torch_layer.bias.detach().numpy())
         )
 
 
@@ -41,7 +41,7 @@ class TestConv1dParity:
         x_np = np.random.randn(batch, in_ch, length).astype(np.float32)
 
         torch_out = torch_conv(torch.tensor(x_np))
-        mlx_out = mlx_conv(mlx_compat.tensor(x_np))
+        mlx_out = mlx_conv(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.detach().numpy() - np.array(mlx_out.tolist())))
         assert max_diff < 1e-5, f"Conv1d mismatch: {max_diff}"
@@ -60,7 +60,7 @@ class TestConv1dParity:
         x_np = np.random.randn(batch, in_ch, length).astype(np.float32)
 
         torch_out = torch_conv(torch.tensor(x_np))
-        mlx_out = mlx_conv(mlx_compat.tensor(x_np))
+        mlx_out = mlx_conv(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.detach().numpy() - np.array(mlx_out.tolist())))
         assert max_diff < 1e-5, f"Conv1d stride/padding mismatch: {max_diff}"
@@ -83,7 +83,7 @@ class TestConv2dParity:
         x_np = np.random.randn(batch, in_ch, h, w).astype(np.float32)
 
         torch_out = torch_conv(torch.tensor(x_np))
-        mlx_out = mlx_conv(mlx_compat.tensor(x_np))
+        mlx_out = mlx_conv(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.detach().numpy() - np.array(mlx_out.tolist())))
         assert max_diff < 1e-5, f"Conv2d mismatch: {max_diff}"
@@ -102,7 +102,7 @@ class TestConv2dParity:
         x_np = np.random.randn(batch, in_ch, h, w).astype(np.float32)
 
         torch_out = torch_conv(torch.tensor(x_np))
-        mlx_out = mlx_conv(mlx_compat.tensor(x_np))
+        mlx_out = mlx_conv(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.detach().numpy() - np.array(mlx_out.tolist())))
         assert max_diff < 1e-5, f"Conv2d stride/padding mismatch: {max_diff}"
@@ -121,7 +121,7 @@ class TestConv2dParity:
         x_np = np.random.randn(batch, in_ch, h, w).astype(np.float32)
 
         torch_out = torch_conv(torch.tensor(x_np))
-        mlx_out = mlx_conv(mlx_compat.tensor(x_np))
+        mlx_out = mlx_conv(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.detach().numpy() - np.array(mlx_out.tolist())))
         assert max_diff < 1e-5, f"Conv2d asymmetric kernel mismatch: {max_diff}"
@@ -140,7 +140,7 @@ class TestConv2dParity:
         x_np = np.random.randn(batch, in_ch, h, w).astype(np.float32)
 
         torch_out = torch_conv(torch.tensor(x_np))
-        mlx_out = mlx_conv(mlx_compat.tensor(x_np))
+        mlx_out = mlx_conv(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.detach().numpy() - np.array(mlx_out.tolist())))
         assert max_diff < 1e-5, f"Conv2d groups mismatch: {max_diff}"
@@ -163,7 +163,7 @@ class TestConv3dParity:
         x_np = np.random.randn(batch, in_ch, d, h, w).astype(np.float32)
 
         torch_out = torch_conv(torch.tensor(x_np))
-        mlx_out = mlx_conv(mlx_compat.tensor(x_np))
+        mlx_out = mlx_conv(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.detach().numpy() - np.array(mlx_out.tolist())))
         assert max_diff < 1e-4, f"Conv3d mismatch: {max_diff}"
@@ -186,7 +186,7 @@ class TestConvTransposeParity:
         x_np = np.random.randn(batch, in_ch, h, w).astype(np.float32)
 
         torch_out = torch_conv(torch.tensor(x_np))
-        mlx_out = mlx_conv(mlx_compat.tensor(x_np))
+        mlx_out = mlx_conv(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.detach().numpy() - np.array(mlx_out.tolist())))
         assert max_diff < 1e-5, f"ConvTranspose2d mismatch: {max_diff}"
@@ -205,7 +205,7 @@ class TestConvTransposeParity:
         x_np = np.random.randn(batch, in_ch, h, w).astype(np.float32)
 
         torch_out = torch_conv(torch.tensor(x_np))
-        mlx_out = mlx_conv(mlx_compat.tensor(x_np))
+        mlx_out = mlx_conv(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.detach().numpy() - np.array(mlx_out.tolist())))
         assert max_diff < 1e-5, f"ConvTranspose2d stride mismatch: {max_diff}"

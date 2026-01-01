@@ -29,8 +29,8 @@ class TransposeOverheadBenchmark(BaseBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
-        x = mlx_compat.randn(
+        import flashlight
+        x = flashlight.randn(
             config["batch"], config["channels"], config["h"], config["w"]
         )
         return (x,)
@@ -89,9 +89,9 @@ class Conv2dLayoutOverheadBenchmark(BaseBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
-        x = mlx_compat.randn(config["batch"], config["in_ch"], config["h"], config["w"])
-        w = mlx_compat.randn(
+        import flashlight
+        x = flashlight.randn(config["batch"], config["in_ch"], config["h"], config["w"])
+        w = flashlight.randn(
             config["out_ch"], config["in_ch"],
             config["kernel"], config["kernel"]
         )
@@ -111,7 +111,7 @@ class Conv2dLayoutOverheadBenchmark(BaseBenchmark):
         return (x, w)
 
     def mlx_operation(self, x, w):
-        import mlx_compat.nn.functional as F
+        import flashlight.nn.functional as F
         return F.conv2d(x, w, padding=1)
 
     def pytorch_operation(self, x, w):
@@ -137,8 +137,8 @@ class PoolingLayoutOverheadBenchmark(BaseBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
-        x = mlx_compat.randn(config["batch"], config["channels"], config["h"], config["w"])
+        import flashlight
+        x = flashlight.randn(config["batch"], config["channels"], config["h"], config["w"])
         return (x,)
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:
@@ -150,7 +150,7 @@ class PoolingLayoutOverheadBenchmark(BaseBenchmark):
         return (x,)
 
     def mlx_operation(self, x):
-        import mlx_compat.nn.functional as F
+        import flashlight.nn.functional as F
         return F.max_pool2d(x, kernel_size=2, stride=2)
 
     def pytorch_operation(self, x):
@@ -179,10 +179,10 @@ class ChainedSpatialOpsBenchmark(BaseBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
-        import mlx_compat.nn as nn
+        import flashlight
+        import flashlight.nn as nn
 
-        x = mlx_compat.randn(config["batch"], config["in_ch"], config["h"], config["w"])
+        x = flashlight.randn(config["batch"], config["in_ch"], config["h"], config["w"])
 
         # Create layers
         self._mlx_conv = nn.Conv2d(config["in_ch"], config["out_ch"], 3, padding=1)
@@ -209,7 +209,7 @@ class ChainedSpatialOpsBenchmark(BaseBenchmark):
         return (x,)
 
     def mlx_operation(self, x):
-        import mlx_compat.nn.functional as F
+        import flashlight.nn.functional as F
 
         # Conv -> BN -> ReLU -> MaxPool
         x = self._mlx_conv(x)

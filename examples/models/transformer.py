@@ -7,8 +7,8 @@ Implements Transformer blocks and models.
 import sys
 sys.path.insert(0, '../..')
 
-import mlx_compat
-import mlx_compat.nn as nn
+import flashlight
+import flashlight.nn as nn
 import math
 
 
@@ -74,14 +74,14 @@ class MultiHeadAttention(nn.Module):
         # Compute attention scores: Q @ K^T / sqrt(d_k)
         # [batch, num_heads, q_len, head_dim] @ [batch, num_heads, head_dim, k_len]
         # -> [batch, num_heads, q_len, k_len]
-        attn_scores = mlx_compat.matmul(q, k.transpose(2, 3)) * self.scale
+        attn_scores = flashlight.matmul(q, k.transpose(2, 3)) * self.scale
 
         # Apply attention mask if provided
         if attn_mask is not None:
             attn_scores = attn_scores + attn_mask
 
         # Softmax over last dimension
-        attn_weights = mlx_compat.softmax(attn_scores, dim=-1)
+        attn_weights = flashlight.softmax(attn_scores, dim=-1)
 
         # Apply dropout
         if self.dropout is not None:
@@ -90,7 +90,7 @@ class MultiHeadAttention(nn.Module):
         # Apply attention to values
         # [batch, num_heads, q_len, k_len] @ [batch, num_heads, v_len, head_dim]
         # -> [batch, num_heads, q_len, head_dim]
-        attn_output = mlx_compat.matmul(attn_weights, v)
+        attn_output = flashlight.matmul(attn_weights, v)
 
         # Reshape back: [batch, num_heads, q_len, head_dim] -> [batch, q_len, embed_dim]
         attn_output = attn_output.transpose(1, 2).reshape(batch_size, q_len, self.embed_dim)
@@ -150,7 +150,7 @@ class TransformerEncoderLayer(nn.Module):
         src = self.norm1(src)
 
         # Feedforward with residual connection
-        src2 = self.linear2(self.dropout(mlx_compat.relu(self.linear1(src))))
+        src2 = self.linear2(self.dropout(flashlight.relu(self.linear1(src))))
         src = src + self.dropout2(src2)
         src = self.norm2(src)
 
@@ -219,7 +219,7 @@ class TransformerDecoderLayer(nn.Module):
         tgt = self.norm2(tgt)
 
         # Feedforward with residual connection
-        tgt2 = self.linear2(self.dropout(mlx_compat.relu(self.linear1(tgt))))
+        tgt2 = self.linear2(self.dropout(flashlight.relu(self.linear1(tgt))))
         tgt = tgt + self.dropout3(tgt2)
         tgt = self.norm3(tgt)
 
@@ -241,14 +241,14 @@ class PositionalEncoding(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
         # Create positional encoding
-        position = mlx_compat.arange(0, max_len).reshape(-1, 1)
-        div_term = mlx_compat.exp(
-            mlx_compat.arange(0, d_model, 2) * (-math.log(10000.0) / d_model)
+        position = flashlight.arange(0, max_len).reshape(-1, 1)
+        div_term = flashlight.exp(
+            flashlight.arange(0, d_model, 2) * (-math.log(10000.0) / d_model)
         )
 
-        pe = mlx_compat.zeros(max_len, d_model)
-        pe[:, 0::2] = mlx_compat.sin(position * div_term)
-        pe[:, 1::2] = mlx_compat.cos(position * div_term)
+        pe = flashlight.zeros(max_len, d_model)
+        pe[:, 0::2] = flashlight.sin(position * div_term)
+        pe[:, 1::2] = flashlight.cos(position * div_term)
 
         # Add batch dimension: [1, max_len, d_model]
         pe = pe.unsqueeze(0)

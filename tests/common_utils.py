@@ -1,5 +1,5 @@
 """
-Common testing utilities for mlx_compat tests.
+Common testing utilities for flashlight tests.
 
 Based on PyTorch's torch.testing._internal.common_utils module.
 Provides utilities for numerical parity testing between MLX and PyTorch.
@@ -114,7 +114,7 @@ class TestCase(unittest.TestCase):
 
 class ToleranceTier:
     """
-    Standard tolerance tiers for mlx_compat testing.
+    Standard tolerance tiers for flashlight testing.
 
     These tiers provide consistent tolerance settings across the test suite.
     Use these instead of hardcoding tolerance values in individual tests.
@@ -268,8 +268,8 @@ def make_tensor(
         return torch.randn(*shape, dtype=dtype, device=device, requires_grad=requires_grad)
     elif backend == 'mlx':
         # Will implement in Phase 1
-        # import mlx_compat
-        # return mlx_compat.randn(*shape, dtype=dtype, requires_grad=requires_grad)
+        # import flashlight
+        # return flashlight.randn(*shape, dtype=dtype, requires_grad=requires_grad)
         raise NotImplementedError("MLX backend not yet implemented (Phase 1)")
     else:
         raise ValueError(f"Unknown backend: {backend}")

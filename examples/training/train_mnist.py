@@ -7,9 +7,9 @@ Trains an MLP on MNIST dataset to demonstrate the training pipeline.
 import sys
 sys.path.insert(0, '../..')
 
-import mlx_compat
-import mlx_compat.nn as nn
-import mlx_compat.optim as optim
+import flashlight
+import flashlight.nn as nn
+import flashlight.optim as optim
 
 # Import model
 sys.path.insert(0, '..')
@@ -27,11 +27,11 @@ def create_synthetic_mnist_batch(batch_size=32):
         y: Target labels [batch_size]
     """
     # Random images
-    x = mlx_compat.randn(batch_size, 784)
+    x = flashlight.randn(batch_size, 784)
 
     # Random labels (0-9)
-    y = mlx_compat.tensor(
-        mlx_compat.randint(0, 10, (batch_size,))._mlx_array.astype(mlx_compat.int32._mlx_dtype),
+    y = flashlight.tensor(
+        flashlight.randint(0, 10, (batch_size,))._mlx_array.astype(flashlight.int32._mlx_dtype),
         requires_grad=False
     )
 
@@ -103,8 +103,8 @@ def evaluate(model, criterion, num_batches=20, batch_size=32):
         loss = criterion(outputs, y)
 
         # Calculate accuracy
-        predictions = mlx_compat.argmax(outputs, dim=1)
-        correct += int(mlx_compat.sum(predictions == y).numpy())
+        predictions = flashlight.argmax(outputs, dim=1)
+        correct += int(flashlight.sum(predictions == y).numpy())
         total += batch_size
 
         total_loss += float(loss.numpy())

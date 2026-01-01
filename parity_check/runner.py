@@ -9,7 +9,7 @@ from typing import Dict, List, Optional
 from .config import (
     MODULE_MAPPING,
     PYTORCH_MODULES,
-    get_mlx_compat_version,
+    get_flashlight_version,
     get_pytorch_version,
 )
 from .exclusions import load_exclusions
@@ -136,7 +136,7 @@ class ParityRunner:
         # Build report
         report = ParityReport(
             pytorch_version=get_pytorch_version(),
-            mlx_compat_version=get_mlx_compat_version(),
+            flashlight_version=get_flashlight_version(),
             # Presence stats
             total_pytorch_apis=sum(len(apis) for apis in self.pytorch_apis.values()),
             implemented_apis=len(presence_result.present),

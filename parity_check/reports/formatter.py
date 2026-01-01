@@ -15,7 +15,7 @@ class ParityReport:
     """Complete parity validation report."""
 
     pytorch_version: str
-    mlx_compat_version: str
+    flashlight_version: str
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
 
     # API presence stats
@@ -124,7 +124,7 @@ class ReportFormatter:
             "=" * 70,
             "",
             f"  PyTorch Version:      {report.pytorch_version}",
-            f"  mlx_compat Version:   {report.mlx_compat_version}",
+            f"  flashlight Version:   {report.flashlight_version}",
             f"  Generated:            {report.timestamp}",
             "",
             "-" * 70,
@@ -330,7 +330,7 @@ class ReportFormatter:
         data = {
             "metadata": {
                 "pytorch_version": report.pytorch_version,
-                "mlx_compat_version": report.mlx_compat_version,
+                "flashlight_version": report.flashlight_version,
                 "timestamp": report.timestamp,
             },
             "coverage": {
@@ -405,7 +405,7 @@ class ReportFormatter:
             "# MLX-Compat API Parity Report",
             "",
             f"**PyTorch Version:** {report.pytorch_version}  ",
-            f"**mlx_compat Version:** {report.mlx_compat_version}  ",
+            f"**flashlight Version:** {report.flashlight_version}  ",
             f"**Generated:** {report.timestamp}",
             "",
             "## Summary",

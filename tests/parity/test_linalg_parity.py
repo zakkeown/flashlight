@@ -1,7 +1,7 @@
 """
 Linear Algebra Parity Tests
 
-Tests numerical parity between mlx_compat.linalg and PyTorch torch.linalg.
+Tests numerical parity between flashlight.linalg and PyTorch torch.linalg.
 """
 
 import pytest
@@ -9,7 +9,7 @@ import numpy as np
 
 torch = pytest.importorskip("torch")
 
-import mlx_compat
+import flashlight
 
 
 class TestMatrixNormParity:
@@ -22,7 +22,7 @@ class TestMatrixNormParity:
         x_np = np.random.randn(10, 10).astype(np.float32)
 
         torch_out = torch.linalg.norm(torch.tensor(x_np), ord="fro")
-        mlx_out = mlx_compat.linalg.norm(mlx_compat.tensor(x_np), ord="fro")
+        mlx_out = flashlight.linalg.norm(flashlight.tensor(x_np), ord="fro")
 
         max_diff = abs(torch_out.item() - float(mlx_out._mlx_array))
         assert max_diff < 1e-4, f"Frobenius norm mismatch: {max_diff}"
@@ -34,7 +34,7 @@ class TestMatrixNormParity:
         x_np = np.random.randn(10).astype(np.float32)
 
         torch_out = torch.linalg.norm(torch.tensor(x_np), ord=2)
-        mlx_out = mlx_compat.linalg.norm(mlx_compat.tensor(x_np), ord=2)
+        mlx_out = flashlight.linalg.norm(flashlight.tensor(x_np), ord=2)
 
         max_diff = abs(torch_out.item() - float(mlx_out._mlx_array))
         assert max_diff < 1e-5, f"2-norm mismatch: {max_diff}"
@@ -46,7 +46,7 @@ class TestMatrixNormParity:
         x_np = np.random.randn(10).astype(np.float32)
 
         torch_out = torch.linalg.norm(torch.tensor(x_np), ord=float("inf"))
-        mlx_out = mlx_compat.linalg.norm(mlx_compat.tensor(x_np), ord=float("inf"))
+        mlx_out = flashlight.linalg.norm(flashlight.tensor(x_np), ord=float("inf"))
 
         max_diff = abs(torch_out.item() - float(mlx_out._mlx_array))
         assert max_diff < 1e-6, f"inf-norm mismatch: {max_diff}"
@@ -62,7 +62,7 @@ class TestDeterminantParity:
         x_np = np.random.randn(5, 5).astype(np.float32)
 
         torch_out = torch.linalg.det(torch.tensor(x_np))
-        mlx_out = mlx_compat.linalg.det(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.linalg.det(flashlight.tensor(x_np))
 
         # Determinant can have larger numerical errors
         max_diff = abs(torch_out.item() - float(mlx_out._mlx_array))
@@ -77,7 +77,7 @@ class TestDeterminantParity:
         x_np = A @ A.T + 0.1 * np.eye(5, dtype=np.float32)
 
         torch_sign, torch_logdet = torch.linalg.slogdet(torch.tensor(x_np))
-        mlx_sign, mlx_logdet = mlx_compat.linalg.slogdet(mlx_compat.tensor(x_np))
+        mlx_sign, mlx_logdet = flashlight.linalg.slogdet(flashlight.tensor(x_np))
 
         assert abs(torch_sign.item() - float(mlx_sign._mlx_array)) < 1e-5
         assert abs(torch_logdet.item() - float(mlx_logdet._mlx_array)) < 1e-3
@@ -95,7 +95,7 @@ class TestInverseParity:
         x_np = A @ A.T + np.eye(5, dtype=np.float32)
 
         torch_out = torch.linalg.inv(torch.tensor(x_np))
-        mlx_out = mlx_compat.linalg.inv(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.linalg.inv(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-4, f"inv mismatch: {max_diff}"
@@ -111,7 +111,7 @@ class TestPseudoinverseParity:
         x_np = np.random.randn(5, 5).astype(np.float32)
 
         torch_out = torch.linalg.pinv(torch.tensor(x_np))
-        mlx_out = mlx_compat.linalg.pinv(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.linalg.pinv(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-3, f"pinv square mismatch: {max_diff}"
@@ -123,7 +123,7 @@ class TestPseudoinverseParity:
         x_np = np.random.randn(10, 5).astype(np.float32)
 
         torch_out = torch.linalg.pinv(torch.tensor(x_np))
-        mlx_out = mlx_compat.linalg.pinv(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.linalg.pinv(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-3, f"pinv tall mismatch: {max_diff}"
@@ -135,7 +135,7 @@ class TestPseudoinverseParity:
         x_np = np.random.randn(5, 10).astype(np.float32)
 
         torch_out = torch.linalg.pinv(torch.tensor(x_np))
-        mlx_out = mlx_compat.linalg.pinv(mlx_compat.tensor(x_np))
+        mlx_out = flashlight.linalg.pinv(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-3, f"pinv wide mismatch: {max_diff}"
@@ -146,8 +146,8 @@ class TestPseudoinverseParity:
         np.random.seed(42)
         x_np = np.random.randn(6, 4).astype(np.float32)
 
-        mlx_x = mlx_compat.tensor(x_np)
-        mlx_pinv = mlx_compat.linalg.pinv(mlx_x)
+        mlx_x = flashlight.tensor(x_np)
+        mlx_pinv = flashlight.linalg.pinv(mlx_x)
 
         # A @ pinv(A) @ A should ≈ A
         reconstruction = mlx_x @ mlx_pinv @ mlx_x
@@ -167,7 +167,7 @@ class TestSVDParity:
 
         # Use full_matrices=False for reduced SVD (compatible shapes)
         torch_U, torch_S, torch_Vh = torch.linalg.svd(torch.tensor(x_np), full_matrices=False)
-        mlx_U, mlx_S, mlx_Vh = mlx_compat.linalg.svd(mlx_compat.tensor(x_np))
+        mlx_U, mlx_S, mlx_Vh = flashlight.linalg.svd(flashlight.tensor(x_np))
 
         # Singular values should match
         max_diff_S = np.max(np.abs(torch_S.numpy() - np.array(mlx_S._mlx_array)))
@@ -179,7 +179,7 @@ class TestSVDParity:
         k = min(6, 4)
         mlx_U_k = mlx_U[:, :k] if mlx_U.shape[1] > k else mlx_U
         mlx_Vh_k = mlx_Vh[:k, :] if mlx_Vh.shape[0] > k else mlx_Vh
-        mlx_recon = mlx_U_k @ mlx_compat.diag(mlx_S) @ mlx_Vh_k
+        mlx_recon = mlx_U_k @ flashlight.diag(mlx_S) @ mlx_Vh_k
 
         max_diff_recon = np.max(
             np.abs(torch_recon.numpy() - np.array(mlx_recon._mlx_array))
@@ -197,7 +197,7 @@ class TestQRParity:
         x_np = np.random.randn(6, 4).astype(np.float32)
 
         torch_Q, torch_R = torch.linalg.qr(torch.tensor(x_np))
-        mlx_Q, mlx_R = mlx_compat.linalg.qr(mlx_compat.tensor(x_np))
+        mlx_Q, mlx_R = flashlight.linalg.qr(flashlight.tensor(x_np))
 
         # Reconstruction should match: Q @ R ≈ X
         torch_recon = torch_Q @ torch_R
@@ -225,7 +225,7 @@ class TestCholeskyParity:
         x_np = A @ A.T + np.eye(5, dtype=np.float32)
 
         torch_L = torch.linalg.cholesky(torch.tensor(x_np))
-        mlx_L = mlx_compat.linalg.cholesky(mlx_compat.tensor(x_np))
+        mlx_L = flashlight.linalg.cholesky(flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_L.numpy() - np.array(mlx_L._mlx_array)))
         assert max_diff < 1e-4, f"Cholesky mismatch: {max_diff}"
@@ -247,8 +247,8 @@ class TestCrossParity:
         b_np = np.random.randn(3).astype(np.float32)
 
         torch_out = torch.linalg.cross(torch.tensor(a_np), torch.tensor(b_np))
-        mlx_out = mlx_compat.linalg.cross(
-            mlx_compat.tensor(a_np), mlx_compat.tensor(b_np)
+        mlx_out = flashlight.linalg.cross(
+            flashlight.tensor(a_np), flashlight.tensor(b_np)
         )
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
@@ -262,8 +262,8 @@ class TestCrossParity:
         b_np = np.random.randn(10, 3).astype(np.float32)
 
         torch_out = torch.linalg.cross(torch.tensor(a_np), torch.tensor(b_np))
-        mlx_out = mlx_compat.linalg.cross(
-            mlx_compat.tensor(a_np), mlx_compat.tensor(b_np)
+        mlx_out = flashlight.linalg.cross(
+            flashlight.tensor(a_np), flashlight.tensor(b_np)
         )
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
@@ -281,7 +281,7 @@ class TestEigenParity:
         x_np = (A + A.T) / 2  # Make symmetric
 
         torch_vals, torch_vecs = torch.linalg.eigh(torch.tensor(x_np))
-        mlx_vals, mlx_vecs = mlx_compat.linalg.eigh(mlx_compat.tensor(x_np))
+        mlx_vals, mlx_vecs = flashlight.linalg.eigh(flashlight.tensor(x_np))
 
         # Eigenvalues should match (sorted)
         max_diff_vals = np.max(
@@ -291,7 +291,7 @@ class TestEigenParity:
 
         # A @ V should equal V @ diag(eigenvalues) for each eigenvector
         # Due to sign ambiguity, check A @ v = lambda * v
-        mlx_x = mlx_compat.tensor(x_np)
+        mlx_x = flashlight.tensor(x_np)
         Av = mlx_x @ mlx_vecs
         lambda_v = mlx_vecs * mlx_vals.unsqueeze(0)
         max_diff_recon = np.max(np.abs(np.array(Av._mlx_array) - np.array(lambda_v._mlx_array)))
@@ -309,7 +309,7 @@ class TestMatmulParity:
         b_np = np.random.randn(20, 15).astype(np.float32)
 
         torch_out = torch.matmul(torch.tensor(a_np), torch.tensor(b_np))
-        mlx_out = mlx_compat.matmul(mlx_compat.tensor(a_np), mlx_compat.tensor(b_np))
+        mlx_out = flashlight.matmul(flashlight.tensor(a_np), flashlight.tensor(b_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-4, f"matmul 2D mismatch: {max_diff}"
@@ -322,7 +322,7 @@ class TestMatmulParity:
         b_np = np.random.randn(4, 20, 15).astype(np.float32)
 
         torch_out = torch.matmul(torch.tensor(a_np), torch.tensor(b_np))
-        mlx_out = mlx_compat.matmul(mlx_compat.tensor(a_np), mlx_compat.tensor(b_np))
+        mlx_out = flashlight.matmul(flashlight.tensor(a_np), flashlight.tensor(b_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-4, f"matmul batched mismatch: {max_diff}"

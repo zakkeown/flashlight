@@ -29,10 +29,10 @@ class GammalnBenchmark(OperatorBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
+        import flashlight
 
         # Use positive values for gammaln
-        x = mlx_compat.rand(config["size"]) * 10 + 0.1
+        x = flashlight.rand(config["size"]) * 10 + 0.1
         return (x,)
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:
@@ -42,9 +42,9 @@ class GammalnBenchmark(OperatorBenchmark):
         return (x,)
 
     def mlx_operation(self, x):
-        import mlx_compat
+        import flashlight
 
-        return mlx_compat.special.gammaln(x)
+        return flashlight.special.gammaln(x)
 
     def pytorch_operation(self, x):
         import torch
@@ -67,9 +67,9 @@ class DigammaBenchmark(OperatorBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
+        import flashlight
 
-        x = mlx_compat.rand(config["size"]) * 10 + 1.0
+        x = flashlight.rand(config["size"]) * 10 + 1.0
         return (x,)
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:
@@ -79,9 +79,9 @@ class DigammaBenchmark(OperatorBenchmark):
         return (x,)
 
     def mlx_operation(self, x):
-        import mlx_compat
+        import flashlight
 
-        return mlx_compat.special.digamma(x)
+        return flashlight.special.digamma(x)
 
     def pytorch_operation(self, x):
         import torch
@@ -104,9 +104,9 @@ class BesselJ0Benchmark(OperatorBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
+        import flashlight
 
-        x = mlx_compat.rand(config["size"]) * 20
+        x = flashlight.rand(config["size"]) * 20
         return (x,)
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:
@@ -116,9 +116,9 @@ class BesselJ0Benchmark(OperatorBenchmark):
         return (x,)
 
     def mlx_operation(self, x):
-        import mlx_compat
+        import flashlight
 
-        return mlx_compat.special.bessel_j0(x)
+        return flashlight.special.bessel_j0(x)
 
     def pytorch_operation(self, x):
         import torch
@@ -141,9 +141,9 @@ class ModifiedBesselI0Benchmark(OperatorBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
+        import flashlight
 
-        x = mlx_compat.rand(config["size"]) * 5
+        x = flashlight.rand(config["size"]) * 5
         return (x,)
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:
@@ -153,9 +153,9 @@ class ModifiedBesselI0Benchmark(OperatorBenchmark):
         return (x,)
 
     def mlx_operation(self, x):
-        import mlx_compat
+        import flashlight
 
-        return mlx_compat.special.modified_bessel_i0(x)
+        return flashlight.special.modified_bessel_i0(x)
 
     def pytorch_operation(self, x):
         import torch
@@ -178,9 +178,9 @@ class NdtrBenchmark(OperatorBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
+        import flashlight
 
-        x = mlx_compat.randn(config["size"])
+        x = flashlight.randn(config["size"])
         return (x,)
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:
@@ -190,9 +190,9 @@ class NdtrBenchmark(OperatorBenchmark):
         return (x,)
 
     def mlx_operation(self, x):
-        import mlx_compat
+        import flashlight
 
-        return mlx_compat.special.ndtr(x)
+        return flashlight.special.ndtr(x)
 
     def pytorch_operation(self, x):
         import torch
@@ -215,10 +215,10 @@ class NdtriBenchmark(OperatorBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
+        import flashlight
 
         # Values in (0, 1) for ndtri
-        x = mlx_compat.rand(config["size"]) * 0.98 + 0.01
+        x = flashlight.rand(config["size"]) * 0.98 + 0.01
         return (x,)
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:
@@ -228,9 +228,9 @@ class NdtriBenchmark(OperatorBenchmark):
         return (x,)
 
     def mlx_operation(self, x):
-        import mlx_compat
+        import flashlight
 
-        return mlx_compat.special.ndtri(x)
+        return flashlight.special.ndtri(x)
 
     def pytorch_operation(self, x):
         import torch
@@ -253,9 +253,9 @@ class ErfBenchmark(OperatorBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
+        import flashlight
 
-        x = mlx_compat.randn(config["size"])
+        x = flashlight.randn(config["size"])
         return (x,)
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:
@@ -265,9 +265,9 @@ class ErfBenchmark(OperatorBenchmark):
         return (x,)
 
     def mlx_operation(self, x):
-        import mlx_compat
+        import flashlight
 
-        return mlx_compat.special.erf(x)
+        return flashlight.special.erf(x)
 
     def pytorch_operation(self, x):
         import torch
@@ -291,9 +291,9 @@ class SoftmaxBenchmark(OperatorBenchmark):
         ]
 
     def create_mlx_inputs(self, config: Dict[str, Any]) -> Tuple:
-        import mlx_compat
+        import flashlight
 
-        x = mlx_compat.randn(config["batch"], config["features"])
+        x = flashlight.randn(config["batch"], config["features"])
         return (x,)
 
     def create_pytorch_inputs(self, config: Dict[str, Any], device: str) -> Tuple:
@@ -303,9 +303,9 @@ class SoftmaxBenchmark(OperatorBenchmark):
         return (x,)
 
     def mlx_operation(self, x):
-        import mlx_compat
+        import flashlight
 
-        return mlx_compat.special.softmax(x, dim=-1)
+        return flashlight.special.softmax(x, dim=-1)
 
     def pytorch_operation(self, x):
         import torch

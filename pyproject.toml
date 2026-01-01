@@ -3,7 +3,7 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "mlx-compat"
+name = "flashlight"
 version = "0.1.0"
 description = "PyTorch-compatible API layer for Apple MLX"
 readme = "README.md"
@@ -46,7 +46,7 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["mlx_compat*", "parity_check*"]
+include = ["flashlight*", "parity_check*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -57,7 +57,7 @@ addopts = [
     "-v",
     "--strict-markers",
     "--tb=short",
-    "--cov=mlx_compat",
+    "--cov=flashlight",
     "--cov-report=term-missing",
     "--cov-report=html",
 ]
@@ -93,7 +93,7 @@ skip_gitignore = true
 extend_skip_glob = ["reference/*"]
 
 [tool.coverage.run]
-source = ["mlx_compat"]
+source = ["flashlight"]
 omit = [
     "*/tests/*",
     "*/test_*.py",

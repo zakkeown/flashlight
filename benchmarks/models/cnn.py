@@ -64,7 +64,7 @@ class CNNForwardBenchmark(ModelBenchmark):
         return nn_module.Sequential(*layers)
 
     def create_mlx_model(self, config: Dict[str, Any]):
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
         return self._create_simple_cnn(nn, config)
 
     def create_pytorch_model(self, config: Dict[str, Any], device: str):
@@ -73,8 +73,8 @@ class CNNForwardBenchmark(ModelBenchmark):
         return model.to(device)
 
     def create_mlx_input(self, config: Dict[str, Any]):
-        import mlx_compat
-        return mlx_compat.randn(config["batch"], config["channels"], config["height"], config["width"])
+        import flashlight
+        return flashlight.randn(config["batch"], config["channels"], config["height"], config["width"])
 
     def create_pytorch_input(self, config: Dict[str, Any], device: str):
         import torch
@@ -128,7 +128,7 @@ class CNNTrainingBenchmark(ModelBenchmark):
         return nn_module.Sequential(*layers)
 
     def create_mlx_model(self, config: Dict[str, Any]):
-        import mlx_compat.nn as nn
+        import flashlight.nn as nn
         return self._create_simple_cnn(nn, config)
 
     def create_pytorch_model(self, config: Dict[str, Any], device: str):
@@ -137,17 +137,17 @@ class CNNTrainingBenchmark(ModelBenchmark):
         return model.to(device)
 
     def create_mlx_input(self, config: Dict[str, Any]):
-        import mlx_compat
-        return mlx_compat.randn(config["batch"], config["channels"], config["height"], config["width"])
+        import flashlight
+        return flashlight.randn(config["batch"], config["channels"], config["height"], config["width"])
 
     def create_pytorch_input(self, config: Dict[str, Any], device: str):
         import torch
         return torch.randn(config["batch"], config["channels"], config["height"], config["width"], device=device)
 
     def create_mlx_target(self, config: Dict[str, Any]):
-        import mlx_compat
+        import flashlight
         labels = np.random.randint(0, config["num_classes"], config["batch"])
-        return mlx_compat.tensor(labels)
+        return flashlight.tensor(labels)
 
     def create_pytorch_target(self, config: Dict[str, Any], device: str):
         import torch

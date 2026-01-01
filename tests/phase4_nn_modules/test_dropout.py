@@ -16,7 +16,7 @@ import numpy as np
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
-    import mlx_compat
+    import flashlight
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -28,21 +28,21 @@ class TestDropout(TestCase):
 
     def test_dropout_creation(self):
         """Test Dropout creation with default parameters."""
-        dropout = mlx_compat.nn.Dropout()
+        dropout = flashlight.nn.Dropout()
         self.assertEqual(dropout.p, 0.5)
 
     def test_dropout_creation_with_p(self):
         """Test Dropout creation with custom probability."""
-        dropout = mlx_compat.nn.Dropout(p=0.3)
+        dropout = flashlight.nn.Dropout(p=0.3)
         self.assertEqual(dropout.p, 0.3)
 
     def test_dropout_train_mode(self):
         """Test Dropout in training mode applies dropout."""
-        dropout = mlx_compat.nn.Dropout(p=0.5)
+        dropout = flashlight.nn.Dropout(p=0.5)
         dropout.train()
 
         # Use larger tensor for statistical significance
-        x = mlx_compat.ones(1000, 1000)
+        x = flashlight.ones(1000, 1000)
         output = dropout(x)
 
         # Check that some values are zero (dropout applied)
@@ -52,10 +52,10 @@ class TestDropout(TestCase):
 
     def test_dropout_eval_mode(self):
         """Test Dropout in eval mode passes input unchanged."""
-        dropout = mlx_compat.nn.Dropout(p=0.5)
+        dropout = flashlight.nn.Dropout(p=0.5)
         dropout.eval()
 
-        x = mlx_compat.randn(10, 10)
+        x = flashlight.randn(10, 10)
         output = dropout(x)
 
         # Output should equal input in eval mode
@@ -63,10 +63,10 @@ class TestDropout(TestCase):
 
     def test_dropout_p_zero(self):
         """Test Dropout with p=0 passes input unchanged."""
-        dropout = mlx_compat.nn.Dropout(p=0.0)
+        dropout = flashlight.nn.Dropout(p=0.0)
         dropout.train()
 
-        x = mlx_compat.randn(10, 10)
+        x = flashlight.randn(10, 10)
         output = dropout(x)
 
         np.testing.assert_array_equal(output.numpy(), x.numpy())
@@ -74,16 +74,16 @@ class TestDropout(TestCase):
     def test_dropout_invalid_p(self):
         """Test Dropout with invalid p raises error."""
         with self.assertRaises(ValueError):
-            mlx_compat.nn.Dropout(p=-0.1)
+            flashlight.nn.Dropout(p=-0.1)
         with self.assertRaises(ValueError):
-            mlx_compat.nn.Dropout(p=1.5)
+            flashlight.nn.Dropout(p=1.5)
 
     def test_dropout_shape_preserved(self):
         """Test Dropout preserves input shape."""
-        dropout = mlx_compat.nn.Dropout(p=0.5)
+        dropout = flashlight.nn.Dropout(p=0.5)
         dropout.train()
 
-        x = mlx_compat.randn(4, 8, 16)
+        x = flashlight.randn(4, 8, 16)
         output = dropout(x)
 
         self.assertEqual(output.shape, x.shape)
@@ -95,35 +95,35 @@ class TestDropout1d(TestCase):
 
     def test_dropout1d_creation(self):
         """Test Dropout1d creation."""
-        dropout = mlx_compat.nn.Dropout1d(p=0.5)
+        dropout = flashlight.nn.Dropout1d(p=0.5)
         self.assertEqual(dropout.p, 0.5)
 
     def test_dropout1d_forward_3d(self):
         """Test Dropout1d forward pass with 3D input."""
-        dropout = mlx_compat.nn.Dropout1d(p=0.5)
+        dropout = flashlight.nn.Dropout1d(p=0.5)
         dropout.train()
 
-        x = mlx_compat.randn(4, 64, 32)  # (N, C, L)
+        x = flashlight.randn(4, 64, 32)  # (N, C, L)
         output = dropout(x)
 
         self.assertEqual(output.shape, (4, 64, 32))
 
     def test_dropout1d_forward_2d(self):
         """Test Dropout1d forward pass with 2D input."""
-        dropout = mlx_compat.nn.Dropout1d(p=0.5)
+        dropout = flashlight.nn.Dropout1d(p=0.5)
         dropout.train()
 
-        x = mlx_compat.randn(64, 32)  # (C, L)
+        x = flashlight.randn(64, 32)  # (C, L)
         output = dropout(x)
 
         self.assertEqual(output.shape, (64, 32))
 
     def test_dropout1d_eval_mode(self):
         """Test Dropout1d in eval mode."""
-        dropout = mlx_compat.nn.Dropout1d(p=0.5)
+        dropout = flashlight.nn.Dropout1d(p=0.5)
         dropout.eval()
 
-        x = mlx_compat.randn(4, 64, 32)
+        x = flashlight.randn(4, 64, 32)
         output = dropout(x)
 
         np.testing.assert_array_equal(output.numpy(), x.numpy())
@@ -135,35 +135,35 @@ class TestDropout2d(TestCase):
 
     def test_dropout2d_creation(self):
         """Test Dropout2d creation."""
-        dropout = mlx_compat.nn.Dropout2d(p=0.5)
+        dropout = flashlight.nn.Dropout2d(p=0.5)
         self.assertEqual(dropout.p, 0.5)
 
     def test_dropout2d_forward_4d(self):
         """Test Dropout2d forward pass with 4D input."""
-        dropout = mlx_compat.nn.Dropout2d(p=0.5)
+        dropout = flashlight.nn.Dropout2d(p=0.5)
         dropout.train()
 
-        x = mlx_compat.randn(4, 64, 8, 8)  # (N, C, H, W)
+        x = flashlight.randn(4, 64, 8, 8)  # (N, C, H, W)
         output = dropout(x)
 
         self.assertEqual(output.shape, (4, 64, 8, 8))
 
     def test_dropout2d_forward_3d(self):
         """Test Dropout2d forward pass with 3D input."""
-        dropout = mlx_compat.nn.Dropout2d(p=0.5)
+        dropout = flashlight.nn.Dropout2d(p=0.5)
         dropout.train()
 
-        x = mlx_compat.randn(64, 8, 8)  # (C, H, W)
+        x = flashlight.randn(64, 8, 8)  # (C, H, W)
         output = dropout(x)
 
         self.assertEqual(output.shape, (64, 8, 8))
 
     def test_dropout2d_eval_mode(self):
         """Test Dropout2d in eval mode."""
-        dropout = mlx_compat.nn.Dropout2d(p=0.5)
+        dropout = flashlight.nn.Dropout2d(p=0.5)
         dropout.eval()
 
-        x = mlx_compat.randn(4, 64, 8, 8)
+        x = flashlight.randn(4, 64, 8, 8)
         output = dropout(x)
 
         np.testing.assert_array_equal(output.numpy(), x.numpy())
@@ -175,25 +175,25 @@ class TestDropout3d(TestCase):
 
     def test_dropout3d_creation(self):
         """Test Dropout3d creation."""
-        dropout = mlx_compat.nn.Dropout3d(p=0.5)
+        dropout = flashlight.nn.Dropout3d(p=0.5)
         self.assertEqual(dropout.p, 0.5)
 
     def test_dropout3d_forward_5d(self):
         """Test Dropout3d forward pass with 5D input."""
-        dropout = mlx_compat.nn.Dropout3d(p=0.5)
+        dropout = flashlight.nn.Dropout3d(p=0.5)
         dropout.train()
 
-        x = mlx_compat.randn(2, 16, 4, 4, 4)  # (N, C, D, H, W)
+        x = flashlight.randn(2, 16, 4, 4, 4)  # (N, C, D, H, W)
         output = dropout(x)
 
         self.assertEqual(output.shape, (2, 16, 4, 4, 4))
 
     def test_dropout3d_eval_mode(self):
         """Test Dropout3d in eval mode."""
-        dropout = mlx_compat.nn.Dropout3d(p=0.5)
+        dropout = flashlight.nn.Dropout3d(p=0.5)
         dropout.eval()
 
-        x = mlx_compat.randn(2, 16, 4, 4, 4)
+        x = flashlight.randn(2, 16, 4, 4, 4)
         output = dropout(x)
 
         np.testing.assert_array_equal(output.numpy(), x.numpy())
@@ -205,25 +205,25 @@ class TestAlphaDropout(TestCase):
 
     def test_alpha_dropout_creation(self):
         """Test AlphaDropout creation."""
-        dropout = mlx_compat.nn.AlphaDropout(p=0.5)
+        dropout = flashlight.nn.AlphaDropout(p=0.5)
         self.assertEqual(dropout.p, 0.5)
 
     def test_alpha_dropout_forward(self):
         """Test AlphaDropout forward pass."""
-        dropout = mlx_compat.nn.AlphaDropout(p=0.5)
+        dropout = flashlight.nn.AlphaDropout(p=0.5)
         dropout.train()
 
-        x = mlx_compat.randn(10, 10)
+        x = flashlight.randn(10, 10)
         output = dropout(x)
 
         self.assertEqual(output.shape, (10, 10))
 
     def test_alpha_dropout_eval_mode(self):
         """Test AlphaDropout in eval mode."""
-        dropout = mlx_compat.nn.AlphaDropout(p=0.5)
+        dropout = flashlight.nn.AlphaDropout(p=0.5)
         dropout.eval()
 
-        x = mlx_compat.randn(10, 10)
+        x = flashlight.randn(10, 10)
         output = dropout(x)
 
         np.testing.assert_array_equal(output.numpy(), x.numpy())
@@ -235,15 +235,15 @@ class TestFeatureAlphaDropout(TestCase):
 
     def test_feature_alpha_dropout_creation(self):
         """Test FeatureAlphaDropout creation."""
-        dropout = mlx_compat.nn.FeatureAlphaDropout(p=0.5)
+        dropout = flashlight.nn.FeatureAlphaDropout(p=0.5)
         self.assertEqual(dropout.p, 0.5)
 
     def test_feature_alpha_dropout_forward(self):
         """Test FeatureAlphaDropout forward pass."""
-        dropout = mlx_compat.nn.FeatureAlphaDropout(p=0.5)
+        dropout = flashlight.nn.FeatureAlphaDropout(p=0.5)
         dropout.train()
 
-        x = mlx_compat.randn(4, 64, 8, 8)
+        x = flashlight.randn(4, 64, 8, 8)
         output = dropout(x)
 
         self.assertEqual(output.shape, (4, 64, 8, 8))

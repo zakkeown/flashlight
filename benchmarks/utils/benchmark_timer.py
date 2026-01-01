@@ -8,8 +8,8 @@ import time
 import numpy as np
 
 import mlx.core as mx
-import mlx_compat
-from mlx_compat.utils.benchmark import Timer, Compare
+import flashlight
+from flashlight.utils.benchmark import Timer, Compare
 
 try:
     import torch
@@ -159,7 +159,7 @@ def benchmark_compare_display():
     print("Compare Table Generation Benchmark")
     print("=" * 60)
 
-    from mlx_compat.utils.benchmark import TaskSpec, Measurement
+    from flashlight.utils.benchmark import TaskSpec, Measurement
 
     # Generate many measurements
     measurements = []
