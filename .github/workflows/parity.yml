@@ -1,21 +1,22 @@
-name: API Parity Check
+name: API Parity
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
   pull_request:
     branches: [main, develop]
   schedule:
-    # Run weekly on Sundays to catch PyTorch API changes
-    - cron: '0 0 * * 0'
+    - cron: '0 0 * * 0'  # Weekly Sunday midnight UTC
   workflow_dispatch:
-    # Allow manual triggering
+
+concurrency:
+  group: parity-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   parity-check:
-    name: Check API Parity
+    name: API Parity Check
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -32,7 +33,6 @@ jobs:
           # Install PyTorch CPU-only for faster CI
           pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install pyyaml packaging
-          # Install flashlight in editable mode
           pip install -e .
 
       - name: Run parity check (informational)
@@ -92,7 +92,6 @@ jobs:
             );
 
             if (botComment) {
-              // Update existing comment
               await github.rest.issues.updateComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -100,7 +99,6 @@ jobs:
                 body: report
               });
             } else {
-              // Create new comment
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -109,15 +107,9 @@ jobs:
               });
             }
 
-      - name: Strict validation (fail on missing APIs)
-        run: |
-          python -m parity_check --strict --signature-strict
-
-  parity-check-macos:
-    name: Check API Parity (macOS with MLX)
-    runs-on: macos-14  # Apple Silicon runner
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
-
+  strict-validation:
+    name: Strict API Validation
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -126,20 +118,48 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install torch
-          pip install mlx
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install pyyaml packaging
           pip install -e .
 
-      - name: Run parity check
+      - name: Validate strict parity
+        run: |
+          python -m parity_check --strict --signature-strict
+
+  numerical-parity:
+    name: Numerical Parity (Apple Silicon)
+    runs-on: macos-14
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch mlx pyyaml packaging
+          pip install -e ".[dev]"
+
+      - name: Run parity check with MLX
         run: |
           python -m parity_check --format console
 
+      - name: Run numerical parity tests
+        run: |
+          pytest tests/parity/ -v --tb=short
+        continue-on-error: true
+
       - name: Run integration parity tests
         run: |
-          pip install pytest
-          pytest tests/integration/test_pytorch_parity.py -v || true
+          pytest tests/integration/test_pytorch_parity.py -v --tb=short || true

@@ -1,0 +1,15 @@
+# Default owner for everything
+* @zakkeown
+
+# Core components
+/flashlight/tensor.py @zakkeown
+/flashlight/ops/ @zakkeown
+/flashlight/autograd/ @zakkeown
+/flashlight/nn/ @zakkeown
+/flashlight/optim/ @zakkeown
+
+# CI/CD
+/.github/ @zakkeown
+
+# Tests
+/tests/ @zakkeown
