@@ -9,8 +9,8 @@ from parity_check.validators.api_presence import (
     PresenceValidationResult,
 )
 from parity_check.validators.signature_match import (
-    SignatureValidator,
     SignatureValidationResult,
+    SignatureValidator,
 )
 
 

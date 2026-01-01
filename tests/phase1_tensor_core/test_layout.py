@@ -4,23 +4,23 @@ Layout Tests
 Tests for flashlight.layout module - NCHW/NHWC layout management.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 import flashlight
 from flashlight.layout import (
     Layout,
-    is_nhwc_mode,
-    nhwc_mode,
-    nchw_mode,
-    infer_layout,
     convert_layout,
     ensure_layout,
-    ensure_nhwc,
     ensure_nchw,
+    ensure_nhwc,
     get_output_layout,
     get_output_layout_1d,
     get_output_layout_3d,
+    infer_layout,
+    is_nhwc_mode,
+    nchw_mode,
+    nhwc_mode,
 )
 
 

@@ -6,9 +6,9 @@ Implements PyTorch-compatible Dataset classes for MLX.
 
 from abc import ABC, abstractmethod
 from bisect import bisect_right
-from typing import Any, Iterator, List, Tuple, TypeVar, Generic, Optional
+from typing import Any, Generic, Iterator, List, Optional, Tuple, TypeVar
 
-T_co = TypeVar('T_co', covariant=True)
+T_co = TypeVar("T_co", covariant=True)
 
 
 class Dataset(ABC, Generic[T_co]):
@@ -51,7 +51,7 @@ class Dataset(ABC, Generic[T_co]):
         """
         raise NotImplementedError
 
-    def __add__(self, other: 'Dataset[T_co]') -> 'ConcatDataset[T_co]':
+    def __add__(self, other: "Dataset[T_co]") -> "ConcatDataset[T_co]":
         """Concatenate two datasets."""
         return ConcatDataset([self, other])
 
@@ -86,7 +86,7 @@ class IterableDataset(ABC, Generic[T_co]):
         """
         raise NotImplementedError
 
-    def __add__(self, other: 'IterableDataset[T_co]') -> 'ChainDataset[T_co]':
+    def __add__(self, other: "IterableDataset[T_co]") -> "ChainDataset[T_co]":
         """Chain two iterable datasets."""
         return ChainDataset([self, other])
 
@@ -141,9 +141,9 @@ class TensorDataset(Dataset[Tuple[Any, ...]]):
 
     def _get_len(self, tensor: Any) -> int:
         """Get the length (first dimension) of a tensor."""
-        if hasattr(tensor, 'shape'):
+        if hasattr(tensor, "shape"):
             return tensor.shape[0]
-        elif hasattr(tensor, '__len__'):
+        elif hasattr(tensor, "__len__"):
             return len(tensor)
         else:
             raise TypeError(f"Cannot determine length of {type(tensor)}")
@@ -390,14 +390,14 @@ def random_split(*args, **kwargs) -> List[Subset]:
     if len(args) >= 1:
         dataset = args[0]
     else:
-        dataset = kwargs.get('dataset')
+        dataset = kwargs.get("dataset")
 
     if len(args) >= 2:
         lengths = args[1]
     else:
-        lengths = kwargs.get('lengths')
+        lengths = kwargs.get("lengths")
 
-    generator = args[2] if len(args) >= 3 else kwargs.get('generator', None)
+    generator = args[2] if len(args) >= 3 else kwargs.get("generator", None)
 
     if dataset is None or lengths is None:
         raise TypeError("random_split() missing required arguments: 'dataset' and 'lengths'")
@@ -412,7 +412,7 @@ def random_split(*args, **kwargs) -> List[Subset]:
     n = len(dataset)
     if generator is not None:
         # If generator has a seed attribute, use it for reproducibility
-        seed = getattr(generator, 'seed', 0) if hasattr(generator, 'seed') else 0
+        seed = getattr(generator, "seed", 0) if hasattr(generator, "seed") else 0
         key = mlx_seeded_key(seed)
         indices = mlx_permutation(n, key=key)
     else:
@@ -422,19 +422,19 @@ def random_split(*args, **kwargs) -> List[Subset]:
     subsets = []
     offset = 0
     for length in lengths:
-        subsets.append(Subset(dataset, indices[offset:offset + length]))
+        subsets.append(Subset(dataset, indices[offset : offset + length]))
         offset += length
 
     return subsets
 
 
 __all__ = [
-    'Dataset',
-    'IterableDataset',
-    'TensorDataset',
-    'ConcatDataset',
-    'ChainDataset',
-    'Subset',
-    'StackDataset',
-    'random_split',
+    "Dataset",
+    "IterableDataset",
+    "TensorDataset",
+    "ConcatDataset",
+    "ChainDataset",
+    "Subset",
+    "StackDataset",
+    "random_split",
 ]

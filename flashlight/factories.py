@@ -8,21 +8,22 @@ Reference:
 - pytorch-mlx-porting-docs/08-PORTING-GUIDE/mlx-mapping.md (lines 96-135)
 """
 
-from typing import Union, Optional, Tuple, Sequence
+from typing import Optional, Sequence, Tuple, Union
 
 try:
     import mlx.core as mx
+
     MLX_AVAILABLE = True
 except ImportError:
     MLX_AVAILABLE = False
     mx = None
 
-from .tensor import Tensor
-from .dtype import DType, get_dtype, get_default_dtype
 from .device import Device, get_default_device
-
+from .dtype import DType, get_default_dtype, get_dtype
+from .tensor import Tensor
 
 # ==================== Helper Function ====================
+
 
 def _parse_shape(*size: Union[int, Tuple[int, ...], Sequence[int]]) -> Tuple[int, ...]:
     """
@@ -46,6 +47,7 @@ def _parse_shape(*size: Union[int, Tuple[int, ...], Sequence[int]]) -> Tuple[int
 
 
 # ==================== Constant Fill Operations ====================
+
 
 def zeros(
     *size: Union[int, Tuple[int, ...]],
@@ -171,16 +173,17 @@ def empty(
         >>> empty(3, 4)  # Returns zeros in MLX
     """
     import warnings
+
     warnings.warn(
-        "MLX does not support uninitialized arrays. "
-        "Returning zero-filled tensor instead.",
+        "MLX does not support uninitialized arrays. " "Returning zero-filled tensor instead.",
         UserWarning,
-        stacklevel=2
+        stacklevel=2,
     )
     return zeros(*size, dtype=dtype, device=device, requires_grad=requires_grad)
 
 
 # ==================== -like Variants ====================
+
 
 def zeros_like(
     input: Tensor,
@@ -233,6 +236,7 @@ def empty_like(
 
 # ==================== Sequence Operations ====================
 
+
 def arange(
     start: Union[int, float] = 0,
     end: Optional[Union[int, float]] = None,
@@ -274,6 +278,7 @@ def arange(
             dtype = get_default_dtype()
         else:
             from . import dtype as dtype_module
+
             dtype = dtype_module.int32
     else:
         dtype = get_dtype(dtype)
@@ -360,6 +365,7 @@ def logspace(
 
 # ==================== Identity/Diagonal Operations ====================
 
+
 def eye(
     n: int,
     m: Optional[int] = None,
@@ -397,6 +403,7 @@ def eye(
 
 
 # ==================== Random Operations ====================
+
 
 def randn(
     *size: Union[int, Tuple[int, ...]],
@@ -499,6 +506,7 @@ def randint(
 
     if dtype is None:
         from . import dtype as dtype_module
+
         dtype = dtype_module.int64
     else:
         dtype = get_dtype(dtype)
@@ -509,6 +517,7 @@ def randint(
 
 
 # ==================== From Existing Data ====================
+
 
 def tensor(
     data,
@@ -580,10 +589,8 @@ def clone(input: Tensor) -> Tensor:
 
 # ==================== Grid Operations ====================
 
-def meshgrid(
-    *tensors: Tensor,
-    indexing: str = None
-) -> Tuple[Tensor, ...]:
+
+def meshgrid(*tensors: Tensor, indexing: str = None) -> Tuple[Tensor, ...]:
     """
     Create coordinate grids from coordinate vectors.
 
@@ -612,7 +619,7 @@ def meshgrid(
     # MLX meshgrid uses 'ij' indexing by default
     # PyTorch default is None (which behaves like 'ij' but warns)
     if indexing is None:
-        indexing = 'ij'  # Default behavior
+        indexing = "ij"  # Default behavior
     grids = mx.meshgrid(*mlx_arrays, indexing=indexing)
 
     results = tuple(Tensor._from_mlx_array(g) for g in grids)
@@ -644,13 +651,14 @@ def cartesian_prod(*tensors: Tensor) -> Tensor:
     if len(tensors) == 1:
         return tensors[0].unsqueeze(1)
 
-    grids = meshgrid(*tensors, indexing='ij')
+    grids = meshgrid(*tensors, indexing="ij")
     # Stack and reshape to (N, len(tensors))
     stacked = mx.stack([g._mlx_array.reshape(-1) for g in grids], axis=1)
     return Tensor._from_mlx_array(stacked)
 
 
 # ==================== Random -like Variants ====================
+
 
 def rand_like(
     input: Tensor,
@@ -723,6 +731,7 @@ def randint_like(
     """
     if dtype is None:
         from . import dtype as dtype_module
+
         dtype = dtype_module.int64
     else:
         dtype = get_dtype(dtype)
@@ -753,6 +762,7 @@ def randperm(
 
     if dtype is None:
         from . import dtype as dtype_module
+
         dtype = dtype_module.int64
     else:
         dtype = get_dtype(dtype)
@@ -767,6 +777,7 @@ def randperm(
 
 
 # ==================== Additional Creation Functions ====================
+
 
 def as_tensor(
     data,
@@ -978,6 +989,7 @@ def multinomial(
 
     # Convert to int64
     from . import dtype as dtype_module
+
     result = result.astype(dtype_module.int64._mlx_dtype)
 
     return Tensor._from_mlx_array(result)
@@ -1030,7 +1042,9 @@ def poisson(
             u = mx.random.uniform(shape=small_rates.shape)
             p = p * u
             # Increment k where p >= L
-            increment = mx.where(p >= L, mx.ones(k.shape, dtype=mx.int32), mx.zeros(k.shape, dtype=mx.int32))
+            increment = mx.where(
+                p >= L, mx.ones(k.shape, dtype=mx.int32), mx.zeros(k.shape, dtype=mx.int32)
+            )
             k = k + increment
             # Check if all done
             if mx.all(p < L):
@@ -1047,7 +1061,9 @@ def poisson(
         # Scale and shift: X ~ lambda + sqrt(lambda) * Z
         approx_samples = large_rates + mx.sqrt(large_rates) * normal_samples
         # Round to nearest non-negative integer
-        approx_samples = mx.maximum(mx.round(approx_samples), mx.zeros(approx_samples.shape, dtype=mx.float32))
+        approx_samples = mx.maximum(
+            mx.round(approx_samples), mx.zeros(approx_samples.shape, dtype=mx.float32)
+        )
         result = mx.where(~small_lambda_mask, approx_samples.astype(mx.int32), result)
 
     return Tensor._from_mlx_array(result)
@@ -1055,20 +1071,40 @@ def poisson(
 
 __all__ = [
     # Constant fill
-    'zeros', 'ones', 'full', 'empty',
+    "zeros",
+    "ones",
+    "full",
+    "empty",
     # -like variants
-    'zeros_like', 'ones_like', 'full_like', 'empty_like',
-    'rand_like', 'randn_like', 'randint_like',
+    "zeros_like",
+    "ones_like",
+    "full_like",
+    "empty_like",
+    "rand_like",
+    "randn_like",
+    "randint_like",
     # Sequences
-    'arange', 'linspace', 'logspace',
+    "arange",
+    "linspace",
+    "logspace",
     # Identity
-    'eye',
+    "eye",
     # Random
-    'randn', 'rand', 'randint', 'randperm',
-    'normal', 'bernoulli', 'multinomial', 'poisson',
+    "randn",
+    "rand",
+    "randint",
+    "randperm",
+    "normal",
+    "bernoulli",
+    "multinomial",
+    "poisson",
     # From data
-    'tensor', 'from_numpy', 'clone',
-    'as_tensor', 'scalar_tensor',
+    "tensor",
+    "from_numpy",
+    "clone",
+    "as_tensor",
+    "scalar_tensor",
     # Grid operations
-    'meshgrid', 'cartesian_prod',
+    "meshgrid",
+    "cartesian_prod",
 ]

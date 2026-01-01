@@ -7,4 +7,4 @@ Provides signal processing utilities including window functions.
 
 from . import windows
 
-__all__ = ['windows']
+__all__ = ["windows"]

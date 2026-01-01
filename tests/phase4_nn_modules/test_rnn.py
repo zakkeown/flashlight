@@ -9,9 +9,11 @@ Tests the nn.layers.rnn module:
 """
 
 import sys
-sys.path.insert(0, '../..')
+
+sys.path.insert(0, "../..")
 
 import unittest
+
 import numpy as np
 import pytest
 
@@ -19,12 +21,14 @@ from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
     import flashlight
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
 
 try:
     import torch
+
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
@@ -43,7 +47,7 @@ class TestRNNCell(TestCase):
     def test_creation_with_bias(self):
         """Test RNNCell creation with bias."""
         cell = flashlight.nn.RNNCell(input_size=10, hidden_size=20, bias=True)
-        self.assertTrue(cell.bias is not None or hasattr(cell, 'bias_ih'))
+        self.assertTrue(cell.bias is not None or hasattr(cell, "bias_ih"))
 
     def test_creation_without_bias(self):
         """Test RNNCell creation without bias."""
@@ -100,9 +104,7 @@ class TestRNNCell(TestCase):
         out_mlx = cell_mlx(flashlight.tensor(x_np), flashlight.tensor(hx_np))
 
         np.testing.assert_allclose(
-            out_torch.detach().numpy(),
-            out_mlx.numpy(),
-            rtol=1e-4, atol=1e-5
+            out_torch.detach().numpy(), out_mlx.numpy(), rtol=1e-4, atol=1e-5
         )
 
 
@@ -156,20 +158,14 @@ class TestLSTMCell(TestCase):
         cx_np = np.random.randn(batch_size, hidden_size).astype(np.float32)
 
         h_torch, c_torch = cell_torch(
-            torch.tensor(x_np),
-            (torch.tensor(hx_np), torch.tensor(cx_np))
+            torch.tensor(x_np), (torch.tensor(hx_np), torch.tensor(cx_np))
         )
         h_mlx, c_mlx = cell_mlx(
-            flashlight.tensor(x_np),
-            (flashlight.tensor(hx_np), flashlight.tensor(cx_np))
+            flashlight.tensor(x_np), (flashlight.tensor(hx_np), flashlight.tensor(cx_np))
         )
 
-        np.testing.assert_allclose(
-            h_torch.detach().numpy(), h_mlx.numpy(), rtol=1e-4, atol=1e-5
-        )
-        np.testing.assert_allclose(
-            c_torch.detach().numpy(), c_mlx.numpy(), rtol=1e-4, atol=1e-5
-        )
+        np.testing.assert_allclose(h_torch.detach().numpy(), h_mlx.numpy(), rtol=1e-4, atol=1e-5)
+        np.testing.assert_allclose(c_torch.detach().numpy(), c_mlx.numpy(), rtol=1e-4, atol=1e-5)
 
 
 @skipIfNoMLX
@@ -288,5 +284,5 @@ class TestGRU(TestCase):
         self.assertEqual(output.shape, (5, 7, 20))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

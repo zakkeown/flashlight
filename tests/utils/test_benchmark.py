@@ -4,20 +4,20 @@ Tests for flashlight.utils.benchmark module.
 Tests Timer, Measurement, Compare, and utility functions.
 """
 
-import unittest
 import time
+import unittest
 
 from flashlight.utils.benchmark import (
-    Timer,
-    Measurement,
-    Compare,
-    TaskSpec,
     Colorize,
-    timer,
-    select_unit,
-    unit_to_english,
-    trim_sigfig,
+    Compare,
+    Measurement,
+    TaskSpec,
+    Timer,
     ordered_unique,
+    select_unit,
+    timer,
+    trim_sigfig,
+    unit_to_english,
 )
 
 

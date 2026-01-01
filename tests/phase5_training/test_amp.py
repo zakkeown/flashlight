@@ -4,8 +4,8 @@ Automatic Mixed Precision (AMP) Tests
 Tests for flashlight.amp module - autocast and GradScaler.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 import flashlight
 
@@ -45,6 +45,7 @@ class TestAutocast:
 
     def test_autocast_as_decorator(self):
         """Test autocast as decorator."""
+
         @flashlight.amp.autocast()
         def compute(x):
             return x * 2
@@ -108,9 +109,7 @@ class TestGradScaler:
         loss = flashlight.tensor([1.0, 2.0, 3.0])
         scaled_loss = scaler.scale(loss)
         expected = np.array([2.0, 4.0, 6.0])
-        np.testing.assert_allclose(
-            np.array(scaled_loss._mlx_array), expected, rtol=1e-5
-        )
+        np.testing.assert_allclose(np.array(scaled_loss._mlx_array), expected, rtol=1e-5)
 
     def test_gradscaler_scale_list(self):
         """Test GradScaler.scale() with list of tensors."""
@@ -118,12 +117,8 @@ class TestGradScaler:
         losses = [flashlight.tensor([1.0]), flashlight.tensor([2.0])]
         scaled_losses = scaler.scale(losses)
         assert len(scaled_losses) == 2
-        np.testing.assert_allclose(
-            np.array(scaled_losses[0]._mlx_array), [3.0], rtol=1e-5
-        )
-        np.testing.assert_allclose(
-            np.array(scaled_losses[1]._mlx_array), [6.0], rtol=1e-5
-        )
+        np.testing.assert_allclose(np.array(scaled_losses[0]._mlx_array), [3.0], rtol=1e-5)
+        np.testing.assert_allclose(np.array(scaled_losses[1]._mlx_array), [6.0], rtol=1e-5)
 
     def test_gradscaler_scale_disabled(self):
         """Test GradScaler.scale() when disabled returns unchanged."""
@@ -131,9 +126,7 @@ class TestGradScaler:
         loss = flashlight.tensor([1.0, 2.0, 3.0])
         scaled_loss = scaler.scale(loss)
         # When disabled, should return original tensor
-        np.testing.assert_allclose(
-            np.array(scaled_loss._mlx_array), [1.0, 2.0, 3.0], rtol=1e-5
-        )
+        np.testing.assert_allclose(np.array(scaled_loss._mlx_array), [1.0, 2.0, 3.0], rtol=1e-5)
 
     def test_gradscaler_update_manual(self):
         """Test GradScaler.update() with manual scale."""
@@ -182,39 +175,36 @@ class TestCustomFwdBwd:
 
     def test_custom_fwd_passthrough(self):
         """Test custom_fwd is a passthrough decorator."""
+
         @flashlight.amp.custom_fwd
         def forward(x):
             return x * 2
 
         x = flashlight.tensor([1.0, 2.0])
         result = forward(x)
-        np.testing.assert_allclose(
-            np.array(result._mlx_array), [2.0, 4.0], rtol=1e-5
-        )
+        np.testing.assert_allclose(np.array(result._mlx_array), [2.0, 4.0], rtol=1e-5)
 
     def test_custom_fwd_with_args(self):
         """Test custom_fwd with arguments."""
+
         @flashlight.amp.custom_fwd(device_type="cuda", cast_inputs=None)
         def forward(x):
             return x + 1
 
         x = flashlight.tensor([1.0, 2.0])
         result = forward(x)
-        np.testing.assert_allclose(
-            np.array(result._mlx_array), [2.0, 3.0], rtol=1e-5
-        )
+        np.testing.assert_allclose(np.array(result._mlx_array), [2.0, 3.0], rtol=1e-5)
 
     def test_custom_bwd_passthrough(self):
         """Test custom_bwd is a passthrough decorator."""
+
         @flashlight.amp.custom_bwd
         def backward(grad):
             return grad * 2
 
         grad = flashlight.tensor([1.0, 2.0])
         result = backward(grad)
-        np.testing.assert_allclose(
-            np.array(result._mlx_array), [2.0, 4.0], rtol=1e-5
-        )
+        np.testing.assert_allclose(np.array(result._mlx_array), [2.0, 4.0], rtol=1e-5)
 
 
 class TestSubmoduleCompatibility:

@@ -9,10 +9,10 @@ import unittest
 import flashlight
 import flashlight.nn as nn
 from flashlight.utils.mobile_optimizer import (
-    optimize_for_mobile,
-    generate_mobile_module_lints,
-    MobileOptimizerType,
     LintCode,
+    MobileOptimizerType,
+    generate_mobile_module_lints,
+    optimize_for_mobile,
 )
 
 
@@ -138,8 +138,8 @@ class TestConvBnFusion(unittest.TestCase):
 
     def test_conv_bn_fusion_output_equivalence(self):
         """Test that fused model produces same output as unfused."""
-        import numpy as np
         import mlx.core as mx
+        import numpy as np
 
         # Create model with Conv + BN
         class ConvBnModel(nn.Module):
@@ -183,11 +183,12 @@ class TestConvBnFusion(unittest.TestCase):
             optimized_values,
             rtol=1e-4,
             atol=1e-5,
-            err_msg="Conv-BN fusion produced different output"
+            err_msg="Conv-BN fusion produced different output",
         )
 
     def test_conv_bn_fusion_removes_bn(self):
         """Test that BN layers are replaced with Identity after fusion."""
+
         class ConvBnModel(nn.Module):
             def __init__(self):
                 super().__init__()
@@ -207,6 +208,7 @@ class TestConvBnFusion(unittest.TestCase):
 
     def test_conv_bn_fusion_blocklist(self):
         """Test that fusion can be blocked."""
+
         class ConvBnModel(nn.Module):
             def __init__(self):
                 super().__init__()
@@ -220,8 +222,7 @@ class TestConvBnFusion(unittest.TestCase):
         model.eval()
 
         optimized = optimize_for_mobile(
-            model,
-            optimization_blocklist={MobileOptimizerType.CONV_BN_FUSION}
+            model, optimization_blocklist={MobileOptimizerType.CONV_BN_FUSION}
         )
 
         # BN should still be present

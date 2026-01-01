@@ -9,12 +9,12 @@ provides stub implementations for API compatibility.
 import warnings
 
 __all__ = [
-    'Conv1d',
-    'Conv2d',
-    'Conv3d',
-    'Linear',
-    'Embedding',
-    'EmbeddingBag',
+    "Conv1d",
+    "Conv2d",
+    "Conv3d",
+    "Linear",
+    "Embedding",
+    "EmbeddingBag",
 ]
 
 
@@ -23,14 +23,17 @@ def _qat_not_supported():
     warnings.warn(
         "Quantization-aware training is not supported in MLX. "
         "QAT modules will behave like their non-quantized counterparts.",
-        UserWarning
+        UserWarning,
     )
 
 
 # Import regular layers as QAT versions (they'll just work without quantization)
-from ..layers.conv import Conv1d as _Conv1d, Conv2d as _Conv2d, Conv3d as _Conv3d
+from ..layers.conv import Conv1d as _Conv1d
+from ..layers.conv import Conv2d as _Conv2d
+from ..layers.conv import Conv3d as _Conv3d
+from ..layers.embedding import Embedding as _Embedding
+from ..layers.embedding import EmbeddingBag as _EmbeddingBag
 from ..layers.linear import Linear as _Linear
-from ..layers.embedding import Embedding as _Embedding, EmbeddingBag as _EmbeddingBag
 
 
 class Conv1d(_Conv1d):

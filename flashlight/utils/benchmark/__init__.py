@@ -31,15 +31,15 @@ Example:
 """
 
 from .common import (
-    TaskSpec,
     Measurement,
-    select_unit,
-    unit_to_english,
-    trim_sigfig,
+    TaskSpec,
     ordered_unique,
+    select_unit,
+    trim_sigfig,
+    unit_to_english,
 )
+from .compare import Colorize, Compare
 from .timer import Timer, timer
-from .compare import Compare, Colorize
 
 __all__ = [
     # Core classes

@@ -2,21 +2,25 @@
 
 import math
 from typing import Optional, Tuple, Union
+
 import mlx.core as mx
 
-from ..tensor import Tensor
-from .distribution import Distribution
-from . import constraints
 from ..ops.special import lgamma, multigammaln
+from ..tensor import Tensor
+from . import constraints
+from ._gamma_sampler import random_gamma
+from .distribution import Distribution
 
 
 class Wishart(Distribution):
     """Wishart distribution over positive definite matrices."""
 
-    arg_constraints = {'df': constraints.positive,
-                      'covariance_matrix': constraints.positive_definite,
-                      'precision_matrix': constraints.positive_definite,
-                      'scale_tril': constraints.lower_cholesky}
+    arg_constraints = {
+        "df": constraints.positive,
+        "covariance_matrix": constraints.positive_definite,
+        "precision_matrix": constraints.positive_definite,
+        "scale_tril": constraints.lower_cholesky,
+    }
     support = constraints.positive_definite
     has_rsample = True
 
@@ -31,18 +35,32 @@ class Wishart(Distribution):
         self.df = df._mlx_array if isinstance(df, Tensor) else mx.array(df)
 
         if sum(x is not None for x in [covariance_matrix, precision_matrix, scale_tril]) != 1:
-            raise ValueError("Exactly one of covariance_matrix, precision_matrix, or scale_tril must be specified")
+            raise ValueError(
+                "Exactly one of covariance_matrix, precision_matrix, or scale_tril must be specified"
+            )
 
         if covariance_matrix is not None:
-            self.covariance_matrix = covariance_matrix._mlx_array if isinstance(covariance_matrix, Tensor) else mx.array(covariance_matrix)
+            self.covariance_matrix = (
+                covariance_matrix._mlx_array
+                if isinstance(covariance_matrix, Tensor)
+                else mx.array(covariance_matrix)
+            )
             # Use CPU stream for cholesky (required by MLX)
             self._scale_tril = mx.linalg.cholesky(self.covariance_matrix, stream=mx.cpu)
             mx.eval(self._scale_tril)
         elif scale_tril is not None:
-            self._scale_tril = scale_tril._mlx_array if isinstance(scale_tril, Tensor) else mx.array(scale_tril)
-            self.covariance_matrix = mx.matmul(self._scale_tril, mx.swapaxes(self._scale_tril, -2, -1))
+            self._scale_tril = (
+                scale_tril._mlx_array if isinstance(scale_tril, Tensor) else mx.array(scale_tril)
+            )
+            self.covariance_matrix = mx.matmul(
+                self._scale_tril, mx.swapaxes(self._scale_tril, -2, -1)
+            )
         else:
-            self._precision_matrix = precision_matrix._mlx_array if isinstance(precision_matrix, Tensor) else mx.array(precision_matrix)
+            self._precision_matrix = (
+                precision_matrix._mlx_array
+                if isinstance(precision_matrix, Tensor)
+                else mx.array(precision_matrix)
+            )
             # Use CPU stream for inv and cholesky (required by MLX)
             self.covariance_matrix = mx.linalg.inv(self._precision_matrix, stream=mx.cpu)
             mx.eval(self.covariance_matrix)
@@ -66,8 +84,16 @@ class Wishart(Distribution):
     @property
     def variance(self) -> Tensor:
         p = self._event_shape[0]
-        var = 2 * self.df[..., None, None] * (self.covariance_matrix ** 2 +
-              mx.einsum('...ij,...ji->...', self.covariance_matrix, self.covariance_matrix)[..., None, None])
+        var = (
+            2
+            * self.df[..., None, None]
+            * (
+                self.covariance_matrix**2
+                + mx.einsum("...ij,...ji->...", self.covariance_matrix, self.covariance_matrix)[
+                    ..., None, None
+                ]
+            )
+        )
         return Tensor(var)
 
     def sample(self, sample_shape: Tuple[int, ...] = ()) -> Tensor:
@@ -111,7 +137,7 @@ class Wishart(Distribution):
             # Sample chi-squared with df - i degrees of freedom
             # Chi2(k) = Gamma(k/2, scale=2) = 2 * Gamma(k/2, scale=1)
             chi2_df = df_broadcast - float(i)
-            chi2_samples = mx.random.gamma(chi2_df / 2, shape) * 2
+            chi2_samples = random_gamma(chi2_df / 2, shape) * 2
             sqrt_chi2 = mx.sqrt(chi2_samples)
 
             # Set diagonal element A[..., i, i]
@@ -153,7 +179,9 @@ class Wishart(Distribution):
         mx.eval(chol_data)
         log_det_value = mx.sum(mx.log(mx.diagonal(chol_data, axis1=-2, axis2=-1)), axis=-1) * 2
         # Log determinant of scale
-        log_det_scale = mx.sum(mx.log(mx.diagonal(self._scale_tril, axis1=-2, axis2=-1)), axis=-1) * 2
+        log_det_scale = (
+            mx.sum(mx.log(mx.diagonal(self._scale_tril, axis1=-2, axis2=-1)), axis=-1) * 2
+        )
 
         # Multivariate log gamma using pure MLX
         log_mvgamma = multigammaln(df / 2, p)
@@ -163,12 +191,14 @@ class Wishart(Distribution):
         mx.eval(scale_inv)
         trace_term = mx.trace(mx.matmul(scale_inv, data))
 
-        log_prob = ((df - p - 1) / 2 * log_det_value -
-                   trace_term / 2 -
-                   df * p / 2 * math.log(2) -
-                   df / 2 * log_det_scale -
-                   log_mvgamma)
+        log_prob = (
+            (df - p - 1) / 2 * log_det_value
+            - trace_term / 2
+            - df * p / 2 * math.log(2)
+            - df / 2 * log_det_scale
+            - log_mvgamma
+        )
         return Tensor(log_prob)
 
 
-__all__ = ['Wishart']
+__all__ = ["Wishart"]

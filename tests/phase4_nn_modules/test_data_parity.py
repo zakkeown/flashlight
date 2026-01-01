@@ -5,9 +5,11 @@ Numerical parity comparison tests for data loading components.
 """
 
 import sys
-sys.path.insert(0, '../..')
+
+sys.path.insert(0, "../..")
 
 import unittest
+
 import numpy as np
 import pytest
 
@@ -15,10 +17,8 @@ from tests.common_utils import TestCase, skipIfNoMLX, skipIfNoTorch
 
 try:
     import flashlight
-    from flashlight.data import (
-        TensorDataset, ConcatDataset, Subset,
-        DataLoader, default_collate
-    )
+    from flashlight.data import ConcatDataset, DataLoader, Subset, TensorDataset, default_collate
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -33,8 +33,8 @@ class TestDataLoaderParity(TestCase):
     def test_batch_output_shape_parity(self):
         """Compare batch output shapes with PyTorch DataLoader."""
         import torch
-        from torch.utils.data import TensorDataset as TorchTensorDataset
         from torch.utils.data import DataLoader as TorchDataLoader
+        from torch.utils.data import TensorDataset as TorchTensorDataset
 
         batch_size = 16
 
@@ -66,8 +66,8 @@ class TestDataLoaderParity(TestCase):
     def test_num_batches_parity(self):
         """Compare number of batches with PyTorch DataLoader."""
         import torch
-        from torch.utils.data import TensorDataset as TorchTensorDataset
         from torch.utils.data import DataLoader as TorchDataLoader
+        from torch.utils.data import TensorDataset as TorchTensorDataset
 
         for dataset_size in [97, 100, 128]:
             for batch_size in [8, 16, 32]:
@@ -75,9 +75,7 @@ class TestDataLoaderParity(TestCase):
                     # MLX version
                     x_mlx = flashlight.randn(dataset_size, 10)
                     dataset_mlx = TensorDataset(x_mlx)
-                    loader_mlx = DataLoader(
-                        dataset_mlx, batch_size=batch_size, drop_last=drop_last
-                    )
+                    loader_mlx = DataLoader(dataset_mlx, batch_size=batch_size, drop_last=drop_last)
 
                     # PyTorch version
                     x_torch = torch.randn(dataset_size, 10)
@@ -90,16 +88,17 @@ class TestDataLoaderParity(TestCase):
                     torch_count = len(list(loader_torch))
 
                     self.assertEqual(
-                        mlx_count, torch_count,
+                        mlx_count,
+                        torch_count,
                         f"Batch count mismatch for size={dataset_size}, "
-                        f"batch={batch_size}, drop_last={drop_last}"
+                        f"batch={batch_size}, drop_last={drop_last}",
                     )
 
     def test_sequential_order_parity(self):
         """Compare sequential ordering with PyTorch DataLoader."""
         import torch
-        from torch.utils.data import TensorDataset as TorchTensorDataset
         from torch.utils.data import DataLoader as TorchDataLoader
+        from torch.utils.data import TensorDataset as TorchTensorDataset
 
         # Create ordered data
         x_mlx = flashlight.arange(100).reshape(100, 1).float()
@@ -145,11 +144,7 @@ class TestCollateParity(TestCase):
 
         # Compare shapes and values
         self.assertEqual(mlx_batch.shape, tuple(torch_batch.shape))
-        np.testing.assert_allclose(
-            mlx_batch.numpy(),
-            torch_batch.numpy(),
-            rtol=1e-5
-        )
+        np.testing.assert_allclose(mlx_batch.numpy(), torch_batch.numpy(), rtol=1e-5)
 
     def test_collate_tuples_parity(self):
         """Compare tuple collation with PyTorch."""
@@ -174,11 +169,7 @@ class TestCollateParity(TestCase):
 
         for mlx_elem, torch_elem in zip(mlx_batch, torch_batch):
             self.assertEqual(mlx_elem.shape, tuple(torch_elem.shape))
-            np.testing.assert_allclose(
-                mlx_elem.numpy(),
-                torch_elem.numpy(),
-                rtol=1e-5
-            )
+            np.testing.assert_allclose(mlx_elem.numpy(), torch_elem.numpy(), rtol=1e-5)
 
     def test_collate_dicts_parity(self):
         """Compare dict collation with PyTorch."""
@@ -187,15 +178,15 @@ class TestCollateParity(TestCase):
 
         # MLX dicts
         mlx_samples = [
-            {'x': flashlight.tensor([1.0, 2.0]), 'y': flashlight.tensor([0])},
-            {'x': flashlight.tensor([3.0, 4.0]), 'y': flashlight.tensor([1])},
+            {"x": flashlight.tensor([1.0, 2.0]), "y": flashlight.tensor([0])},
+            {"x": flashlight.tensor([3.0, 4.0]), "y": flashlight.tensor([1])},
         ]
         mlx_batch = default_collate(mlx_samples)
 
         # PyTorch dicts
         torch_samples = [
-            {'x': torch.tensor([1.0, 2.0]), 'y': torch.tensor([0])},
-            {'x': torch.tensor([3.0, 4.0]), 'y': torch.tensor([1])},
+            {"x": torch.tensor([1.0, 2.0]), "y": torch.tensor([0])},
+            {"x": torch.tensor([3.0, 4.0]), "y": torch.tensor([1])},
         ]
         torch_batch = torch_collate(torch_samples)
 
@@ -203,11 +194,7 @@ class TestCollateParity(TestCase):
 
         for key in mlx_batch:
             self.assertEqual(mlx_batch[key].shape, tuple(torch_batch[key].shape))
-            np.testing.assert_allclose(
-                mlx_batch[key].numpy(),
-                torch_batch[key].numpy(),
-                rtol=1e-5
-            )
+            np.testing.assert_allclose(mlx_batch[key].numpy(), torch_batch[key].numpy(), rtol=1e-5)
 
     def test_collate_numbers_parity(self):
         """Compare number collation with PyTorch."""
@@ -220,11 +207,7 @@ class TestCollateParity(TestCase):
         torch_batch = torch_collate(samples)
 
         self.assertEqual(mlx_batch.shape, tuple(torch_batch.shape))
-        np.testing.assert_allclose(
-            mlx_batch.numpy(),
-            torch_batch.numpy(),
-            rtol=1e-5
-        )
+        np.testing.assert_allclose(mlx_batch.numpy(), torch_batch.numpy(), rtol=1e-5)
 
     def test_collate_nested_parity(self):
         """Compare nested structure collation with PyTorch."""
@@ -233,28 +216,26 @@ class TestCollateParity(TestCase):
 
         # MLX nested
         mlx_samples = [
-            {'inputs': (flashlight.tensor([1.0]), flashlight.tensor([2.0]))},
-            {'inputs': (flashlight.tensor([3.0]), flashlight.tensor([4.0]))},
+            {"inputs": (flashlight.tensor([1.0]), flashlight.tensor([2.0]))},
+            {"inputs": (flashlight.tensor([3.0]), flashlight.tensor([4.0]))},
         ]
         mlx_batch = default_collate(mlx_samples)
 
         # PyTorch nested
         torch_samples = [
-            {'inputs': (torch.tensor([1.0]), torch.tensor([2.0]))},
-            {'inputs': (torch.tensor([3.0]), torch.tensor([4.0]))},
+            {"inputs": (torch.tensor([1.0]), torch.tensor([2.0]))},
+            {"inputs": (torch.tensor([3.0]), torch.tensor([4.0]))},
         ]
         torch_batch = torch_collate(torch_samples)
 
         # Check nested structure
-        self.assertIn('inputs', mlx_batch)
-        self.assertIsInstance(mlx_batch['inputs'], tuple)
-        self.assertEqual(len(mlx_batch['inputs']), 2)
+        self.assertIn("inputs", mlx_batch)
+        self.assertIsInstance(mlx_batch["inputs"], tuple)
+        self.assertEqual(len(mlx_batch["inputs"]), 2)
 
         for i in range(2):
             np.testing.assert_allclose(
-                mlx_batch['inputs'][i].numpy(),
-                torch_batch['inputs'][i].numpy(),
-                rtol=1e-5
+                mlx_batch["inputs"][i].numpy(), torch_batch["inputs"][i].numpy(), rtol=1e-5
             )
 
 
@@ -288,21 +269,14 @@ class TestDatasetParity(TestCase):
             mlx_sample = dataset_mlx[i]
             torch_sample = dataset_torch[i]
 
-            np.testing.assert_allclose(
-                mlx_sample[0].numpy(),
-                torch_sample[0].numpy(),
-                rtol=1e-5
-            )
-            np.testing.assert_array_equal(
-                mlx_sample[1].numpy(),
-                torch_sample[1].numpy()
-            )
+            np.testing.assert_allclose(mlx_sample[0].numpy(), torch_sample[0].numpy(), rtol=1e-5)
+            np.testing.assert_array_equal(mlx_sample[1].numpy(), torch_sample[1].numpy())
 
     def test_concat_dataset_parity(self):
         """Compare ConcatDataset with PyTorch."""
         import torch
-        from torch.utils.data import TensorDataset as TorchTensorDataset
         from torch.utils.data import ConcatDataset as TorchConcatDataset
+        from torch.utils.data import TensorDataset as TorchTensorDataset
 
         np_x1 = np.random.randn(30, 5).astype(np.float32)
         np_x2 = np.random.randn(20, 5).astype(np.float32)
@@ -324,17 +298,13 @@ class TestDatasetParity(TestCase):
             mlx_sample = concat_mlx[i]
             torch_sample = concat_torch[i]
 
-            np.testing.assert_allclose(
-                mlx_sample[0].numpy(),
-                torch_sample[0].numpy(),
-                rtol=1e-5
-            )
+            np.testing.assert_allclose(mlx_sample[0].numpy(), torch_sample[0].numpy(), rtol=1e-5)
 
     def test_subset_parity(self):
         """Compare Subset with PyTorch."""
         import torch
-        from torch.utils.data import TensorDataset as TorchTensorDataset
         from torch.utils.data import Subset as TorchSubset
+        from torch.utils.data import TensorDataset as TorchTensorDataset
 
         np_x = np.random.randn(100, 10).astype(np.float32)
         indices = [5, 15, 25, 35, 45]
@@ -353,13 +323,10 @@ class TestDatasetParity(TestCase):
             mlx_sample = subset_mlx[i]
             torch_sample = subset_torch[i]
 
-            np.testing.assert_allclose(
-                mlx_sample[0].numpy(),
-                torch_sample[0].numpy(),
-                rtol=1e-5
-            )
+            np.testing.assert_allclose(mlx_sample[0].numpy(), torch_sample[0].numpy(), rtol=1e-5)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from tests.common_utils import run_tests
+
     run_tests()

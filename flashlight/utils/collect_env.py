@@ -12,7 +12,6 @@ import sys
 from collections import namedtuple
 from typing import Optional, Tuple
 
-
 # Named tuple for environment info
 SystemEnv = namedtuple(
     "SystemEnv",
@@ -150,6 +149,7 @@ def get_metal_available() -> bool:
     """Check if Metal is available."""
     try:
         import mlx.core as mx
+
         return mx.metal.is_available()
     except Exception:
         return False
@@ -159,6 +159,7 @@ def get_mlx_version() -> str:
     """Get MLX version."""
     try:
         import mlx
+
         return mlx.__version__
     except Exception:
         return "Not installed"
@@ -168,6 +169,7 @@ def get_flashlight_version() -> str:
     """Get flashlight version."""
     try:
         import flashlight
+
         return getattr(flashlight, "__version__", "Unknown")
     except Exception:
         return "Not installed"
@@ -177,6 +179,7 @@ def get_numpy_version() -> str:
     """Get NumPy version."""
     try:
         import numpy
+
         return numpy.__version__
     except Exception:
         return "Not installed"

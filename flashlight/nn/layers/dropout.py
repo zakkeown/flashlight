@@ -5,8 +5,9 @@ Implements dropout regularization.
 """
 
 import mlx.core as mx
-from ..module import Module
+
 from ...tensor import Tensor
+from ..module import Module
 
 
 class Dropout(Module):
@@ -58,6 +59,7 @@ class Dropout(Module):
 
         # Preserve gradient tracking
         from ...autograd.context import is_grad_enabled
+
         if is_grad_enabled() and input.requires_grad:
             result.requires_grad = True
             # Note: Dropout gradient is the same mask scaled by 1/(1-p)
@@ -66,7 +68,7 @@ class Dropout(Module):
         return result
 
     def extra_repr(self) -> str:
-        return f'p={self.p}'
+        return f"p={self.p}"
 
 
 class Dropout1d(Module):
@@ -110,13 +112,14 @@ class Dropout1d(Module):
         result = Tensor._from_mlx_array(output_array)
 
         from ...autograd.context import is_grad_enabled
+
         if is_grad_enabled() and input.requires_grad:
             result.requires_grad = True
 
         return result
 
     def extra_repr(self) -> str:
-        return f'p={self.p}'
+        return f"p={self.p}"
 
 
 class Dropout2d(Module):
@@ -159,13 +162,14 @@ class Dropout2d(Module):
         result = Tensor._from_mlx_array(output_array)
 
         from ...autograd.context import is_grad_enabled
+
         if is_grad_enabled() and input.requires_grad:
             result.requires_grad = True
 
         return result
 
     def extra_repr(self) -> str:
-        return f'p={self.p}'
+        return f"p={self.p}"
 
 
 class Dropout3d(Module):
@@ -208,13 +212,14 @@ class Dropout3d(Module):
         result = Tensor._from_mlx_array(output_array)
 
         from ...autograd.context import is_grad_enabled
+
         if is_grad_enabled() and input.requires_grad:
             result.requires_grad = True
 
         return result
 
     def extra_repr(self) -> str:
-        return f'p={self.p}'
+        return f"p={self.p}"
 
 
 class AlphaDropout(Module):
@@ -252,7 +257,7 @@ class AlphaDropout(Module):
         keep_prob = 1 - self.p
 
         # Compute affine transformation parameters
-        a = ((1 - self.p) * (1 + self.p * alpha_p ** 2)) ** -0.5
+        a = ((1 - self.p) * (1 + self.p * alpha_p**2)) ** -0.5
         b = -a * alpha_p * self.p
 
         # Create mask
@@ -266,13 +271,14 @@ class AlphaDropout(Module):
         result = Tensor._from_mlx_array(output_array)
 
         from ...autograd.context import is_grad_enabled
+
         if is_grad_enabled() and input.requires_grad:
             result.requires_grad = True
 
         return result
 
     def extra_repr(self) -> str:
-        return f'p={self.p}'
+        return f"p={self.p}"
 
 
 class FeatureAlphaDropout(Module):
@@ -313,7 +319,7 @@ class FeatureAlphaDropout(Module):
 
         keep_prob = 1 - self.p
 
-        a = ((1 - self.p) * (1 + self.p * alpha_p ** 2)) ** -0.5
+        a = ((1 - self.p) * (1 + self.p * alpha_p**2)) ** -0.5
         b = -a * alpha_p * self.p
 
         mask = mx.random.bernoulli(keep_prob, mask_shape)
@@ -326,13 +332,14 @@ class FeatureAlphaDropout(Module):
         result = Tensor._from_mlx_array(output_array)
 
         from ...autograd.context import is_grad_enabled
+
         if is_grad_enabled() and input.requires_grad:
             result.requires_grad = True
 
         return result
 
     def extra_repr(self) -> str:
-        return f'p={self.p}'
+        return f"p={self.p}"
 
 
-__all__ = ['Dropout', 'Dropout1d', 'Dropout2d', 'Dropout3d', 'AlphaDropout', 'FeatureAlphaDropout']
+__all__ = ["Dropout", "Dropout1d", "Dropout2d", "Dropout3d", "AlphaDropout", "FeatureAlphaDropout"]

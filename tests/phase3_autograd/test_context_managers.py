@@ -8,9 +8,11 @@ Tests gradient context managers:
 """
 
 import sys
-sys.path.insert(0, '../..')
+
+sys.path.insert(0, "../..")
 
 import unittest
+
 import numpy as np
 
 from tests.common_utils import TestCase, skipIfNoMLX
@@ -18,6 +20,7 @@ from tests.common_utils import TestCase, skipIfNoMLX
 try:
     import flashlight
     from flashlight.autograd.context import is_grad_enabled
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -49,6 +52,7 @@ class TestNoGrad(TestCase):
 
     def test_no_grad_decorator(self):
         """Test no_grad as decorator."""
+
         @flashlight.no_grad()
         def func(x):
             return x * 2
@@ -87,6 +91,7 @@ class TestEnableGrad(TestCase):
 
     def test_enable_grad_decorator(self):
         """Test enable_grad as decorator."""
+
         @flashlight.enable_grad()
         def func(x):
             return x * 2
@@ -152,6 +157,7 @@ class TestIsGradEnabled(TestCase):
         self.assertTrue(is_grad_enabled())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from tests.common_utils import run_tests
+
     run_tests()

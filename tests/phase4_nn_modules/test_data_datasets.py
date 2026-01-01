@@ -5,9 +5,11 @@ Tests for ChainDataset, StackDataset, and random_split.
 """
 
 import sys
-sys.path.insert(0, '../..')
+
+sys.path.insert(0, "../..")
 
 import unittest
+
 import numpy as np
 import pytest
 
@@ -16,10 +18,16 @@ from tests.common_utils import TestCase, skipIfNoMLX, skipIfNoTorch
 try:
     import flashlight
     from flashlight.data import (
-        Dataset, IterableDataset, TensorDataset,
-        ConcatDataset, ChainDataset, Subset, StackDataset,
-        random_split
+        ChainDataset,
+        ConcatDataset,
+        Dataset,
+        IterableDataset,
+        StackDataset,
+        Subset,
+        TensorDataset,
+        random_split,
     )
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -104,8 +112,8 @@ class TestStackDataset(TestCase):
         sample = stacked[0]
 
         self.assertIsInstance(sample, dict)
-        self.assertIn('images', sample)
-        self.assertIn('labels', sample)
+        self.assertIn("images", sample)
+        self.assertIn("labels", sample)
 
     def test_keyword_keys(self):
         """Verify keyword argument names become keys."""
@@ -117,7 +125,7 @@ class TestStackDataset(TestCase):
         stacked = StackDataset(features=ds_x, targets=ds_y)
         sample = stacked[0]
 
-        self.assertEqual(set(sample.keys()), {'features', 'targets'})
+        self.assertEqual(set(sample.keys()), {"features", "targets"})
 
     def test_positional_keys(self):
         """Verify positional args get string index keys."""
@@ -129,7 +137,7 @@ class TestStackDataset(TestCase):
         stacked = StackDataset(ds_x, ds_y)
         sample = stacked[0]
 
-        self.assertEqual(set(sample.keys()), {'0', '1'})
+        self.assertEqual(set(sample.keys()), {"0", "1"})
 
     def test_length_mismatch_error(self):
         """Verify error on mismatched lengths."""
@@ -292,6 +300,7 @@ class TestDatasetParity(TestCase):
         self.assertEqual(torch_train_vals | torch_val_vals, set(range(100)))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from tests.common_utils import run_tests
+
     run_tests()

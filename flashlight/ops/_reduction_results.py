@@ -5,8 +5,9 @@ These classes defer computation of indices until they're actually accessed,
 avoiding the overhead of computing argmax/argmin when only values are needed.
 """
 
-import mlx.core as mx
 from typing import TYPE_CHECKING
+
+import mlx.core as mx
 
 if TYPE_CHECKING:
     from ..tensor import Tensor
@@ -27,7 +28,7 @@ class MaxResult:
         >>> values, indices = max(tensor, dim=1)
     """
 
-    def __init__(self, input_tensor: 'Tensor', dim: int, keepdim: bool):
+    def __init__(self, input_tensor: "Tensor", dim: int, keepdim: bool):
         # Store the input Tensor (not just MLX array) for gradient tracking
         self._input_tensor = input_tensor
         self._input = input_tensor._mlx_array
@@ -37,11 +38,11 @@ class MaxResult:
         self._indices = None
 
     @property
-    def values(self) -> 'Tensor':
+    def values(self) -> "Tensor":
         if self._values is None:
-            from ..tensor import Tensor
-            from ..autograd.function import MaxBackward
             from ..autograd.context import is_grad_enabled
+            from ..autograd.function import MaxBackward
+            from ..tensor import Tensor
 
             mlx_result = mx.max(self._input, axis=self._dim, keepdims=self._keepdim)
             self._values = Tensor._from_mlx_array(mlx_result)
@@ -56,9 +57,10 @@ class MaxResult:
         return self._values
 
     @property
-    def indices(self) -> 'Tensor':
+    def indices(self) -> "Tensor":
         if self._indices is None:
             from ..tensor import Tensor
+
             self._indices = Tensor._from_mlx_array(
                 mx.argmax(self._input, axis=self._dim, keepdims=self._keepdim)
             )
@@ -99,18 +101,20 @@ class MinResult:
         self._indices = None
 
     @property
-    def values(self) -> 'Tensor':
+    def values(self) -> "Tensor":
         if self._values is None:
             from ..tensor import Tensor
+
             self._values = Tensor._from_mlx_array(
                 mx.min(self._input, axis=self._dim, keepdims=self._keepdim)
             )
         return self._values
 
     @property
-    def indices(self) -> 'Tensor':
+    def indices(self) -> "Tensor":
         if self._indices is None:
             from ..tensor import Tensor
+
             self._indices = Tensor._from_mlx_array(
                 mx.argmin(self._input, axis=self._dim, keepdims=self._keepdim)
             )
@@ -128,4 +132,4 @@ class MinResult:
         return f"MinResult(values={self.values}, indices={self.indices})"
 
 
-__all__ = ['MaxResult', 'MinResult']
+__all__ = ["MaxResult", "MinResult"]

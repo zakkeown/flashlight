@@ -27,21 +27,20 @@ Example:
 """
 
 # Import submodules
-from . import data
-from . import hooks
-from . import benchmark
-from . import model_zoo
-from . import collect_env
-from . import weak
-from . import mobile_optimizer
-from .checkpoint import checkpoint, checkpoint_sequential, CheckpointFunction
+from . import benchmark, collect_env, data, hooks, mobile_optimizer, model_zoo, weak
+from .checkpoint import CheckpointFunction, checkpoint, checkpoint_sequential
+from .collect_env import get_env_info, get_pretty_env_info
 
 # Re-export commonly used items
-from .hooks import RemovableHandle, BackwardHook, unserializable_hook, warn_if_has_hooks
-from .model_zoo import load_url, get_dir, set_dir
-from .collect_env import get_env_info, get_pretty_env_info
-from .weak import WeakRef, TensorWeakRef, WeakIdRef, WeakIdKeyDictionary, WeakTensorKeyDictionary
-from .mobile_optimizer import optimize_for_mobile, generate_mobile_module_lints, MobileOptimizerType, LintCode
+from .hooks import BackwardHook, RemovableHandle, unserializable_hook, warn_if_has_hooks
+from .mobile_optimizer import (
+    LintCode,
+    MobileOptimizerType,
+    generate_mobile_module_lints,
+    optimize_for_mobile,
+)
+from .model_zoo import get_dir, load_url, set_dir
+from .weak import TensorWeakRef, WeakIdKeyDictionary, WeakIdRef, WeakRef, WeakTensorKeyDictionary
 
 # Optional tensorboard import
 try:

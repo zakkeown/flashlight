@@ -9,17 +9,16 @@ Gradient checkpointing trades compute for memory by not storing intermediate
 activations during the forward pass, then recomputing them during backward.
 """
 
-from typing import Callable, Any, Tuple, Optional, List, Union, ContextManager
 import contextlib
 import warnings
 import weakref
+from typing import Any, Callable, ContextManager, List, Optional, Tuple, Union
 
 import mlx.core as mx
 
-from ..autograd.function import Function, SavedTensorsContext, GradientFunction
-from ..autograd.context import no_grad, set_grad_enabled, is_grad_enabled
+from ..autograd.context import is_grad_enabled, no_grad, set_grad_enabled
+from ..autograd.function import Function, GradientFunction, SavedTensorsContext
 from ..random import get_rng_state, set_rng_state
-
 
 __all__ = [
     "checkpoint",
@@ -145,7 +144,9 @@ class CheckpointFunctionBackward(GradientFunction):
                 try:
                     # Compute VJP (vector-Jacobian product)
                     _, vjp_fn = mx.vjp(compute_output, [inp._mlx_array])
-                    cotangent = grad_output._mlx_array if isinstance(grad_output, Tensor) else grad_output
+                    cotangent = (
+                        grad_output._mlx_array if isinstance(grad_output, Tensor) else grad_output
+                    )
                     grad_inp = vjp_fn([cotangent])[0]
                     grads.append(Tensor._from_mlx_array(grad_inp))
                 except Exception:
@@ -263,7 +264,7 @@ class CheckpointFunction(Function):
             if isinstance(inp, Tensor) and inp.requires_grad:
                 # Find corresponding detached input
                 detached_inp = detached_inputs[i]
-                if hasattr(detached_inp, 'grad') and detached_inp.grad is not None:
+                if hasattr(detached_inp, "grad") and detached_inp.grad is not None:
                     grads.append(detached_inp.grad)
                 else:
                     # Gradient not computed, return None
@@ -402,6 +403,7 @@ def _checkpoint_without_reentrant(
     # Create the frame to track this checkpoint
     def make_recompute_fn():
         """Create a closure that can recompute the forward pass."""
+
         def recompute():
             # Restore RNG state
             if preserve_rng_state and rng_state is not None:
@@ -420,6 +422,7 @@ def _checkpoint_without_reentrant(
             # Run the function
             with set_grad_enabled(True), recompute_context:
                 return function(*detached)
+
         return recompute
 
     frame = _CheckpointFrame(
@@ -497,7 +500,9 @@ def _checkpoint_without_reentrant(
 
             # Verify determinism if enabled
             if self.frame.determinism_check != "none":
-                original_outputs = self.outputs if isinstance(self.outputs, tuple) else (self.outputs,)
+                original_outputs = (
+                    self.outputs if isinstance(self.outputs, tuple) else (self.outputs,)
+                )
                 for i, (orig, recomp) in enumerate(zip(original_outputs, recomputed_outputs)):
                     if isinstance(orig, Tensor) and isinstance(recomp, Tensor):
                         orig_meta = _default_metadata_fn(orig)
@@ -513,6 +518,7 @@ def _checkpoint_without_reentrant(
             grads = []
             for i, inp in enumerate(self.saved_inputs):
                 if isinstance(inp, Tensor) and inp.requires_grad:
+
                     def compute_output(x, idx=i):
                         new_inputs = []
                         for j, di in enumerate(detached_inputs):
@@ -527,7 +533,11 @@ def _checkpoint_without_reentrant(
 
                     try:
                         _, vjp_fn = mx.vjp(compute_output, [inp._mlx_array])
-                        cotangent = grad_output._mlx_array if isinstance(grad_output, Tensor) else grad_output
+                        cotangent = (
+                            grad_output._mlx_array
+                            if isinstance(grad_output, Tensor)
+                            else grad_output
+                        )
                         grad_inp = vjp_fn([cotangent])[0]
                         grads.append(Tensor._from_mlx_array(grad_inp))
                     except Exception:
@@ -631,9 +641,7 @@ def checkpoint(
     # Validate parameters
     if use_reentrant:
         if context_fn is not noop_context_fn:
-            raise ValueError(
-                "Passing context_fn is only supported when use_reentrant=False."
-            )
+            raise ValueError("Passing context_fn is only supported when use_reentrant=False.")
         if determinism_check != _DEFAULT_DETERMINISM_MODE:
             raise ValueError(
                 "Passing determinism_check is only supported when use_reentrant=False."
@@ -653,9 +661,7 @@ def checkpoint(
         )
 
     # Check if any input requires grad
-    any_requires_grad = any(
-        isinstance(arg, Tensor) and arg.requires_grad for arg in args
-    )
+    any_requires_grad = any(isinstance(arg, Tensor) and arg.requires_grad for arg in args)
 
     if not any_requires_grad:
         # No gradients needed, just run the function normally
@@ -711,20 +717,19 @@ def checkpoint_sequential(
         >>> # Segment 2 (checkpointed): layers[4:8]
     """
     # Handle Sequential modules
-    if hasattr(functions, '__iter__') and not isinstance(functions, (list, tuple)):
+    if hasattr(functions, "__iter__") and not isinstance(functions, (list, tuple)):
         # Convert to list (e.g., from nn.Sequential)
         functions = list(functions)
 
     if not isinstance(functions, (list, tuple)):
-        raise TypeError(
-            f"functions must be a list or Sequential, got {type(functions)}"
-        )
+        raise TypeError(f"functions must be a list or Sequential, got {type(functions)}")
 
     if segments <= 0:
         raise ValueError(f"segments must be positive, got {segments}")
 
     def get_segment_function(start_idx: int, end_idx: int) -> Callable:
         """Create a function that runs a segment of layers."""
+
         def segment_forward(x):
             for i in range(start_idx, end_idx):
                 x = functions[i](x)
@@ -771,7 +776,6 @@ def check_backward_validity(inputs: tuple) -> None:
     has_grad = any(isinstance(inp, Tensor) and inp.requires_grad for inp in inputs)
     if not has_grad:
         warnings.warn(
-            "None of the inputs have requires_grad=True. "
-            "Checkpointing will have no effect.",
+            "None of the inputs have requires_grad=True. " "Checkpointing will have no effect.",
             UserWarning,
         )

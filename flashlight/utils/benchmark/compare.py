@@ -8,7 +8,7 @@ import collections
 import enum
 from typing import List, Optional
 
-from .common import Measurement, select_unit, ordered_unique, trim_sigfig
+from .common import Measurement, ordered_unique, select_unit, trim_sigfig
 
 __all__ = ["Compare", "Colorize"]
 
@@ -188,9 +188,7 @@ class Compare:
         num_cols = len(header)
         col_widths = []
         for i in range(num_cols):
-            width = max(
-                len(self._strip_ansi(str(row[i]))) for row in all_rows if i < len(row)
-            )
+            width = max(len(self._strip_ansi(str(row[i]))) for row in all_rows if i < len(row))
             col_widths.append(width)
 
         # Format output
@@ -201,9 +199,7 @@ class Compare:
         lines.append(f"[{label}]")
 
         # Column header
-        header_line = "  |  ".join(
-            h.center(w) for h, w in zip(header, col_widths)
-        )
+        header_line = "  |  ".join(h.center(w) for h, w in zip(header, col_widths))
         lines.append(header_line)
         lines.append("-" * len(header_line))
 
@@ -246,9 +242,7 @@ class Compare:
                 max_val = max(valid_values)
                 for j in range(1, len(row)):  # Skip row label
                     if values[j - 1] is not None:
-                        row[j] = self._colorize_value(
-                            row[j], values[j - 1], min_val, max_val
-                        )
+                        row[j] = self._colorize_value(row[j], values[j - 1], min_val, max_val)
 
         elif self._colorize == Colorize.COLUMNWISE:
             # Color within each column
@@ -267,9 +261,7 @@ class Compare:
 
         return data_rows
 
-    def _colorize_value(
-        self, text: str, value: float, min_val: float, max_val: float
-    ) -> str:
+    def _colorize_value(self, text: str, value: float, min_val: float, max_val: float) -> str:
         """Apply color to a single value based on its position in range."""
         if min_val == max_val:
             return text

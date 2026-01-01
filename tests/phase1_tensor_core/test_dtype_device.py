@@ -5,15 +5,18 @@ Tests dtype system and device management.
 """
 
 import sys
-sys.path.insert(0, '../..')
+
+sys.path.insert(0, "../..")
 
 import unittest
+
 import numpy as np
 
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
     import flashlight
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -88,7 +91,7 @@ class TestDtype(TestCase):
     def test_float64_warning(self):
         """Test that float64 issues a warning."""
         with self.assertWarns(UserWarning):
-            t = flashlight.tensor([1, 2, 3], dtype='float64')
+            t = flashlight.tensor([1, 2, 3], dtype="float64")
         # Should fall back to float32
         self.assertEqual(t.dtype, flashlight.float32)
 
@@ -99,18 +102,18 @@ class TestDevice(TestCase):
 
     def test_device_creation(self):
         """Test Device creation."""
-        dev = flashlight.Device('cpu')
-        self.assertEqual(dev.type, 'cpu')
+        dev = flashlight.Device("cpu")
+        self.assertEqual(dev.type, "cpu")
 
     def test_device_cuda(self):
         """Test CUDA device (warns about unified memory)."""
-        dev = flashlight.Device('cuda')
-        self.assertEqual(dev.type, 'cuda')
+        dev = flashlight.Device("cuda")
+        self.assertEqual(dev.type, "cuda")
 
     def test_device_with_index(self):
         """Test device with index."""
-        dev = flashlight.Device('cuda:0')
-        self.assertEqual(dev.type, 'cuda')
+        dev = flashlight.Device("cuda:0")
+        self.assertEqual(dev.type, "cuda")
         self.assertEqual(dev.index, 0)
 
     def test_tensor_device(self):
@@ -121,20 +124,20 @@ class TestDevice(TestCase):
     def test_to_device(self):
         """Test .to() with device."""
         t = flashlight.tensor([1, 2, 3])
-        t_cuda = t.to(device='cuda')
-        self.assertEqual(t_cuda.device.type, 'cuda')
+        t_cuda = t.to(device="cuda")
+        self.assertEqual(t_cuda.device.type, "cuda")
 
     def test_cuda_method(self):
         """Test .cuda() method."""
         t = flashlight.tensor([1, 2, 3])
         t_cuda = t.cuda()
-        self.assertEqual(t_cuda.device.type, 'cuda')
+        self.assertEqual(t_cuda.device.type, "cuda")
 
     def test_cpu_method(self):
         """Test .cpu() method."""
         t = flashlight.tensor([1, 2, 3])
         t_cpu = t.cpu()
-        self.assertEqual(t_cpu.device.type, 'cpu')
+        self.assertEqual(t_cpu.device.type, "cpu")
 
     def test_device_count(self):
         """Test device_count() function."""
@@ -186,7 +189,7 @@ class TestDtypeFunctions(TestCase):
 
     def test_dtype_string_conversion(self):
         """Test dtype from string."""
-        t = flashlight.tensor([1.0], dtype='float32')
+        t = flashlight.tensor([1.0], dtype="float32")
         self.assertEqual(t.dtype, flashlight.float32)
 
 
@@ -316,6 +319,7 @@ class TestIndexing(TestCase):
         self.assertTrue(view.is_view)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from tests.common_utils import run_tests
+
     run_tests()

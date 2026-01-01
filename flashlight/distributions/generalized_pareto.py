@@ -1,17 +1,22 @@
 """Generalized Pareto Distribution"""
 
 from typing import Optional, Tuple, Union
+
 import mlx.core as mx
 
 from ..tensor import Tensor
-from .distribution import Distribution
 from . import constraints
+from .distribution import Distribution
 
 
 class GeneralizedPareto(Distribution):
     """Generalized Pareto distribution."""
 
-    arg_constraints = {'loc': constraints.real, 'scale': constraints.positive, 'concentration': constraints.real}
+    arg_constraints = {
+        "loc": constraints.real,
+        "scale": constraints.positive,
+        "concentration": constraints.real,
+    }
     has_rsample = True
 
     def __init__(
@@ -23,8 +28,14 @@ class GeneralizedPareto(Distribution):
     ):
         self.loc = loc._mlx_array if isinstance(loc, Tensor) else mx.array(loc)
         self.scale = scale._mlx_array if isinstance(scale, Tensor) else mx.array(scale)
-        self.concentration = concentration._mlx_array if isinstance(concentration, Tensor) else mx.array(concentration)
-        batch_shape = mx.broadcast_shapes(self.loc.shape, mx.broadcast_shapes(self.scale.shape, self.concentration.shape))
+        self.concentration = (
+            concentration._mlx_array
+            if isinstance(concentration, Tensor)
+            else mx.array(concentration)
+        )
+        batch_shape = mx.broadcast_shapes(
+            self.loc.shape, mx.broadcast_shapes(self.scale.shape, self.concentration.shape)
+        )
         super().__init__(batch_shape, validate_args=validate_args)
 
     @property
@@ -34,12 +45,16 @@ class GeneralizedPareto(Distribution):
     @property
     def mean(self) -> Tensor:
         xi = self.concentration
-        return Tensor(mx.where(xi < 1, self.loc + self.scale / (1 - xi), mx.array(float('inf'))))
+        return Tensor(mx.where(xi < 1, self.loc + self.scale / (1 - xi), mx.array(float("inf"))))
 
     @property
     def variance(self) -> Tensor:
         xi = self.concentration
-        return Tensor(mx.where(xi < 0.5, self.scale ** 2 / ((1 - xi) ** 2 * (1 - 2 * xi)), mx.array(float('inf'))))
+        return Tensor(
+            mx.where(
+                xi < 0.5, self.scale**2 / ((1 - xi) ** 2 * (1 - 2 * xi)), mx.array(float("inf"))
+            )
+        )
 
     def sample(self, sample_shape: Tuple[int, ...] = ()) -> Tensor:
         shape = sample_shape + self._batch_shape
@@ -55,14 +70,14 @@ class GeneralizedPareto(Distribution):
         data = value._mlx_array if isinstance(value, Tensor) else value
         xi = self.concentration
         z = (data - self.loc) / self.scale
-        log_prob = -mx.log(self.scale) - (1 + 1/xi) * mx.log(1 + xi * z)
+        log_prob = -mx.log(self.scale) - (1 + 1 / xi) * mx.log(1 + xi * z)
         return Tensor(log_prob)
 
     def cdf(self, value: Tensor) -> Tensor:
         data = value._mlx_array if isinstance(value, Tensor) else value
         xi = self.concentration
         z = (data - self.loc) / self.scale
-        return Tensor(1 - mx.power(1 + xi * z, -1/xi))
+        return Tensor(1 - mx.power(1 + xi * z, -1 / xi))
 
 
-__all__ = ['GeneralizedPareto']
+__all__ = ["GeneralizedPareto"]

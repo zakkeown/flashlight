@@ -15,8 +15,8 @@ Example:
     >>> writer.close()
 """
 
-from typing import Optional, Union, Any, Dict
 import warnings
+from typing import Any, Dict, Optional, Union
 
 __all__ = ["SummaryWriter"]
 
@@ -31,11 +31,12 @@ try:
     _TENSORBOARD_AVAILABLE = True
 except ImportError:
     try:
-        from tensorboard.summary.writer.writer import FileWriter as _FileWriter
+        import os as _os
+        import time as _time
+
         from tensorboard.compat.proto import summary_pb2
         from tensorboard.compat.proto.event_pb2 import Event
-        import time as _time
-        import os as _os
+        from tensorboard.summary.writer.writer import FileWriter as _FileWriter
 
         _TENSORBOARD_AVAILABLE = True
     except ImportError:
@@ -392,9 +393,7 @@ class SummaryWriter:
         mat = _to_numpy(mat)
 
         if self._mode == "torch":
-            self._writer.add_embedding(
-                mat, metadata, label_img, global_step, tag, metadata_header
-            )
+            self._writer.add_embedding(mat, metadata, label_img, global_step, tag, metadata_header)
         else:
             warnings.warn(
                 "Embedding logging requires torch tensorboard integration.",

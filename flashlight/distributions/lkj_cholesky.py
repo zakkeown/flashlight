@@ -1,19 +1,20 @@
 """LKJ Cholesky Distribution"""
 
 from typing import Optional, Tuple, Union
+
 import mlx.core as mx
 
-from ..tensor import Tensor
-from .distribution import Distribution
-from . import constraints
 from ..ops.special import betaln
+from ..tensor import Tensor
+from . import constraints
 from ._constants import PROB_EPSILON
+from .distribution import Distribution
 
 
 class LKJCholesky(Distribution):
     """LKJ distribution for Cholesky factors of correlation matrices."""
 
-    arg_constraints = {'dim': constraints.positive_integer, 'concentration': constraints.positive}
+    arg_constraints = {"dim": constraints.positive_integer, "concentration": constraints.positive}
     support = constraints.corr_cholesky
 
     def __init__(
@@ -23,7 +24,11 @@ class LKJCholesky(Distribution):
         validate_args: Optional[bool] = None,
     ):
         self.dim = dim
-        self.concentration = concentration._mlx_array if isinstance(concentration, Tensor) else mx.array(concentration)
+        self.concentration = (
+            concentration._mlx_array
+            if isinstance(concentration, Tensor)
+            else mx.array(concentration)
+        )
         batch_shape = self.concentration.shape
         event_shape = (dim, dim)
         super().__init__(batch_shape, event_shape, validate_args=validate_args)
@@ -71,4 +76,4 @@ class LKJCholesky(Distribution):
         return Tensor(log_prob - log_norm)
 
 
-__all__ = ['LKJCholesky']
+__all__ = ["LKJCholesky"]

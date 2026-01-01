@@ -5,15 +5,18 @@ Tests arithmetic operations (add, sub, mul, div, matmul, etc.)
 """
 
 import sys
-sys.path.insert(0, '../..')
+
+sys.path.insert(0, "../..")
 
 import unittest
+
 import numpy as np
 
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
     import flashlight
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -133,14 +136,14 @@ class TestDiv(TestCase):
         """Test division with truncation rounding."""
         a = flashlight.tensor([7.0, -7.0, 8.0])
         b = flashlight.tensor([3.0, 3.0, 3.0])
-        c = flashlight.div(a, b, rounding_mode='trunc')
+        c = flashlight.div(a, b, rounding_mode="trunc")
         np.testing.assert_array_equal(c.numpy(), np.array([2.0, -2.0, 2.0]))
 
     def test_div_rounding_floor(self):
         """Test division with floor rounding."""
         a = flashlight.tensor([7.0, -7.0, 8.0])
         b = flashlight.tensor([3.0, 3.0, 3.0])
-        c = flashlight.div(a, b, rounding_mode='floor')
+        c = flashlight.div(a, b, rounding_mode="floor")
         np.testing.assert_array_equal(c.numpy(), np.array([2.0, -3.0, 2.0]))
 
 
@@ -273,6 +276,7 @@ class TestElementwiseUnary(TestCase):
         np.testing.assert_array_equal(c.numpy(), np.array([-1.0, 2.0, -3.0]))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from tests.common_utils import run_tests
+
     run_tests()

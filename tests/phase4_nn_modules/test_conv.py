@@ -8,9 +8,11 @@ Tests the nn.layers.conv module:
 """
 
 import sys
-sys.path.insert(0, '../..')
+
+sys.path.insert(0, "../..")
 
 import unittest
+
 import numpy as np
 import pytest
 
@@ -18,12 +20,14 @@ from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
     import flashlight
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
 
 try:
     import torch
+
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
@@ -89,9 +93,7 @@ class TestConv1d(TestCase):
         out_mlx = conv_mlx(flashlight.tensor(x_np))
 
         np.testing.assert_allclose(
-            out_torch.detach().numpy(),
-            out_mlx.numpy(),
-            rtol=1e-4, atol=1e-5
+            out_torch.detach().numpy(), out_mlx.numpy(), rtol=1e-4, atol=1e-5
         )
 
 
@@ -209,5 +211,5 @@ class TestConvTranspose3d(TestCase):
         self.assertEqual(output.shape[:2], (2, 3))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

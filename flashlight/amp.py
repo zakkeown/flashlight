@@ -8,9 +8,9 @@ Note: MLX handles dtype management differently. These utilities are provided
 for API compatibility but may have simplified behavior.
 """
 
+import warnings
 from contextlib import contextmanager
 from typing import Any, Dict, Optional, Sequence, Union
-import warnings
 
 import mlx.core as mx
 
@@ -70,9 +70,11 @@ class autocast:
 
     def __call__(self, func):
         """Decorator usage."""
+
         def wrapper(*args, **kwargs):
             with self:
                 return func(*args, **kwargs)
+
         return wrapper
 
 
@@ -255,21 +257,23 @@ def custom_bwd(bwd=None, device_type: str = "cuda"):
 # Submodule compatibility
 class autocast_mode:
     """Compatibility module for torch.amp.autocast_mode."""
+
     autocast = autocast
     is_autocast_available = staticmethod(is_autocast_available)
 
 
 class grad_scaler:
     """Compatibility module for torch.amp.grad_scaler."""
+
     GradScaler = GradScaler
 
 
 __all__ = [
-    'autocast',
-    'GradScaler',
-    'is_autocast_available',
-    'custom_fwd',
-    'custom_bwd',
-    'autocast_mode',
-    'grad_scaler',
+    "autocast",
+    "GradScaler",
+    "is_autocast_available",
+    "custom_fwd",
+    "custom_bwd",
+    "autocast_mode",
+    "grad_scaler",
 ]

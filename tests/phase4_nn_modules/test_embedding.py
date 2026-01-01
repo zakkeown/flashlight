@@ -7,9 +7,11 @@ Tests the nn.layers.embedding module:
 """
 
 import sys
-sys.path.insert(0, '../..')
+
+sys.path.insert(0, "../..")
 
 import unittest
+
 import numpy as np
 import pytest
 
@@ -17,12 +19,14 @@ from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
     import flashlight
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
 
 try:
     import torch
+
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
@@ -72,9 +76,7 @@ class TestEmbedding(TestCase):
 
         # Create MLX embedding with same weights
         emb_mlx = flashlight.nn.Embedding(num_emb, emb_dim)
-        emb_mlx.weight._mlx_array = flashlight.tensor(
-            emb_torch.weight.detach().numpy()
-        )._mlx_array
+        emb_mlx.weight._mlx_array = flashlight.tensor(emb_torch.weight.detach().numpy())._mlx_array
 
         # Test
         indices = [1, 5, 10, 20, 50]
@@ -82,9 +84,7 @@ class TestEmbedding(TestCase):
         out_mlx = emb_mlx(flashlight.tensor(indices, dtype=flashlight.int32))
 
         np.testing.assert_allclose(
-            out_torch.detach().numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
+            out_torch.detach().numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6
         )
 
 
@@ -100,7 +100,7 @@ class TestEmbeddingBag(TestCase):
 
     def test_forward_with_offsets(self):
         """Test EmbeddingBag forward pass with offsets."""
-        emb = flashlight.nn.EmbeddingBag(num_embeddings=100, embedding_dim=64, mode='mean')
+        emb = flashlight.nn.EmbeddingBag(num_embeddings=100, embedding_dim=64, mode="mean")
         # Two bags: [1, 2, 3] and [4, 5]
         indices = flashlight.tensor([1, 2, 3, 4, 5], dtype=flashlight.int32)
         offsets = flashlight.tensor([0, 3], dtype=flashlight.int32)
@@ -109,7 +109,7 @@ class TestEmbeddingBag(TestCase):
 
     def test_mode_sum(self):
         """Test EmbeddingBag with mode='sum'."""
-        emb = flashlight.nn.EmbeddingBag(num_embeddings=100, embedding_dim=64, mode='sum')
+        emb = flashlight.nn.EmbeddingBag(num_embeddings=100, embedding_dim=64, mode="sum")
         indices = flashlight.tensor([1, 2, 3], dtype=flashlight.int32)
         offsets = flashlight.tensor([0], dtype=flashlight.int32)
         output = emb(indices, offsets=offsets)
@@ -117,12 +117,12 @@ class TestEmbeddingBag(TestCase):
 
     def test_mode_max(self):
         """Test EmbeddingBag with mode='max'."""
-        emb = flashlight.nn.EmbeddingBag(num_embeddings=100, embedding_dim=64, mode='max')
+        emb = flashlight.nn.EmbeddingBag(num_embeddings=100, embedding_dim=64, mode="max")
         indices = flashlight.tensor([1, 2, 3], dtype=flashlight.int32)
         offsets = flashlight.tensor([0], dtype=flashlight.int32)
         output = emb(indices, offsets=offsets)
         self.assertEqual(output.shape, (1, 64))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

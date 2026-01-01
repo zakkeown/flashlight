@@ -4,11 +4,13 @@ RMSprop Optimizer
 Implements RMSprop algorithm (Root Mean Square Propagation).
 """
 
-from typing import Iterable, Dict, Any, Union, Optional
+from typing import Any, Dict, Iterable, Optional, Union
+
 import mlx.core as mx
-from .optimizer import Optimizer
+
 from ..nn.parameter import Parameter
 from ..tensor import Tensor
+from .optimizer import Optimizer
 
 
 class RMSprop(Optimizer):
@@ -52,7 +54,7 @@ class RMSprop(Optimizer):
         capturable: bool = False,
         foreach: Optional[bool] = None,
         maximize: bool = False,
-        differentiable: bool = False
+        differentiable: bool = False,
     ):
         if lr < 0.0:
             raise ValueError(f"Invalid learning rate: {lr}")
@@ -75,7 +77,7 @@ class RMSprop(Optimizer):
             capturable=capturable,
             foreach=foreach,
             maximize=maximize,
-            differentiable=differentiable
+            differentiable=differentiable,
         )
 
         super().__init__(params, defaults)
@@ -95,14 +97,14 @@ class RMSprop(Optimizer):
             loss = closure()
 
         for group in self.param_groups:
-            lr = group['lr']
-            alpha = group['alpha']
-            eps = group['eps']
-            weight_decay = group['weight_decay']
-            momentum = group['momentum']
-            centered = group['centered']
+            lr = group["lr"]
+            alpha = group["alpha"]
+            eps = group["eps"]
+            weight_decay = group["weight_decay"]
+            momentum = group["momentum"]
+            centered = group["centered"]
 
-            for p in group['params']:
+            for p in group["params"]:
                 if p.grad is None:
                     continue
 
@@ -110,47 +112,49 @@ class RMSprop(Optimizer):
 
                 # Apply weight decay
                 if weight_decay != 0:
-                    grad = Tensor._from_mlx_array(
-                        grad._mlx_array + weight_decay * p._mlx_array
-                    )
+                    grad = Tensor._from_mlx_array(grad._mlx_array + weight_decay * p._mlx_array)
 
                 param_state = self.state[id(p)]
 
                 # Initialize state
-                if 'step' not in param_state:
-                    param_state['step'] = 0
-                    param_state['square_avg'] = Tensor._from_mlx_array(mx.zeros_like(p._mlx_array))
+                if "step" not in param_state:
+                    param_state["step"] = 0
+                    param_state["square_avg"] = Tensor._from_mlx_array(mx.zeros_like(p._mlx_array))
                     if momentum > 0:
-                        param_state['momentum_buffer'] = Tensor._from_mlx_array(mx.zeros_like(p._mlx_array))
+                        param_state["momentum_buffer"] = Tensor._from_mlx_array(
+                            mx.zeros_like(p._mlx_array)
+                        )
                     if centered:
-                        param_state['grad_avg'] = Tensor._from_mlx_array(mx.zeros_like(p._mlx_array))
+                        param_state["grad_avg"] = Tensor._from_mlx_array(
+                            mx.zeros_like(p._mlx_array)
+                        )
 
-                square_avg = param_state['square_avg']
-                param_state['step'] += 1
+                square_avg = param_state["square_avg"]
+                param_state["step"] += 1
 
                 # Update square average
                 # v_t = alpha * v_{t-1} + (1 - alpha) * g_t^2
-                square_avg_mlx = alpha * square_avg._mlx_array + (1 - alpha) * (grad._mlx_array ** 2)
+                square_avg_mlx = alpha * square_avg._mlx_array + (1 - alpha) * (grad._mlx_array**2)
                 square_avg = Tensor._from_mlx_array(square_avg_mlx)
-                param_state['square_avg'] = square_avg
+                param_state["square_avg"] = square_avg
 
                 if centered:
-                    grad_avg = param_state['grad_avg']
+                    grad_avg = param_state["grad_avg"]
                     # g_avg_t = alpha * g_avg_{t-1} + (1 - alpha) * g_t
                     grad_avg_mlx = alpha * grad_avg._mlx_array + (1 - alpha) * grad._mlx_array
                     grad_avg = Tensor._from_mlx_array(grad_avg_mlx)
-                    param_state['grad_avg'] = grad_avg
+                    param_state["grad_avg"] = grad_avg
                     # avg = v_t - g_avg^2
-                    avg_mlx = square_avg._mlx_array - grad_avg._mlx_array ** 2
+                    avg_mlx = square_avg._mlx_array - grad_avg._mlx_array**2
                 else:
                     avg_mlx = square_avg._mlx_array
 
                 if momentum > 0:
-                    buf = param_state['momentum_buffer']
+                    buf = param_state["momentum_buffer"]
                     # buf = momentum * buf + g / sqrt(avg + eps)
                     buf_mlx = momentum * buf._mlx_array + grad._mlx_array / (mx.sqrt(avg_mlx) + eps)
                     buf = Tensor._from_mlx_array(buf_mlx)
-                    param_state['momentum_buffer'] = buf
+                    param_state["momentum_buffer"] = buf
                     # p = p - lr * buf
                     p._mlx_array = p._mlx_array - lr * buf._mlx_array
                 else:
@@ -161,9 +165,11 @@ class RMSprop(Optimizer):
 
     def __repr__(self) -> str:
         """String representation of the optimizer."""
-        return f"RMSprop (lr={self.defaults['lr']}, alpha={self.defaults['alpha']}, " \
-               f"eps={self.defaults['eps']}, weight_decay={self.defaults['weight_decay']}, " \
-               f"momentum={self.defaults['momentum']}, centered={self.defaults['centered']})"
+        return (
+            f"RMSprop (lr={self.defaults['lr']}, alpha={self.defaults['alpha']}, "
+            f"eps={self.defaults['eps']}, weight_decay={self.defaults['weight_decay']}, "
+            f"momentum={self.defaults['momentum']}, centered={self.defaults['centered']})"
+        )
 
 
-__all__ = ['RMSprop']
+__all__ = ["RMSprop"]

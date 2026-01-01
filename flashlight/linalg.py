@@ -4,11 +4,12 @@ torch.linalg namespace
 Implements PyTorch-compatible linear algebra functions with MLX backend.
 """
 
-from typing import Optional, Tuple, Union, Literal
+from typing import Literal, Optional, Tuple, Union
+
 import mlx.core as mx
 
-from .tensor import Tensor
 from .autograd.context import is_grad_enabled
+from .tensor import Tensor
 
 
 def norm(
@@ -16,7 +17,7 @@ def norm(
     ord: Optional[Union[int, float, str]] = None,
     dim: Optional[Union[int, Tuple[int, ...]]] = None,
     keepdim: bool = False,
-    dtype: Optional[str] = None
+    dtype: Optional[str] = None,
 ) -> Tensor:
     """
     Computes a vector or matrix norm.
@@ -51,28 +52,30 @@ def norm(
     if ord is None:
         # Default: Frobenius for matrices (dim=None), 2-norm otherwise
         if axis is None and mlx_array.ndim == 2:
-            ord = 'fro'
+            ord = "fro"
         else:
             ord = 2
 
-    if ord == 'fro':
+    if ord == "fro":
         # Frobenius norm: sqrt(sum of squares)
         result_array = mx.sqrt(mx.sum(mx.square(mlx_array), axis=axis, keepdims=keepdim))
-    elif ord == 'nuc':
+    elif ord == "nuc":
         # Nuclear norm is the sum of singular values: ||A||_* = sum(svd(A).S)
         # SVD requires CPU stream in MLX
         _, S, _ = mx.linalg.svd(mlx_array, stream=mx.cpu)
         result_array = mx.sum(S, axis=-1, keepdims=keepdim)
-    elif ord == float('inf'):
+    elif ord == float("inf"):
         # Max absolute value
         result_array = mx.max(mx.abs(mlx_array), axis=axis, keepdims=keepdim)
-    elif ord == float('-inf'):
+    elif ord == float("-inf"):
         # Min absolute value
         result_array = mx.min(mx.abs(mlx_array), axis=axis, keepdims=keepdim)
     elif isinstance(ord, (int, float)):
         if ord == 0:
             # Count non-zero elements
-            result_array = mx.sum(mlx_array != 0, axis=axis, keepdims=keepdim).astype(mlx_array.dtype)
+            result_array = mx.sum(mlx_array != 0, axis=axis, keepdims=keepdim).astype(
+                mlx_array.dtype
+            )
         elif ord == 1:
             result_array = mx.sum(mx.abs(mlx_array), axis=axis, keepdims=keepdim)
         elif ord == 2:
@@ -80,8 +83,7 @@ def norm(
         else:
             # General p-norm: (sum(|x|^p))^(1/p)
             result_array = mx.power(
-                mx.sum(mx.power(mx.abs(mlx_array), ord), axis=axis, keepdims=keepdim),
-                1.0 / ord
+                mx.sum(mx.power(mx.abs(mlx_array), ord), axis=axis, keepdims=keepdim), 1.0 / ord
             )
     else:
         raise ValueError(f"Invalid norm order: {ord}")
@@ -101,7 +103,7 @@ def vector_norm(
     keepdim: bool = False,
     dtype: Optional[str] = None,
     *,
-    x: Tensor = None  # Alias for input for compatibility
+    x: Tensor = None,  # Alias for input for compatibility
 ) -> Tensor:
     """
     Computes a vector norm.
@@ -131,10 +133,10 @@ def vector_norm(
 
 def matrix_norm(
     input: Tensor,
-    ord: Union[int, float, str] = 'fro',
+    ord: Union[int, float, str] = "fro",
     dim: Tuple[int, int] = (-2, -1),
     keepdim: bool = False,
-    dtype: Optional[str] = None
+    dtype: Optional[str] = None,
 ) -> Tensor:
     """
     Computes a matrix norm.
@@ -197,7 +199,7 @@ def svdvals(input: Tensor) -> Tensor:
     return S
 
 
-def qr(input: Tensor, mode: str = 'reduced') -> Tuple[Tensor, Tensor]:
+def qr(input: Tensor, mode: str = "reduced") -> Tuple[Tensor, Tensor]:
     """
     Computes QR decomposition.
 
@@ -310,7 +312,7 @@ def eig(input: Tensor) -> Tuple[Tensor, Tensor]:
     return eigenvalues_tensor, eigenvectors_tensor
 
 
-def eigh(input: Tensor, UPLO: str = 'L') -> Tuple[Tensor, Tensor]:
+def eigh(input: Tensor, UPLO: str = "L") -> Tuple[Tensor, Tensor]:
     """
     Computes eigenvalues and eigenvectors of a symmetric/Hermitian matrix.
 
@@ -334,7 +336,7 @@ def eigh(input: Tensor, UPLO: str = 'L') -> Tuple[Tensor, Tensor]:
     return eigenvalues_tensor, eigenvectors_tensor
 
 
-def eigvalsh(input: Tensor, UPLO: str = 'L') -> Tensor:
+def eigvalsh(input: Tensor, UPLO: str = "L") -> Tensor:
     """
     Computes eigenvalues of a symmetric/Hermitian matrix.
 
@@ -517,21 +519,21 @@ def cross(input: Tensor, other: Tensor, dim: int = -1) -> Tensor:
 
 
 __all__ = [
-    'norm',
-    'vector_norm',
-    'matrix_norm',
-    'svd',
-    'svdvals',
-    'qr',
-    'cholesky',
-    'inv',
-    'solve',
-    'eig',
-    'eigh',
-    'eigvalsh',
-    'matrix_rank',
-    'pinv',
-    'det',
-    'slogdet',
-    'cross',
+    "norm",
+    "vector_norm",
+    "matrix_norm",
+    "svd",
+    "svdvals",
+    "qr",
+    "cholesky",
+    "inv",
+    "solve",
+    "eig",
+    "eigh",
+    "eigvalsh",
+    "matrix_rank",
+    "pinv",
+    "det",
+    "slogdet",
+    "cross",
 ]

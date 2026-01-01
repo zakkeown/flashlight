@@ -4,11 +4,13 @@ Learning Rate Scheduler Parity Tests
 Comprehensive tests comparing flashlight LR schedulers against PyTorch implementations.
 """
 
-import sys
 import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+import sys
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 import unittest
+
 import numpy as np
 
 from tests.common_utils import TestCase, skipIfNoMLX
@@ -18,6 +20,7 @@ try:
     import flashlight.nn as nn
     import flashlight.optim as optim
     from flashlight.optim import lr_scheduler as mlx_lr_scheduler
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -27,6 +30,7 @@ try:
     import torch.nn as torch_nn
     import torch.optim as torch_optim
     from torch.optim import lr_scheduler as torch_lr_scheduler
+
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
@@ -37,7 +41,9 @@ def skip_if_no_torch(func):
     return unittest.skipUnless(TORCH_AVAILABLE, "PyTorch not available")(func)
 
 
-def compare_lr_schedules(test_case, mlx_scheduler, torch_scheduler, num_epochs, rtol=1e-6, atol=1e-8):
+def compare_lr_schedules(
+    test_case, mlx_scheduler, torch_scheduler, num_epochs, rtol=1e-6, atol=1e-8
+):
     """
     Compare learning rate schedules between MLX and PyTorch.
 
@@ -50,15 +56,17 @@ def compare_lr_schedules(test_case, mlx_scheduler, torch_scheduler, num_epochs, 
         atol: Absolute tolerance
     """
     for epoch in range(num_epochs):
-        mlx_lrs = [group['lr'] for group in mlx_scheduler.optimizer.param_groups]
-        torch_lrs = [group['lr'] for group in torch_scheduler.optimizer.param_groups]
+        mlx_lrs = [group["lr"] for group in mlx_scheduler.optimizer.param_groups]
+        torch_lrs = [group["lr"] for group in torch_scheduler.optimizer.param_groups]
 
         for i, (mlx_lr, torch_lr) in enumerate(zip(mlx_lrs, torch_lrs)):
             try:
                 np.testing.assert_allclose(
-                    mlx_lr, torch_lr,
-                    rtol=rtol, atol=atol,
-                    err_msg=f"LR mismatch at epoch {epoch}, param_group {i}"
+                    mlx_lr,
+                    torch_lr,
+                    rtol=rtol,
+                    atol=atol,
+                    err_msg=f"LR mismatch at epoch {epoch}, param_group {i}",
                 )
             except AssertionError as e:
                 test_case.fail(
@@ -174,8 +182,12 @@ class TestLinearLRParity(TestCase):
     def test_linear_lr_custom_factors(self):
         """Test LinearLR with custom start and end factors."""
         mlx_opt, torch_opt = create_optimizers(lr=0.1)
-        mlx_sched = mlx_lr_scheduler.LinearLR(mlx_opt, start_factor=0.1, end_factor=1.0, total_iters=20)
-        torch_sched = torch_lr_scheduler.LinearLR(torch_opt, start_factor=0.1, end_factor=1.0, total_iters=20)
+        mlx_sched = mlx_lr_scheduler.LinearLR(
+            mlx_opt, start_factor=0.1, end_factor=1.0, total_iters=20
+        )
+        torch_sched = torch_lr_scheduler.LinearLR(
+            torch_opt, start_factor=0.1, end_factor=1.0, total_iters=20
+        )
         compare_lr_schedules(self, mlx_sched, torch_sched, num_epochs=30)
 
 
@@ -219,7 +231,7 @@ class TestLambdaLRParity(TestCase):
 
     def test_lambda_lr_basic(self):
         """Test basic LambdaLR with simple decay."""
-        lr_lambda = lambda epoch: 0.95 ** epoch
+        lr_lambda = lambda epoch: 0.95**epoch
         mlx_opt, torch_opt = create_optimizers(lr=0.1)
         mlx_sched = mlx_lr_scheduler.LambdaLR(mlx_opt, lr_lambda=lr_lambda)
         torch_sched = torch_lr_scheduler.LambdaLR(torch_opt, lr_lambda=lr_lambda)
@@ -269,10 +281,10 @@ class TestCyclicLRParity(TestCase):
         """Test CyclicLR with triangular mode."""
         mlx_opt, torch_opt = create_optimizers(lr=0.1)
         mlx_sched = mlx_lr_scheduler.CyclicLR(
-            mlx_opt, base_lr=0.001, max_lr=0.1, step_size_up=10, mode='triangular'
+            mlx_opt, base_lr=0.001, max_lr=0.1, step_size_up=10, mode="triangular"
         )
         torch_sched = torch_lr_scheduler.CyclicLR(
-            torch_opt, base_lr=0.001, max_lr=0.1, step_size_up=10, mode='triangular'
+            torch_opt, base_lr=0.001, max_lr=0.1, step_size_up=10, mode="triangular"
         )
         compare_lr_schedules(self, mlx_sched, torch_sched, num_epochs=50, rtol=1e-5, atol=1e-7)
 
@@ -298,8 +310,10 @@ class TestReduceLROnPlateauParity(TestCase):
     def test_reduce_on_plateau_basic(self):
         """Test ReduceLROnPlateau with decreasing metric."""
         mlx_opt, torch_opt = create_optimizers(lr=0.1)
-        mlx_sched = mlx_lr_scheduler.ReduceLROnPlateau(mlx_opt, mode='min', factor=0.1, patience=5)
-        torch_sched = torch_lr_scheduler.ReduceLROnPlateau(torch_opt, mode='min', factor=0.1, patience=5)
+        mlx_sched = mlx_lr_scheduler.ReduceLROnPlateau(mlx_opt, mode="min", factor=0.1, patience=5)
+        torch_sched = torch_lr_scheduler.ReduceLROnPlateau(
+            torch_opt, mode="min", factor=0.1, patience=5
+        )
 
         # Simulate training with gradually decreasing loss, then plateau
         metrics = [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.4, 0.3]
@@ -307,11 +321,12 @@ class TestReduceLROnPlateauParity(TestCase):
             mlx_sched.step(metric)
             torch_sched.step(metric)
 
-            mlx_lr = mlx_opt.param_groups[0]['lr']
-            torch_lr = torch_opt.param_groups[0]['lr']
+            mlx_lr = mlx_opt.param_groups[0]["lr"]
+            torch_lr = torch_opt.param_groups[0]["lr"]
             np.testing.assert_allclose(mlx_lr, torch_lr, rtol=1e-6, atol=1e-8)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from tests.common_utils import run_tests
+
     run_tests()

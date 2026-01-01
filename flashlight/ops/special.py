@@ -14,6 +14,7 @@ Implementations use well-known numerical methods:
 
 import math
 from typing import Union
+
 import mlx.core as mx
 
 from ..distributions._constants import CF_TINY
@@ -21,17 +22,20 @@ from ..distributions._constants import CF_TINY
 # Lanczos coefficients for lgamma (g=7, n=9)
 # These provide ~15 digit precision for positive real numbers
 _LANCZOS_G = 7.0
-_LANCZOS_COEFFICIENTS = mx.array([
-    0.99999999999980993,
-    676.5203681218851,
-    -1259.1392167224028,
-    771.32342877765313,
-    -176.61502916214059,
-    12.507343278686905,
-    -0.13857109526572012,
-    9.9843695780195716e-6,
-    1.5056327351493116e-7,
-], dtype=mx.float32)
+_LANCZOS_COEFFICIENTS = mx.array(
+    [
+        0.99999999999980993,
+        676.5203681218851,
+        -1259.1392167224028,
+        771.32342877765313,
+        -176.61502916214059,
+        12.507343278686905,
+        -0.13857109526572012,
+        9.9843695780195716e-6,
+        1.5056327351493116e-7,
+    ],
+    dtype=mx.float32,
+)
 
 
 def lgamma(x: mx.array) -> mx.array:
@@ -87,7 +91,7 @@ def lgamma(x: mx.array) -> mx.array:
 
     # lgamma at non-positive integers is +inf
     is_nonpositive_int = (x <= 0) & (x == mx.floor(x))
-    result = mx.where(is_nonpositive_int, mx.array(float('inf')), result)
+    result = mx.where(is_nonpositive_int, mx.array(float("inf")), result)
 
     # Always return float32 - lgamma is a continuous function that produces floats
     # even for integer inputs
@@ -161,15 +165,23 @@ def digamma(x: mx.array) -> mx.array:
     x12 = x6 * x6
 
     # Bernoulli numbers B_{2k} / (2k)
-    b2 = 1.0 / 12.0       # B_2 / 2 = (1/6) / 2
-    b4 = 1.0 / 120.0      # B_4 / 4 = (-1/30) / 4, but we need -B_4/4
-    b6 = 1.0 / 252.0      # B_6 / 6
-    b8 = 1.0 / 240.0      # -B_8 / 8
-    b10 = 5.0 / 660.0     # B_10 / 10
-    b12 = 691.0 / 32760.0 # -B_12 / 12
+    b2 = 1.0 / 12.0  # B_2 / 2 = (1/6) / 2
+    b4 = 1.0 / 120.0  # B_4 / 4 = (-1/30) / 4, but we need -B_4/4
+    b6 = 1.0 / 252.0  # B_6 / 6
+    b8 = 1.0 / 240.0  # -B_8 / 8
+    b10 = 5.0 / 660.0  # B_10 / 10
+    b12 = 691.0 / 32760.0  # -B_12 / 12
 
-    asymp = (mx.log(x_shifted) - 0.5 / x_shifted
-             - b2 / x2 + b4 / x4 - b6 / x6 + b8 / x8 - b10 / x10 + b12 / x12)
+    asymp = (
+        mx.log(x_shifted)
+        - 0.5 / x_shifted
+        - b2 / x2
+        + b4 / x4
+        - b6 / x6
+        + b8 / x8
+        - b10 / x10
+        + b12 / x12
+    )
 
     result = asymp + shift
 
@@ -178,7 +190,9 @@ def digamma(x: mx.array) -> mx.array:
     # = digamma(1-x) - pi * cos(pi*x) / sin(pi*x)
     sin_pix = mx.sin(math.pi * x)
     # Add epsilon protection when sin is near zero to avoid division by zero
-    safe_sin_pix = mx.where(mx.abs(sin_pix) < CF_TINY, CF_TINY * mx.sign(sin_pix + CF_TINY), sin_pix)
+    safe_sin_pix = mx.where(
+        mx.abs(sin_pix) < CF_TINY, CF_TINY * mx.sign(sin_pix + CF_TINY), sin_pix
+    )
     cot_pix = mx.cos(math.pi * x) / safe_sin_pix
     reflected = result - math.pi * cot_pix
 
@@ -186,7 +200,7 @@ def digamma(x: mx.array) -> mx.array:
 
     # Handle poles at non-positive integers
     is_nonpositive_int = (x <= 0) & (x == mx.floor(x))
-    result = mx.where(is_nonpositive_int, mx.array(float('nan')), result)
+    result = mx.where(is_nonpositive_int, mx.array(float("nan")), result)
 
     # Always return float32 - digamma is a continuous function that produces floats
     return result
@@ -373,9 +387,12 @@ def betainc(a: mx.array, b: mx.array, x: mx.array) -> mx.array:
     b_work = mx.where(use_symmetry, a, b)
 
     # Log of the prefactor: x^a * (1-x)^b / (a * B(a,b))
-    log_prefactor = (a_work * mx.log(mx.maximum(x_work, CF_TINY)) +
-                     b_work * mx.log(mx.maximum(1.0 - x_work, CF_TINY)) -
-                     mx.log(a_work) - betaln(a_work, b_work))
+    log_prefactor = (
+        a_work * mx.log(mx.maximum(x_work, CF_TINY))
+        + b_work * mx.log(mx.maximum(1.0 - x_work, CF_TINY))
+        - mx.log(a_work)
+        - betaln(a_work, b_work)
+    )
 
     # Continued fraction using Lentz's algorithm
     # The continued fraction for I_x(a,b) is:
@@ -455,8 +472,7 @@ def i0(x: mx.array) -> mx.array:
     t = (ax / 3.75) ** 2
 
     # Coefficients for small x approximation
-    small_coeffs = [1.0, 3.5156229, 3.0899424, 1.2067492,
-                    0.2659732, 0.0360768, 0.0045813]
+    small_coeffs = [1.0, 3.5156229, 3.0899424, 1.2067492, 0.2659732, 0.0360768, 0.0045813]
 
     small_result = small_coeffs[0]
     t_power = t
@@ -469,8 +485,17 @@ def i0(x: mx.array) -> mx.array:
     t_large = 3.75 / ax
 
     # Coefficients for large x approximation (scaled by sqrt(2*pi))
-    large_coeffs = [0.39894228, 0.01328592, 0.00225319, -0.00157565,
-                    0.00916281, -0.02057706, 0.02635537, -0.01647633, 0.00392377]
+    large_coeffs = [
+        0.39894228,
+        0.01328592,
+        0.00225319,
+        -0.00157565,
+        0.00916281,
+        -0.02057706,
+        0.02635537,
+        -0.01647633,
+        0.00392377,
+    ]
 
     large_result = large_coeffs[0]
     t_power = t_large
@@ -513,8 +538,7 @@ def i1(x: mx.array) -> mx.array:
 
     # Coefficients for small x approximation
     # I1(x) = x * (0.5 + polynomial in t)
-    small_coeffs = [0.5, 0.87890594, 0.51498869, 0.15084934,
-                    0.02658733, 0.00301532, 0.00032411]
+    small_coeffs = [0.5, 0.87890594, 0.51498869, 0.15084934, 0.02658733, 0.00301532, 0.00032411]
 
     small_result = small_coeffs[0]
     t_power = t
@@ -527,8 +551,17 @@ def i1(x: mx.array) -> mx.array:
     t_large = 3.75 / ax
 
     # Coefficients for large x approximation
-    large_coeffs = [0.39894228, -0.03988024, -0.00362018, 0.00163801,
-                    -0.01031555, 0.02282967, -0.02895312, 0.01787654, -0.00420059]
+    large_coeffs = [
+        0.39894228,
+        -0.03988024,
+        -0.00362018,
+        0.00163801,
+        -0.01031555,
+        0.02282967,
+        -0.02895312,
+        0.01787654,
+        -0.00420059,
+    ]
 
     large_result = large_coeffs[0]
     t_power = t_large
@@ -581,15 +614,17 @@ psi = digamma
 
 
 __all__ = [
-    'lgamma', 'gammaln',
-    'gamma',
-    'digamma', 'psi',
-    'betaln',
-    'beta',
-    'gammainc',
-    'gammaincc',
-    'betainc',
-    'i0',
-    'i1',
-    'multigammaln',
+    "lgamma",
+    "gammaln",
+    "gamma",
+    "digamma",
+    "psi",
+    "betaln",
+    "beta",
+    "gammainc",
+    "gammaincc",
+    "betainc",
+    "i0",
+    "i1",
+    "multigammaln",
 ]

@@ -4,12 +4,12 @@ Timer class for benchmarking MLX operations.
 Provides accurate timing with MLX synchronization for lazy evaluation.
 """
 
-import timeit
 import textwrap
 import time
-from typing import Any, Callable, Optional, List, Dict
+import timeit
+from typing import Any, Callable, Dict, List, Optional
 
-from .common import TaskSpec, Measurement
+from .common import Measurement, TaskSpec
 
 __all__ = ["Timer", "timer"]
 

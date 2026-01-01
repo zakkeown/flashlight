@@ -4,11 +4,12 @@ Additional Optimizers
 Implements additional PyTorch-compatible optimizers for MLX.
 """
 
-from typing import Iterable, Callable, Optional, Tuple
+from typing import Callable, Iterable, Optional, Tuple
+
 import mlx.core as mx
 
-from .optimizer import Optimizer
 from ..tensor import Tensor
+from .optimizer import Optimizer
 
 
 class Adamax(Optimizer):
@@ -50,12 +51,12 @@ class Adamax(Optimizer):
             loss = closure()
 
         for group in self.param_groups:
-            lr = group['lr']
-            beta1, beta2 = group['betas']
-            eps = group['eps']
-            weight_decay = group['weight_decay']
+            lr = group["lr"]
+            beta1, beta2 = group["betas"]
+            eps = group["eps"]
+            weight_decay = group["weight_decay"]
 
-            for p in group['params']:
+            for p in group["params"]:
                 if p.grad is None:
                     continue
 
@@ -63,13 +64,13 @@ class Adamax(Optimizer):
                 state = self.state[id(p)]
 
                 if len(state) == 0:
-                    state['step'] = 0
-                    state['exp_avg'] = mx.zeros_like(p._mlx_array)
-                    state['exp_inf'] = mx.zeros_like(p._mlx_array)
+                    state["step"] = 0
+                    state["exp_avg"] = mx.zeros_like(p._mlx_array)
+                    state["exp_inf"] = mx.zeros_like(p._mlx_array)
 
-                state['step'] += 1
-                exp_avg = state['exp_avg']
-                exp_inf = state['exp_inf']
+                state["step"] += 1
+                exp_avg = state["exp_avg"]
+                exp_inf = state["exp_inf"]
 
                 if weight_decay != 0:
                     grad = grad + weight_decay * p._mlx_array
@@ -79,11 +80,11 @@ class Adamax(Optimizer):
                 # Update exponentially weighted infinity norm
                 exp_inf = mx.maximum(beta2 * exp_inf, mx.abs(grad))
 
-                state['exp_avg'] = exp_avg
-                state['exp_inf'] = exp_inf
+                state["exp_avg"] = exp_avg
+                state["exp_inf"] = exp_inf
 
                 # Bias correction for first moment
-                bias_correction1 = 1 - beta1 ** state['step']
+                bias_correction1 = 1 - beta1 ** state["step"]
                 step_size = lr / bias_correction1
 
                 p._mlx_array = p._mlx_array - step_size * exp_avg / (exp_inf + eps)
@@ -132,12 +133,12 @@ class RAdam(Optimizer):
             loss = closure()
 
         for group in self.param_groups:
-            lr = group['lr']
-            beta1, beta2 = group['betas']
-            eps = group['eps']
-            weight_decay = group['weight_decay']
+            lr = group["lr"]
+            beta1, beta2 = group["betas"]
+            eps = group["eps"]
+            weight_decay = group["weight_decay"]
 
-            for p in group['params']:
+            for p in group["params"]:
                 if p.grad is None:
                     continue
 
@@ -145,13 +146,13 @@ class RAdam(Optimizer):
                 state = self.state[id(p)]
 
                 if len(state) == 0:
-                    state['step'] = 0
-                    state['exp_avg'] = mx.zeros_like(p._mlx_array)
-                    state['exp_avg_sq'] = mx.zeros_like(p._mlx_array)
+                    state["step"] = 0
+                    state["exp_avg"] = mx.zeros_like(p._mlx_array)
+                    state["exp_avg_sq"] = mx.zeros_like(p._mlx_array)
 
-                state['step'] += 1
-                exp_avg = state['exp_avg']
-                exp_avg_sq = state['exp_avg_sq']
+                state["step"] += 1
+                exp_avg = state["exp_avg"]
+                exp_avg_sq = state["exp_avg_sq"]
 
                 if weight_decay != 0:
                     grad = grad + weight_decay * p._mlx_array
@@ -160,22 +161,26 @@ class RAdam(Optimizer):
                 exp_avg = beta1 * exp_avg + (1 - beta1) * grad
                 exp_avg_sq = beta2 * exp_avg_sq + (1 - beta2) * grad * grad
 
-                state['exp_avg'] = exp_avg
-                state['exp_avg_sq'] = exp_avg_sq
+                state["exp_avg"] = exp_avg
+                state["exp_avg_sq"] = exp_avg_sq
 
-                step = state['step']
-                bias_correction1 = 1 - beta1 ** step
-                bias_correction2 = 1 - beta2 ** step
+                step = state["step"]
+                bias_correction1 = 1 - beta1**step
+                bias_correction2 = 1 - beta2**step
 
                 # Maximum length of approximated SMA
                 rho_inf = 2 / (1 - beta2) - 1
                 # Current length of approximated SMA
-                rho_t = rho_inf - 2 * step * (beta2 ** step) / bias_correction2
+                rho_t = rho_inf - 2 * step * (beta2**step) / bias_correction2
 
                 if rho_t > 5:
                     # Variance is tractable
-                    rect = ((rho_t - 4) * (rho_t - 2) * rho_inf /
-                            ((rho_inf - 4) * (rho_inf - 2) * rho_t)) ** 0.5
+                    rect = (
+                        (rho_t - 4)
+                        * (rho_t - 2)
+                        * rho_inf
+                        / ((rho_inf - 4) * (rho_inf - 2) * rho_t)
+                    ) ** 0.5
                     step_size = lr * rect / bias_correction1
                     denom = mx.sqrt(exp_avg_sq / bias_correction2) + eps
                     p._mlx_array = p._mlx_array - step_size * exp_avg / denom
@@ -221,8 +226,9 @@ class NAdam(Optimizer):
         differentiable: bool = False,
     ):
         # These are for PyTorch compatibility
-        defaults = dict(lr=lr, betas=betas, eps=eps, weight_decay=weight_decay,
-                        momentum_decay=momentum_decay)
+        defaults = dict(
+            lr=lr, betas=betas, eps=eps, weight_decay=weight_decay, momentum_decay=momentum_decay
+        )
         super().__init__(params, defaults)
 
     def step(self, closure: Callable = None):
@@ -231,12 +237,12 @@ class NAdam(Optimizer):
             loss = closure()
 
         for group in self.param_groups:
-            lr = group['lr']
-            beta1, beta2 = group['betas']
-            eps = group['eps']
-            weight_decay = group['weight_decay']
+            lr = group["lr"]
+            beta1, beta2 = group["betas"]
+            eps = group["eps"]
+            weight_decay = group["weight_decay"]
 
-            for p in group['params']:
+            for p in group["params"]:
                 if p.grad is None:
                     continue
 
@@ -244,40 +250,41 @@ class NAdam(Optimizer):
                 state = self.state[id(p)]
 
                 if len(state) == 0:
-                    state['step'] = 0
-                    state['exp_avg'] = mx.zeros_like(p._mlx_array)
-                    state['exp_avg_sq'] = mx.zeros_like(p._mlx_array)
-                    state['mu_product'] = 1.0
+                    state["step"] = 0
+                    state["exp_avg"] = mx.zeros_like(p._mlx_array)
+                    state["exp_avg_sq"] = mx.zeros_like(p._mlx_array)
+                    state["mu_product"] = 1.0
 
-                state['step'] += 1
-                exp_avg = state['exp_avg']
-                exp_avg_sq = state['exp_avg_sq']
+                state["step"] += 1
+                exp_avg = state["exp_avg"]
+                exp_avg_sq = state["exp_avg_sq"]
 
                 if weight_decay != 0:
                     grad = grad + weight_decay * p._mlx_array
 
-                step = state['step']
+                step = state["step"]
 
                 # Update biased first moment estimate
                 exp_avg = beta1 * exp_avg + (1 - beta1) * grad
                 # Update biased second raw moment estimate
                 exp_avg_sq = beta2 * exp_avg_sq + (1 - beta2) * grad * grad
 
-                state['exp_avg'] = exp_avg
-                state['exp_avg_sq'] = exp_avg_sq
+                state["exp_avg"] = exp_avg
+                state["exp_avg_sq"] = exp_avg_sq
 
-                bias_correction1 = 1 - beta1 ** step
-                bias_correction2 = 1 - beta2 ** step
+                bias_correction1 = 1 - beta1**step
+                bias_correction2 = 1 - beta2**step
 
                 # Nesterov momentum
-                mu = beta1 * (1 - 0.5 * (0.96 ** (step * group['momentum_decay'])))
-                mu_next = beta1 * (1 - 0.5 * (0.96 ** ((step + 1) * group['momentum_decay'])))
+                mu = beta1 * (1 - 0.5 * (0.96 ** (step * group["momentum_decay"])))
+                mu_next = beta1 * (1 - 0.5 * (0.96 ** ((step + 1) * group["momentum_decay"])))
 
-                state['mu_product'] *= mu
-                mu_product_next = state['mu_product'] * mu_next
+                state["mu_product"] *= mu
+                mu_product_next = state["mu_product"] * mu_next
 
-                exp_avg_hat = mu_next * exp_avg / (1 - mu_product_next) + \
-                              (1 - mu) * grad / (1 - state['mu_product'])
+                exp_avg_hat = mu_next * exp_avg / (1 - mu_product_next) + (1 - mu) * grad / (
+                    1 - state["mu_product"]
+                )
                 exp_avg_sq_hat = exp_avg_sq / bias_correction2
 
                 p._mlx_array = p._mlx_array - lr * exp_avg_hat / (mx.sqrt(exp_avg_sq_hat) + eps)
@@ -325,13 +332,13 @@ class ASGD(Optimizer):
             loss = closure()
 
         for group in self.param_groups:
-            lr = group['lr']
-            lambd = group['lambd']
-            alpha = group['alpha']
-            t0 = group['t0']
-            weight_decay = group['weight_decay']
+            lr = group["lr"]
+            lambd = group["lambd"]
+            alpha = group["alpha"]
+            t0 = group["t0"]
+            weight_decay = group["weight_decay"]
 
-            for p in group['params']:
+            for p in group["params"]:
                 if p.grad is None:
                     continue
 
@@ -339,26 +346,26 @@ class ASGD(Optimizer):
                 state = self.state[id(p)]
 
                 if len(state) == 0:
-                    state['step'] = 0
-                    state['eta'] = lr
-                    state['mu'] = 1.0
-                    state['ax'] = mx.zeros_like(p._mlx_array)
+                    state["step"] = 0
+                    state["eta"] = lr
+                    state["mu"] = 1.0
+                    state["ax"] = mx.zeros_like(p._mlx_array)
 
-                state['step'] += 1
+                state["step"] += 1
 
                 if weight_decay != 0:
                     grad = grad + weight_decay * p._mlx_array
 
                 # Decay learning rate
-                state['eta'] = lr / ((1 + lambd * state['step']) ** alpha)
+                state["eta"] = lr / ((1 + lambd * state["step"]) ** alpha)
 
                 # Update parameter
-                p._mlx_array = p._mlx_array - state['eta'] * grad
+                p._mlx_array = p._mlx_array - state["eta"] * grad
 
                 # Update averaged parameter
-                if state['step'] > t0:
-                    state['mu'] += 1
-                    state['ax'] = state['ax'] + (p._mlx_array - state['ax']) / state['mu']
+                if state["step"] > t0:
+                    state["mu"] += 1
+                    state["ax"] = state["ax"] + (p._mlx_array - state["ax"]) / state["mu"]
 
         return loss
 
@@ -400,11 +407,11 @@ class Rprop(Optimizer):
             loss = closure()
 
         for group in self.param_groups:
-            lr = group['lr']
-            etaminus, etaplus = group['etas']
-            step_size_min, step_size_max = group['step_sizes']
+            lr = group["lr"]
+            etaminus, etaplus = group["etas"]
+            step_size_min, step_size_max = group["step_sizes"]
 
-            for p in group['params']:
+            for p in group["params"]:
                 if p.grad is None:
                     continue
 
@@ -412,14 +419,14 @@ class Rprop(Optimizer):
                 state = self.state[id(p)]
 
                 if len(state) == 0:
-                    state['step'] = 0
-                    state['prev_grad'] = mx.zeros_like(p._mlx_array)
+                    state["step"] = 0
+                    state["prev_grad"] = mx.zeros_like(p._mlx_array)
                     # Use mx.full instead of mx.full_like (MLX doesn't have full_like)
-                    state['step_size'] = mx.full(p._mlx_array.shape, lr, dtype=p._mlx_array.dtype)
+                    state["step_size"] = mx.full(p._mlx_array.shape, lr, dtype=p._mlx_array.dtype)
 
-                state['step'] += 1
-                prev_grad = state['prev_grad']
-                step_size = state['step_size']
+                state["step"] += 1
+                prev_grad = state["prev_grad"]
+                step_size = state["step_size"]
 
                 # Compute sign changes
                 sign = grad * prev_grad
@@ -427,14 +434,18 @@ class Rprop(Optimizer):
                 neg_sign = sign < 0
 
                 # Update step sizes
-                step_size = mx.where(pos_sign, mx.minimum(step_size * etaplus, step_size_max), step_size)
-                step_size = mx.where(neg_sign, mx.maximum(step_size * etaminus, step_size_min), step_size)
+                step_size = mx.where(
+                    pos_sign, mx.minimum(step_size * etaplus, step_size_max), step_size
+                )
+                step_size = mx.where(
+                    neg_sign, mx.maximum(step_size * etaminus, step_size_min), step_size
+                )
 
                 # Update gradient (set to 0 where sign changed)
                 grad = mx.where(neg_sign, 0, grad)
 
-                state['prev_grad'] = grad
-                state['step_size'] = step_size
+                state["prev_grad"] = grad
+                state["step_size"] = step_size
 
                 # Update parameter
                 p._mlx_array = p._mlx_array - step_size * mx.sign(grad)
@@ -443,9 +454,9 @@ class Rprop(Optimizer):
 
 
 __all__ = [
-    'Adamax',
-    'RAdam',
-    'NAdam',
-    'ASGD',
-    'Rprop',
+    "Adamax",
+    "RAdam",
+    "NAdam",
+    "ASGD",
+    "Rprop",
 ]

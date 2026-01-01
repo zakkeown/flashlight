@@ -5,9 +5,11 @@ Tests for the DistributedSampler class.
 """
 
 import sys
-sys.path.insert(0, '../..')
+
+sys.path.insert(0, "../..")
 
 import unittest
+
 import numpy as np
 import pytest
 
@@ -15,7 +17,8 @@ from tests.common_utils import TestCase, skipIfNoMLX, skipIfNoTorch
 
 try:
     import flashlight
-    from flashlight.data import TensorDataset, DistributedSampler
+    from flashlight.data import DistributedSampler, TensorDataset
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -62,9 +65,7 @@ class TestDistributedSampler(TestCase):
         sizes = []
 
         for rank in range(num_replicas):
-            sampler = DistributedSampler(
-                dataset, num_replicas=num_replicas, rank=rank
-            )
+            sampler = DistributedSampler(dataset, num_replicas=num_replicas, rank=rank)
             sizes.append(len(sampler))
 
         # All replicas should have same size
@@ -107,9 +108,7 @@ class TestDistributedSampler(TestCase):
         x = flashlight.randn(100, 10)
         dataset = TensorDataset(x)
 
-        sampler = DistributedSampler(
-            dataset, num_replicas=1, rank=0, shuffle=False
-        )
+        sampler = DistributedSampler(dataset, num_replicas=1, rank=0, shuffle=False)
         indices = list(sampler)
 
         self.assertEqual(indices, list(range(100)))
@@ -122,12 +121,8 @@ class TestDistributedSampler(TestCase):
         x = flashlight.randn(103, 10)
         dataset = TensorDataset(x)
 
-        sampler_no_drop = DistributedSampler(
-            dataset, num_replicas=4, rank=0, drop_last=False
-        )
-        sampler_drop = DistributedSampler(
-            dataset, num_replicas=4, rank=0, drop_last=True
-        )
+        sampler_no_drop = DistributedSampler(dataset, num_replicas=4, rank=0, drop_last=False)
+        sampler_drop = DistributedSampler(dataset, num_replicas=4, rank=0, drop_last=True)
 
         self.assertEqual(len(sampler_no_drop), 26)
         self.assertEqual(len(sampler_drop), 25)
@@ -226,9 +221,7 @@ class TestDistributedSamplerParity(TestCase):
                 # MLX
                 x_mlx = flashlight.randn(dataset_size, 10)
                 dataset_mlx = TensorDataset(x_mlx)
-                mlx_sampler = DistributedSampler(
-                    dataset_mlx, num_replicas=num_replicas, rank=0
-                )
+                mlx_sampler = DistributedSampler(dataset_mlx, num_replicas=num_replicas, rank=0)
 
                 # PyTorch
                 x_torch = torch.randn(dataset_size, 10)
@@ -238,11 +231,13 @@ class TestDistributedSamplerParity(TestCase):
                 )
 
                 self.assertEqual(
-                    len(mlx_sampler), len(torch_sampler),
-                    f"Length mismatch for size={dataset_size}, replicas={num_replicas}"
+                    len(mlx_sampler),
+                    len(torch_sampler),
+                    f"Length mismatch for size={dataset_size}, replicas={num_replicas}",
                 )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from tests.common_utils import run_tests
+
     run_tests()

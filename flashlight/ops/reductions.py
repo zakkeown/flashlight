@@ -4,16 +4,23 @@ Reduction Operations
 Implements PyTorch-compatible reduction operations with MLX backend.
 """
 
-from typing import Optional, Union, Tuple
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Optional, Tuple, Union
+
 import mlx.core as mx
 
-from ..tensor import Tensor
-from ..autograd.function import SumBackward, MeanBackward, MaxBackward
+if TYPE_CHECKING:
+    from ._reduction_results import MaxResult, MinResult
+
 from ..autograd.context import is_grad_enabled
+from ..autograd.function import MaxBackward, MeanBackward, SumBackward
+from ..tensor import Tensor
 
 
-def sum(input: Tensor, dim: Optional[Union[int, Tuple[int, ...]]] = None,
-        keepdim: bool = False) -> Tensor:
+def sum(
+    input: Tensor, dim: Optional[Union[int, Tuple[int, ...]]] = None, keepdim: bool = False
+) -> Tensor:
     """
     Sum of all elements or along dimensions.
 
@@ -44,8 +51,9 @@ def sum(input: Tensor, dim: Optional[Union[int, Tuple[int, ...]]] = None,
     return result
 
 
-def mean(input: Tensor, dim: Optional[Union[int, Tuple[int, ...]]] = None,
-         keepdim: bool = False) -> Tensor:
+def mean(
+    input: Tensor, dim: Optional[Union[int, Tuple[int, ...]]] = None, keepdim: bool = False
+) -> Tensor:
     """
     Mean of all elements or along dimensions.
 
@@ -75,7 +83,9 @@ def mean(input: Tensor, dim: Optional[Union[int, Tuple[int, ...]]] = None,
     return result
 
 
-def max(input: Tensor, dim: Optional[Union[int, Tuple[int, ...]]] = None, keepdim: bool = False) -> Union[Tensor, 'MaxResult']:
+def max(
+    input: Tensor, dim: Optional[Union[int, Tuple[int, ...]]] = None, keepdim: bool = False
+) -> Union[Tensor, "MaxResult"]:
     """
     Maximum value(s) of tensor.
 
@@ -124,7 +134,9 @@ def max(input: Tensor, dim: Optional[Union[int, Tuple[int, ...]]] = None, keepdi
     return MaxResult(input, dim, keepdim)
 
 
-def min(input: Tensor, dim: Optional[Union[int, Tuple[int, ...]]] = None, keepdim: bool = False) -> Union[Tensor, 'MinResult']:
+def min(
+    input: Tensor, dim: Optional[Union[int, Tuple[int, ...]]] = None, keepdim: bool = False
+) -> Union[Tensor, "MinResult"]:
     """
     Minimum value(s) of tensor.
 
@@ -208,8 +220,12 @@ def argmin(input: Tensor, dim: Optional[int] = None, keepdim: bool = False) -> T
     return result
 
 
-def var(input: Tensor, dim: Optional[Union[int, Tuple[int, ...]]] = None,
-        keepdim: bool = False, unbiased: bool = True) -> Tensor:
+def var(
+    input: Tensor,
+    dim: Optional[Union[int, Tuple[int, ...]]] = None,
+    keepdim: bool = False,
+    unbiased: bool = True,
+) -> Tensor:
     """
     Variance of elements.
 
@@ -238,8 +254,12 @@ def var(input: Tensor, dim: Optional[Union[int, Tuple[int, ...]]] = None,
     return result
 
 
-def std(input: Tensor, dim: Optional[Union[int, Tuple[int, ...]]] = None,
-        keepdim: bool = False, unbiased: bool = True) -> Tensor:
+def std(
+    input: Tensor,
+    dim: Optional[Union[int, Tuple[int, ...]]] = None,
+    keepdim: bool = False,
+    unbiased: bool = True,
+) -> Tensor:
     """
     Standard deviation of elements.
 
@@ -337,7 +357,9 @@ def any(input: Tensor, dim: Optional[int] = None, keepdim: bool = False) -> Tens
     return result
 
 
-def amax(input: Tensor, dim: Optional[Union[int, Tuple[int, ...]]] = None, keepdim: bool = False) -> Tensor:
+def amax(
+    input: Tensor, dim: Optional[Union[int, Tuple[int, ...]]] = None, keepdim: bool = False
+) -> Tensor:
     """
     Maximum values along dimensions (without returning indices).
 
@@ -363,7 +385,9 @@ def amax(input: Tensor, dim: Optional[Union[int, Tuple[int, ...]]] = None, keepd
     return result
 
 
-def amin(input: Tensor, dim: Optional[Union[int, Tuple[int, ...]]] = None, keepdim: bool = False) -> Tensor:
+def amin(
+    input: Tensor, dim: Optional[Union[int, Tuple[int, ...]]] = None, keepdim: bool = False
+) -> Tensor:
     """
     Minimum values along dimensions (without returning indices).
 
@@ -389,7 +413,9 @@ def amin(input: Tensor, dim: Optional[Union[int, Tuple[int, ...]]] = None, keepd
     return result
 
 
-def aminmax(input: Tensor, dim: Optional[int] = None, keepdim: bool = False) -> Tuple[Tensor, Tensor]:
+def aminmax(
+    input: Tensor, dim: Optional[int] = None, keepdim: bool = False
+) -> Tuple[Tensor, Tensor]:
     """
     Compute minimum and maximum values along a dimension simultaneously.
 
@@ -410,7 +436,10 @@ def aminmax(input: Tensor, dim: Optional[int] = None, keepdim: bool = False) -> 
 # Extended Reduction Operations (Sprint 5)
 # =============================================================================
 
-def median(input: Tensor, dim: Optional[int] = None, keepdim: bool = False) -> Union[Tensor, Tuple[Tensor, Tensor]]:
+
+def median(
+    input: Tensor, dim: Optional[int] = None, keepdim: bool = False
+) -> Union[Tensor, Tuple[Tensor, Tensor]]:
     """
     Compute median values.
 
@@ -555,7 +584,9 @@ def mode(input: Tensor, dim: int = -1, keepdim: bool = False) -> Tuple[Tensor, T
                 current_count += 1
                 current_last_idx = slice_indices_list[j]
             else:
-                if current_count > best_count or (current_count == best_count and current_value < best_value):
+                if current_count > best_count or (
+                    current_count == best_count and current_value < best_value
+                ):
                     best_value = current_value
                     best_count = current_count
                     best_orig_idx = current_first_idx if use_first_index else current_last_idx
@@ -565,7 +596,9 @@ def mode(input: Tensor, dim: int = -1, keepdim: bool = False) -> Tuple[Tensor, T
                 current_last_idx = slice_indices_list[j]
 
         # Check the last run
-        if current_count > best_count or (current_count == best_count and current_value < best_value):
+        if current_count > best_count or (
+            current_count == best_count and current_value < best_value
+        ):
             best_value = current_value
             best_orig_idx = current_first_idx if use_first_index else current_last_idx
 
@@ -597,8 +630,9 @@ def mode(input: Tensor, dim: int = -1, keepdim: bool = False) -> Tuple[Tensor, T
     return values, indices
 
 
-def quantile(input: Tensor, q: Union[float, Tensor], dim: Optional[int] = None,
-             keepdim: bool = False) -> Tensor:
+def quantile(
+    input: Tensor, q: Union[float, Tensor], dim: Optional[int] = None, keepdim: bool = False
+) -> Tensor:
     """
     Compute quantiles using linear interpolation.
 
@@ -698,8 +732,9 @@ def quantile(input: Tensor, q: Union[float, Tensor], dim: Optional[int] = None,
     return result
 
 
-def nanmean(input: Tensor, dim: Optional[Union[int, Tuple[int, ...]]] = None,
-            keepdim: bool = False) -> Tensor:
+def nanmean(
+    input: Tensor, dim: Optional[Union[int, Tuple[int, ...]]] = None, keepdim: bool = False
+) -> Tensor:
     """
     Mean ignoring NaN values.
 
@@ -736,8 +771,9 @@ def nanmean(input: Tensor, dim: Optional[Union[int, Tuple[int, ...]]] = None,
     return result
 
 
-def nansum(input: Tensor, dim: Optional[Union[int, Tuple[int, ...]]] = None,
-           keepdim: bool = False) -> Tensor:
+def nansum(
+    input: Tensor, dim: Optional[Union[int, Tuple[int, ...]]] = None, keepdim: bool = False
+) -> Tensor:
     """
     Sum ignoring NaN values.
 
@@ -769,8 +805,12 @@ def nansum(input: Tensor, dim: Optional[Union[int, Tuple[int, ...]]] = None,
     return result
 
 
-def std_mean(input: Tensor, dim: Optional[Union[int, Tuple[int, ...]]] = None,
-             keepdim: bool = False, unbiased: bool = True) -> Tuple[Tensor, Tensor]:
+def std_mean(
+    input: Tensor,
+    dim: Optional[Union[int, Tuple[int, ...]]] = None,
+    keepdim: bool = False,
+    unbiased: bool = True,
+) -> Tuple[Tensor, Tensor]:
     """
     Compute standard deviation and mean simultaneously.
 
@@ -788,8 +828,12 @@ def std_mean(input: Tensor, dim: Optional[Union[int, Tuple[int, ...]]] = None,
     return std_val, mean_val
 
 
-def var_mean(input: Tensor, dim: Optional[Union[int, Tuple[int, ...]]] = None,
-             keepdim: bool = False, unbiased: bool = True) -> Tuple[Tensor, Tensor]:
+def var_mean(
+    input: Tensor,
+    dim: Optional[Union[int, Tuple[int, ...]]] = None,
+    keepdim: bool = False,
+    unbiased: bool = True,
+) -> Tuple[Tensor, Tensor]:
     """
     Compute variance and mean simultaneously.
 
@@ -842,7 +886,7 @@ def cummax(input: Tensor, dim: int) -> Tuple[Tensor, Tensor]:
     # For position 0, it's always "new max" since there's no previous
 
     # Create shifted cummax (pad with -inf at the start)
-    neg_inf = mx.array(float('-inf'), dtype=arr.dtype)
+    neg_inf = mx.array(float("-inf"), dtype=arr.dtype)
 
     # Build slices for shifting
     slices_before = [slice(None)] * ndim
@@ -857,7 +901,7 @@ def cummax(input: Tensor, dim: int) -> Tuple[Tensor, Tensor]:
     # Pad with -inf at the beginning
     pad_shape = list(arr.shape)
     pad_shape[dim] = 1
-    neg_inf_pad = mx.full(pad_shape, float('-inf'), dtype=arr.dtype)
+    neg_inf_pad = mx.full(pad_shape, float("-inf"), dtype=arr.dtype)
 
     prev_cummax = mx.concatenate([neg_inf_pad, prev_cummax_inner], axis=dim)
 
@@ -927,7 +971,7 @@ def cummin(input: Tensor, dim: int) -> Tuple[Tensor, Tensor]:
     # Pad with +inf at the beginning (so position 0 is always considered a "new" min)
     pad_shape = list(arr.shape)
     pad_shape[dim] = 1
-    pos_inf_pad = mx.full(pad_shape, float('inf'), dtype=arr.dtype)
+    pos_inf_pad = mx.full(pad_shape, float("inf"), dtype=arr.dtype)
 
     prev_cummin = mx.concatenate([pos_inf_pad, prev_cummin_inner], axis=dim)
 

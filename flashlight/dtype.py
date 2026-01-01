@@ -14,6 +14,7 @@ from typing import Optional
 
 try:
     import mlx.core as mx
+
     MLX_AVAILABLE = True
 except ImportError:
     MLX_AVAILABLE = False
@@ -40,12 +41,12 @@ class DType:
             is_signed: Whether this is a signed type
         """
         # Parse arguments - support both positional and keyword args
-        mlx_dtype = args[0] if args else kwargs.get('mlx_dtype')
-        name = args[1] if len(args) > 1 else kwargs.get('name')
-        itemsize = args[2] if len(args) > 2 else kwargs.get('itemsize')
-        is_floating = args[3] if len(args) > 3 else kwargs.get('is_floating', False)
-        is_complex = args[4] if len(args) > 4 else kwargs.get('is_complex', False)
-        is_signed = args[5] if len(args) > 5 else kwargs.get('is_signed', True)
+        mlx_dtype = args[0] if args else kwargs.get("mlx_dtype")
+        name = args[1] if len(args) > 1 else kwargs.get("name")
+        itemsize = args[2] if len(args) > 2 else kwargs.get("itemsize")
+        is_floating = args[3] if len(args) > 3 else kwargs.get("is_floating", False)
+        is_complex = args[4] if len(args) > 4 else kwargs.get("is_complex", False)
+        is_signed = args[5] if len(args) > 5 else kwargs.get("is_signed", True)
 
         self._mlx_dtype = mlx_dtype
         self.name = name
@@ -74,28 +75,28 @@ class DType:
 
 if MLX_AVAILABLE:
     # Floating point types
-    float32 = DType(mx.float32, 'float32', 4, is_floating=True)
-    float16 = DType(mx.float16, 'float16', 2, is_floating=True)
-    bfloat16 = DType(mx.bfloat16, 'bfloat16', 2, is_floating=True)
+    float32 = DType(mx.float32, "float32", 4, is_floating=True)
+    float16 = DType(mx.float16, "float16", 2, is_floating=True)
+    bfloat16 = DType(mx.bfloat16, "bfloat16", 2, is_floating=True)
 
     # Integer types (signed)
-    int8 = DType(mx.int8, 'int8', 1)
-    int16 = DType(mx.int16, 'int16', 2)
-    int32 = DType(mx.int32, 'int32', 4)
-    int64 = DType(mx.int64, 'int64', 8)
+    int8 = DType(mx.int8, "int8", 1)
+    int16 = DType(mx.int16, "int16", 2)
+    int32 = DType(mx.int32, "int32", 4)
+    int64 = DType(mx.int64, "int64", 8)
 
     # Integer types (unsigned)
-    uint8 = DType(mx.uint8, 'uint8', 1, is_signed=False)
-    uint16 = DType(mx.uint16, 'uint16', 2, is_signed=False)
-    uint32 = DType(mx.uint32, 'uint32', 4, is_signed=False)
-    uint64 = DType(mx.uint64, 'uint64', 8, is_signed=False)
+    uint8 = DType(mx.uint8, "uint8", 1, is_signed=False)
+    uint16 = DType(mx.uint16, "uint16", 2, is_signed=False)
+    uint32 = DType(mx.uint32, "uint32", 4, is_signed=False)
+    uint64 = DType(mx.uint64, "uint64", 8, is_signed=False)
 
     # Boolean
-    bool = DType(mx.bool_, 'bool', 1, is_signed=False)
+    bool = DType(mx.bool_, "bool", 1, is_signed=False)
 
     # Complex types (if available in MLX)
     try:
-        complex64 = DType(mx.complex64, 'complex64', 8, is_complex=True)
+        complex64 = DType(mx.complex64, "complex64", 8, is_complex=True)
     except AttributeError:
         complex64 = None
 
@@ -136,8 +137,14 @@ else:
 class UnsupportedDType(DType):
     """Dtype that exists in PyTorch but not in MLX."""
 
-    def __init__(self, name: str, fallback: Optional[DType], itemsize: int,
-                 is_floating: bool = False, is_complex: bool = False):
+    def __init__(
+        self,
+        name: str,
+        fallback: Optional[DType],
+        itemsize: int,
+        is_floating: bool = False,
+        is_complex: bool = False,
+    ):
         super().__init__(None, name, itemsize, is_floating, is_complex)
         self.fallback = fallback
 
@@ -149,11 +156,11 @@ class UnsupportedDType(DType):
 
 
 # Float64 - Not supported in MLX (use float32 as fallback)
-float64 = UnsupportedDType('float64', float32, 8, is_floating=True)
+float64 = UnsupportedDType("float64", float32, 8, is_floating=True)
 double = float64  # Alias
 
 # Complex128 - Not supported in MLX
-complex128 = UnsupportedDType('complex128', complex64, 16, is_complex=True)
+complex128 = UnsupportedDType("complex128", complex64, 16, is_complex=True)
 
 
 def _warn_unsupported(dtype_name: str, fallback_name: str):
@@ -163,7 +170,7 @@ def _warn_unsupported(dtype_name: str, fallback_name: str):
         f"Automatically converting to {fallback_name}. "
         f"This may result in reduced precision.",
         UserWarning,
-        stacklevel=3
+        stacklevel=3,
     )
 
 
@@ -190,21 +197,28 @@ def get_dtype(dtype) -> Optional[DType]:
     # String lookup
     if isinstance(dtype, str):
         dtype_map = {
-            'float32': float32, 'float': float32,
-            'float64': float64, 'double': float64,
-            'float16': float16, 'half': float16,
-            'bfloat16': bfloat16,
-            'int8': int8,
-            'int16': int16, 'short': int16,
-            'int32': int32, 'int': int32,
-            'int64': int64, 'long': int64,
-            'uint8': uint8, 'byte': uint8,
-            'uint16': uint16,
-            'uint32': uint32,
-            'uint64': uint64,
-            'bool': bool,
-            'complex64': complex64,
-            'complex128': complex128,
+            "float32": float32,
+            "float": float32,
+            "float64": float64,
+            "double": float64,
+            "float16": float16,
+            "half": float16,
+            "bfloat16": bfloat16,
+            "int8": int8,
+            "int16": int16,
+            "short": int16,
+            "int32": int32,
+            "int": int32,
+            "int64": int64,
+            "long": int64,
+            "uint8": uint8,
+            "byte": uint8,
+            "uint16": uint16,
+            "uint32": uint32,
+            "uint64": uint64,
+            "bool": bool,
+            "complex64": complex64,
+            "complex128": complex128,
         }
         result = dtype_map.get(dtype)
         if result is None:
@@ -288,28 +302,28 @@ def torch_dtype_to_numpy(dtype):
 
     # String lookup
     dtype_map = {
-        'float32': np.float32,
-        'float': np.float32,
-        'float64': np.float64,
-        'double': np.float64,
-        'float16': np.float16,
-        'half': np.float16,
-        'bfloat16': np.float32,  # numpy doesn't have bfloat16, use float32
-        'int8': np.int8,
-        'int16': np.int16,
-        'short': np.int16,
-        'int32': np.int32,
-        'int': np.int32,
-        'int64': np.int64,
-        'long': np.int64,
-        'uint8': np.uint8,
-        'byte': np.uint8,
-        'uint16': np.uint16,
-        'uint32': np.uint32,
-        'uint64': np.uint64,
-        'bool': np.bool_,
-        'complex64': np.complex64,
-        'complex128': np.complex128,
+        "float32": np.float32,
+        "float": np.float32,
+        "float64": np.float64,
+        "double": np.float64,
+        "float16": np.float16,
+        "half": np.float16,
+        "bfloat16": np.float32,  # numpy doesn't have bfloat16, use float32
+        "int8": np.int8,
+        "int16": np.int16,
+        "short": np.int16,
+        "int32": np.int32,
+        "int": np.int32,
+        "int64": np.int64,
+        "long": np.int64,
+        "uint8": np.uint8,
+        "byte": np.uint8,
+        "uint16": np.uint16,
+        "uint32": np.uint32,
+        "uint64": np.uint64,
+        "bool": np.bool_,
+        "complex64": np.complex64,
+        "complex128": np.complex128,
     }
 
     if isinstance(dtype, str):
@@ -319,7 +333,7 @@ def torch_dtype_to_numpy(dtype):
         return result
 
     # If it's already a numpy dtype, return it
-    if hasattr(dtype, 'name') and dtype.name in dtype_map:
+    if hasattr(dtype, "name") and dtype.name in dtype_map:
         return dtype_map[dtype.name]
 
     raise ValueError(f"Cannot convert {dtype} to numpy dtype")
@@ -342,7 +356,7 @@ def numpy_to_mlx_dtype(np_dtype, return_raw=True, warn_on_downgrade=True):
 
     # Handle numpy dtype objects first to get the type
     original_dtype = np_dtype
-    if hasattr(np_dtype, 'type'):
+    if hasattr(np_dtype, "type"):
         np_dtype = np_dtype.type
 
     dtype_map = {
@@ -370,29 +384,47 @@ def numpy_to_mlx_dtype(np_dtype, return_raw=True, warn_on_downgrade=True):
             "float64 is not supported in MLX. Automatically converting to float32. "
             "This may result in reduced precision.",
             UserWarning,
-            stacklevel=3
+            stacklevel=3,
         )
 
     # Return raw MLX dtype or wrapped DType
-    if return_raw and hasattr(result, '_mlx_dtype'):
+    if return_raw and hasattr(result, "_mlx_dtype"):
         return result._mlx_dtype
     return result
 
 
 __all__ = [
-    'DType',
+    "DType",
     # Floating point
-    'float32', 'float16', 'bfloat16', 'float64',
-    'float', 'half', 'double',
+    "float32",
+    "float16",
+    "bfloat16",
+    "float64",
+    "float",
+    "half",
+    "double",
     # Integers
-    'int8', 'int16', 'int32', 'int64',
-    'uint8', 'uint16', 'uint32', 'uint64',
-    'short', 'int', 'long', 'byte',
+    "int8",
+    "int16",
+    "int32",
+    "int64",
+    "uint8",
+    "uint16",
+    "uint32",
+    "uint64",
+    "short",
+    "int",
+    "long",
+    "byte",
     # Boolean
-    'bool',
+    "bool",
     # Complex
-    'complex64', 'complex128',
+    "complex64",
+    "complex128",
     # Functions
-    'get_dtype', 'set_default_dtype', 'get_default_dtype',
-    'torch_dtype_to_numpy', 'numpy_to_mlx_dtype',
+    "get_dtype",
+    "set_default_dtype",
+    "get_default_dtype",
+    "torch_dtype_to_numpy",
+    "numpy_to_mlx_dtype",
 ]

@@ -5,18 +5,27 @@ Implements PyTorch-compatible arithmetic operations with MLX backend.
 These operations build the autograd computation graph.
 """
 
-from typing import Union, Optional
+from typing import Optional, Union
+
 import mlx.core as mx
 
-from ..tensor import Tensor
+from ..autograd.context import is_grad_enabled
+from ..autograd.function import (
+    AbsBackward,
+    AddBackward,
+    DivBackward,
+    ExpBackward,
+    LogBackward,
+    MatmulBackward,
+    MulBackward,
+    NegBackward,
+    PowBackward,
+    SqrtBackward,
+    SubBackward,
+)
 from ..distributions._constants import FLOAT32_TINY
 from ..dtype import get_dtype
-from ..autograd.function import (
-    AddBackward, SubBackward, MulBackward, DivBackward,
-    MatmulBackward, PowBackward, SqrtBackward, ExpBackward,
-    LogBackward, AbsBackward, NegBackward
-)
-from ..autograd.context import is_grad_enabled
+from ..tensor import Tensor
 
 
 def add(input: Tensor, other: Union[Tensor, float, int], *, alpha: float = 1) -> Tensor:
@@ -53,7 +62,9 @@ def add(input: Tensor, other: Union[Tensor, float, int], *, alpha: float = 1) ->
     result = Tensor._from_mlx_array(mlx_result)
 
     # Autograd graph construction
-    if is_grad_enabled() and (input.requires_grad or (isinstance(other, Tensor) and other.requires_grad)):
+    if is_grad_enabled() and (
+        input.requires_grad or (isinstance(other, Tensor) and other.requires_grad)
+    ):
         result.requires_grad = True
         # Convert scalar to Tensor for autograd
         other_tensor = other if isinstance(other, Tensor) else Tensor(other)
@@ -92,7 +103,9 @@ def sub(input: Tensor, other: Union[Tensor, float, int], *, alpha: float = 1) ->
     result = Tensor._from_mlx_array(mlx_result)
 
     # Autograd graph construction
-    if is_grad_enabled() and (input.requires_grad or (isinstance(other, Tensor) and other.requires_grad)):
+    if is_grad_enabled() and (
+        input.requires_grad or (isinstance(other, Tensor) and other.requires_grad)
+    ):
         result.requires_grad = True
         other_tensor = other if isinstance(other, Tensor) else Tensor(other)
         grad_fn = SubBackward(input, other_tensor, alpha)
@@ -124,7 +137,9 @@ def mul(input: Tensor, other: Union[Tensor, float, int]) -> Tensor:
     result = Tensor._from_mlx_array(mlx_result)
 
     # Autograd graph construction
-    if is_grad_enabled() and (input.requires_grad or (isinstance(other, Tensor) and other.requires_grad)):
+    if is_grad_enabled() and (
+        input.requires_grad or (isinstance(other, Tensor) and other.requires_grad)
+    ):
         result.requires_grad = True
         other_tensor = other if isinstance(other, Tensor) else Tensor(other)
         grad_fn = MulBackward(input, other_tensor)
@@ -134,7 +149,9 @@ def mul(input: Tensor, other: Union[Tensor, float, int]) -> Tensor:
     return result
 
 
-def div(input: Tensor, other: Union[Tensor, float, int], *, rounding_mode: Optional[str] = None) -> Tensor:
+def div(
+    input: Tensor, other: Union[Tensor, float, int], *, rounding_mode: Optional[str] = None
+) -> Tensor:
     """
     Divide two tensors element-wise.
 
@@ -155,11 +172,11 @@ def div(input: Tensor, other: Union[Tensor, float, int], *, rounding_mode: Optio
 
     mlx_result = mx.divide(input._mlx_array, other_array)
 
-    if rounding_mode == 'trunc':
+    if rounding_mode == "trunc":
         # MLX doesn't have trunc, so implement it manually
         # trunc(x) = sign(x) * floor(abs(x))
         mlx_result = mx.sign(mlx_result) * mx.floor(mx.abs(mlx_result))
-    elif rounding_mode == 'floor':
+    elif rounding_mode == "floor":
         mlx_result = mx.floor(mlx_result)
     elif rounding_mode is not None:
         raise ValueError(f"Invalid rounding_mode: {rounding_mode}")
@@ -167,7 +184,11 @@ def div(input: Tensor, other: Union[Tensor, float, int], *, rounding_mode: Optio
     result = Tensor._from_mlx_array(mlx_result)
 
     # Autograd graph construction (only for non-rounding modes for now)
-    if rounding_mode is None and is_grad_enabled() and (input.requires_grad or (isinstance(other, Tensor) and other.requires_grad)):
+    if (
+        rounding_mode is None
+        and is_grad_enabled()
+        and (input.requires_grad or (isinstance(other, Tensor) and other.requires_grad))
+    ):
         result.requires_grad = True
         other_tensor = other if isinstance(other, Tensor) else Tensor(other)
         grad_fn = DivBackward(input, other_tensor)
@@ -271,7 +292,9 @@ def pow(input: Tensor, exponent: Union[Tensor, float, int]) -> Tensor:
     result = Tensor._from_mlx_array(mlx_result)
 
     # Autograd graph construction
-    if is_grad_enabled() and (input.requires_grad or (isinstance(exponent, Tensor) and exponent.requires_grad)):
+    if is_grad_enabled() and (
+        input.requires_grad or (isinstance(exponent, Tensor) and exponent.requires_grad)
+    ):
         result.requires_grad = True
         exponent_tensor = exponent if isinstance(exponent, Tensor) else Tensor(exponent)
         grad_fn = PowBackward(input, exponent_tensor, result)
@@ -412,6 +435,7 @@ def sin(input: Tensor) -> Tensor:
     # Autograd graph construction
     if is_grad_enabled() and input.requires_grad:
         from ..autograd.function import SinBackward
+
         result.requires_grad = True
         grad_fn = SinBackward(input)
         grad_fn.output_tensor = result
@@ -436,6 +460,7 @@ def cos(input: Tensor) -> Tensor:
     # Autograd graph construction
     if is_grad_enabled() and input.requires_grad:
         from ..autograd.function import CosBackward
+
         result.requires_grad = True
         grad_fn = CosBackward(input)
         grad_fn.output_tensor = result
@@ -586,6 +611,7 @@ absolute = abs
 
 # ==================== Extended Math Functions ====================
 
+
 def angle(input: Tensor) -> Tensor:
     """
     Compute the angle (argument) of complex numbers element-wise.
@@ -619,7 +645,7 @@ def angle(input: Tensor) -> Tensor:
 
         # For NaN values, the result should be NaN
         # mx.isnan returns True for NaN values
-        nan_array = mx.full(x.shape, float('nan'), dtype=x.dtype)
+        nan_array = mx.full(x.shape, float("nan"), dtype=x.dtype)
         mlx_result = mx.where(mx.isnan(x), nan_array, mlx_result)
 
     result = Tensor._from_mlx_array(mlx_result)
@@ -658,17 +684,14 @@ def sinc(input: Tensor) -> Tensor:
         Tensor with sinc values
     """
     import math
+
     pi = math.pi
     x = input._mlx_array
 
     # sinc(x) = sin(pi*x) / (pi*x), with sinc(0) = 1
     pi_x = pi * x
     # Use where to handle x=0 case
-    mlx_result = mx.where(
-        x == 0,
-        mx.ones_like(x),
-        mx.sin(pi_x) / pi_x
-    )
+    mlx_result = mx.where(x == 0, mx.ones_like(x), mx.sin(pi_x) / pi_x)
     result = Tensor._from_mlx_array(mlx_result)
     if is_grad_enabled() and input.requires_grad:
         result.requires_grad = True
@@ -686,9 +709,7 @@ def hypot(input: Tensor, other: Tensor) -> Tensor:
     Returns:
         Tensor with hypotenuse values
     """
-    mlx_result = mx.sqrt(
-        mx.power(input._mlx_array, 2) + mx.power(other._mlx_array, 2)
-    )
+    mlx_result = mx.sqrt(mx.power(input._mlx_array, 2) + mx.power(other._mlx_array, 2))
     result = Tensor._from_mlx_array(mlx_result)
     if is_grad_enabled() and (input.requires_grad or other.requires_grad):
         result.requires_grad = True
@@ -714,7 +735,9 @@ def copysign(input: Tensor, other: Union[Tensor, float, int]) -> Tensor:
     # copysign(x, y) = abs(x) * sign(y)
     mlx_result = mx.abs(input._mlx_array) * mx.sign(other_array)
     result = Tensor._from_mlx_array(mlx_result)
-    if is_grad_enabled() and (input.requires_grad or (isinstance(other, Tensor) and other.requires_grad)):
+    if is_grad_enabled() and (
+        input.requires_grad or (isinstance(other, Tensor) and other.requires_grad)
+    ):
         result.requires_grad = True
     return result
 
@@ -735,11 +758,7 @@ def heaviside(input: Tensor, values: Tensor) -> Tensor:
     x = input._mlx_array
     vals = values._mlx_array
 
-    mlx_result = mx.where(
-        x < 0,
-        mx.zeros_like(x),
-        mx.where(x > 0, mx.ones_like(x), vals)
-    )
+    mlx_result = mx.where(x < 0, mx.zeros_like(x), mx.where(x > 0, mx.ones_like(x), vals))
     result = Tensor._from_mlx_array(mlx_result)
     if is_grad_enabled() and (input.requires_grad or values.requires_grad):
         result.requires_grad = True
@@ -768,12 +787,11 @@ def fmax(input: Tensor, other: Union[Tensor, float, int]) -> Tensor:
     x = input._mlx_array
     y = other_array
 
-    mlx_result = mx.where(
-        mx.isnan(x), y,
-        mx.where(mx.isnan(y), x, mx.maximum(x, y))
-    )
+    mlx_result = mx.where(mx.isnan(x), y, mx.where(mx.isnan(y), x, mx.maximum(x, y)))
     result = Tensor._from_mlx_array(mlx_result)
-    if is_grad_enabled() and (input.requires_grad or (isinstance(other, Tensor) and other.requires_grad)):
+    if is_grad_enabled() and (
+        input.requires_grad or (isinstance(other, Tensor) and other.requires_grad)
+    ):
         result.requires_grad = True
     return result
 
@@ -800,12 +818,11 @@ def fmin(input: Tensor, other: Union[Tensor, float, int]) -> Tensor:
     x = input._mlx_array
     y = other_array
 
-    mlx_result = mx.where(
-        mx.isnan(x), y,
-        mx.where(mx.isnan(y), x, mx.minimum(x, y))
-    )
+    mlx_result = mx.where(mx.isnan(x), y, mx.where(mx.isnan(y), x, mx.minimum(x, y)))
     result = Tensor._from_mlx_array(mlx_result)
-    if is_grad_enabled() and (input.requires_grad or (isinstance(other, Tensor) and other.requires_grad)):
+    if is_grad_enabled() and (
+        input.requires_grad or (isinstance(other, Tensor) and other.requires_grad)
+    ):
         result.requires_grad = True
     return result
 
@@ -1020,13 +1037,10 @@ def i0(input: Tensor) -> Tensor:
     t2 = t * t
 
     # Coefficients for small x approximation
-    small_result = (1.0 +
-                    t2 * (3.5156229 +
-                    t2 * (3.0899424 +
-                    t2 * (1.2067492 +
-                    t2 * (0.2659732 +
-                    t2 * (0.0360768 +
-                    t2 * 0.0045813))))))
+    small_result = 1.0 + t2 * (
+        3.5156229
+        + t2 * (3.0899424 + t2 * (1.2067492 + t2 * (0.2659732 + t2 * (0.0360768 + t2 * 0.0045813))))
+    )
 
     # For |x| > 3.75, use asymptotic expansion
     # I0(x) ≈ exp(x) / sqrt(x) * polynomial(3.75/x)
@@ -1034,15 +1048,26 @@ def i0(input: Tensor) -> Tensor:
     t_large2 = t_large * t_large
 
     # Coefficients for large x approximation
-    poly_large = (0.39894228 +
-                  t_large * (0.01328592 +
-                  t_large * (0.00225319 +
-                  t_large * (-0.00157565 +
-                  t_large * (0.00916281 +
-                  t_large * (-0.02057706 +
-                  t_large * (0.02635537 +
-                  t_large * (-0.01647633 +
-                  t_large * 0.00392377))))))))
+    poly_large = 0.39894228 + t_large * (
+        0.01328592
+        + t_large
+        * (
+            0.00225319
+            + t_large
+            * (
+                -0.00157565
+                + t_large
+                * (
+                    0.00916281
+                    + t_large
+                    * (
+                        -0.02057706
+                        + t_large * (0.02635537 + t_large * (-0.01647633 + t_large * 0.00392377))
+                    )
+                )
+            )
+        )
+    )
 
     large_result = mx.exp(ax) / mx.sqrt(ax) * poly_large
 
@@ -1125,7 +1150,9 @@ def float_power(input: Tensor, exponent: Union[Tensor, float, int]) -> Tensor:
 
     mlx_result = mx.power(x, exp_array)
     result = Tensor._from_mlx_array(mlx_result)
-    if is_grad_enabled() and (input.requires_grad or (isinstance(exponent, Tensor) and exponent.requires_grad)):
+    if is_grad_enabled() and (
+        input.requires_grad or (isinstance(exponent, Tensor) and exponent.requires_grad)
+    ):
         result.requires_grad = True
     return result
 
@@ -1152,6 +1179,7 @@ def logaddexp2(input: Tensor, other: Tensor) -> Tensor:
 
     # Use log1p for numerical stability
     import math
+
     log2_e = 1.0 / math.log(2)
 
     mlx_result = max_val + mx.log1p(mx.power(2.0, min_val - max_val)) * log2_e
@@ -1195,7 +1223,9 @@ def nextafter(input: Tensor, other: Tensor) -> Tensor:
     # and nextafter(0, y) where y < 0 should be -min_positive
     # Note: we use mx.where to avoid subnormal * 1.0 = 0 issue
     is_zero = mx.equal(x, mx.array(0.0, dtype=mx.float32))
-    zero_result = mx.where(going_up, min_positive, mx.where(going_down, -min_positive, mx.zeros_like(x)))
+    zero_result = mx.where(
+        going_up, min_positive, mx.where(going_down, -min_positive, mx.zeros_like(x))
+    )
 
     # For non-zero x: use ulp-based stepping
     # ULP (unit in last place) = eps * |x| for normal numbers
@@ -1312,12 +1342,10 @@ def xlogy(input: Tensor, other: Union[Tensor, float, int]) -> Tensor:
     y = other_array
 
     # xlogy(x, y) = x * log(y), but 0 * log(y) = 0 even when log(y) is undefined
-    mlx_result = mx.where(
-        x == 0,
-        mx.zeros_like(x),
-        x * mx.log(y)
-    )
+    mlx_result = mx.where(x == 0, mx.zeros_like(x), x * mx.log(y))
     result = Tensor._from_mlx_array(mlx_result)
-    if is_grad_enabled() and (input.requires_grad or (isinstance(other, Tensor) and other.requires_grad)):
+    if is_grad_enabled() and (
+        input.requires_grad or (isinstance(other, Tensor) and other.requires_grad)
+    ):
         result.requires_grad = True
     return result

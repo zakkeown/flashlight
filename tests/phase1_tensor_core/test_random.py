@@ -4,19 +4,19 @@ Random Number Generation Tests
 Tests for flashlight.random module.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 import flashlight
 from flashlight.random import (
     Generator,
     default_generator,
+    fork_rng,
+    get_rng_state,
+    initial_seed,
     manual_seed,
     seed,
-    initial_seed,
-    get_rng_state,
     set_rng_state,
-    fork_rng,
 )
 
 
@@ -86,6 +86,7 @@ class TestDefaultGenerator:
         """Test default_generator is a singleton-like global."""
         from flashlight.random import default_generator as gen1
         from flashlight.random import default_generator as gen2
+
         assert gen1 is gen2
 
 

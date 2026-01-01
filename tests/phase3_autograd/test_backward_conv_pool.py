@@ -8,15 +8,18 @@ Tests gradient computation for convolution and pooling:
 """
 
 import sys
-sys.path.insert(0, '../..')
+
+sys.path.insert(0, "../..")
 
 import unittest
+
 import numpy as np
 
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
     import flashlight
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -82,12 +85,19 @@ class TestMaxPool2dBackward(TestCase):
         """Test basic MaxPool2d backward."""
         pool = flashlight.nn.MaxPool2d(kernel_size=2, stride=2)
 
-        x = flashlight.tensor([[[
-            [1.0, 2.0, 3.0, 4.0],
-            [5.0, 6.0, 7.0, 8.0],
-            [9.0, 10.0, 11.0, 12.0],
-            [13.0, 14.0, 15.0, 16.0]
-        ]]], requires_grad=True)
+        x = flashlight.tensor(
+            [
+                [
+                    [
+                        [1.0, 2.0, 3.0, 4.0],
+                        [5.0, 6.0, 7.0, 8.0],
+                        [9.0, 10.0, 11.0, 12.0],
+                        [13.0, 14.0, 15.0, 16.0],
+                    ]
+                ]
+            ],
+            requires_grad=True,
+        )
 
         y = pool(x)
         loss = flashlight.sum(y)
@@ -126,12 +136,19 @@ class TestAvgPool2dBackward(TestCase):
         """Test basic AvgPool2d backward."""
         pool = flashlight.nn.AvgPool2d(kernel_size=2, stride=2)
 
-        x = flashlight.tensor([[[
-            [1.0, 2.0, 3.0, 4.0],
-            [5.0, 6.0, 7.0, 8.0],
-            [9.0, 10.0, 11.0, 12.0],
-            [13.0, 14.0, 15.0, 16.0]
-        ]]], requires_grad=True)
+        x = flashlight.tensor(
+            [
+                [
+                    [
+                        [1.0, 2.0, 3.0, 4.0],
+                        [5.0, 6.0, 7.0, 8.0],
+                        [9.0, 10.0, 11.0, 12.0],
+                        [13.0, 14.0, 15.0, 16.0],
+                    ]
+                ]
+            ],
+            requires_grad=True,
+        )
 
         y = pool(x)
         loss = flashlight.sum(y)
@@ -191,6 +208,7 @@ class TestConvPoolChain(TestCase):
         self.assertEqual(x.grad.shape, x.shape)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from tests.common_utils import run_tests
+
     run_tests()

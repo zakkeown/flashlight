@@ -4,10 +4,9 @@ Hook management utilities.
 Implements PyTorch-compatible hook utilities for MLX.
 """
 
-from collections import OrderedDict
 import weakref
-from typing import Any, Optional, Callable, Dict, List, Union, Tuple
-
+from collections import OrderedDict
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 __all__ = ["RemovableHandle", "unserializable_hook", "warn_if_has_hooks", "BackwardHook"]
 
@@ -156,9 +155,7 @@ class BackwardHook:
         self.n_inputs: int = -1
         self.input_tensors_index: Optional[List[int]] = None
 
-    def _pack_with_none(
-        self, indices: List[int], values: Tuple, size: int
-    ) -> Tuple[Any, ...]:
+    def _pack_with_none(self, indices: List[int], values: Tuple, size: int) -> Tuple[Any, ...]:
         """Pack values at indices into list of given size, filling with None."""
         res: List[Any] = [None] * size
         for idx, val in zip(indices, values):

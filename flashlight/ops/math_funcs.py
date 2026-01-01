@@ -5,10 +5,12 @@ Implements PyTorch-compatible math utility functions with MLX backend.
 """
 
 from typing import Optional, Union
+
 import mlx.core as mx
-from ..tensor import Tensor
+
 from ..autograd.context import is_grad_enabled
 from ..distributions._constants import FLOAT32_MAX
+from ..tensor import Tensor
 
 
 def clamp(input: Tensor, min: Optional[float] = None, max: Optional[float] = None) -> Tensor:
@@ -192,7 +194,7 @@ def round(input: Tensor, decimals: int = 0) -> Tensor:
     if decimals == 0:
         result_array = mx.round(input._mlx_array)
     else:
-        scale = 10 ** decimals
+        scale = 10**decimals
         result_array = mx.round(input._mlx_array * scale) / scale
 
     result = Tensor._from_mlx_array(result_array)
@@ -206,6 +208,7 @@ def round(input: Tensor, decimals: int = 0) -> Tensor:
 _trunc_kernel = None
 _TRUNC_METAL_THRESHOLD = 1_000_000  # Use Metal kernel for tensors > 1M elements
 
+
 def _get_trunc_kernel():
     """Get or create cached Metal kernel for trunc operation."""
     global _trunc_kernel
@@ -214,11 +217,11 @@ def _get_trunc_kernel():
             name="trunc_kernel",
             input_names=["inp"],
             output_names=["out"],
-            source='''
+            source="""
                 uint idx = thread_position_in_grid.x;
                 if (idx >= inp_shape[0]) return;
                 out[idx] = metal::trunc(inp[idx]);
-            '''
+            """,
         )
     return _trunc_kernel
 
@@ -298,9 +301,7 @@ def fix_(input: Tensor) -> Tensor:
         Modified input tensor
     """
     result_array = mx.where(
-        input._mlx_array >= 0,
-        mx.floor(input._mlx_array),
-        mx.ceil(input._mlx_array)
+        input._mlx_array >= 0, mx.floor(input._mlx_array), mx.ceil(input._mlx_array)
     )
     input._mlx_array = result_array
     return input
@@ -425,10 +426,7 @@ def logical_xor(input: Tensor, other: Tensor) -> Tensor:
     # XOR = (A OR B) AND NOT (A AND B)
     a = input._mlx_array
     b = other._mlx_array
-    result_array = mx.logical_and(
-        mx.logical_or(a, b),
-        mx.logical_not(mx.logical_and(a, b))
-    )
+    result_array = mx.logical_and(mx.logical_or(a, b), mx.logical_not(mx.logical_and(a, b)))
     return Tensor._from_mlx_array(result_array)
 
 
@@ -509,8 +507,11 @@ def lerp(input: Tensor, end: Tensor, weight: Union[float, Tensor]) -> Tensor:
     result_array = input._mlx_array + weight_array * (end._mlx_array - input._mlx_array)
     result = Tensor._from_mlx_array(result_array)
 
-    if is_grad_enabled() and (input.requires_grad or end.requires_grad or
-                               (isinstance(weight, Tensor) and weight.requires_grad)):
+    if is_grad_enabled() and (
+        input.requires_grad
+        or end.requires_grad
+        or (isinstance(weight, Tensor) and weight.requires_grad)
+    ):
         result.requires_grad = True
 
     return result
@@ -532,7 +533,9 @@ def addcmul(input: Tensor, tensor1: Tensor, tensor2: Tensor, value: float = 1.0)
     result_array = input._mlx_array + value * tensor1._mlx_array * tensor2._mlx_array
     result = Tensor._from_mlx_array(result_array)
 
-    if is_grad_enabled() and (input.requires_grad or tensor1.requires_grad or tensor2.requires_grad):
+    if is_grad_enabled() and (
+        input.requires_grad or tensor1.requires_grad or tensor2.requires_grad
+    ):
         result.requires_grad = True
 
     return result
@@ -554,7 +557,9 @@ def addcdiv(input: Tensor, tensor1: Tensor, tensor2: Tensor, value: float = 1.0)
     result_array = input._mlx_array + value * tensor1._mlx_array / tensor2._mlx_array
     result = Tensor._from_mlx_array(result_array)
 
-    if is_grad_enabled() and (input.requires_grad or tensor1.requires_grad or tensor2.requires_grad):
+    if is_grad_enabled() and (
+        input.requires_grad or tensor1.requires_grad or tensor2.requires_grad
+    ):
         result.requires_grad = True
 
     return result
@@ -577,7 +582,10 @@ def fmod(input: Tensor, other) -> Tensor:
         other_array = other
 
     # fmod is the remainder after truncation division
-    result_array = input._mlx_array - trunc(Tensor._from_mlx_array(input._mlx_array / other_array))._mlx_array * other_array
+    result_array = (
+        input._mlx_array
+        - trunc(Tensor._from_mlx_array(input._mlx_array / other_array))._mlx_array * other_array
+    )
     result = Tensor._from_mlx_array(result_array)
 
     if is_grad_enabled() and input.requires_grad:
@@ -627,6 +635,7 @@ def cumsum(input: Tensor, dim: int, dtype=None) -> Tensor:
     result_array = mx.cumsum(input._mlx_array, axis=dim)
     if dtype is not None:
         from ..dtype import get_mlx_dtype
+
         result_array = result_array.astype(get_mlx_dtype(dtype))
     result = Tensor._from_mlx_array(result_array)
 
@@ -651,6 +660,7 @@ def cumprod(input: Tensor, dim: int, dtype=None) -> Tensor:
     result_array = mx.cumprod(input._mlx_array, axis=dim)
     if dtype is not None:
         from ..dtype import get_mlx_dtype
+
         result_array = result_array.astype(get_mlx_dtype(dtype))
     result = Tensor._from_mlx_array(result_array)
 
@@ -671,6 +681,7 @@ def deg2rad(input: Tensor) -> Tensor:
         Tensor in radians
     """
     import math
+
     result_array = input._mlx_array * (math.pi / 180.0)
     result = Tensor._from_mlx_array(result_array)
 
@@ -691,6 +702,7 @@ def rad2deg(input: Tensor) -> Tensor:
         Tensor in degrees
     """
     import math
+
     result_array = input._mlx_array * (180.0 / math.pi)
     result = Tensor._from_mlx_array(result_array)
 
@@ -700,7 +712,9 @@ def rad2deg(input: Tensor) -> Tensor:
     return result
 
 
-def nan_to_num(input: Tensor, nan: float = 0.0, posinf: Optional[float] = None, neginf: Optional[float] = None) -> Tensor:
+def nan_to_num(
+    input: Tensor, nan: float = 0.0, posinf: Optional[float] = None, neginf: Optional[float] = None
+) -> Tensor:
     """
     Replace NaN, positive infinity, and negative infinity values.
 
@@ -724,18 +738,14 @@ def nan_to_num(input: Tensor, nan: float = 0.0, posinf: Optional[float] = None, 
     if posinf is None:
         posinf = FLOAT32_MAX
     result_array = mx.where(
-        mx.logical_and(mx.isinf(result_array), result_array > 0),
-        posinf,
-        result_array
+        mx.logical_and(mx.isinf(result_array), result_array > 0), posinf, result_array
     )
 
     # Replace negative infinity with negative float32 max
     if neginf is None:
         neginf = -FLOAT32_MAX
     result_array = mx.where(
-        mx.logical_and(mx.isinf(result_array), result_array < 0),
-        neginf,
-        result_array
+        mx.logical_and(mx.isinf(result_array), result_array < 0), neginf, result_array
     )
 
     result = Tensor._from_mlx_array(result_array)
@@ -779,7 +789,13 @@ def count_nonzero(input: Tensor, dim: Optional[int] = None) -> Tensor:
     return Tensor._from_mlx_array(result_array.astype(mx.int64))
 
 
-def diff(input: Tensor, n: int = 1, dim: int = -1, prepend: Optional[Tensor] = None, append: Optional[Tensor] = None) -> Tensor:
+def diff(
+    input: Tensor,
+    n: int = 1,
+    dim: int = -1,
+    prepend: Optional[Tensor] = None,
+    append: Optional[Tensor] = None,
+) -> Tensor:
     """
     Compute n-th discrete difference along a dimension.
 
@@ -826,9 +842,11 @@ def diff(input: Tensor, n: int = 1, dim: int = -1, prepend: Optional[Tensor] = N
 # In-place variants
 # =============================================================================
 
+
 def deg2rad_(input: Tensor) -> Tensor:
     """In-place version of deg2rad."""
     import math
+
     input._mlx_array = input._mlx_array * (math.pi / 180.0)
     return input
 
@@ -836,25 +854,26 @@ def deg2rad_(input: Tensor) -> Tensor:
 def rad2deg_(input: Tensor) -> Tensor:
     """In-place version of rad2deg."""
     import math
+
     input._mlx_array = input._mlx_array * (180.0 / math.pi)
     return input
 
 
-def nan_to_num_(input: Tensor, nan: float = 0.0, posinf: Optional[float] = None, neginf: Optional[float] = None) -> Tensor:
+def nan_to_num_(
+    input: Tensor, nan: float = 0.0, posinf: Optional[float] = None, neginf: Optional[float] = None
+) -> Tensor:
     """In-place version of nan_to_num. Pure MLX implementation."""
     result_array = input._mlx_array
     result_array = mx.where(mx.isnan(result_array), nan, result_array)
     if posinf is None:
         posinf = FLOAT32_MAX
     result_array = mx.where(
-        mx.logical_and(mx.isinf(result_array), result_array > 0),
-        posinf, result_array
+        mx.logical_and(mx.isinf(result_array), result_array > 0), posinf, result_array
     )
     if neginf is None:
         neginf = -FLOAT32_MAX
     result_array = mx.where(
-        mx.logical_and(mx.isinf(result_array), result_array < 0),
-        neginf, result_array
+        mx.logical_and(mx.isinf(result_array), result_array < 0), neginf, result_array
     )
     input._mlx_array = result_array
     return input
@@ -875,6 +894,7 @@ def square_(input: Tensor) -> Tensor:
 # =============================================================================
 # New math functions (Phase 7.3)
 # =============================================================================
+
 
 def logit(input: Tensor, eps: Optional[float] = None) -> Tensor:
     """
@@ -1159,7 +1179,9 @@ def trapezoid(y: Tensor, x: Optional[Tensor] = None, dx: float = 1.0, dim: int =
 trapz = trapezoid
 
 
-def cumulative_trapezoid(y: Tensor, x: Optional[Tensor] = None, dx: float = 1.0, dim: int = -1) -> Tensor:
+def cumulative_trapezoid(
+    y: Tensor, x: Optional[Tensor] = None, dx: float = 1.0, dim: int = -1
+) -> Tensor:
     """
     Cumulative trapezoidal rule integration.
 
@@ -1217,7 +1239,9 @@ def cumulative_trapezoid(y: Tensor, x: Optional[Tensor] = None, dx: float = 1.0,
     return result
 
 
-def gradient(input: Tensor, spacing: float = 1.0, dim: Optional[int] = None, edge_order: int = 1) -> tuple:
+def gradient(
+    input: Tensor, spacing: float = 1.0, dim: Optional[int] = None, edge_order: int = 1
+) -> tuple:
     """
     Compute the gradient of an array using finite differences.
 
@@ -1265,11 +1289,7 @@ def gradient(input: Tensor, spacing: float = 1.0, dim: Optional[int] = None, edg
             right_edge = (3.0 * arr_1d[-1] - 4.0 * arr_1d[-2] + arr_1d[-3]) / (2.0 * h)
 
         # Concatenate: [left_edge, central..., right_edge]
-        result = mx.concatenate([
-            mx.array([left_edge]),
-            central,
-            mx.array([right_edge])
-        ])
+        result = mx.concatenate([mx.array([left_edge]), central, mx.array([right_edge])])
 
         return result
 
@@ -1493,8 +1513,10 @@ def range_(*args, **kwargs):
     Use torch.arange instead.
     """
     import warnings
+
     warnings.warn("torch.range is deprecated, use torch.arange instead", DeprecationWarning)
     from ..factories import arange
+
     return arange(*args, **kwargs)
 
 
@@ -1539,33 +1561,73 @@ def bitwise_right_shift(input: Tensor, other) -> Tensor:
 
 
 __all__ = [
-    'clamp', 'clip',
-    'clamp_min', 'clamp_max', 'clamp_min_', 'clamp_max_', 'clip_',
-    'floor', 'ceil', 'round', 'trunc', 'frac',
-    'fix', 'fix_',
-    'sign', 'signbit',
-    'isnan', 'isinf', 'isfinite',
-    'logical_and', 'logical_or', 'logical_not', 'logical_xor',
-    'reciprocal', 'rsqrt', 'square',
-    'lerp', 'addcmul', 'addcdiv',
-    'fmod', 'remainder',
-    'cumsum', 'cumprod',
-    'deg2rad', 'rad2deg', 'deg2rad_', 'rad2deg_',
-    'nan_to_num', 'nan_to_num_',
-    'count_nonzero',
-    'diff',
+    "clamp",
+    "clip",
+    "clamp_min",
+    "clamp_max",
+    "clamp_min_",
+    "clamp_max_",
+    "clip_",
+    "floor",
+    "ceil",
+    "round",
+    "trunc",
+    "frac",
+    "fix",
+    "fix_",
+    "sign",
+    "signbit",
+    "isnan",
+    "isinf",
+    "isfinite",
+    "logical_and",
+    "logical_or",
+    "logical_not",
+    "logical_xor",
+    "reciprocal",
+    "rsqrt",
+    "square",
+    "lerp",
+    "addcmul",
+    "addcdiv",
+    "fmod",
+    "remainder",
+    "cumsum",
+    "cumprod",
+    "deg2rad",
+    "rad2deg",
+    "deg2rad_",
+    "rad2deg_",
+    "nan_to_num",
+    "nan_to_num_",
+    "count_nonzero",
+    "diff",
     # In-place variants
-    'negative_', 'square_',
+    "negative_",
+    "square_",
     # New math functions
-    'logit', 'logit_',
-    'sgn', 'rsub', 'subtract',
-    'floor_divide', 'true_divide',
-    'gcd', 'gcd_', 'lcm', 'lcm_',
-    'trapezoid', 'trapz', 'cumulative_trapezoid',
-    'gradient',
-    'is_same_size', 'is_signed',
-    'vander', 'unravel_index',
-    'tril_indices', 'triu_indices',
-    'range_',
-    'bitwise_left_shift', 'bitwise_right_shift',
+    "logit",
+    "logit_",
+    "sgn",
+    "rsub",
+    "subtract",
+    "floor_divide",
+    "true_divide",
+    "gcd",
+    "gcd_",
+    "lcm",
+    "lcm_",
+    "trapezoid",
+    "trapz",
+    "cumulative_trapezoid",
+    "gradient",
+    "is_same_size",
+    "is_signed",
+    "vander",
+    "unravel_index",
+    "tril_indices",
+    "triu_indices",
+    "range_",
+    "bitwise_left_shift",
+    "bitwise_right_shift",
 ]

@@ -1,0 +1,178 @@
+name: Benchmarks
+
+on:
+  pull_request:
+    paths:
+      - 'flashlight/**'
+      - 'benchmarks/**'
+  schedule:
+    - cron: '0 4 * * 0'  # Weekly Sunday 4 AM UTC
+  workflow_dispatch:
+    inputs:
+      level:
+        description: 'Benchmark level'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - operator
+          - layer
+          - model
+          - all
+
+concurrency:
+  group: benchmarks-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  benchmark:
+    name: Performance Benchmarks
+    runs-on: macos-14  # Apple Silicon required for MLX
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install torch  # For comparison
+          pip install -e ".[dev]"
+
+      - name: Run benchmarks
+        run: |
+          # Use CPU for PyTorch comparison to avoid MLX/MPS Metal conflicts
+          # Use 'operator' level by default to avoid GPU hangs on CI runners
+          python -m benchmarks \
+            --level ${{ github.event.inputs.level || 'operator' }} \
+            --compare-pytorch \
+            --pytorch-device cpu \
+            --quick \
+            -o json \
+            -f benchmark-results.json
+        timeout-minutes: 10
+
+      - name: Download baseline
+        uses: actions/cache/restore@v4
+        with:
+          path: benchmark-baseline.json
+          key: benchmark-baseline-${{ github.base_ref || 'main' }}
+          restore-keys: |
+            benchmark-baseline-main
+            benchmark-baseline-
+
+      - name: Compare with baseline
+        id: compare
+        run: |
+          python scripts/compare_benchmarks.py \
+            --current benchmark-results.json \
+            --baseline benchmark-baseline.json \
+            --threshold 0.1 \
+            --output comparison.md
+        continue-on-error: true
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: |
+            benchmark-results.json
+            comparison.md
+          retention-days: 30
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request' && steps.compare.outcome == 'success'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            let comparison = '## Benchmark Results\n\nNo baseline available for comparison.';
+            if (fs.existsSync('comparison.md')) {
+              comparison = fs.readFileSync('comparison.md', 'utf8');
+            }
+
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('## Benchmark Results')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: comparison
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comparison
+              });
+            }
+
+      - name: Update baseline (main only)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: actions/cache/save@v4
+        with:
+          path: benchmark-results.json
+          key: benchmark-baseline-main-${{ github.sha }}
+
+  store-history:
+    name: Store Benchmark History
+    needs: benchmark
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout gh-pages
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+        continue-on-error: true
+
+      - name: Create gh-pages if needed
+        run: |
+          if [ ! -d ".git" ]; then
+            git init
+            git checkout -b gh-pages
+          fi
+
+      - name: Download benchmark results
+        uses: actions/download-artifact@v4
+        with:
+          name: benchmark-results
+
+      - name: Append to history
+        run: |
+          mkdir -p benchmarks/history
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          mv benchmark-results.json benchmarks/history/${TIMESTAMP}.json
+          # Keep last 30 results
+          ls -t benchmarks/history/*.json 2>/dev/null | tail -n +31 | xargs rm -f || true
+
+      - name: Commit history
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add benchmarks/
+          git commit -m "Update benchmark history" || true
+          git push origin gh-pages || true

@@ -7,7 +7,7 @@ the modified tensor.
 """
 
 import math
-from typing import Optional, Union, Callable, Literal
+from typing import Callable, Literal, Optional, Union
 
 import mlx.core as mx
 
@@ -19,6 +19,7 @@ try:
 except ImportError:
     # Python 3.9 compatibility
     from typing import Callable, TypeVar, Union
+
     try:
         from typing import Literal
     except ImportError:
@@ -29,18 +30,33 @@ except ImportError:
         ParamSpec = TypeVar  # Fallback
 
 __all__ = [
-    'calculate_gain',
-    'uniform_', 'normal_', 'constant_', 'ones_', 'zeros_',
-    'eye_', 'dirac_',
-    'xavier_uniform_', 'xavier_normal_',
-    'kaiming_uniform_', 'kaiming_normal_',
-    'orthogonal_', 'sparse_', 'trunc_normal_',
+    "calculate_gain",
+    "uniform_",
+    "normal_",
+    "constant_",
+    "ones_",
+    "zeros_",
+    "eye_",
+    "dirac_",
+    "xavier_uniform_",
+    "xavier_normal_",
+    "kaiming_uniform_",
+    "kaiming_normal_",
+    "orthogonal_",
+    "sparse_",
+    "trunc_normal_",
     # Non-underscore versions (deprecated but still used)
-    'uniform', 'normal', 'constant',
-    'xavier_uniform', 'xavier_normal',
-    'kaiming_uniform', 'kaiming_normal',
-    'orthogonal', 'sparse',
-    'eye', 'dirac',
+    "uniform",
+    "normal",
+    "constant",
+    "xavier_uniform",
+    "xavier_normal",
+    "kaiming_uniform",
+    "kaiming_normal",
+    "orthogonal",
+    "sparse",
+    "eye",
+    "dirac",
 ]
 
 
@@ -58,21 +74,28 @@ def calculate_gain(nonlinearity: str, param: Optional[float] = None) -> float:
     Example:
         >>> gain = nn.init.calculate_gain('leaky_relu', 0.2)
     """
-    linear_fns = ['linear', 'conv1d', 'conv2d', 'conv3d', 'conv_transpose1d',
-                  'conv_transpose2d', 'conv_transpose3d']
-    if nonlinearity in linear_fns or nonlinearity == 'sigmoid':
+    linear_fns = [
+        "linear",
+        "conv1d",
+        "conv2d",
+        "conv3d",
+        "conv_transpose1d",
+        "conv_transpose2d",
+        "conv_transpose3d",
+    ]
+    if nonlinearity in linear_fns or nonlinearity == "sigmoid":
         return 1
-    elif nonlinearity == 'tanh':
+    elif nonlinearity == "tanh":
         return 5.0 / 3
-    elif nonlinearity == 'relu':
+    elif nonlinearity == "relu":
         return math.sqrt(2.0)
-    elif nonlinearity == 'leaky_relu':
+    elif nonlinearity == "leaky_relu":
         if param is None:
             negative_slope = 0.01
         else:
             negative_slope = param
-        return math.sqrt(2.0 / (1 + negative_slope ** 2))
-    elif nonlinearity == 'selu':
+        return math.sqrt(2.0 / (1 + negative_slope**2))
+    elif nonlinearity == "selu":
         return 3.0 / 4  # Value from Self-Normalizing Neural Networks paper
     else:
         raise ValueError(f"Unsupported nonlinearity {nonlinearity}")
@@ -94,8 +117,7 @@ def _no_grad_normal_(tensor: Tensor, mean: float, std: float) -> Tensor:
     return tensor
 
 
-def _no_grad_trunc_normal_(tensor: Tensor, mean: float, std: float,
-                           a: float, b: float) -> Tensor:
+def _no_grad_trunc_normal_(tensor: Tensor, mean: float, std: float, a: float, b: float) -> Tensor:
     """Fill tensor with truncated normal distribution."""
     # Simple rejection sampling approach for truncated normal
     l = (a - mean) / std
@@ -261,7 +283,7 @@ def dirac_(tensor: Tensor, groups: int = 1) -> Tensor:
     sizes = tensor.shape
 
     if sizes[0] % groups != 0:
-        raise ValueError('dim 0 must be divisible by groups')
+        raise ValueError("dim 0 must be divisible by groups")
 
     out_chans_per_grp = sizes[0] // groups
     min_dim = min(out_chans_per_grp, sizes[1])
@@ -277,7 +299,9 @@ def dirac_(tensor: Tensor, groups: int = 1) -> Tensor:
             elif dimensions == 4:
                 tensor._mlx_array[g * out_chans_per_grp + d, d, sizes[2] // 2, sizes[3] // 2] = 1
             elif dimensions == 5:
-                tensor._mlx_array[g * out_chans_per_grp + d, d, sizes[2] // 2, sizes[3] // 2, sizes[4] // 2] = 1
+                tensor._mlx_array[
+                    g * out_chans_per_grp + d, d, sizes[2] // 2, sizes[3] // 2, sizes[4] // 2
+                ] = 1
 
     return tensor
 
@@ -286,7 +310,9 @@ def _calculate_fan_in_and_fan_out(tensor: Tensor) -> tuple:
     """Calculate fan_in and fan_out for a tensor."""
     dimensions = tensor.ndim
     if dimensions < 2:
-        raise ValueError("Fan in and fan out can not be computed for tensor with fewer than 2 dimensions")
+        raise ValueError(
+            "Fan in and fan out can not be computed for tensor with fewer than 2 dimensions"
+        )
 
     num_input_fmaps = tensor.shape[1]
     num_output_fmaps = tensor.shape[0]
@@ -346,8 +372,9 @@ def xavier_normal_(tensor: Tensor, gain: float = 1.0) -> Tensor:
     return _no_grad_normal_(tensor, 0.0, std)
 
 
-def kaiming_uniform_(tensor: Tensor, a: float = 0, mode: str = 'fan_in',
-                     nonlinearity: str = 'leaky_relu') -> Tensor:
+def kaiming_uniform_(
+    tensor: Tensor, a: float = 0, mode: str = "fan_in", nonlinearity: str = "leaky_relu"
+) -> Tensor:
     """
     Fill the input Tensor with values using Kaiming uniform initialization.
 
@@ -367,10 +394,10 @@ def kaiming_uniform_(tensor: Tensor, a: float = 0, mode: str = 'fan_in',
         >>> w = torch.empty(3, 5)
         >>> nn.init.kaiming_uniform_(w, mode='fan_in', nonlinearity='relu')
     """
-    if mode == 'fan_in':
+    if mode == "fan_in":
         fan_in, fan_out = _calculate_fan_in_and_fan_out(tensor)
         fan = fan_in
-    elif mode == 'fan_out':
+    elif mode == "fan_out":
         fan_in, fan_out = _calculate_fan_in_and_fan_out(tensor)
         fan = fan_out
     else:
@@ -382,8 +409,9 @@ def kaiming_uniform_(tensor: Tensor, a: float = 0, mode: str = 'fan_in',
     return _no_grad_uniform_(tensor, -bound, bound)
 
 
-def kaiming_normal_(tensor: Tensor, a: float = 0, mode: str = 'fan_in',
-                    nonlinearity: str = 'leaky_relu') -> Tensor:
+def kaiming_normal_(
+    tensor: Tensor, a: float = 0, mode: str = "fan_in", nonlinearity: str = "leaky_relu"
+) -> Tensor:
     """
     Fill the input Tensor with values using Kaiming normal initialization.
 
@@ -403,10 +431,10 @@ def kaiming_normal_(tensor: Tensor, a: float = 0, mode: str = 'fan_in',
         >>> w = torch.empty(3, 5)
         >>> nn.init.kaiming_normal_(w, mode='fan_out', nonlinearity='relu')
     """
-    if mode == 'fan_in':
+    if mode == "fan_in":
         fan_in, fan_out = _calculate_fan_in_and_fan_out(tensor)
         fan = fan_in
-    elif mode == 'fan_out':
+    elif mode == "fan_out":
         fan_in, fan_out = _calculate_fan_in_and_fan_out(tensor)
         fan = fan_out
     else:
@@ -503,8 +531,9 @@ def sparse_(tensor: Tensor, sparsity: float, std: float = 0.01) -> Tensor:
     return tensor
 
 
-def trunc_normal_(tensor: Tensor, mean: float = 0.0, std: float = 1.0,
-                  a: float = -2.0, b: float = 2.0) -> Tensor:
+def trunc_normal_(
+    tensor: Tensor, mean: float = 0.0, std: float = 1.0, a: float = -2.0, b: float = 2.0
+) -> Tensor:
     """
     Fill the input Tensor with values drawn from a truncated normal distribution.
 
@@ -554,14 +583,16 @@ def xavier_normal(tensor: Tensor, gain: float = 1.0) -> Tensor:
     return xavier_normal_(tensor, gain)
 
 
-def kaiming_uniform(tensor: Tensor, a: float = 0, mode: str = 'fan_in',
-                    nonlinearity: str = 'leaky_relu') -> Tensor:
+def kaiming_uniform(
+    tensor: Tensor, a: float = 0, mode: str = "fan_in", nonlinearity: str = "leaky_relu"
+) -> Tensor:
     """Deprecated. Use kaiming_uniform_ instead."""
     return kaiming_uniform_(tensor, a, mode, nonlinearity)
 
 
-def kaiming_normal(tensor: Tensor, a: float = 0, mode: str = 'fan_in',
-                   nonlinearity: str = 'leaky_relu') -> Tensor:
+def kaiming_normal(
+    tensor: Tensor, a: float = 0, mode: str = "fan_in", nonlinearity: str = "leaky_relu"
+) -> Tensor:
     """Deprecated. Use kaiming_normal_ instead."""
     return kaiming_normal_(tensor, a, mode, nonlinearity)
 

@@ -4,9 +4,11 @@
 Implements 3D convolution operations with PyTorch-compatible API.
 """
 
+from typing import Tuple, Union
+
 import mlx.core as mx
+
 from ..tensor import Tensor
-from typing import Union, Tuple
 
 
 def _triple(x):
@@ -23,7 +25,7 @@ def conv3d(
     stride: Union[int, Tuple[int, int, int]] = 1,
     padding: Union[int, Tuple[int, int, int]] = 0,
     dilation: Union[int, Tuple[int, int, int]] = 1,
-    groups: int = 1
+    groups: int = 1,
 ) -> Tensor:
     """
     3D convolution operation.
@@ -97,7 +99,7 @@ def conv3d(
                 stride=(stride[1], stride[2]),
                 padding=(padding[1], padding[2]),
                 dilation=(dilation[1], dilation[2]),
-                groups=groups
+                groups=groups,
             )
 
             if depth_sum is None:
@@ -123,8 +125,10 @@ def conv3d(
 
     # Handle autograd
     from ..autograd.context import is_grad_enabled
-    if is_grad_enabled() and (input.requires_grad or weight.requires_grad or
-                               (bias is not None and bias.requires_grad)):
+
+    if is_grad_enabled() and (
+        input.requires_grad or weight.requires_grad or (bias is not None and bias.requires_grad)
+    ):
         result.requires_grad = True
 
     return result
@@ -138,7 +142,7 @@ def conv_transpose3d(
     padding: Union[int, Tuple[int, int, int]] = 0,
     output_padding: Union[int, Tuple[int, int, int]] = 0,
     groups: int = 1,
-    dilation: Union[int, Tuple[int, int, int]] = 1
+    dilation: Union[int, Tuple[int, int, int]] = 1,
 ) -> Tensor:
     """
     3D transposed convolution operation.
@@ -188,7 +192,7 @@ def conv_transpose3d(
         padding=padding,
         dilation=dilation,
         output_padding=output_padding,
-        groups=groups
+        groups=groups,
     )
 
     # Add bias if provided
@@ -204,11 +208,13 @@ def conv_transpose3d(
 
     # Handle autograd
     from ..autograd.context import is_grad_enabled
-    if is_grad_enabled() and (input.requires_grad or weight.requires_grad or
-                               (bias is not None and bias.requires_grad)):
+
+    if is_grad_enabled() and (
+        input.requires_grad or weight.requires_grad or (bias is not None and bias.requires_grad)
+    ):
         result.requires_grad = True
 
     return result
 
 
-__all__ = ['conv3d', 'conv_transpose3d']
+__all__ = ["conv3d", "conv_transpose3d"]

@@ -1,20 +1,24 @@
 """Negative Binomial Distribution"""
 
 from typing import Optional, Tuple, Union
+
 import mlx.core as mx
 
-from ..tensor import Tensor
-from .distribution import Distribution
-from . import constraints
 from ..ops.special import lgamma
+from ..tensor import Tensor
+from . import constraints
+from ._gamma_sampler import random_gamma
+from .distribution import Distribution
 
 
 class NegativeBinomial(Distribution):
     """Negative Binomial distribution."""
 
-    arg_constraints = {'total_count': constraints.nonnegative,
-                      'probs': constraints.half_open_interval(0, 1),
-                      'logits': constraints.real}
+    arg_constraints = {
+        "total_count": constraints.nonnegative,
+        "probs": constraints.half_open_interval(0, 1),
+        "logits": constraints.real,
+    }
     support = constraints.nonnegative_integer
 
     def __init__(
@@ -27,7 +31,9 @@ class NegativeBinomial(Distribution):
         if (probs is None) == (logits is None):
             raise ValueError("Exactly one of probs or logits must be specified")
 
-        self.total_count = total_count._mlx_array if isinstance(total_count, Tensor) else mx.array(total_count)
+        self.total_count = (
+            total_count._mlx_array if isinstance(total_count, Tensor) else mx.array(total_count)
+        )
         if probs is not None:
             self.probs = probs._mlx_array if isinstance(probs, Tensor) else mx.array(probs)
             self.logits = mx.log(self.probs) - mx.log(1 - self.probs)
@@ -44,9 +50,13 @@ class NegativeBinomial(Distribution):
 
     @property
     def mode(self) -> Tensor:
-        return Tensor(mx.where(self.total_count > 1,
-                              mx.floor((self.total_count - 1) * self.probs / (1 - self.probs)),
-                              mx.array(0.0)))
+        return Tensor(
+            mx.where(
+                self.total_count > 1,
+                mx.floor((self.total_count - 1) * self.probs / (1 - self.probs)),
+                mx.array(0.0),
+            )
+        )
 
     @property
     def variance(self) -> Tensor:
@@ -69,8 +79,8 @@ class NegativeBinomial(Distribution):
         # Gamma(shape=r, scale=p/(1-p)) = Gamma(shape=r, scale=1) * p/(1-p)
         scale = p / (1 - p)
 
-        # Sample from Gamma(r, scale=1) using MLX's native gamma
-        gamma_samples = mx.random.gamma(r, shape)
+        # Sample from Gamma(r, scale=1) using custom gamma sampler
+        gamma_samples = random_gamma(r, shape)
 
         # Scale by p/(1-p) to get Gamma(r, scale=p/(1-p))
         lambda_samples = gamma_samples * scale
@@ -120,4 +130,4 @@ class NegativeBinomial(Distribution):
         return Tensor(log_comb + r * mx.log(1 - self.probs) + k * mx.log(self.probs))
 
 
-__all__ = ['NegativeBinomial']
+__all__ = ["NegativeBinomial"]

@@ -5,19 +5,20 @@ Compares behavior and numerical results against PyTorch.
 """
 
 import unittest
-import numpy as np
 
+import numpy as np
 import pytest
 
 try:
     import torch
     import torch.utils.benchmark as torch_benchmark
+
     HAS_TORCH = True
 except ImportError:
     HAS_TORCH = False
 
 import flashlight
-from flashlight.utils.benchmark import Timer, Measurement, Compare, select_unit, trim_sigfig
+from flashlight.utils.benchmark import Compare, Measurement, Timer, select_unit, trim_sigfig
 
 
 @pytest.mark.parity
@@ -115,6 +116,7 @@ class TestCheckpointParity(unittest.TestCase):
         # MLX
         mlx_x = flashlight.tensor(data, requires_grad=True)
         from flashlight.utils import checkpoint as mlx_checkpoint
+
         mlx_result = mlx_checkpoint(mlx_fn, mlx_x)
 
         # PyTorch
@@ -123,6 +125,7 @@ class TestCheckpointParity(unittest.TestCase):
 
         # Compare outputs
         import mlx.core as mx
+
         mx.eval(mlx_result._mlx_array)
 
         np.testing.assert_allclose(
@@ -140,7 +143,7 @@ class TestCheckpointParity(unittest.TestCase):
         # Simple linear layers
         # Both PyTorch and MLX Linear weight is (out_features, in_features)
         weight1 = np.random.randn(10, 10).astype(np.float32)  # 10 -> 10
-        weight2 = np.random.randn(5, 10).astype(np.float32)   # 10 -> 5
+        weight2 = np.random.randn(5, 10).astype(np.float32)  # 10 -> 5
 
         # MLX layers
         mlx_linear1 = flashlight.nn.Linear(10, 10, bias=False)
@@ -161,6 +164,7 @@ class TestCheckpointParity(unittest.TestCase):
         # MLX checkpoint_sequential
         mlx_x = flashlight.tensor(data, requires_grad=True)
         from flashlight.utils.checkpoint import checkpoint_sequential
+
         mlx_result = checkpoint_sequential(mlx_layers, segments=2, input=mlx_x)
 
         # PyTorch checkpoint_sequential
@@ -174,6 +178,7 @@ class TestCheckpointParity(unittest.TestCase):
 
         # Compare
         import mlx.core as mx
+
         mx.eval(mlx_result._mlx_array)
 
         np.testing.assert_allclose(
@@ -191,21 +196,22 @@ class TestHooksParity(unittest.TestCase):
 
     def test_removable_handle_api(self):
         """Test RemovableHandle has PyTorch-compatible API."""
-        from flashlight.utils.hooks import RemovableHandle
         from collections import OrderedDict
+
+        from flashlight.utils.hooks import RemovableHandle
 
         # Both should support the same basic operations
         mlx_hooks = OrderedDict()
         mlx_handle = RemovableHandle(mlx_hooks)
 
         # Check API compatibility
-        self.assertTrue(hasattr(mlx_handle, 'id'))
-        self.assertTrue(hasattr(mlx_handle, 'remove'))
+        self.assertTrue(hasattr(mlx_handle, "id"))
+        self.assertTrue(hasattr(mlx_handle, "remove"))
         self.assertTrue(callable(mlx_handle.remove))
 
         # Context manager support
-        self.assertTrue(hasattr(mlx_handle, '__enter__'))
-        self.assertTrue(hasattr(mlx_handle, '__exit__'))
+        self.assertTrue(hasattr(mlx_handle, "__enter__"))
+        self.assertTrue(hasattr(mlx_handle, "__exit__"))
 
     def test_unserializable_hook_decorator(self):
         """Test unserializable_hook decorator marks functions."""
@@ -216,7 +222,7 @@ class TestHooksParity(unittest.TestCase):
             return grad
 
         # Should have marker attribute
-        self.assertTrue(hasattr(my_hook, '__mlx_unserializable__'))
+        self.assertTrue(hasattr(my_hook, "__mlx_unserializable__"))
 
 
 @pytest.mark.parity
@@ -232,6 +238,7 @@ class TestDataParity(unittest.TestCase):
 
         # MLX
         from flashlight.utils.data import DataLoader, TensorDataset
+
         mlx_x = flashlight.tensor(data)
         mlx_y = flashlight.tensor(labels)
         mlx_dataset = TensorDataset(mlx_x, mlx_y)
@@ -273,7 +280,7 @@ class TestDataParity(unittest.TestCase):
 
     def test_random_split_lengths(self):
         """Test random_split produces correct split sizes."""
-        from flashlight.utils.data import random_split, TensorDataset
+        from flashlight.utils.data import TensorDataset, random_split
 
         data = np.random.randn(100, 5).astype(np.float32)
 
@@ -335,17 +342,18 @@ class TestWeakParity(unittest.TestCase):
         d = WeakTensorKeyDictionary()
 
         # Should support dict-like operations
-        self.assertTrue(hasattr(d, '__setitem__'))
-        self.assertTrue(hasattr(d, '__getitem__'))
-        self.assertTrue(hasattr(d, '__delitem__'))
-        self.assertTrue(hasattr(d, '__contains__'))
-        self.assertTrue(hasattr(d, '__len__'))
-        self.assertTrue(hasattr(d, '__iter__'))
+        self.assertTrue(hasattr(d, "__setitem__"))
+        self.assertTrue(hasattr(d, "__getitem__"))
+        self.assertTrue(hasattr(d, "__delitem__"))
+        self.assertTrue(hasattr(d, "__contains__"))
+        self.assertTrue(hasattr(d, "__len__"))
+        self.assertTrue(hasattr(d, "__iter__"))
 
     def test_weak_id_key_dict_matches_torch(self):
         """Test WeakIdKeyDictionary behaves like torch version."""
-        from flashlight.utils.weak import WeakIdKeyDictionary
         import torch.utils.weak as torch_weak
+
+        from flashlight.utils.weak import WeakIdKeyDictionary
 
         # Both should handle objects as keys by identity
         class Obj:
@@ -373,14 +381,14 @@ class TestMobileOptimizerParity(unittest.TestCase):
         from flashlight.utils.mobile_optimizer import MobileOptimizerType
 
         # Check common optimization types exist
-        self.assertTrue(hasattr(MobileOptimizerType, 'CONV_BN_FUSION'))
-        self.assertTrue(hasattr(MobileOptimizerType, 'REMOVE_DROPOUT'))
-        self.assertTrue(hasattr(MobileOptimizerType, 'FUSE_ADD_RELU'))
+        self.assertTrue(hasattr(MobileOptimizerType, "CONV_BN_FUSION"))
+        self.assertTrue(hasattr(MobileOptimizerType, "REMOVE_DROPOUT"))
+        self.assertTrue(hasattr(MobileOptimizerType, "FUSE_ADD_RELU"))
 
     def test_optimize_for_mobile_removes_dropout(self):
         """Test optimize_for_mobile removes dropout like PyTorch."""
-        from flashlight.utils.mobile_optimizer import optimize_for_mobile
         import flashlight.nn as nn
+        from flashlight.utils.mobile_optimizer import optimize_for_mobile
 
         # MLX model with dropout
         mlx_model = nn.Sequential(
@@ -423,7 +431,7 @@ class TestCollectEnvParity(unittest.TestCase):
 
     def test_get_env_info_returns_namedtuple(self):
         """Test get_env_info returns structured data like PyTorch."""
-        from flashlight.utils.collect_env import get_env_info, SystemEnv
+        from flashlight.utils.collect_env import SystemEnv, get_env_info
 
         env = get_env_info()
 
@@ -431,8 +439,8 @@ class TestCollectEnvParity(unittest.TestCase):
         self.assertIsInstance(env, SystemEnv)
 
         # Should have version fields
-        self.assertTrue(hasattr(env, 'python_version'))
-        self.assertTrue(hasattr(env, 'numpy_version'))
+        self.assertTrue(hasattr(env, "python_version"))
+        self.assertTrue(hasattr(env, "numpy_version"))
 
     def test_get_pretty_env_info_returns_string(self):
         """Test get_pretty_env_info returns formatted string like PyTorch."""

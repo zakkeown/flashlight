@@ -13,17 +13,17 @@ Layer implementations:
 """
 
 from .upsample import (
-    Upsample,
-    UpsamplingNearest2d,
-    UpsamplingBilinear2d,
     PixelShuffle,
     PixelUnshuffle,
+    Upsample,
+    UpsamplingBilinear2d,
+    UpsamplingNearest2d,
 )
 
 __all__ = [
-    'Upsample',
-    'UpsamplingNearest2d',
-    'UpsamplingBilinear2d',
-    'PixelShuffle',
-    'PixelUnshuffle',
+    "Upsample",
+    "UpsamplingNearest2d",
+    "UpsamplingBilinear2d",
+    "PixelShuffle",
+    "PixelUnshuffle",
 ]

@@ -22,247 +22,512 @@ Version: 0.1.0 (Alpha)
 Status: Phase 0 - Project scaffolding complete
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Optional
+
+    from .dtype import DType
+
 __version__ = "0.1.0"
 __author__ = "Flashlight Contributors"
 
-# Phase 1: Tensor core
-from .tensor import Tensor
-from .dtype import (
-    # Floating point types
-    float32, float16, bfloat16, float64,
-    float, half, double,
-    # Integer types
-    int8, int16, int32, int64,
-    uint8, uint16, uint32, uint64,
-    short, int, long, byte,
-    # Boolean
-    bool,
-    # Complex
-    complex64, complex128,
-    # Functions
-    get_dtype, set_default_dtype, get_default_dtype,
-)
 from .device import (
     Device,
-    get_default_device, set_default_device,
-    current_device, device_count, is_available, synchronize,
+    current_device,
+    device_count,
+    get_default_device,
+    is_available,
+    set_default_device,
+    synchronize,
+)
+from .dtype import (  # Floating point types; Integer types; Boolean; Complex; Functions
+    bfloat16,
+    bool,
+    byte,
+    complex64,
+    complex128,
+    double,
+    float,
+    float16,
+    float32,
+    float64,
+    get_default_dtype,
+    get_dtype,
+    half,
+    int,
+    int8,
+    int16,
+    int32,
+    int64,
+    long,
+    set_default_dtype,
+    short,
+    uint8,
+    uint16,
+    uint32,
+    uint64,
 )
 
 # Phase 1: Tensor creation functions
-from .factories import (
-    # Constant fill
-    zeros, ones, full, empty,
-    # -like variants
-    zeros_like, ones_like, full_like, empty_like,
-    rand_like, randn_like, randint_like,
-    # Sequences
-    arange, linspace, logspace,
-    # Identity
+from .factories import (  # Constant fill; -like variants; Sequences; Identity; Random; From data; Grid operations
+    arange,
+    as_tensor,
+    bernoulli,
+    cartesian_prod,
+    clone,
+    empty,
+    empty_like,
     eye,
-    # Random
-    randn, rand, randint, randperm,
-    normal, bernoulli, multinomial, poisson,
-    # From data
-    tensor, from_numpy, clone,
-    as_tensor, scalar_tensor,
-    # Grid operations
-    meshgrid, cartesian_prod,
-)
-
-# Phase 1: View operations
-from .view_ops import (
-    reshape, view, transpose, permute,
-    squeeze, unsqueeze, flatten, contiguous,
+    from_numpy,
+    full,
+    full_like,
+    linspace,
+    logspace,
+    meshgrid,
+    multinomial,
+    normal,
+    ones,
+    ones_like,
+    poisson,
+    rand,
+    rand_like,
+    randint,
+    randint_like,
+    randn,
+    randn_like,
+    randperm,
+    scalar_tensor,
+    tensor,
+    zeros,
+    zeros_like,
 )
 
 # Phase 2: Operators
-from .ops import (
-    # Arithmetic
-    add, sub, mul, div, matmul, mm, bmm,
-    pow, sqrt, exp, log, abs, neg,
-    multiply, divide,
-    # Trigonometric
-    sin, cos, tan, sinh, cosh,
-    asin, acos, atan, atan2,
-    asinh, acosh, atanh,
-    arcsin, arccos, arctan, arctan2,
-    arcsinh, arccosh, arctanh,
+from .ops import (  # Arithmetic; Trigonometric; Extended math functions; Logarithms; Activations; Reductions; Extended reductions; Shape manipulation; Extended shape operations; Additional shape ops; Sorting and selection; Linear algebra (torch.* level); Indexing; Extended indexing; Scatter extensions; Comparison; Math utilities; In-place variants; New math functions; Quick ops; New quick ops; In-place operations; Grid sampler; Histogram; Other; RNN functions; Matrix functions; NaN-aware operations; Strided operations; Scatter/Index operations; Linear algebra extensions; Special math functions; Additional in-place ops; Additional linear algebra; Range and view ops; Pooling; Convolution
+    abs,
     absolute,
-    # Extended math functions
-    angle, exp2, sinc, hypot, copysign, heaviside,
-    fmax, fmin, erfc, lgamma, digamma, i0,
-    isreal, isneginf, isposinf, float_power,
-    logaddexp2, nextafter, frexp, ldexp, xlogy,
-    # Logarithms
-    log2, log10, log1p, expm1,
-    # Activations
-    relu, gelu, sigmoid, tanh,
-    softmax, log_softmax, silu,
-    leaky_relu, elu, swish,
-    # Reductions
-    sum, mean, max, min,
-    argmax, argmin,
-    var, std, prod,
-    all, any,
-    amax, amin, aminmax,
-    # Extended reductions
-    median, mode, quantile,
-    nanmean, nansum,
-    std_mean, var_mean,
-    cummax, cummin, logcumsumexp, histc,
-    # Shape manipulation
-    cat, stack, split, chunk,
-    expand, repeat, tile, repeat_interleave,
-    gather, narrow, select, unbind,
-    roll, flip, fliplr, flipud, rot90,
-    # Extended shape operations
-    ravel, t, adjoint, moveaxis, swapaxes,
-    hstack, vstack, dstack, column_stack, row_stack,
-    hsplit, vsplit, dsplit, tensor_split,
-    block_diag, diag_embed, diagflat,
-    # Additional shape ops
-    movedim, swapdims,
-    broadcast_tensors, unflatten, concat, combinations,
-    split_with_sizes, unsafe_chunk, unsafe_split, unsafe_split_with_sizes,
-    # Sorting and selection
-    sort, argsort, topk, kthvalue, msort,
-    unique, unique_consecutive,
-    # Linear algebra (torch.* level)
-    einsum, tensordot,
-    diag, diagonal, triu, tril, trace,
-    outer, inner, dot, vdot, kron,
-    # Indexing
-    scatter, scatter_add, index_select,
-    where, masked_fill, masked_select,
-    index_add, nonzero, take, put,
-    # Extended indexing
-    index_fill, index_copy, index_put,
-    fill, take_along_dim, argwhere, isin,
-    # Scatter extensions
-    diagonal_scatter, slice_scatter, select_scatter, scatter_reduce,
-    # Comparison
-    eq, ne, lt, le, gt, ge,
-    equal, allclose, isclose,
-    maximum, minimum,
-    greater, greater_equal, less, less_equal, not_equal,
-    # Math utilities
-    clamp, clip,
-    clamp_min, clamp_max, clamp_min_, clamp_max_, clip_,
-    floor, ceil, round, trunc, frac,
-    fix, fix_,
-    sign, signbit,
-    isnan, isinf, isfinite,
-    logical_and, logical_or, logical_not, logical_xor,
-    reciprocal, rsqrt, square,
-    lerp, addcmul, addcdiv,
-    fmod, remainder,
-    cumsum, cumprod,
-    deg2rad, rad2deg, deg2rad_, rad2deg_,
-    nan_to_num, nan_to_num_,
+    acos,
+    acosh,
+    adaptive_avg_pool1d,
+    adaptive_max_pool1d,
+    add,
+    addbmm,
+    addcdiv,
+    addcmul,
+    addmm,
+    addmv,
+    addr,
+    adjoint,
+    affine_grid_generator,
+    all,
+    allclose,
+    alpha_dropout_,
+    amax,
+    amin,
+    aminmax,
+    angle,
+    any,
+    arccos,
+    arccosh,
+    arcsin,
+    arcsinh,
+    arctan,
+    arctan2,
+    arctanh,
+    argmax,
+    argmin,
+    argsort,
+    argwhere,
+    as_strided,
+    as_strided_,
+    as_strided_scatter,
+    asin,
+    asinh,
+    atan,
+    atan2,
+    atanh,
+    atleast_1d,
+    atleast_2d,
+    atleast_3d,
+    avg_pool1d,
+    avg_pool2d,
+    baddbmm,
+    bilinear,
+    binomial,
+    bitwise_and,
+    bitwise_left_shift,
+    bitwise_not,
+    bitwise_or,
+    bitwise_right_shift,
+    bitwise_xor,
+    block_diag,
+    bmm,
+    broadcast_tensors,
+    broadcast_to,
+    cat,
+    ceil,
+    chain_matmul,
+    cholesky_inverse,
+    cholesky_solve,
+    chunk,
+    clamp,
+    clamp_max,
+    clamp_max_,
+    clamp_min,
+    clamp_min_,
+    clip,
+    clip_,
+    column_stack,
+    combinations,
+    concat,
+    concatenate,
+    conj,
+    constant_pad_nd,
+    conv1d,
+    conv2d,
+    conv3d,
+    convolution,
+    copysign,
+    corrcoef,
+    cos,
+    cosh,
     count_nonzero,
+    cov,
+    cummax,
+    cummin,
+    cumprod,
+    cumsum,
+    cumulative_trapezoid,
+    deg2rad,
+    deg2rad_,
+    diag,
+    diag_embed,
+    diagflat,
+    diagonal,
+    diagonal_scatter,
     diff,
-    # In-place variants
-    negative_, square_,
-    # New math functions
-    logit, logit_,
-    sgn, rsub, subtract,
-    floor_divide, true_divide,
-    gcd, gcd_, lcm, lcm_,
-    trapezoid, trapz, cumulative_trapezoid,
+    digamma,
+    dist,
+    div,
+    divide,
+    dot,
+    dropout_,
+    dsplit,
+    dstack,
+    einsum,
+    elu,
+    embedding_renorm_,
+    empty_permuted,
+    empty_strided,
+    eq,
+    equal,
+    erf,
+    erf_,
+    erfc,
+    erfc_,
+    erfinv,
+    exp,
+    exp2,
+    exp2_,
+    expand,
+    expm1,
+    feature_alpha_dropout_,
+    feature_dropout,
+    feature_dropout_,
+    fill,
+    fill_,
+    fix,
+    fix_,
+    flip,
+    fliplr,
+    flipud,
+    float_power,
+    floor,
+    floor_divide,
+    fmax,
+    fmin,
+    fmod,
+    frac,
+    frexp,
+    frobenius_norm,
+    from_file,
+    frombuffer,
+    gather,
+    gcd,
+    gcd_,
+    ge,
+    gelu,
+    geqrf,
+    ger,
     gradient,
-    is_same_size, is_signed,
-    vander, unravel_index,
-    tril_indices, triu_indices,
-    range_,
-    bitwise_left_shift, bitwise_right_shift,
-    # Quick ops
-    atleast_1d, atleast_2d, atleast_3d,
-    bitwise_and, bitwise_or, bitwise_xor, bitwise_not,
-    broadcast_to, concatenate,
-    conj, erf, erfinv,
-    negative, positive,
-    real, imag,
-    logaddexp, logsumexp,
-    addmm, baddbmm, mv, addr,
+    greater,
+    greater_equal,
+    grid_sampler,
+    grid_sampler_2d,
+    grid_sampler_3d,
+    gru,
+    gt,
+    heaviside,
+    histc,
+    histogram,
+    histogramdd,
+    hsplit,
+    hstack,
+    hypot,
+    i0,
+    i0_,
+    igamma,
+    igammac,
+    imag,
+    index_add,
+    index_copy,
+    index_fill,
+    index_put,
+    index_put_,
+    index_reduce,
+    index_select,
+    inner,
+    is_same_size,
+    is_signed,
+    isclose,
+    isfinite,
+    isin,
+    isinf,
+    isnan,
+    isneginf,
+    isposinf,
+    isreal,
+    kron,
+    kthvalue,
+    lcm,
+    lcm_,
+    ldexp,
+    ldexp_,
+    le,
+    leaky_relu,
+    lerp,
+    less,
+    less_equal,
+    lgamma,
+    lobpcg,
+    log,
+    log1p,
+    log2,
+    log10,
+    log_softmax,
+    logaddexp,
+    logaddexp2,
+    logcumsumexp,
+    logdet,
+    logical_and,
+    logical_not,
+    logical_or,
+    logical_xor,
+    logit,
+    logit_,
+    logsumexp,
+    lstm,
+    lt,
+    lu_solve,
+    lu_unpack,
+    masked_fill,
+    masked_scatter,
+    masked_select,
+    matmul,
+    matrix_exp,
+    matrix_power,
+    max,
+    max_pool1d,
+    max_pool1d_with_indices,
+    max_pool2d,
+    maximum,
+    mean,
+    median,
+    min,
+    minimum,
+    mm,
+    mode,
+    moveaxis,
+    movedim,
+    msort,
+    mul,
+    multiply,
+    mv,
+    mvlgamma,
+    nan_to_num,
+    nan_to_num_,
+    nanmean,
+    nanmedian,
+    nanquantile,
+    nansum,
+    narrow,
+    ne,
+    neg,
+    negative,
+    negative_,
+    nextafter,
+    nonzero,
+    nonzero_static,
+    norm_except_dim,
+    not_equal,
+    nuclear_norm,
     numel,
-    # New quick ops
-    addbmm, addmv, chain_matmul, dist,
-    corrcoef, cov, bilinear, constant_pad_nd,
-    ger, frobenius_norm, frombuffer, binomial,
-    convolution, affine_grid_generator,
-    # In-place operations
-    dropout_, alpha_dropout_, feature_alpha_dropout_,
-    erf_, erfc_, exp2_, i0_, fill_,
-    # Grid sampler
-    grid_sampler, grid_sampler_2d, grid_sampler_3d,
-    # Histogram
-    histogram, histogramdd,
-    # Other
-    feature_dropout, igamma, igammac, polygamma,
-    # RNN functions
-    lstm, gru,
-    # Matrix functions
-    logdet, matrix_exp, matrix_power,
-    # NaN-aware operations
-    nanmedian, nanquantile,
-    # Strided operations
-    as_strided, as_strided_, as_strided_scatter,
-    empty_permuted, empty_strided, nonzero_static,
-    # Scatter/Index operations
-    index_put_, index_reduce, masked_scatter,
-    # Linear algebra extensions
-    cholesky_inverse, cholesky_solve, lu_solve, lu_unpack, geqrf,
-    # Special math functions
-    mvlgamma, ldexp_, embedding_renorm_, feature_dropout_,
-    from_file, max_pool1d_with_indices,
-    # Additional in-place ops
-    relu_, sinc_, xlogy_,
-    # Additional linear algebra
-    pinverse, triangular_solve, nuclear_norm, renorm, norm_except_dim,
-    # Range and view ops
-    range_func, view_as_complex, view_as_real,
-    rms_norm, rnn_tanh, rnn_relu, slice_inverse,
-    orgqr, ormqr, lobpcg,
-    # Pooling
-    max_pool2d, avg_pool2d,
-    max_pool1d, avg_pool1d,
-    adaptive_avg_pool1d, adaptive_max_pool1d,
-    # Convolution
-    conv1d, conv2d, conv3d,
+    orgqr,
+    ormqr,
+    outer,
+    pinverse,
+    polygamma,
+    positive,
+    pow,
+    prod,
+    put,
+    quantile,
+    rad2deg,
+    rad2deg_,
+    range_,
+    range_func,
+    ravel,
+    real,
+    reciprocal,
+    relu,
+    relu_,
+    remainder,
+    renorm,
+    repeat,
+    repeat_interleave,
+    rms_norm,
+    rnn_relu,
+    rnn_tanh,
+    roll,
+    rot90,
+    round,
+    row_stack,
+    rsqrt,
+    rsub,
+    scatter,
+    scatter_add,
+    scatter_reduce,
+    select,
+    select_scatter,
+    sgn,
+    sigmoid,
+    sign,
+    signbit,
+    silu,
+    sin,
+    sinc,
+    sinc_,
+    sinh,
+    slice_inverse,
+    slice_scatter,
+    softmax,
+    sort,
+    split,
+    split_with_sizes,
+    sqrt,
+    square,
+    square_,
+    stack,
+    std,
+    std_mean,
+    sub,
+    subtract,
+    sum,
+    swapaxes,
+    swapdims,
+    swish,
+    t,
+    take,
+    take_along_dim,
+    tan,
+    tanh,
+    tensor_split,
+    tensordot,
+    tile,
+    topk,
+    trace,
+    trapezoid,
+    trapz,
+    triangular_solve,
+    tril,
+    tril_indices,
+    triu,
+    triu_indices,
+    true_divide,
+    trunc,
+    unbind,
+    unflatten,
+    unique,
+    unique_consecutive,
+    unravel_index,
+    unsafe_chunk,
+    unsafe_split,
+    unsafe_split_with_sizes,
+    vander,
+    var,
+    var_mean,
+    vdot,
+    view_as_complex,
+    view_as_real,
+    vsplit,
+    vstack,
+    where,
+    xlogy,
+    xlogy_,
+)
+
+# Phase 1: Tensor core
+from .tensor import Tensor
+
+# Phase 1: View operations
+from .view_ops import (
+    contiguous,
+    flatten,
+    permute,
+    reshape,
+    squeeze,
+    transpose,
+    unsqueeze,
+    view,
 )
 
 # Create alias for range (since range_func avoids builtin conflict)
 range = range_func
 
-# Transposed convolutions (from nn.functional)
-from .nn.functional import (
-    conv_transpose1d, conv_transpose2d, conv_transpose3d,
-)
-
-# torch.linalg namespace
-from . import linalg
-
-# torch.special namespace
-from . import special
-
-# torch.fft namespace
-from . import fft
-
-# torch.amp namespace (automatic mixed precision)
-from . import amp
-
 # torch.random namespace
-from . import random
+# torch.amp namespace (automatic mixed precision)
+# torch.fft namespace
+# torch.special namespace
+# torch.linalg namespace
+from . import amp, fft, linalg, random, special
 
 # Expose linalg functions at torch.* level
 from .linalg import (
-    det, pinv, cross, svd, qr, cholesky, slogdet,
-    inv as inverse,
-    norm as linalg_norm,
+    cholesky,
+    cross,
+    det,
+)
+from .linalg import inv as inverse
+from .linalg import norm as linalg_norm
+from .linalg import (
+    pinv,
+    qr,
+    slogdet,
+    svd,
+)
+
+# Transposed convolutions (from nn.functional)
+from .nn.functional import (
+    conv_transpose1d,
+    conv_transpose2d,
+    conv_transpose3d,
 )
 
 
-def norm(input, p='fro', dim=None, keepdim=False, out=None, dtype=None):
+def norm(input, p="fro", dim=None, keepdim=False, out=None, dtype=None):
     """
     Compute the matrix or vector norm.
 
@@ -282,33 +547,48 @@ def norm(input, p='fro', dim=None, keepdim=False, out=None, dtype=None):
     # torch.norm uses 'p' while torch.linalg.norm uses 'ord'
     return linalg_norm(input, ord=p, dim=dim, keepdim=keepdim, dtype=dtype)
 
-# Expose dropout and normalization functions at torch.* level
-from .nn.functional import (
-    dropout,
-    alpha_dropout,
-    feature_alpha_dropout,
-    batch_norm, layer_norm, group_norm, instance_norm,
-)
-
-# Expose additional activation functions at torch.* level
-from .nn.functional import (
-    celu, celu_,
-    selu, selu_,
-    hardtanh, hardtanh_,
-    hardshrink, softshrink, tanhshrink,
-    threshold, threshold_,
-    glu, logsigmoid,
-    prelu, softmin,
-    rrelu, rrelu_,
-    relu6, hardswish, hardsigmoid,
-    softplus, softsign, mish,
-)
 
 # Expose embedding functions at torch.* level
 # Note: torch.embedding(weight, indices) has different signature than
 # torch.nn.functional.embedding(input, weight), so we need a wrapper
+# Expose additional activation functions at torch.* level
+# Expose dropout and normalization functions at torch.* level
+from .nn.functional import (
+    alpha_dropout,
+    batch_norm,
+    celu,
+    celu_,
+    dropout,
+)
 from .nn.functional import embedding as _embedding_functional
 from .nn.functional import embedding_bag as _embedding_bag_functional
+from .nn.functional import (
+    feature_alpha_dropout,
+    glu,
+    group_norm,
+    hardshrink,
+    hardsigmoid,
+    hardswish,
+    hardtanh,
+    hardtanh_,
+    instance_norm,
+    layer_norm,
+    logsigmoid,
+    mish,
+    prelu,
+    relu6,
+    rrelu,
+    rrelu_,
+    selu,
+    selu_,
+    softmin,
+    softplus,
+    softshrink,
+    softsign,
+    tanhshrink,
+    threshold,
+    threshold_,
+)
 
 
 def embedding(
@@ -320,7 +600,7 @@ def embedding(
     scale_grad_by_freq=False,
     sparse=False,
     *,
-    indices=None  # Alias for input for compatibility
+    indices=None,  # Alias for input for compatibility
 ):
     """
     Embedding lookup (torch.embedding signature).
@@ -356,7 +636,7 @@ def embedding(
         max_norm=max_norm,
         norm_type=norm_type,
         scale_grad_by_freq=scale_grad_by_freq,
-        sparse=sparse
+        sparse=sparse,
     )
 
 
@@ -367,11 +647,11 @@ def embedding_bag(
     max_norm=None,
     norm_type=2.0,
     scale_grad_by_freq=False,
-    mode='sum',
+    mode="sum",
     sparse=False,
     per_sample_weights=None,
     include_last_offset=False,
-    padding_idx=None
+    padding_idx=None,
 ):
     """
     Embedding bag lookup (torch.embedding_bag signature).
@@ -402,20 +682,21 @@ def embedding_bag(
         - mode='mean' (1): offset2bag shape is (num_indices,), max_indices shape is (num_bags,)
         - mode='max' (2): offset2bag shape is (num_indices,), max_indices shape is (num_bags, embedding_dim)
     """
-    import mlx.core as mx
     import builtins
+
+    import mlx.core as mx
 
     # Normalize mode to string for the functional call
     # PyTorch C++ binding uses int: 0=sum, 1=mean, 2=max
-    mode_int_to_str = {0: 'sum', 1: 'mean', 2: 'max'}
+    mode_int_to_str = {0: "sum", 1: "mean", 2: "max"}
     if isinstance(mode, builtins.int):
-        mode_str = mode_int_to_str.get(mode, 'sum')
-        mode_is_sum = (mode == 0)
-        mode_is_max = (mode == 2)
+        mode_str = mode_int_to_str.get(mode, "sum")
+        mode_is_sum = mode == 0
+        mode_is_max = mode == 2
     else:
         mode_str = mode
-        mode_is_sum = (mode == 'sum')
-        mode_is_max = (mode == 'max')
+        mode_is_sum = mode == "sum"
+        mode_is_max = mode == "max"
 
     output = _embedding_bag_functional(
         input=input,
@@ -428,7 +709,7 @@ def embedding_bag(
         sparse=sparse,
         per_sample_weights=per_sample_weights,
         include_last_offset=include_last_offset,
-        padding_idx=padding_idx
+        padding_idx=padding_idx,
     )
 
     # PyTorch's torch.embedding_bag returns a tuple of 4 elements:
@@ -443,7 +724,7 @@ def embedding_bag(
     embedding_dim = output.shape[1] if output.ndim > 1 else 1
 
     # Get input as MLX array
-    indices = input._mlx_array if hasattr(input, '_mlx_array') else mx.array(input)
+    indices = input._mlx_array if hasattr(input, "_mlx_array") else mx.array(input)
     num_indices = indices.size
 
     # Compute offset2bag and bag_size based on mode
@@ -460,19 +741,25 @@ def embedding_bag(
             offset2bag_data = mx.repeat(mx.arange(batch_size), bag_len)
             bag_size_data = mx.full((batch_size,), bag_len, dtype=mx.int64)
         elif offsets is not None:
-            offsets_data = offsets._mlx_array if hasattr(offsets, '_mlx_array') else mx.array(offsets)
+            offsets_data = (
+                offsets._mlx_array if hasattr(offsets, "_mlx_array") else mx.array(offsets)
+            )
             offsets_data = offsets_data.astype(mx.int64)
 
             if include_last_offset:
                 bag_boundaries = offsets_data
                 num_bags_computed = len(offsets_data) - 1
             else:
-                bag_boundaries = mx.concatenate([offsets_data, mx.array([num_indices], dtype=mx.int64)])
+                bag_boundaries = mx.concatenate(
+                    [offsets_data, mx.array([num_indices], dtype=mx.int64)]
+                )
                 num_bags_computed = len(offsets_data)
 
             # Compute offset2bag by creating a mapping from each index to its bag
-            import numpy as np
             import builtins
+
+            import numpy as np
+
             offsets_np = np.array(bag_boundaries)
             offset2bag_np = np.zeros(num_indices, dtype=np.int64)
             bag_size_np = np.zeros(num_bags_computed, dtype=np.int64)
@@ -505,35 +792,39 @@ def embedding_bag(
     return (output, offset2bag, bag_size, max_indices)
 
 
-# Expose RNN cell functions at torch.* level
-from .nn.functional import (
-    rnn_tanh_cell, rnn_relu_cell, lstm_cell, gru_cell,
-)
-
-# Expose distance functions at torch.* level
-from .nn.functional import (
-    cosine_similarity, pairwise_distance, pdist, cdist,
-)
-
-# Expose pixel operations at torch.* level
-from .nn.functional import (
-    pixel_shuffle, pixel_unshuffle, channel_shuffle,
-)
-
 # Expose loss functions at torch.* level
 # Import the functional versions first
 from .nn import functional as _F
 
 # Simple re-exports (these don't have the reduction parameter issue)
+# Expose pixel operations at torch.* level
+# Expose distance functions at torch.* level
+# Expose RNN cell functions at torch.* level
 from .nn.functional import (
-    mse_loss, l1_loss, cross_entropy, nll_loss,
     binary_cross_entropy,
+    cdist,
+    channel_shuffle,
+    cosine_similarity,
+    cross_entropy,
+    gaussian_nll_loss,
+    gru_cell,
+    huber_loss,
+    l1_loss,
+    lstm_cell,
+    mse_loss,
+    multi_margin_loss,
+    multilabel_soft_margin_loss,
+    nll_loss,
+    pairwise_distance,
+    pdist,
+    pixel_shuffle,
+    pixel_unshuffle,
+    poisson_nll_loss,
+    rnn_relu_cell,
+    rnn_tanh_cell,
     smooth_l1_loss,
-    huber_loss, soft_margin_loss,
-    gaussian_nll_loss, poisson_nll_loss,
-    multi_margin_loss, multilabel_soft_margin_loss,
+    soft_margin_loss,
 )
-
 
 # =============================================================================
 # Reduction Parameter Wrappers
@@ -544,16 +835,17 @@ from .nn.functional import (
 # We need wrappers to convert int -> string for parity.
 # =============================================================================
 
+
 def _reduction_int_to_str(reduction):
     """Convert PyTorch's C++ reduction enum (int) to string."""
     if isinstance(reduction, str):
         return reduction
     if reduction == 0:
-        return 'none'
+        return "none"
     elif reduction == 1:
-        return 'mean'
+        return "mean"
     elif reduction == 2:
-        return 'sum'
+        return "sum"
     else:
         raise ValueError(f"Invalid reduction value: {reduction}")
 
@@ -565,7 +857,7 @@ def binary_cross_entropy_with_logits(
     size_average=None,
     reduce=None,
     reduction=1,  # PyTorch default is 1 (mean)
-    pos_weight=None
+    pos_weight=None,
 ):
     """Binary cross entropy with logits (torch.* level API).
 
@@ -585,9 +877,13 @@ def binary_cross_entropy_with_logits(
     """
     reduction_str = _reduction_int_to_str(reduction)
     return _F.binary_cross_entropy_with_logits(
-        input, target, weight=weight,
-        size_average=size_average, reduce=reduce,
-        reduction=reduction_str, pos_weight=pos_weight
+        input,
+        target,
+        weight=weight,
+        size_average=size_average,
+        reduce=reduce,
+        reduction=reduction_str,
+        pos_weight=pos_weight,
     )
 
 
@@ -601,7 +897,7 @@ def triplet_margin_loss(
     swap=False,
     size_average=None,
     reduce=None,
-    reduction=1  # PyTorch default is 1 (mean)
+    reduction=1,  # PyTorch default is 1 (mean)
 ):
     """Triplet margin loss (torch.* level API).
 
@@ -622,10 +918,16 @@ def triplet_margin_loss(
     """
     reduction_str = _reduction_int_to_str(reduction)
     return _F.triplet_margin_loss(
-        anchor, positive, negative,
-        margin=margin, p=p, eps=eps, swap=swap,
-        size_average=size_average, reduce=reduce,
-        reduction=reduction_str
+        anchor,
+        positive,
+        negative,
+        margin=margin,
+        p=p,
+        eps=eps,
+        swap=swap,
+        size_average=size_average,
+        reduce=reduce,
+        reduction=reduction_str,
     )
 
 
@@ -636,7 +938,7 @@ def margin_ranking_loss(
     margin=0,
     size_average=None,
     reduce=None,
-    reduction=1  # PyTorch default is 1 (mean)
+    reduction=1,  # PyTorch default is 1 (mean)
 ):
     """Margin ranking loss (torch.* level API).
 
@@ -654,10 +956,13 @@ def margin_ranking_loss(
     """
     reduction_str = _reduction_int_to_str(reduction)
     return _F.margin_ranking_loss(
-        input1, input2, target,
+        input1,
+        input2,
+        target,
         margin=margin,
-        size_average=size_average, reduce=reduce,
-        reduction=reduction_str
+        size_average=size_average,
+        reduce=reduce,
+        reduction=reduction_str,
     )
 
 
@@ -667,7 +972,7 @@ def hinge_embedding_loss(
     margin=1.0,
     size_average=None,
     reduce=None,
-    reduction=1  # PyTorch default is 1 (mean)
+    reduction=1,  # PyTorch default is 1 (mean)
 ):
     """Hinge embedding loss (torch.* level API).
 
@@ -684,10 +989,12 @@ def hinge_embedding_loss(
     """
     reduction_str = _reduction_int_to_str(reduction)
     return _F.hinge_embedding_loss(
-        input, target,
+        input,
+        target,
         margin=margin,
-        size_average=size_average, reduce=reduce,
-        reduction=reduction_str
+        size_average=size_average,
+        reduce=reduce,
+        reduction=reduction_str,
     )
 
 
@@ -697,7 +1004,7 @@ def kl_div(
     size_average=None,
     reduce=None,
     reduction=1,  # PyTorch default is 1 (mean)
-    log_target=False
+    log_target=False,
 ):
     """KL divergence loss (torch.* level API).
 
@@ -714,9 +1021,12 @@ def kl_div(
     """
     reduction_str = _reduction_int_to_str(reduction)
     return _F.kl_div(
-        input, target,
-        size_average=size_average, reduce=reduce,
-        reduction=reduction_str, log_target=log_target
+        input,
+        target,
+        size_average=size_average,
+        reduce=reduce,
+        reduction=reduction_str,
+        log_target=log_target,
     )
 
 
@@ -727,7 +1037,7 @@ def cosine_embedding_loss(
     margin=0,
     size_average=None,
     reduce=None,
-    reduction=1  # PyTorch default is 1 (mean)
+    reduction=1,  # PyTorch default is 1 (mean)
 ):
     """Cosine embedding loss (torch.* level API).
 
@@ -745,10 +1055,13 @@ def cosine_embedding_loss(
     """
     reduction_str = _reduction_int_to_str(reduction)
     return _F.cosine_embedding_loss(
-        input1, input2, target,
+        input1,
+        input2,
+        target,
         margin=margin,
-        size_average=size_average, reduce=reduce,
-        reduction=reduction_str
+        size_average=size_average,
+        reduce=reduce,
+        reduction=reduction_str,
     )
 
 
@@ -759,7 +1072,7 @@ def ctc_loss(
     target_lengths,
     blank=0,
     reduction=1,  # PyTorch default is 1 (mean)
-    zero_infinity=False
+    zero_infinity=False,
 ):
     """CTC loss (torch.* level API).
 
@@ -777,59 +1090,66 @@ def ctc_loss(
     """
     reduction_str = _reduction_int_to_str(reduction)
     return _F.ctc_loss(
-        log_probs, targets, input_lengths, target_lengths,
-        blank=blank, reduction=reduction_str, zero_infinity=zero_infinity
+        log_probs,
+        targets,
+        input_lengths,
+        target_lengths,
+        blank=blank,
+        reduction=reduction_str,
+        zero_infinity=zero_infinity,
     )
 
 
-# Expose other nn.functional at torch.* level
-from .nn.functional import (
-    linear, pad, normalize, one_hot, interpolate,
-)
-
-# Expose more pooling functions at torch.* level
-from .nn.functional import (
-    max_pool3d, avg_pool3d,
-    adaptive_avg_pool2d, adaptive_max_pool2d,
-    adaptive_avg_pool3d, adaptive_max_pool3d,
-    dropout1d, dropout2d, dropout3d,
-)
+# Phase 7: Data loading
+# Phase 5: Optimizers
+# Phase 4: Neural networks
+from . import data, nn, optim
 
 # Phase 3: Autograd
 from .autograd import (
-    no_grad,
     enable_grad,
-    set_grad_enabled,
     is_grad_enabled,
+    no_grad,
+    set_grad_enabled,
 )
 
 # Layout optimization for NHWC-native mode
 from .layout import (
     Layout,
-    nhwc_mode,
-    nchw_mode,
-    is_nhwc_mode,
     convert_layout,
-    ensure_nhwc,
     ensure_nchw,
+    ensure_nhwc,
+    is_nhwc_mode,
+    nchw_mode,
+    nhwc_mode,
 )
 
-# Phase 4: Neural networks
-from . import nn
-
-# Phase 5: Optimizers
-from . import optim
-
-# Phase 7: Data loading
-from . import data
+# Expose more pooling functions at torch.* level
+# Expose other nn.functional at torch.* level
+from .nn.functional import (
+    adaptive_avg_pool2d,
+    adaptive_avg_pool3d,
+    adaptive_max_pool2d,
+    adaptive_max_pool3d,
+    avg_pool3d,
+    dropout1d,
+    dropout2d,
+    dropout3d,
+    interpolate,
+    linear,
+    max_pool3d,
+    normalize,
+    one_hot,
+    pad,
+)
 
 # Serialization
-from .serialization import save, load
-
+from .serialization import load, save
 
 # =============================================================================
 # Utility Functions (torch-level)
 # =============================================================================
+
 
 def is_tensor(obj) -> bool:
     """Check if an object is a Tensor."""
@@ -839,12 +1159,14 @@ def is_tensor(obj) -> bool:
 def is_floating_point(input: Tensor) -> bool:
     """Check if tensor has floating point dtype."""
     import mlx.core as mx
+
     return input._mlx_array.dtype in (mx.float16, mx.float32, mx.bfloat16, mx.float64)
 
 
 def is_complex(input: Tensor) -> bool:
     """Check if tensor has complex dtype."""
     import mlx.core as mx
+
     return input._mlx_array.dtype in (mx.complex64,)
 
 
@@ -856,6 +1178,7 @@ def numel(input: Tensor) -> int:
 def manual_seed(seed: int) -> None:
     """Set the random seed for reproducibility."""
     import mlx.core as mx
+
     mx.random.seed(seed)
 
 
@@ -873,7 +1196,8 @@ def set_num_threads(num: int) -> None:
 # Extended Utility Functions (Sprint 6)
 # =============================================================================
 
-def result_type(*tensors_or_dtypes) -> "dtype":
+
+def result_type(*tensors_or_dtypes) -> DType:
     """
     Determine the result dtype from input tensors/dtypes.
 
@@ -884,13 +1208,14 @@ def result_type(*tensors_or_dtypes) -> "dtype":
         Result dtype
     """
     import mlx.core as mx
+
     from .dtype import get_dtype
 
     dtypes = []
     for t in tensors_or_dtypes:
         if isinstance(t, Tensor):
             dtypes.append(t._mlx_array.dtype)
-        elif hasattr(t, '_mlx_dtype'):
+        elif hasattr(t, "_mlx_dtype"):
             dtypes.append(t._mlx_dtype)
         else:
             dtypes.append(get_dtype(t)._mlx_dtype)
@@ -909,7 +1234,7 @@ def result_type(*tensors_or_dtypes) -> "dtype":
     return float32
 
 
-def promote_types(type1, type2) -> "dtype":
+def promote_types(type1, type2) -> DType:
     """
     Promote two dtypes to a common type.
 
@@ -966,8 +1291,9 @@ def asarray(data, *, dtype=None, device=None, copy=None, requires_grad=False) ->
         Tensor
     """
     import mlx.core as mx
-    from .dtype import get_dtype
     import numpy as np
+
+    from .dtype import get_dtype
 
     if isinstance(data, Tensor):
         arr = data._mlx_array
@@ -1004,6 +1330,7 @@ def complex(real: Tensor, imag: Tensor) -> Tensor:
         MLX has limited complex support.
     """
     import mlx.core as mx
+
     # MLX complex number construction
     result_array = real._mlx_array.astype(mx.float32) + 1j * imag._mlx_array.astype(mx.float32)
     return Tensor._from_mlx_array(result_array)
@@ -1021,6 +1348,7 @@ def polar(abs_val: Tensor, angle: Tensor) -> Tensor:
         Complex tensor
     """
     import mlx.core as mx
+
     real = abs_val._mlx_array * mx.cos(angle._mlx_array)
     imag = abs_val._mlx_array * mx.sin(angle._mlx_array)
     result_array = real.astype(mx.float32) + 1j * imag.astype(mx.float32)
@@ -1038,6 +1366,7 @@ def conj_physical(input: Tensor) -> Tensor:
         Conjugated tensor
     """
     import mlx.core as mx
+
     result_array = mx.conj(input._mlx_array)
     return Tensor._from_mlx_array(result_array)
 
@@ -1089,8 +1418,10 @@ def is_neg(input: Tensor) -> bool:
 # Window Functions
 # =============================================================================
 
-def bartlett_window(window_length, *, periodic=True, dtype=None, device=None,
-                    requires_grad=False) -> Tensor:
+
+def bartlett_window(
+    window_length, *, periodic=True, dtype=None, device=None, requires_grad=False
+) -> Tensor:
     """
     Compute the Bartlett window.
 
@@ -1104,8 +1435,10 @@ def bartlett_window(window_length, *, periodic=True, dtype=None, device=None,
     Returns:
         Bartlett window tensor
     """
-    import mlx.core as mx
     import math
+
+    import mlx.core as mx
+
     from .dtype import get_dtype
 
     if window_length <= 0:
@@ -1125,6 +1458,7 @@ def bartlett_window(window_length, *, periodic=True, dtype=None, device=None,
 
     if dtype is not None:
         from .dtype import get_dtype
+
         dtype_obj = get_dtype(dtype)
         window = window.astype(dtype_obj._mlx_dtype)
 
@@ -1133,8 +1467,9 @@ def bartlett_window(window_length, *, periodic=True, dtype=None, device=None,
     return result
 
 
-def blackman_window(window_length, *, periodic=True, dtype=None, device=None,
-                    requires_grad=False) -> Tensor:
+def blackman_window(
+    window_length, *, periodic=True, dtype=None, device=None, requires_grad=False
+) -> Tensor:
     """
     Compute the Blackman window.
 
@@ -1148,8 +1483,10 @@ def blackman_window(window_length, *, periodic=True, dtype=None, device=None,
     Returns:
         Blackman window tensor
     """
-    import mlx.core as mx
     import math
+
+    import mlx.core as mx
+
     from .dtype import get_dtype
 
     if window_length <= 0:
@@ -1169,6 +1506,7 @@ def blackman_window(window_length, *, periodic=True, dtype=None, device=None,
 
     if dtype is not None:
         from .dtype import get_dtype
+
         dtype_obj = get_dtype(dtype)
         window = window.astype(dtype_obj._mlx_dtype)
 
@@ -1177,8 +1515,16 @@ def blackman_window(window_length, *, periodic=True, dtype=None, device=None,
     return result
 
 
-def hamming_window(window_length, *, periodic=True, alpha=0.54, beta=0.46,
-                   dtype=None, device=None, requires_grad=False) -> Tensor:
+def hamming_window(
+    window_length,
+    *,
+    periodic=True,
+    alpha=0.54,
+    beta=0.46,
+    dtype=None,
+    device=None,
+    requires_grad=False,
+) -> Tensor:
     """
     Compute the Hamming window.
 
@@ -1194,8 +1540,10 @@ def hamming_window(window_length, *, periodic=True, alpha=0.54, beta=0.46,
     Returns:
         Hamming window tensor
     """
-    import mlx.core as mx
     import math
+
+    import mlx.core as mx
+
     from .dtype import get_dtype
 
     if window_length <= 0:
@@ -1213,6 +1561,7 @@ def hamming_window(window_length, *, periodic=True, alpha=0.54, beta=0.46,
 
     if dtype is not None:
         from .dtype import get_dtype
+
         dtype_obj = get_dtype(dtype)
         window = window.astype(dtype_obj._mlx_dtype)
 
@@ -1221,8 +1570,9 @@ def hamming_window(window_length, *, periodic=True, alpha=0.54, beta=0.46,
     return result
 
 
-def hann_window(window_length, *, periodic=True, dtype=None, device=None,
-                requires_grad=False) -> Tensor:
+def hann_window(
+    window_length, *, periodic=True, dtype=None, device=None, requires_grad=False
+) -> Tensor:
     """
     Compute the Hann window.
 
@@ -1236,8 +1586,10 @@ def hann_window(window_length, *, periodic=True, dtype=None, device=None,
     Returns:
         Hann window tensor
     """
-    import mlx.core as mx
     import math
+
+    import mlx.core as mx
+
     from .dtype import get_dtype
 
     if window_length <= 0:
@@ -1255,6 +1607,7 @@ def hann_window(window_length, *, periodic=True, dtype=None, device=None,
 
     if dtype is not None:
         from .dtype import get_dtype
+
         dtype_obj = get_dtype(dtype)
         window = window.astype(dtype_obj._mlx_dtype)
 
@@ -1263,8 +1616,9 @@ def hann_window(window_length, *, periodic=True, dtype=None, device=None,
     return result
 
 
-def kaiser_window(window_length, *, periodic=True, beta=12.0, dtype=None,
-                  device=None, requires_grad=False) -> Tensor:
+def kaiser_window(
+    window_length, *, periodic=True, beta=12.0, dtype=None, device=None, requires_grad=False
+) -> Tensor:
     """
     Compute the Kaiser window.
 
@@ -1281,6 +1635,7 @@ def kaiser_window(window_length, *, periodic=True, beta=12.0, dtype=None,
     """
     import mlx.core as mx
     import numpy as np
+
     from .dtype import get_dtype
 
     if window_length <= 0:
@@ -1305,6 +1660,7 @@ def kaiser_window(window_length, *, periodic=True, beta=12.0, dtype=None,
 
     if dtype is not None:
         from .dtype import get_dtype
+
         dtype_obj = get_dtype(dtype)
         window = window.astype(dtype_obj._mlx_dtype)
 
@@ -1313,8 +1669,14 @@ def kaiser_window(window_length, *, periodic=True, beta=12.0, dtype=None,
     return result
 
 
-def searchsorted(sorted_sequence: Tensor, values: Tensor, *, out_int32: bool = False,
-                 right: bool = False, side: str = None) -> Tensor:
+def searchsorted(
+    sorted_sequence: Tensor,
+    values: Tensor,
+    *,
+    out_int32: bool = False,
+    right: bool = False,
+    side: str = None,
+) -> Tensor:
     """
     Find indices where elements should be inserted to maintain order.
 
@@ -1328,8 +1690,8 @@ def searchsorted(sorted_sequence: Tensor, values: Tensor, *, out_int32: bool = F
     Returns:
         Tensor of indices
     """
-    import numpy as np
     import mlx.core as mx
+    import numpy as np
 
     sorted_np = np.array(sorted_sequence._mlx_array)
     values_np = np.array(values._mlx_array)
@@ -1337,7 +1699,7 @@ def searchsorted(sorted_sequence: Tensor, values: Tensor, *, out_int32: bool = F
     if side is not None:
         side_arg = side
     else:
-        side_arg = 'right' if right else 'left'
+        side_arg = "right" if right else "left"
 
     indices_np = np.searchsorted(sorted_np.flatten(), values_np, side=side_arg)
 
@@ -1346,8 +1708,9 @@ def searchsorted(sorted_sequence: Tensor, values: Tensor, *, out_int32: bool = F
     return result
 
 
-def bucketize(input: Tensor, boundaries: Tensor, *, out_int32: bool = False,
-              right: bool = False) -> Tensor:
+def bucketize(
+    input: Tensor, boundaries: Tensor, *, out_int32: bool = False, right: bool = False
+) -> Tensor:
     """
     Return bucket indices for input values given boundaries.
 
@@ -1375,9 +1738,10 @@ def bincount(input: Tensor, weights: Tensor = None, minlength: int = 0) -> Tenso
     Returns:
         1D tensor of counts
     """
-    import numpy as np
-    import mlx.core as mx
     import builtins
+
+    import mlx.core as mx
+    import numpy as np
 
     input_np = np.array(input._mlx_array).astype(builtins.int)
     weights_np = np.array(weights._mlx_array) if weights is not None else None
@@ -1389,7 +1753,7 @@ def bincount(input: Tensor, weights: Tensor = None, minlength: int = 0) -> Tenso
     return result
 
 
-def can_cast(from_dtype, to_dtype, casting: str = 'safe') -> bool:
+def can_cast(from_dtype, to_dtype, casting: str = "safe") -> bool:
     """
     Check if a dtype can be cast to another.
 
@@ -1402,17 +1766,18 @@ def can_cast(from_dtype, to_dtype, casting: str = 'safe') -> bool:
         True if cast is allowed
     """
     import numpy as np
+
     from .dtype import get_dtype
 
     if isinstance(from_dtype, Tensor):
-        from_np = np.dtype(str(from_dtype._mlx_array.dtype).replace('mlx.core.', ''))
+        from_np = np.dtype(str(from_dtype._mlx_array.dtype).replace("mlx.core.", ""))
     else:
-        from_np = np.dtype(str(get_dtype(from_dtype)._mlx_dtype).replace('mlx.core.', ''))
+        from_np = np.dtype(str(get_dtype(from_dtype)._mlx_dtype).replace("mlx.core.", ""))
 
     if isinstance(to_dtype, Tensor):
-        to_np = np.dtype(str(to_dtype._mlx_array.dtype).replace('mlx.core.', ''))
+        to_np = np.dtype(str(to_dtype._mlx_array.dtype).replace("mlx.core.", ""))
     else:
-        to_np = np.dtype(str(get_dtype(to_dtype)._mlx_dtype).replace('mlx.core.', ''))
+        to_np = np.dtype(str(get_dtype(to_dtype)._mlx_dtype).replace("mlx.core.", ""))
 
     return np.can_cast(from_np, to_np, casting=casting)
 
@@ -1466,10 +1831,10 @@ from .nn import functional as _F
 
 def _batch_norm_impl(
     input: Tensor,
-    weight: "Optional[Tensor]",
-    bias: "Optional[Tensor]",
-    running_mean: "Optional[Tensor]",
-    running_var: "Optional[Tensor]",
+    weight: Optional[Tensor],
+    bias: Optional[Tensor],
+    running_mean: Optional[Tensor],
+    running_var: Optional[Tensor],
     training: bool,
     momentum: float,
     eps: float,
@@ -1508,10 +1873,10 @@ def _batch_norm_impl(
 
 def _instance_norm_impl(
     input: Tensor,
-    weight: "Optional[Tensor]",
-    bias: "Optional[Tensor]",
-    running_mean: "Optional[Tensor]",
-    running_var: "Optional[Tensor]",
+    weight: Optional[Tensor],
+    bias: Optional[Tensor],
+    running_mean: Optional[Tensor],
+    running_var: Optional[Tensor],
     use_input_stats: bool,
     momentum: float,
     eps: float,
@@ -1558,236 +1923,627 @@ __all__ = [
     "__version__",
     "Tensor",
     # Dtypes
-    "float32", "float16", "bfloat16", "float64",
-    "float", "half", "double",
-    "int8", "int16", "int32", "int64",
-    "uint8", "uint16", "uint32", "uint64",
-    "short", "int", "long", "byte", "bool",
-    "complex64", "complex128",
-    "get_dtype", "set_default_dtype", "get_default_dtype",
+    "float32",
+    "float16",
+    "bfloat16",
+    "float64",
+    "float",
+    "half",
+    "double",
+    "int8",
+    "int16",
+    "int32",
+    "int64",
+    "uint8",
+    "uint16",
+    "uint32",
+    "uint64",
+    "short",
+    "int",
+    "long",
+    "byte",
+    "bool",
+    "complex64",
+    "complex128",
+    "get_dtype",
+    "set_default_dtype",
+    "get_default_dtype",
     # Device
     "Device",
-    "get_default_device", "set_default_device",
-    "current_device", "device_count", "is_available", "synchronize",
+    "get_default_device",
+    "set_default_device",
+    "current_device",
+    "device_count",
+    "is_available",
+    "synchronize",
     # Factory functions
-    "zeros", "ones", "full", "empty",
-    "zeros_like", "ones_like", "full_like", "empty_like",
-    "rand_like", "randn_like", "randint_like",
-    "arange", "linspace", "logspace",
+    "zeros",
+    "ones",
+    "full",
+    "empty",
+    "zeros_like",
+    "ones_like",
+    "full_like",
+    "empty_like",
+    "rand_like",
+    "randn_like",
+    "randint_like",
+    "arange",
+    "linspace",
+    "logspace",
     "eye",
-    "randn", "rand", "randint", "randperm",
-    "normal", "bernoulli", "multinomial", "poisson",
-    "tensor", "from_numpy", "clone",
-    "as_tensor", "scalar_tensor",
-    "meshgrid", "cartesian_prod",
+    "randn",
+    "rand",
+    "randint",
+    "randperm",
+    "normal",
+    "bernoulli",
+    "multinomial",
+    "poisson",
+    "tensor",
+    "from_numpy",
+    "clone",
+    "as_tensor",
+    "scalar_tensor",
+    "meshgrid",
+    "cartesian_prod",
     # View operations
-    "reshape", "view", "transpose", "permute",
-    "squeeze", "unsqueeze", "flatten", "contiguous",
+    "reshape",
+    "view",
+    "transpose",
+    "permute",
+    "squeeze",
+    "unsqueeze",
+    "flatten",
+    "contiguous",
     # Operators (Phase 2)
-    "add", "sub", "mul", "div", "matmul", "mm", "bmm",
-    "pow", "sqrt", "exp", "log", "abs", "neg",
-    "multiply", "divide",
+    "add",
+    "sub",
+    "mul",
+    "div",
+    "matmul",
+    "mm",
+    "bmm",
+    "pow",
+    "sqrt",
+    "exp",
+    "log",
+    "abs",
+    "neg",
+    "multiply",
+    "divide",
     # Trigonometric functions
-    "sin", "cos", "tan", "sinh", "cosh",
-    "asin", "acos", "atan", "atan2",
-    "asinh", "acosh", "atanh",
-    "arcsin", "arccos", "arctan", "arctan2",
-    "arcsinh", "arccosh", "arctanh",
+    "sin",
+    "cos",
+    "tan",
+    "sinh",
+    "cosh",
+    "asin",
+    "acos",
+    "atan",
+    "atan2",
+    "asinh",
+    "acosh",
+    "atanh",
+    "arcsin",
+    "arccos",
+    "arctan",
+    "arctan2",
+    "arcsinh",
+    "arccosh",
+    "arctanh",
     "absolute",
     # Extended math functions
-    "angle", "exp2", "sinc", "hypot", "copysign", "heaviside",
-    "fmax", "fmin", "erfc", "lgamma", "digamma", "i0",
-    "isreal", "isneginf", "isposinf", "float_power",
-    "logaddexp2", "nextafter", "frexp", "ldexp", "xlogy",
+    "angle",
+    "exp2",
+    "sinc",
+    "hypot",
+    "copysign",
+    "heaviside",
+    "fmax",
+    "fmin",
+    "erfc",
+    "lgamma",
+    "digamma",
+    "i0",
+    "isreal",
+    "isneginf",
+    "isposinf",
+    "float_power",
+    "logaddexp2",
+    "nextafter",
+    "frexp",
+    "ldexp",
+    "xlogy",
     # Logarithms
-    "log2", "log10", "log1p", "expm1",
+    "log2",
+    "log10",
+    "log1p",
+    "expm1",
     # Activations
-    "relu", "gelu", "sigmoid", "tanh",
-    "softmax", "log_softmax", "silu",
-    "leaky_relu", "elu", "swish",
+    "relu",
+    "gelu",
+    "sigmoid",
+    "tanh",
+    "softmax",
+    "log_softmax",
+    "silu",
+    "leaky_relu",
+    "elu",
+    "swish",
     # Reductions
-    "sum", "mean", "max", "min",
-    "argmax", "argmin",
-    "var", "std", "prod",
-    "all", "any",
-    "amax", "amin", "aminmax",
+    "sum",
+    "mean",
+    "max",
+    "min",
+    "argmax",
+    "argmin",
+    "var",
+    "std",
+    "prod",
+    "all",
+    "any",
+    "amax",
+    "amin",
+    "aminmax",
     # Extended reductions
-    "median", "mode", "quantile",
-    "nanmean", "nansum",
-    "std_mean", "var_mean",
-    "cummax", "cummin", "logcumsumexp", "histc",
+    "median",
+    "mode",
+    "quantile",
+    "nanmean",
+    "nansum",
+    "std_mean",
+    "var_mean",
+    "cummax",
+    "cummin",
+    "logcumsumexp",
+    "histc",
     # Shape manipulation
-    "cat", "stack", "split", "chunk",
-    "expand", "repeat", "tile", "repeat_interleave",
-    "gather", "narrow", "select", "unbind",
-    "roll", "flip", "fliplr", "flipud", "rot90",
+    "cat",
+    "stack",
+    "split",
+    "chunk",
+    "expand",
+    "repeat",
+    "tile",
+    "repeat_interleave",
+    "gather",
+    "narrow",
+    "select",
+    "unbind",
+    "roll",
+    "flip",
+    "fliplr",
+    "flipud",
+    "rot90",
     # Extended shape operations
-    "ravel", "t", "adjoint", "moveaxis", "swapaxes",
-    "hstack", "vstack", "dstack", "column_stack", "row_stack",
-    "hsplit", "vsplit", "dsplit", "tensor_split",
-    "block_diag", "diag_embed", "diagflat",
+    "ravel",
+    "t",
+    "adjoint",
+    "moveaxis",
+    "swapaxes",
+    "hstack",
+    "vstack",
+    "dstack",
+    "column_stack",
+    "row_stack",
+    "hsplit",
+    "vsplit",
+    "dsplit",
+    "tensor_split",
+    "block_diag",
+    "diag_embed",
+    "diagflat",
     # Additional shape ops
-    "movedim", "swapdims",
-    "broadcast_tensors", "unflatten", "concat", "combinations",
-    "split_with_sizes", "unsafe_chunk", "unsafe_split", "unsafe_split_with_sizes",
+    "movedim",
+    "swapdims",
+    "broadcast_tensors",
+    "unflatten",
+    "concat",
+    "combinations",
+    "split_with_sizes",
+    "unsafe_chunk",
+    "unsafe_split",
+    "unsafe_split_with_sizes",
     # Sorting and selection
-    "sort", "argsort", "topk", "kthvalue", "msort",
-    "unique", "unique_consecutive",
+    "sort",
+    "argsort",
+    "topk",
+    "kthvalue",
+    "msort",
+    "unique",
+    "unique_consecutive",
     # Linear algebra (torch.* level)
-    "einsum", "tensordot",
-    "diag", "diagonal", "triu", "tril", "trace",
-    "outer", "inner", "dot", "vdot", "kron",
+    "einsum",
+    "tensordot",
+    "diag",
+    "diagonal",
+    "triu",
+    "tril",
+    "trace",
+    "outer",
+    "inner",
+    "dot",
+    "vdot",
+    "kron",
     # Indexing
-    "scatter", "scatter_add", "index_select",
-    "where", "masked_fill", "masked_select",
-    "index_add", "nonzero", "take", "put",
+    "scatter",
+    "scatter_add",
+    "index_select",
+    "where",
+    "masked_fill",
+    "masked_select",
+    "index_add",
+    "nonzero",
+    "take",
+    "put",
     # Extended indexing
-    "index_fill", "index_copy", "index_put",
-    "fill", "take_along_dim", "argwhere", "isin",
+    "index_fill",
+    "index_copy",
+    "index_put",
+    "fill",
+    "take_along_dim",
+    "argwhere",
+    "isin",
     # Scatter extensions
-    "diagonal_scatter", "slice_scatter", "select_scatter", "scatter_reduce",
+    "diagonal_scatter",
+    "slice_scatter",
+    "select_scatter",
+    "scatter_reduce",
     # Comparison
-    "eq", "ne", "lt", "le", "gt", "ge",
-    "equal", "allclose", "isclose",
-    "maximum", "minimum",
-    "greater", "greater_equal", "less", "less_equal", "not_equal",
+    "eq",
+    "ne",
+    "lt",
+    "le",
+    "gt",
+    "ge",
+    "equal",
+    "allclose",
+    "isclose",
+    "maximum",
+    "minimum",
+    "greater",
+    "greater_equal",
+    "less",
+    "less_equal",
+    "not_equal",
     # Math utilities
-    "clamp", "clip",
-    "clamp_min", "clamp_max", "clamp_min_", "clamp_max_", "clip_",
-    "floor", "ceil", "round", "trunc", "frac",
-    "fix", "fix_",
-    "sign", "signbit",
-    "isnan", "isinf", "isfinite",
-    "logical_and", "logical_or", "logical_not", "logical_xor",
-    "reciprocal", "rsqrt", "square",
-    "lerp", "addcmul", "addcdiv",
-    "fmod", "remainder",
-    "cumsum", "cumprod",
-    "deg2rad", "rad2deg", "deg2rad_", "rad2deg_",
-    "nan_to_num", "nan_to_num_",
+    "clamp",
+    "clip",
+    "clamp_min",
+    "clamp_max",
+    "clamp_min_",
+    "clamp_max_",
+    "clip_",
+    "floor",
+    "ceil",
+    "round",
+    "trunc",
+    "frac",
+    "fix",
+    "fix_",
+    "sign",
+    "signbit",
+    "isnan",
+    "isinf",
+    "isfinite",
+    "logical_and",
+    "logical_or",
+    "logical_not",
+    "logical_xor",
+    "reciprocal",
+    "rsqrt",
+    "square",
+    "lerp",
+    "addcmul",
+    "addcdiv",
+    "fmod",
+    "remainder",
+    "cumsum",
+    "cumprod",
+    "deg2rad",
+    "rad2deg",
+    "deg2rad_",
+    "rad2deg_",
+    "nan_to_num",
+    "nan_to_num_",
     "count_nonzero",
     "diff",
     # In-place variants
-    "negative_", "square_",
+    "negative_",
+    "square_",
     # New math functions
-    "logit", "logit_",
-    "sgn", "rsub", "subtract",
-    "floor_divide", "true_divide",
-    "gcd", "gcd_", "lcm", "lcm_",
-    "trapezoid", "trapz", "cumulative_trapezoid",
+    "logit",
+    "logit_",
+    "sgn",
+    "rsub",
+    "subtract",
+    "floor_divide",
+    "true_divide",
+    "gcd",
+    "gcd_",
+    "lcm",
+    "lcm_",
+    "trapezoid",
+    "trapz",
+    "cumulative_trapezoid",
     "gradient",
-    "is_same_size", "is_signed",
-    "vander", "unravel_index",
-    "tril_indices", "triu_indices",
+    "is_same_size",
+    "is_signed",
+    "vander",
+    "unravel_index",
+    "tril_indices",
+    "triu_indices",
     "range_",
-    "bitwise_left_shift", "bitwise_right_shift",
+    "bitwise_left_shift",
+    "bitwise_right_shift",
     # Quick ops
-    "atleast_1d", "atleast_2d", "atleast_3d",
-    "bitwise_and", "bitwise_or", "bitwise_xor", "bitwise_not",
-    "broadcast_to", "concatenate",
-    "conj", "erf", "erfinv",
-    "negative", "positive",
-    "real", "imag",
-    "logaddexp", "logsumexp",
-    "addmm", "baddbmm", "mv", "addr",
+    "atleast_1d",
+    "atleast_2d",
+    "atleast_3d",
+    "bitwise_and",
+    "bitwise_or",
+    "bitwise_xor",
+    "bitwise_not",
+    "broadcast_to",
+    "concatenate",
+    "conj",
+    "erf",
+    "erfinv",
+    "negative",
+    "positive",
+    "real",
+    "imag",
+    "logaddexp",
+    "logsumexp",
+    "addmm",
+    "baddbmm",
+    "mv",
+    "addr",
     "numel",
     # New quick ops
-    "addbmm", "addmv", "chain_matmul", "dist",
-    "corrcoef", "cov", "bilinear", "constant_pad_nd",
-    "ger", "frobenius_norm", "frombuffer", "binomial",
-    "convolution", "affine_grid_generator",
+    "addbmm",
+    "addmv",
+    "chain_matmul",
+    "dist",
+    "corrcoef",
+    "cov",
+    "bilinear",
+    "constant_pad_nd",
+    "ger",
+    "frobenius_norm",
+    "frombuffer",
+    "binomial",
+    "convolution",
+    "affine_grid_generator",
     # In-place operations
-    "dropout_", "alpha_dropout_", "feature_alpha_dropout_",
-    "erf_", "erfc_", "exp2_", "i0_", "fill_",
+    "dropout_",
+    "alpha_dropout_",
+    "feature_alpha_dropout_",
+    "erf_",
+    "erfc_",
+    "exp2_",
+    "i0_",
+    "fill_",
     # Grid sampler
-    "grid_sampler", "grid_sampler_2d", "grid_sampler_3d",
+    "grid_sampler",
+    "grid_sampler_2d",
+    "grid_sampler_3d",
     # Histogram
-    "histogram", "histogramdd",
+    "histogram",
+    "histogramdd",
     # Other
-    "feature_dropout", "igamma", "igammac", "polygamma",
+    "feature_dropout",
+    "igamma",
+    "igammac",
+    "polygamma",
     # RNN functions
-    "lstm", "gru",
+    "lstm",
+    "gru",
     # Matrix functions
-    "logdet", "matrix_exp", "matrix_power",
+    "logdet",
+    "matrix_exp",
+    "matrix_power",
     # NaN-aware operations
-    "nanmedian", "nanquantile",
+    "nanmedian",
+    "nanquantile",
     # Strided operations
-    "as_strided", "as_strided_", "as_strided_scatter",
-    "empty_permuted", "empty_strided", "nonzero_static",
+    "as_strided",
+    "as_strided_",
+    "as_strided_scatter",
+    "empty_permuted",
+    "empty_strided",
+    "nonzero_static",
     # Scatter/Index operations
-    "index_put_", "index_reduce", "masked_scatter",
+    "index_put_",
+    "index_reduce",
+    "masked_scatter",
     # Linear algebra extensions
-    "cholesky_inverse", "cholesky_solve", "lu_solve", "lu_unpack", "geqrf",
+    "cholesky_inverse",
+    "cholesky_solve",
+    "lu_solve",
+    "lu_unpack",
+    "geqrf",
     # Special math functions
-    "mvlgamma", "ldexp_", "embedding_renorm_", "feature_dropout_",
-    "from_file", "max_pool1d_with_indices", "ctc_loss",
+    "mvlgamma",
+    "ldexp_",
+    "embedding_renorm_",
+    "feature_dropout_",
+    "from_file",
+    "max_pool1d_with_indices",
+    "ctc_loss",
     # Additional in-place ops
-    "relu_", "sinc_", "xlogy_",
+    "relu_",
+    "sinc_",
+    "xlogy_",
     # Additional linear algebra
-    "pinverse", "triangular_solve", "nuclear_norm", "renorm", "norm_except_dim",
+    "pinverse",
+    "triangular_solve",
+    "nuclear_norm",
+    "renorm",
+    "norm_except_dim",
     # Range and view ops
-    "range", "view_as_complex", "view_as_real",
-    "rms_norm", "rnn_tanh", "rnn_relu", "slice_inverse",
-    "orgqr", "ormqr", "lobpcg",
+    "range",
+    "view_as_complex",
+    "view_as_real",
+    "rms_norm",
+    "rnn_tanh",
+    "rnn_relu",
+    "slice_inverse",
+    "orgqr",
+    "ormqr",
+    "lobpcg",
     # Pooling
-    "max_pool2d", "avg_pool2d",
-    "max_pool1d", "avg_pool1d",
-    "adaptive_avg_pool1d", "adaptive_max_pool1d",
+    "max_pool2d",
+    "avg_pool2d",
+    "max_pool1d",
+    "avg_pool1d",
+    "adaptive_avg_pool1d",
+    "adaptive_max_pool1d",
     # Convolution
-    "conv1d", "conv2d", "conv3d",
-    "conv_transpose1d", "conv_transpose2d", "conv_transpose3d",
+    "conv1d",
+    "conv2d",
+    "conv3d",
+    "conv_transpose1d",
+    "conv_transpose2d",
+    "conv_transpose3d",
     # Linear algebra (from linalg)
-    "norm", "det", "pinv", "cross", "svd", "qr", "cholesky", "slogdet", "inverse",
+    "norm",
+    "det",
+    "pinv",
+    "cross",
+    "svd",
+    "qr",
+    "cholesky",
+    "slogdet",
+    "inverse",
     # Dropout and normalization (from nn.functional)
-    "dropout", "alpha_dropout", "feature_alpha_dropout",
-    "batch_norm", "layer_norm", "group_norm", "instance_norm",
+    "dropout",
+    "alpha_dropout",
+    "feature_alpha_dropout",
+    "batch_norm",
+    "layer_norm",
+    "group_norm",
+    "instance_norm",
     # Additional activations (from nn.functional)
-    "celu", "celu_", "selu", "selu_",
-    "hardtanh", "hardtanh_", "hardshrink", "softshrink", "tanhshrink",
-    "threshold", "threshold_", "glu", "logsigmoid",
-    "prelu", "softmin", "rrelu", "rrelu_",
-    "relu6", "hardswish", "hardsigmoid", "softplus", "softsign", "mish",
+    "celu",
+    "celu_",
+    "selu",
+    "selu_",
+    "hardtanh",
+    "hardtanh_",
+    "hardshrink",
+    "softshrink",
+    "tanhshrink",
+    "threshold",
+    "threshold_",
+    "glu",
+    "logsigmoid",
+    "prelu",
+    "softmin",
+    "rrelu",
+    "rrelu_",
+    "relu6",
+    "hardswish",
+    "hardsigmoid",
+    "softplus",
+    "softsign",
+    "mish",
     # Embedding
-    "embedding", "embedding_bag",
+    "embedding",
+    "embedding_bag",
     # RNN cell functions
-    "rnn_tanh_cell", "rnn_relu_cell", "lstm_cell", "gru_cell",
+    "rnn_tanh_cell",
+    "rnn_relu_cell",
+    "lstm_cell",
+    "gru_cell",
     # Distance functions
-    "cosine_similarity", "pairwise_distance", "pdist", "cdist",
+    "cosine_similarity",
+    "pairwise_distance",
+    "pdist",
+    "cdist",
     # Pixel operations
-    "pixel_shuffle", "pixel_unshuffle", "channel_shuffle",
+    "pixel_shuffle",
+    "pixel_unshuffle",
+    "channel_shuffle",
     # Loss functions
-    "mse_loss", "l1_loss", "cross_entropy", "nll_loss",
-    "binary_cross_entropy", "binary_cross_entropy_with_logits",
-    "smooth_l1_loss", "triplet_margin_loss", "margin_ranking_loss",
-    "hinge_embedding_loss", "huber_loss", "kl_div", "soft_margin_loss",
-    "cosine_embedding_loss", "gaussian_nll_loss", "poisson_nll_loss",
-    "multi_margin_loss", "multilabel_soft_margin_loss",
+    "mse_loss",
+    "l1_loss",
+    "cross_entropy",
+    "nll_loss",
+    "binary_cross_entropy",
+    "binary_cross_entropy_with_logits",
+    "smooth_l1_loss",
+    "triplet_margin_loss",
+    "margin_ranking_loss",
+    "hinge_embedding_loss",
+    "huber_loss",
+    "kl_div",
+    "soft_margin_loss",
+    "cosine_embedding_loss",
+    "gaussian_nll_loss",
+    "poisson_nll_loss",
+    "multi_margin_loss",
+    "multilabel_soft_margin_loss",
     # Other nn.functional
-    "linear", "pad", "normalize", "one_hot", "interpolate",
+    "linear",
+    "pad",
+    "normalize",
+    "one_hot",
+    "interpolate",
     # Additional pooling
-    "max_pool3d", "avg_pool3d",
-    "adaptive_avg_pool2d", "adaptive_max_pool2d",
-    "adaptive_avg_pool3d", "adaptive_max_pool3d",
-    "dropout1d", "dropout2d", "dropout3d",
+    "max_pool3d",
+    "avg_pool3d",
+    "adaptive_avg_pool2d",
+    "adaptive_max_pool2d",
+    "adaptive_avg_pool3d",
+    "adaptive_max_pool3d",
+    "dropout1d",
+    "dropout2d",
+    "dropout3d",
     # Autograd (Phase 3)
-    "no_grad", "enable_grad", "set_grad_enabled", "is_grad_enabled",
+    "no_grad",
+    "enable_grad",
+    "set_grad_enabled",
+    "is_grad_enabled",
     # Utility functions
-    "is_tensor", "is_floating_point", "is_complex",
-    "manual_seed", "get_num_threads", "set_num_threads",
+    "is_tensor",
+    "is_floating_point",
+    "is_complex",
+    "manual_seed",
+    "get_num_threads",
+    "set_num_threads",
     # Extended utility functions
-    "result_type", "promote_types",
-    "searchsorted", "bucketize", "bincount",
-    "can_cast", "is_nonzero",
+    "result_type",
+    "promote_types",
+    "searchsorted",
+    "bucketize",
+    "bincount",
+    "can_cast",
+    "is_nonzero",
     "is_inference_mode_enabled",
     "are_deterministic_algorithms_enabled",
-    "set_deterministic_debug_mode", "get_deterministic_debug_mode",
+    "set_deterministic_debug_mode",
+    "get_deterministic_debug_mode",
     # Detach and other functions
-    "detach", "detach_", "asarray",
+    "detach",
+    "detach_",
+    "asarray",
     # Complex number operations
-    "complex", "polar", "conj_physical", "conj_physical_",
-    "resolve_conj", "resolve_neg", "is_conj", "is_neg",
+    "complex",
+    "polar",
+    "conj_physical",
+    "conj_physical_",
+    "resolve_conj",
+    "resolve_neg",
+    "is_conj",
+    "is_neg",
     # Window functions
-    "bartlett_window", "blackman_window", "hamming_window", "hann_window", "kaiser_window",
+    "bartlett_window",
+    "blackman_window",
+    "hamming_window",
+    "hann_window",
+    "kaiser_window",
     # Namespaces
     "linalg",
     "special",
@@ -1801,8 +2557,10 @@ __all__ = [
     # Data loading (Phase 7)
     "data",
     # Serialization
-    "save", "load",
+    "save",
+    "load",
 ]
+
 
 # Development status indicator
 def _get_implementation_status():
@@ -1831,10 +2589,12 @@ def show_status():
 # Check MLX availability
 try:
     import mlx.core as mx
+
     _MLX_AVAILABLE = True
 except ImportError:
     _MLX_AVAILABLE = False
     import warnings
+
     warnings.warn(
         "MLX not found. Please install MLX: pip install mlx",
         ImportWarning,

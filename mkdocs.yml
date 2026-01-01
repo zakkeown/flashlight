@@ -1,0 +1,83 @@
+site_name: Flashlight Documentation
+site_description: PyTorch-compatible API layer for Apple's MLX framework
+site_url: https://github.com/flashlight
+repo_url: https://github.com/flashlight
+repo_name: flashlight
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - toc.integrate
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_source: true
+            show_bases: true
+            show_root_heading: true
+            show_category_heading: true
+            members_order: source
+  - gen-files:
+      scripts:
+        - scripts/gen_api_docs.py
+  - literate-nav:
+      nav_file: SUMMARY.md
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - admonition
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - attr_list
+  - md_in_html
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quickstart.md
+    - Migration from PyTorch: getting-started/migration.md
+  - User Guide:
+    - Tensor Operations: guide/tensors.md
+    - Neural Networks: guide/nn.md
+    - Training: guide/training.md
+    - Best Practices: guide/best-practices.md
+  - API Reference: reference/
+  - Contributing: contributing.md
+  - Changelog: changelog.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/flashlight

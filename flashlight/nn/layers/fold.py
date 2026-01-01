@@ -4,11 +4,11 @@ Fold and Unfold Layers
 Implements nn.Fold and nn.Unfold for extracting and combining sliding local blocks.
 """
 
-from typing import Union, Tuple
+from typing import Tuple, Union
 
-from ..module import Module
 from ...tensor import Tensor
 from ..functional import fold, unfold
+from ..module import Module
 
 
 class Unfold(Module):
@@ -43,7 +43,7 @@ class Unfold(Module):
         kernel_size: Union[int, Tuple[int, int]],
         dilation: Union[int, Tuple[int, int]] = 1,
         padding: Union[int, Tuple[int, int]] = 0,
-        stride: Union[int, Tuple[int, int]] = 1
+        stride: Union[int, Tuple[int, int]] = 1,
     ):
         super().__init__()
         self.kernel_size = kernel_size
@@ -57,13 +57,13 @@ class Unfold(Module):
             kernel_size=self.kernel_size,
             dilation=self.dilation,
             padding=self.padding,
-            stride=self.stride
+            stride=self.stride,
         )
 
     def extra_repr(self) -> str:
         return (
-            f'kernel_size={self.kernel_size}, dilation={self.dilation}, '
-            f'padding={self.padding}, stride={self.stride}'
+            f"kernel_size={self.kernel_size}, dilation={self.dilation}, "
+            f"padding={self.padding}, stride={self.stride}"
         )
 
 
@@ -99,7 +99,7 @@ class Fold(Module):
         kernel_size: Union[int, Tuple[int, int]],
         dilation: Union[int, Tuple[int, int]] = 1,
         padding: Union[int, Tuple[int, int]] = 0,
-        stride: Union[int, Tuple[int, int]] = 1
+        stride: Union[int, Tuple[int, int]] = 1,
     ):
         super().__init__()
         self.output_size = output_size
@@ -115,14 +115,14 @@ class Fold(Module):
             kernel_size=self.kernel_size,
             dilation=self.dilation,
             padding=self.padding,
-            stride=self.stride
+            stride=self.stride,
         )
 
     def extra_repr(self) -> str:
         return (
-            f'output_size={self.output_size}, kernel_size={self.kernel_size}, '
-            f'dilation={self.dilation}, padding={self.padding}, stride={self.stride}'
+            f"output_size={self.output_size}, kernel_size={self.kernel_size}, "
+            f"dilation={self.dilation}, padding={self.padding}, stride={self.stride}"
         )
 
 
-__all__ = ['Fold', 'Unfold']
+__all__ = ["Fold", "Unfold"]

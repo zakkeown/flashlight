@@ -1,12 +1,13 @@
 """Transformed Distribution"""
 
 from typing import List, Optional, Tuple, Union
+
 import mlx.core as mx
 
 from ..tensor import Tensor
-from .distribution import Distribution
-from .transforms import Transform, ComposeTransform
 from . import constraints
+from .distribution import Distribution
+from .transforms import ComposeTransform, Transform
 
 
 class TransformedDistribution(Distribution):
@@ -92,4 +93,4 @@ class TransformedDistribution(Distribution):
         raise NotImplementedError("variance not available for TransformedDistribution")
 
 
-__all__ = ['TransformedDistribution']
+__all__ = ["TransformedDistribution"]

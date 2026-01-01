@@ -5,8 +5,9 @@ PyTorch-compatible torch.special module for MLX.
 Provides special mathematical functions implemented in pure MLX.
 """
 
-from typing import Optional, Union
 import math
+from typing import Optional, Union
+
 import mlx.core as mx
 
 from .tensor import Tensor
@@ -29,6 +30,7 @@ def _to_tensor(x: mx.array) -> Tensor:
 # =============================================================================
 # Error functions
 # =============================================================================
+
 
 def erf(input: Tensor, *, out: Optional[Tensor] = None) -> Tensor:
     """
@@ -80,19 +82,17 @@ def erfc(input: Tensor, *, out: Optional[Tensor] = None) -> Tensor:
 
     # Asymptotic series coefficients: (-1)^n * (2n-1)!! / (2x^2)^n
     inv_sqrt_pi = 0.5641895835477563  # 1/sqrt(pi)
-    series = (1.0
-              - inv_2x2 * (1.0
-              - inv_2x2 * (3.0
-              - inv_2x2 * (15.0
-              - inv_2x2 * (105.0
-              - inv_2x2 * (945.0
-              - inv_2x2 * 10395.0))))))
+    series = 1.0 - inv_2x2 * (
+        1.0
+        - inv_2x2
+        * (3.0 - inv_2x2 * (15.0 - inv_2x2 * (105.0 - inv_2x2 * (945.0 - inv_2x2 * 10395.0))))
+    )
 
     # erfc(x) = exp(-x^2) * (1/(sqrt(pi)*x)) * series
     asymptotic_result = mx.exp(-x2) * inv_sqrt_pi / x * series
 
     # Use asymptotic only for large positive x
-    use_asymptotic = (data > threshold)
+    use_asymptotic = data > threshold
     result = mx.where(use_asymptotic, asymptotic_result, direct_result)
 
     return _to_tensor(result)
@@ -134,13 +134,11 @@ def erfcx(input: Tensor, *, out: Optional[Tensor] = None) -> Tensor:
     # More terms in the asymptotic series for better accuracy
     # (2n-1)!! = 1, 1, 3, 15, 105, 945, 10395, 135135, ...
     inv_sqrt_pi = 0.5641895835477563  # 1/sqrt(pi)
-    series = (1.0
-              - inv_2x2 * (1.0
-              - inv_2x2 * (3.0
-              - inv_2x2 * (15.0
-              - inv_2x2 * (105.0
-              - inv_2x2 * (945.0
-              - inv_2x2 * 10395.0))))))
+    series = 1.0 - inv_2x2 * (
+        1.0
+        - inv_2x2
+        * (3.0 - inv_2x2 * (15.0 - inv_2x2 * (105.0 - inv_2x2 * (945.0 - inv_2x2 * 10395.0))))
+    )
     asymptotic_result = inv_sqrt_pi / x * series
 
     result = mx.where(small_x, direct_result, asymptotic_result)
@@ -172,6 +170,7 @@ def erfinv(input: Tensor, *, out: Optional[Tensor] = None) -> Tensor:
 # Gamma functions - Pure MLX implementations
 # =============================================================================
 
+
 def _gammaln_mlx(x: mx.array) -> mx.array:
     """
     Pure MLX implementation of log-gamma function using Lanczos approximation.
@@ -180,17 +179,20 @@ def _gammaln_mlx(x: mx.array) -> mx.array:
     """
     # Lanczos approximation coefficients (g=7)
     g = 7.0
-    coeffs = mx.array([
-        0.99999999999980993,
-        676.5203681218851,
-        -1259.1392167224028,
-        771.32342877765313,
-        -176.61502916214059,
-        12.507343278686905,
-        -0.13857109526572012,
-        9.9843695780195716e-6,
-        1.5056327351493116e-7
-    ], dtype=mx.float32)
+    coeffs = mx.array(
+        [
+            0.99999999999980993,
+            676.5203681218851,
+            -1259.1392167224028,
+            771.32342877765313,
+            -176.61502916214059,
+            12.507343278686905,
+            -0.13857109526572012,
+            9.9843695780195716e-6,
+            1.5056327351493116e-7,
+        ],
+        dtype=mx.float32,
+    )
 
     # Handle reflection for x < 0.5 using: gamma(x) * gamma(1-x) = pi / sin(pi*x)
     # So: lgamma(x) = log(pi) - log(sin(pi*x)) - lgamma(1-x)
@@ -262,13 +264,20 @@ def _digamma_mlx(x: mx.array) -> mx.array:
     # B12/12=-691/32760, B14/14=1/12
     result = mx.log(x_shifted) - 0.5 * inv_x
     result = result - inv_x2 * (
-        1.0/12.0
-        - inv_x2 * (1.0/120.0
-        - inv_x2 * (1.0/252.0
-        - inv_x2 * (1.0/240.0
-        - inv_x2 * (1.0/132.0
-        - inv_x2 * (691.0/32760.0
-        - inv_x2 * (1.0/12.0))))))
+        1.0 / 12.0
+        - inv_x2
+        * (
+            1.0 / 120.0
+            - inv_x2
+            * (
+                1.0 / 252.0
+                - inv_x2
+                * (
+                    1.0 / 240.0
+                    - inv_x2 * (1.0 / 132.0 - inv_x2 * (691.0 / 32760.0 - inv_x2 * (1.0 / 12.0)))
+                )
+            )
+        )
     )
 
     # Apply recurrence relation to shift back: psi(x) = psi(x+n) - sum 1/(x+k)
@@ -283,7 +292,7 @@ def _digamma_mlx(x: mx.array) -> mx.array:
     # Handle x <= 0 (poles at non-positive integers)
     # psi has poles at 0, -1, -2, ... ; return NaN there
     is_nonpositive_int = (x <= 0) & (mx.abs(x - mx.round(x)) < 1e-10)
-    result = mx.where(is_nonpositive_int, mx.array(float('nan')), result)
+    result = mx.where(is_nonpositive_int, mx.array(float("nan")), result)
 
     return result
 
@@ -529,6 +538,7 @@ def gammaincc(input: Tensor, other: Tensor, *, out: Optional[Tensor] = None) -> 
 # Bessel functions - Pure MLX implementations using polynomial approximations
 # =============================================================================
 
+
 def bessel_j0(input: Tensor, *, out: Optional[Tensor] = None) -> Tensor:
     """
     Bessel function of the first kind of order 0.
@@ -550,10 +560,13 @@ def bessel_j0(input: Tensor, *, out: Optional[Tensor] = None) -> Tensor:
 
     # Polynomial for |x| < 8
     y = x * x
-    p1 = 57568490574.0 + y * (-13362590354.0 + y * (651619640.7 + y * (
-        -11214424.18 + y * (77392.33017 + y * (-184.9052456)))))
-    p2 = 57568490411.0 + y * (1029532985.0 + y * (9494680.718 + y * (
-        59272.64853 + y * (267.8532712 + y * 1.0))))
+    p1 = 57568490574.0 + y * (
+        -13362590354.0
+        + y * (651619640.7 + y * (-11214424.18 + y * (77392.33017 + y * (-184.9052456))))
+    )
+    p2 = 57568490411.0 + y * (
+        1029532985.0 + y * (9494680.718 + y * (59272.64853 + y * (267.8532712 + y * 1.0)))
+    )
     small_result = p1 / p2
 
     # Asymptotic form for |x| >= 8
@@ -561,10 +574,14 @@ def bessel_j0(input: Tensor, *, out: Optional[Tensor] = None) -> Tensor:
     y_large = z * z
     xx = ax - 0.785398164  # pi/4
 
-    p3 = 1.0 + y_large * (-0.1098628627e-2 + y_large * (0.2734510407e-4 + y_large * (
-        -0.2073370639e-5 + y_large * 0.2093887211e-6)))
-    p4 = -0.1562499995e-1 + y_large * (0.1430488765e-3 + y_large * (
-        -0.6911147651e-5 + y_large * (0.7621095161e-6 - y_large * 0.934945152e-7)))
+    p3 = 1.0 + y_large * (
+        -0.1098628627e-2
+        + y_large * (0.2734510407e-4 + y_large * (-0.2073370639e-5 + y_large * 0.2093887211e-6))
+    )
+    p4 = -0.1562499995e-1 + y_large * (
+        0.1430488765e-3
+        + y_large * (-0.6911147651e-5 + y_large * (0.7621095161e-6 - y_large * 0.934945152e-7))
+    )
 
     large_result = mx.sqrt(0.636619772 / ax) * (mx.cos(xx) * p3 - z * mx.sin(xx) * p4)
 
@@ -588,10 +605,17 @@ def bessel_j1(input: Tensor, *, out: Optional[Tensor] = None) -> Tensor:
 
     # Polynomial for |x| < 8
     y = x * x
-    p1 = x * (72362614232.0 + y * (-7895059235.0 + y * (242396853.1 + y * (
-        -2972611.439 + y * (15704.48260 + y * (-30.16036606))))))
-    p2 = 144725228442.0 + y * (2300535178.0 + y * (18583304.74 + y * (
-        99447.43394 + y * (376.9991397 + y * 1.0))))
+    p1 = x * (
+        72362614232.0
+        + y
+        * (
+            -7895059235.0
+            + y * (242396853.1 + y * (-2972611.439 + y * (15704.48260 + y * (-30.16036606))))
+        )
+    )
+    p2 = 144725228442.0 + y * (
+        2300535178.0 + y * (18583304.74 + y * (99447.43394 + y * (376.9991397 + y * 1.0)))
+    )
     small_result = p1 / p2
 
     # Asymptotic form for |x| >= 8
@@ -599,10 +623,14 @@ def bessel_j1(input: Tensor, *, out: Optional[Tensor] = None) -> Tensor:
     y_large = z * z
     xx = ax - 2.356194491  # 3*pi/4
 
-    p3 = 1.0 + y_large * (0.183105e-2 + y_large * (-0.3516396496e-4 + y_large * (
-        0.2457520174e-5 + y_large * (-0.240337019e-6))))
-    p4 = 0.04687499995 + y_large * (-0.2002690873e-3 + y_large * (
-        0.8449199096e-5 + y_large * (-0.88228987e-6 + y_large * 0.105787412e-6)))
+    p3 = 1.0 + y_large * (
+        0.183105e-2
+        + y_large * (-0.3516396496e-4 + y_large * (0.2457520174e-5 + y_large * (-0.240337019e-6)))
+    )
+    p4 = 0.04687499995 + y_large * (
+        -0.2002690873e-3
+        + y_large * (0.8449199096e-5 + y_large * (-0.88228987e-6 + y_large * 0.105787412e-6))
+    )
 
     large_result = mx.sqrt(0.636619772 / ax) * (mx.cos(xx) * p3 - z * mx.sin(xx) * p4)
     large_result = mx.where(x < 0, -large_result, large_result)
@@ -630,10 +658,12 @@ def bessel_y0(input: Tensor, *, out: Optional[Tensor] = None) -> Tensor:
 
     # Small x polynomial
     y = x * x
-    p1 = -2957821389.0 + y * (7062834065.0 + y * (-512359803.6 + y * (
-        10879881.29 + y * (-86327.92757 + y * 228.4622733))))
-    p2 = 40076544269.0 + y * (745249964.8 + y * (7189466.438 + y * (
-        47447.26470 + y * (226.1030244 + y * 1.0))))
+    p1 = -2957821389.0 + y * (
+        7062834065.0 + y * (-512359803.6 + y * (10879881.29 + y * (-86327.92757 + y * 228.4622733)))
+    )
+    p2 = 40076544269.0 + y * (
+        745249964.8 + y * (7189466.438 + y * (47447.26470 + y * (226.1030244 + y * 1.0)))
+    )
 
     # Y0(x) = (2/pi) * J0(x) * ln(x) + polynomial
     j0_val = bessel_j0(input)._mlx_array
@@ -644,17 +674,21 @@ def bessel_y0(input: Tensor, *, out: Optional[Tensor] = None) -> Tensor:
     y_large = z * z
     xx = x - 0.785398164
 
-    p3 = 1.0 + y_large * (-0.1098628627e-2 + y_large * (0.2734510407e-4 + y_large * (
-        -0.2073370639e-5 + y_large * 0.2093887211e-6)))
-    p4 = -0.1562499995e-1 + y_large * (0.1430488765e-3 + y_large * (
-        -0.6911147651e-5 + y_large * (0.7621095161e-6 - y_large * 0.934945152e-7)))
+    p3 = 1.0 + y_large * (
+        -0.1098628627e-2
+        + y_large * (0.2734510407e-4 + y_large * (-0.2073370639e-5 + y_large * 0.2093887211e-6))
+    )
+    p4 = -0.1562499995e-1 + y_large * (
+        0.1430488765e-3
+        + y_large * (-0.6911147651e-5 + y_large * (0.7621095161e-6 - y_large * 0.934945152e-7))
+    )
 
     large_result = mx.sqrt(0.636619772 / x) * (mx.sin(xx) * p3 + z * mx.cos(xx) * p4)
 
     result = mx.where(x < 8.0, small_result, large_result)
 
     # Handle x <= 0 (undefined)
-    result = mx.where(x <= 0, mx.array(float('nan')), result)
+    result = mx.where(x <= 0, mx.array(float("nan")), result)
 
     return _to_tensor(result)
 
@@ -674,10 +708,18 @@ def bessel_y1(input: Tensor, *, out: Optional[Tensor] = None) -> Tensor:
 
     # Small x polynomial
     y = x * x
-    p1 = x * (-4900604943000.0 + y * (1275274390000.0 + y * (-51534381390.0 + y * (
-        734926455.1 + y * (-4237922.726 + y * 8511.937935)))))
-    p2 = 24909857410000.0 + y * (424441966400.0 + y * (3733650367.0 + y * (
-        22459040.02 + y * (102042.605 + y * (354.9632885 + y)))))
+    p1 = x * (
+        -4900604943000.0
+        + y
+        * (
+            1275274390000.0
+            + y * (-51534381390.0 + y * (734926455.1 + y * (-4237922.726 + y * 8511.937935)))
+        )
+    )
+    p2 = 24909857410000.0 + y * (
+        424441966400.0
+        + y * (3733650367.0 + y * (22459040.02 + y * (102042.605 + y * (354.9632885 + y))))
+    )
 
     # Y1(x) = (2/pi) * (J1(x) * ln(x) - 1/x) + polynomial
     j1_val = bessel_j1(input)._mlx_array
@@ -688,15 +730,19 @@ def bessel_y1(input: Tensor, *, out: Optional[Tensor] = None) -> Tensor:
     y_large = z * z
     xx = x - 2.356194491
 
-    p3 = 1.0 + y_large * (0.183105e-2 + y_large * (-0.3516396496e-4 + y_large * (
-        0.2457520174e-5 + y_large * (-0.240337019e-6))))
-    p4 = 0.04687499995 + y_large * (-0.2002690873e-3 + y_large * (
-        0.8449199096e-5 + y_large * (-0.88228987e-6 + y_large * 0.105787412e-6)))
+    p3 = 1.0 + y_large * (
+        0.183105e-2
+        + y_large * (-0.3516396496e-4 + y_large * (0.2457520174e-5 + y_large * (-0.240337019e-6)))
+    )
+    p4 = 0.04687499995 + y_large * (
+        -0.2002690873e-3
+        + y_large * (0.8449199096e-5 + y_large * (-0.88228987e-6 + y_large * 0.105787412e-6))
+    )
 
     large_result = mx.sqrt(0.636619772 / x) * (mx.sin(xx) * p3 + z * mx.cos(xx) * p4)
 
     result = mx.where(x < 8.0, small_result, large_result)
-    result = mx.where(x <= 0, mx.array(float('nan')), result)
+    result = mx.where(x <= 0, mx.array(float("nan")), result)
 
     return _to_tensor(result)
 
@@ -717,15 +763,38 @@ def modified_bessel_i0(input: Tensor, *, out: Optional[Tensor] = None) -> Tensor
 
     # Polynomial for |x| < 3.75
     y = (x / 3.75) ** 2
-    small_result = 1.0 + y * (3.5156229 + y * (3.0899424 + y * (1.2067492 + y * (
-        0.2659732 + y * (0.0360768 + y * 0.0045813)))))
+    small_result = 1.0 + y * (
+        3.5156229
+        + y * (3.0899424 + y * (1.2067492 + y * (0.2659732 + y * (0.0360768 + y * 0.0045813))))
+    )
 
     # Polynomial for |x| >= 3.75
     y_large = 3.75 / ax
-    large_result = (mx.exp(ax) / mx.sqrt(ax)) * (0.39894228 + y_large * (
-        0.01328592 + y_large * (0.00225319 + y_large * (-0.00157565 + y_large * (
-            0.00916281 + y_large * (-0.02057706 + y_large * (0.02635537 + y_large * (
-                -0.01647633 + y_large * 0.00392377))))))))
+    large_result = (mx.exp(ax) / mx.sqrt(ax)) * (
+        0.39894228
+        + y_large
+        * (
+            0.01328592
+            + y_large
+            * (
+                0.00225319
+                + y_large
+                * (
+                    -0.00157565
+                    + y_large
+                    * (
+                        0.00916281
+                        + y_large
+                        * (
+                            -0.02057706
+                            + y_large
+                            * (0.02635537 + y_large * (-0.01647633 + y_large * 0.00392377))
+                        )
+                    )
+                )
+            )
+        )
+    )
 
     result = mx.where(ax < 3.75, small_result, large_result)
     return _to_tensor(result)
@@ -747,15 +816,43 @@ def modified_bessel_i1(input: Tensor, *, out: Optional[Tensor] = None) -> Tensor
 
     # Polynomial for |x| < 3.75
     y = (x / 3.75) ** 2
-    small_result = ax * (0.5 + y * (0.87890594 + y * (0.51498869 + y * (
-        0.15084934 + y * (0.02658733 + y * (0.00301532 + y * 0.00032411))))))
+    small_result = ax * (
+        0.5
+        + y
+        * (
+            0.87890594
+            + y
+            * (0.51498869 + y * (0.15084934 + y * (0.02658733 + y * (0.00301532 + y * 0.00032411))))
+        )
+    )
 
     # Polynomial for |x| >= 3.75
     y_large = 3.75 / ax
-    large_result = (mx.exp(ax) / mx.sqrt(ax)) * (0.39894228 + y_large * (
-        -0.03988024 + y_large * (-0.00362018 + y_large * (0.00163801 + y_large * (
-            -0.01031555 + y_large * (0.02282967 + y_large * (-0.02895312 + y_large * (
-                0.01787654 + y_large * (-0.00420059)))))))))
+    large_result = (mx.exp(ax) / mx.sqrt(ax)) * (
+        0.39894228
+        + y_large
+        * (
+            -0.03988024
+            + y_large
+            * (
+                -0.00362018
+                + y_large
+                * (
+                    0.00163801
+                    + y_large
+                    * (
+                        -0.01031555
+                        + y_large
+                        * (
+                            0.02282967
+                            + y_large
+                            * (-0.02895312 + y_large * (0.01787654 + y_large * (-0.00420059)))
+                        )
+                    )
+                )
+            )
+        )
+    )
 
     result = mx.where(ax < 3.75, small_result, large_result)
     result = mx.where(x < 0, -result, result)
@@ -779,17 +876,36 @@ def modified_bessel_k0(input: Tensor, *, out: Optional[Tensor] = None) -> Tensor
     # For x <= 2, use polynomial with I0 * ln(x) term
     y = x * x / 4.0
     small_result = (-mx.log(x / 2.0) * modified_bessel_i0(Tensor(x))._mlx_array) + (
-        -0.57721566 + y * (0.42278420 + y * (0.23069756 + y * (
-            0.03488590 + y * (0.00262698 + y * (0.00010750 + y * 0.00000740))))))
+        -0.57721566
+        + y
+        * (
+            0.42278420
+            + y
+            * (0.23069756 + y * (0.03488590 + y * (0.00262698 + y * (0.00010750 + y * 0.00000740))))
+        )
+    )
 
     # For x > 2, use different polynomial
     y_large = 2.0 / x
-    large_result = (mx.exp(-x) / mx.sqrt(x)) * (1.25331414 + y_large * (
-        -0.07832358 + y_large * (0.02189568 + y_large * (-0.01062446 + y_large * (
-            0.00587872 + y_large * (-0.00251540 + y_large * 0.00053208))))))
+    large_result = (mx.exp(-x) / mx.sqrt(x)) * (
+        1.25331414
+        + y_large
+        * (
+            -0.07832358
+            + y_large
+            * (
+                0.02189568
+                + y_large
+                * (
+                    -0.01062446
+                    + y_large * (0.00587872 + y_large * (-0.00251540 + y_large * 0.00053208))
+                )
+            )
+        )
+    )
 
     result = mx.where(x <= 2.0, small_result, large_result)
-    result = mx.where(x <= 0, mx.array(float('inf')), result)
+    result = mx.where(x <= 0, mx.array(float("inf")), result)
 
     return _to_tensor(result)
 
@@ -810,22 +926,46 @@ def modified_bessel_k1(input: Tensor, *, out: Optional[Tensor] = None) -> Tensor
     # For x <= 2
     y = x * x / 4.0
     small_result = (mx.log(x / 2.0) * modified_bessel_i1(Tensor(x))._mlx_array) + (1.0 / x) * (
-        1.0 + y * (0.15443144 + y * (-0.67278579 + y * (-0.18156897 + y * (
-            -0.01919402 + y * (-0.00110404 + y * (-0.00004686)))))))
+        1.0
+        + y
+        * (
+            0.15443144
+            + y
+            * (
+                -0.67278579
+                + y * (-0.18156897 + y * (-0.01919402 + y * (-0.00110404 + y * (-0.00004686))))
+            )
+        )
+    )
 
     # For x > 2
     y_large = 2.0 / x
-    large_result = (mx.exp(-x) / mx.sqrt(x)) * (1.25331414 + y_large * (
-        0.23498619 + y_large * (-0.03655620 + y_large * (0.01504268 + y_large * (
-            -0.00780353 + y_large * (0.00325614 + y_large * (-0.00068245)))))))
+    large_result = (mx.exp(-x) / mx.sqrt(x)) * (
+        1.25331414
+        + y_large
+        * (
+            0.23498619
+            + y_large
+            * (
+                -0.03655620
+                + y_large
+                * (
+                    0.01504268
+                    + y_large * (-0.00780353 + y_large * (0.00325614 + y_large * (-0.00068245)))
+                )
+            )
+        )
+    )
 
     result = mx.where(x <= 2.0, small_result, large_result)
-    result = mx.where(x <= 0, mx.array(float('inf')), result)
+    result = mx.where(x <= 0, mx.array(float("inf")), result)
 
     return _to_tensor(result)
 
 
-def scaled_modified_bessel_k0(input: Tensor = None, *, x: Tensor = None, out: Optional[Tensor] = None) -> Tensor:
+def scaled_modified_bessel_k0(
+    input: Tensor = None, *, x: Tensor = None, out: Optional[Tensor] = None
+) -> Tensor:
     """
     Scaled modified Bessel function of the second kind of order 0.
 
@@ -849,7 +989,9 @@ def scaled_modified_bessel_k0(input: Tensor = None, *, x: Tensor = None, out: Op
     return _to_tensor(result)
 
 
-def scaled_modified_bessel_k1(input: Tensor = None, *, x: Tensor = None, out: Optional[Tensor] = None) -> Tensor:
+def scaled_modified_bessel_k1(
+    input: Tensor = None, *, x: Tensor = None, out: Optional[Tensor] = None
+) -> Tensor:
     """
     Scaled modified Bessel function of the second kind of order 1.
 
@@ -873,7 +1015,9 @@ def scaled_modified_bessel_k1(input: Tensor = None, *, x: Tensor = None, out: Op
     return _to_tensor(result)
 
 
-def spherical_bessel_j0(input: Tensor = None, *, x: Tensor = None, out: Optional[Tensor] = None) -> Tensor:
+def spherical_bessel_j0(
+    input: Tensor = None, *, x: Tensor = None, out: Optional[Tensor] = None
+) -> Tensor:
     """
     Spherical Bessel function of the first kind of order 0.
 
@@ -971,6 +1115,7 @@ def i1e(input: Tensor, *, out: Optional[Tensor] = None) -> Tensor:
 # Exponential and logarithmic functions
 # =============================================================================
 
+
 def exp2(input: Tensor, *, out: Optional[Tensor] = None) -> Tensor:
     """
     Compute 2^x element-wise.
@@ -1065,6 +1210,7 @@ def xlogy(input: Tensor, other: Tensor, *, out: Optional[Tensor] = None) -> Tens
 # Logit and sigmoid functions
 # =============================================================================
 
+
 def expit(input: Tensor, *, out: Optional[Tensor] = None) -> Tensor:
     """
     Compute the sigmoid (expit) function.
@@ -1107,6 +1253,7 @@ def logit(input: Tensor, eps: Optional[float] = None, *, out: Optional[Tensor] =
 # =============================================================================
 # Softmax functions
 # =============================================================================
+
 
 def softmax(input: Tensor, dim: int, *, dtype=None) -> Tensor:
     """
@@ -1167,6 +1314,7 @@ def logsumexp(input: Tensor, dim: int, keepdim: bool = False) -> Tensor:
 # Normal distribution functions
 # =============================================================================
 
+
 def ndtr(input: Tensor, *, out: Optional[Tensor] = None) -> Tensor:
     """
     Compute the cumulative distribution function of the standard normal.
@@ -1203,39 +1351,46 @@ def ndtri(input: Tensor, *, out: Optional[Tensor] = None) -> Tensor:
     # Split into central region and tails
 
     # Central region coefficients (|p - 0.5| <= 0.425)
-    a = mx.array([
-        -3.969683028665376e+01,
-         2.209460984245205e+02,
-        -2.759285104469687e+02,
-         1.383577518672690e+02,
-        -3.066479806614716e+01,
-         2.506628277459239e+00
-    ], dtype=mx.float32)
+    a = mx.array(
+        [
+            -3.969683028665376e01,
+            2.209460984245205e02,
+            -2.759285104469687e02,
+            1.383577518672690e02,
+            -3.066479806614716e01,
+            2.506628277459239e00,
+        ],
+        dtype=mx.float32,
+    )
 
-    b = mx.array([
-        -5.447609879822406e+01,
-         1.615858368580409e+02,
-        -1.556989798598866e+02,
-         6.680131188771972e+01,
-        -1.328068155288572e+01
-    ], dtype=mx.float32)
+    b = mx.array(
+        [
+            -5.447609879822406e01,
+            1.615858368580409e02,
+            -1.556989798598866e02,
+            6.680131188771972e01,
+            -1.328068155288572e01,
+        ],
+        dtype=mx.float32,
+    )
 
     # Tail region coefficients
-    c = mx.array([
-        -7.784894002430293e-03,
-        -3.223964580411365e-01,
-        -2.400758277161838e+00,
-        -2.549732539343734e+00,
-         4.374664141464968e+00,
-         2.938163982698783e+00
-    ], dtype=mx.float32)
+    c = mx.array(
+        [
+            -7.784894002430293e-03,
+            -3.223964580411365e-01,
+            -2.400758277161838e00,
+            -2.549732539343734e00,
+            4.374664141464968e00,
+            2.938163982698783e00,
+        ],
+        dtype=mx.float32,
+    )
 
-    d = mx.array([
-         7.784695709041462e-03,
-         3.224671290700398e-01,
-         2.445134137142996e+00,
-         3.754408661907416e+00
-    ], dtype=mx.float32)
+    d = mx.array(
+        [7.784695709041462e-03, 3.224671290700398e-01, 2.445134137142996e00, 3.754408661907416e00],
+        dtype=mx.float32,
+    )
 
     # Define break points
     p_low = 0.02425
@@ -1245,20 +1400,28 @@ def ndtri(input: Tensor, *, out: Optional[Tensor] = None) -> Tensor:
     q = p - 0.5
     r_central = q * q
 
-    num_central = (((((a[0] * r_central + a[1]) * r_central + a[2]) * r_central + a[3]) * r_central + a[4]) * r_central + a[5])
-    den_central = (((((b[0] * r_central + b[1]) * r_central + b[2]) * r_central + b[3]) * r_central + b[4]) * r_central + 1.0)
+    num_central = (
+        (((a[0] * r_central + a[1]) * r_central + a[2]) * r_central + a[3]) * r_central + a[4]
+    ) * r_central + a[5]
+    den_central = (
+        (((b[0] * r_central + b[1]) * r_central + b[2]) * r_central + b[3]) * r_central + b[4]
+    ) * r_central + 1.0
     central_result = q * num_central / den_central
 
     # Lower tail
     q_low = mx.sqrt(-2.0 * mx.log(p))
-    num_low = (((((c[0] * q_low + c[1]) * q_low + c[2]) * q_low + c[3]) * q_low + c[4]) * q_low + c[5])
-    den_low = ((((d[0] * q_low + d[1]) * q_low + d[2]) * q_low + d[3]) * q_low + 1.0)
+    num_low = ((((c[0] * q_low + c[1]) * q_low + c[2]) * q_low + c[3]) * q_low + c[4]) * q_low + c[
+        5
+    ]
+    den_low = (((d[0] * q_low + d[1]) * q_low + d[2]) * q_low + d[3]) * q_low + 1.0
     low_result = num_low / den_low
 
     # Upper tail
     q_high = mx.sqrt(-2.0 * mx.log(1.0 - p))
-    num_high = (((((c[0] * q_high + c[1]) * q_high + c[2]) * q_high + c[3]) * q_high + c[4]) * q_high + c[5])
-    den_high = ((((d[0] * q_high + d[1]) * q_high + d[2]) * q_high + d[3]) * q_high + 1.0)
+    num_high = (
+        (((c[0] * q_high + c[1]) * q_high + c[2]) * q_high + c[3]) * q_high + c[4]
+    ) * q_high + c[5]
+    den_high = (((d[0] * q_high + d[1]) * q_high + d[2]) * q_high + d[3]) * q_high + 1.0
     high_result = -num_high / den_high
 
     # Combine results
@@ -1268,8 +1431,8 @@ def ndtri(input: Tensor, *, out: Optional[Tensor] = None) -> Tensor:
     result = mx.where(in_central, central_result, mx.where(in_low, low_result, high_result))
 
     # Handle edge cases
-    result = mx.where(p <= 0, mx.array(float('-inf')), result)
-    result = mx.where(p >= 1, mx.array(float('inf')), result)
+    result = mx.where(p <= 0, mx.array(float("-inf")), result)
+    result = mx.where(p >= 1, mx.array(float("inf")), result)
 
     return _to_tensor(result)
 
@@ -1312,6 +1475,7 @@ def log_ndtr(input: Tensor, *, out: Optional[Tensor] = None) -> Tensor:
 # Entropy
 # =============================================================================
 
+
 def entr(input: Tensor, *, out: Optional[Tensor] = None) -> Tensor:
     """
     Compute the entropy function: -x * log(x).
@@ -1331,6 +1495,7 @@ def entr(input: Tensor, *, out: Optional[Tensor] = None) -> Tensor:
 # =============================================================================
 # Sinc function
 # =============================================================================
+
 
 def sinc(input: Tensor, *, out: Optional[Tensor] = None) -> Tensor:
     """
@@ -1354,6 +1519,7 @@ def sinc(input: Tensor, *, out: Optional[Tensor] = None) -> Tensor:
 # Round function
 # =============================================================================
 
+
 def round(input: Tensor, decimals: int = 0, *, out: Optional[Tensor] = None) -> Tensor:
     """
     Round elements to the given number of decimals.
@@ -1370,7 +1536,7 @@ def round(input: Tensor, decimals: int = 0, *, out: Optional[Tensor] = None) -> 
     if decimals == 0:
         result = mx.round(data)
     else:
-        factor = 10.0 ** decimals
+        factor = 10.0**decimals
         result = mx.round(data * factor) / factor
     return _to_tensor(result)
 
@@ -1378,6 +1544,7 @@ def round(input: Tensor, decimals: int = 0, *, out: Optional[Tensor] = None) -> 
 # =============================================================================
 # Zeta function
 # =============================================================================
+
 
 def zeta(input: Tensor, other: Tensor, *, out: Optional[Tensor] = None) -> Tensor:
     """
@@ -1416,7 +1583,7 @@ def zeta(input: Tensor, other: Tensor, *, out: Optional[Tensor] = None) -> Tenso
 
     # Bernoulli number corrections (B_2 = 1/6, B_4 = -1/30, B_6 = 1/42, ...)
     # Only use first few for numerical stability
-    bernoulli = [1.0/6.0, -1.0/30.0, 1.0/42.0, -1.0/30.0, 5.0/66.0]
+    bernoulli = [1.0 / 6.0, -1.0 / 30.0, 1.0 / 42.0, -1.0 / 30.0, 5.0 / 66.0]
 
     qN = q + float(N)
     s_prod = s  # s
@@ -1425,9 +1592,9 @@ def zeta(input: Tensor, other: Tensor, *, out: Optional[Tensor] = None) -> Tenso
     for k, b in enumerate(bernoulli):
         if k >= p:
             break
-        s_prod = s_prod * (s + 2*k) * (s + 2*k + 1)  # Rising factorial
+        s_prod = s_prod * (s + 2 * k) * (s + 2 * k + 1)  # Rising factorial
         factorial = 1.0
-        for j in range(1, 2*k + 3):
+        for j in range(1, 2 * k + 3):
             factorial *= j
         qN_pow = qN_pow / (qN * qN)
         result = result + b * s_prod * qN_pow / factorial
@@ -1438,6 +1605,7 @@ def zeta(input: Tensor, other: Tensor, *, out: Optional[Tensor] = None) -> Tenso
 # =============================================================================
 # Airy function
 # =============================================================================
+
 
 def airy_ai(input: Tensor = None, *, x: Tensor = None, out: Optional[Tensor] = None) -> Tensor:
     """
@@ -1484,11 +1652,12 @@ def airy_ai(input: Tensor = None, *, x: Tensor = None, out: Optional[Tensor] = N
     # Ai(-z) ~ sin(zeta + pi/4) / (sqrt(pi)*z^(1/4)) where zeta = 2/3 * z^(3/2)
     z_neg = mx.abs(z)
     zeta_neg = (2.0 / 3.0) * mx.power(z_neg, 1.5)
-    asymp_neg = mx.sin(zeta_neg + math.pi / 4.0) / (mx.sqrt(mx.array(math.pi)) * mx.power(z_neg, 0.25))
+    asymp_neg = mx.sin(zeta_neg + math.pi / 4.0) / (
+        mx.sqrt(mx.array(math.pi)) * mx.power(z_neg, 0.25)
+    )
 
     # Combine regions
-    result = mx.where(mx.abs(z) < 3.0, taylor_result,
-                      mx.where(z > 0, asymp_pos, asymp_neg))
+    result = mx.where(mx.abs(z) < 3.0, taylor_result, mx.where(z > 0, asymp_pos, asymp_neg))
 
     return _to_tensor(result)
 
@@ -1497,6 +1666,7 @@ def airy_ai(input: Tensor = None, *, x: Tensor = None, out: Optional[Tensor] = N
 # Polynomial functions (Chebyshev, Hermite, Laguerre, Legendre)
 # Pure MLX implementations using recurrence relations
 # =============================================================================
+
 
 def _chebyshev_t_scalar(x: mx.array, n: int) -> mx.array:
     """Chebyshev T polynomial for scalar n using recurrence."""
@@ -1516,7 +1686,9 @@ def _chebyshev_t_scalar(x: mx.array, n: int) -> mx.array:
         return t_curr
 
 
-def chebyshev_polynomial_t(input: Tensor, n: Union[int, Tensor], *, out: Optional[Tensor] = None) -> Tensor:
+def chebyshev_polynomial_t(
+    input: Tensor, n: Union[int, Tensor], *, out: Optional[Tensor] = None
+) -> Tensor:
     """
     Chebyshev polynomial of the first kind.
 
@@ -1550,7 +1722,7 @@ def chebyshev_polynomial_t(input: Tensor, n: Union[int, Tensor], *, out: Optiona
         # Select based on n
         result = mx.zeros_like(x)
         for k in range(max_n + 1):
-            mask = (n_arr == k)
+            mask = n_arr == k
             result = mx.where(mask, polys[k], result)
     else:
         # Assume it's an int-like value
@@ -1577,7 +1749,9 @@ def _chebyshev_u_scalar(x: mx.array, n: int) -> mx.array:
         return u_curr
 
 
-def chebyshev_polynomial_u(input: Tensor, n: Union[int, Tensor], *, out: Optional[Tensor] = None) -> Tensor:
+def chebyshev_polynomial_u(
+    input: Tensor, n: Union[int, Tensor], *, out: Optional[Tensor] = None
+) -> Tensor:
     """
     Chebyshev polynomial of the second kind.
 
@@ -1607,7 +1781,7 @@ def chebyshev_polynomial_u(input: Tensor, n: Union[int, Tensor], *, out: Optiona
 
         result = mx.zeros_like(x)
         for k in range(max_n + 1):
-            mask = (n_arr == k)
+            mask = n_arr == k
             result = mx.where(mask, polys[k], result)
     else:
         result = _chebyshev_u_scalar(x, int(n))
@@ -1633,7 +1807,9 @@ def _chebyshev_v_scalar(x: mx.array, n: int) -> mx.array:
         return v_curr
 
 
-def chebyshev_polynomial_v(input: Tensor, n: Union[int, Tensor], *, out: Optional[Tensor] = None) -> Tensor:
+def chebyshev_polynomial_v(
+    input: Tensor, n: Union[int, Tensor], *, out: Optional[Tensor] = None
+) -> Tensor:
     """
     Chebyshev polynomial of the third kind.
 
@@ -1663,7 +1839,7 @@ def chebyshev_polynomial_v(input: Tensor, n: Union[int, Tensor], *, out: Optiona
 
         result = mx.zeros_like(x)
         for k in range(max_n + 1):
-            mask = (n_arr == k)
+            mask = n_arr == k
             result = mx.where(mask, polys[k], result)
     else:
         result = _chebyshev_v_scalar(x, int(n))
@@ -1689,7 +1865,9 @@ def _chebyshev_w_scalar(x: mx.array, n: int) -> mx.array:
         return w_curr
 
 
-def chebyshev_polynomial_w(input: Tensor, n: Union[int, Tensor], *, out: Optional[Tensor] = None) -> Tensor:
+def chebyshev_polynomial_w(
+    input: Tensor, n: Union[int, Tensor], *, out: Optional[Tensor] = None
+) -> Tensor:
     """
     Chebyshev polynomial of the fourth kind.
 
@@ -1719,7 +1897,7 @@ def chebyshev_polynomial_w(input: Tensor, n: Union[int, Tensor], *, out: Optiona
 
         result = mx.zeros_like(x)
         for k in range(max_n + 1):
-            mask = (n_arr == k)
+            mask = n_arr == k
             result = mx.where(mask, polys[k], result)
     else:
         result = _chebyshev_w_scalar(x, int(n))
@@ -1727,7 +1905,9 @@ def chebyshev_polynomial_w(input: Tensor, n: Union[int, Tensor], *, out: Optiona
     return _to_tensor(result)
 
 
-def shifted_chebyshev_polynomial_t(input: Tensor, n: Union[int, Tensor], *, out: Optional[Tensor] = None) -> Tensor:
+def shifted_chebyshev_polynomial_t(
+    input: Tensor, n: Union[int, Tensor], *, out: Optional[Tensor] = None
+) -> Tensor:
     """
     Shifted Chebyshev polynomial of the first kind.
 
@@ -1746,7 +1926,9 @@ def shifted_chebyshev_polynomial_t(input: Tensor, n: Union[int, Tensor], *, out:
     return chebyshev_polynomial_t(Tensor(shifted_x), n, out=out)
 
 
-def shifted_chebyshev_polynomial_u(input: Tensor, n: Union[int, Tensor], *, out: Optional[Tensor] = None) -> Tensor:
+def shifted_chebyshev_polynomial_u(
+    input: Tensor, n: Union[int, Tensor], *, out: Optional[Tensor] = None
+) -> Tensor:
     """
     Shifted Chebyshev polynomial of the second kind.
 
@@ -1765,7 +1947,9 @@ def shifted_chebyshev_polynomial_u(input: Tensor, n: Union[int, Tensor], *, out:
     return chebyshev_polynomial_u(Tensor(shifted_x), n, out=out)
 
 
-def shifted_chebyshev_polynomial_v(input: Tensor, n: Union[int, Tensor], *, out: Optional[Tensor] = None) -> Tensor:
+def shifted_chebyshev_polynomial_v(
+    input: Tensor, n: Union[int, Tensor], *, out: Optional[Tensor] = None
+) -> Tensor:
     """
     Shifted Chebyshev polynomial of the third kind.
 
@@ -1784,7 +1968,9 @@ def shifted_chebyshev_polynomial_v(input: Tensor, n: Union[int, Tensor], *, out:
     return chebyshev_polynomial_v(Tensor(shifted_x), n, out=out)
 
 
-def shifted_chebyshev_polynomial_w(input: Tensor, n: Union[int, Tensor], *, out: Optional[Tensor] = None) -> Tensor:
+def shifted_chebyshev_polynomial_w(
+    input: Tensor, n: Union[int, Tensor], *, out: Optional[Tensor] = None
+) -> Tensor:
     """
     Shifted Chebyshev polynomial of the fourth kind.
 
@@ -1821,7 +2007,9 @@ def _hermite_h_scalar(x: mx.array, n: int) -> mx.array:
         return h_curr
 
 
-def hermite_polynomial_h(input: Tensor, n: Union[int, Tensor], *, out: Optional[Tensor] = None) -> Tensor:
+def hermite_polynomial_h(
+    input: Tensor, n: Union[int, Tensor], *, out: Optional[Tensor] = None
+) -> Tensor:
     """
     Physicist's Hermite polynomial.
 
@@ -1851,7 +2039,7 @@ def hermite_polynomial_h(input: Tensor, n: Union[int, Tensor], *, out: Optional[
 
         result = mx.zeros_like(x)
         for k in range(max_n + 1):
-            mask = (n_arr == k)
+            mask = n_arr == k
             result = mx.where(mask, polys[k], result)
     else:
         result = _hermite_h_scalar(x, int(n))
@@ -1877,7 +2065,9 @@ def _hermite_he_scalar(x: mx.array, n: int) -> mx.array:
         return he_curr
 
 
-def hermite_polynomial_he(input: Tensor, n: Union[int, Tensor], *, out: Optional[Tensor] = None) -> Tensor:
+def hermite_polynomial_he(
+    input: Tensor, n: Union[int, Tensor], *, out: Optional[Tensor] = None
+) -> Tensor:
     """
     Probabilist's Hermite polynomial.
 
@@ -1907,7 +2097,7 @@ def hermite_polynomial_he(input: Tensor, n: Union[int, Tensor], *, out: Optional
 
         result = mx.zeros_like(x)
         for k in range(max_n + 1):
-            mask = (n_arr == k)
+            mask = n_arr == k
             result = mx.where(mask, polys[k], result)
     else:
         result = _hermite_he_scalar(x, int(n))
@@ -1935,7 +2125,9 @@ def _laguerre_l_scalar(x: mx.array, n: int) -> mx.array:
         return l_curr
 
 
-def laguerre_polynomial_l(input: Tensor, n: Union[int, Tensor], *, out: Optional[Tensor] = None) -> Tensor:
+def laguerre_polynomial_l(
+    input: Tensor, n: Union[int, Tensor], *, out: Optional[Tensor] = None
+) -> Tensor:
     """
     Laguerre polynomial.
 
@@ -1965,7 +2157,7 @@ def laguerre_polynomial_l(input: Tensor, n: Union[int, Tensor], *, out: Optional
 
         result = mx.zeros_like(x)
         for k in range(max_n + 1):
-            mask = (n_arr == k)
+            mask = n_arr == k
             result = mx.where(mask, polys[k], result)
     else:
         result = _laguerre_l_scalar(x, int(n))
@@ -1993,7 +2185,9 @@ def _legendre_p_scalar(x: mx.array, n: int) -> mx.array:
         return p_curr
 
 
-def legendre_polynomial_p(input: Tensor, n: Union[int, Tensor], *, out: Optional[Tensor] = None) -> Tensor:
+def legendre_polynomial_p(
+    input: Tensor, n: Union[int, Tensor], *, out: Optional[Tensor] = None
+) -> Tensor:
     """
     Legendre polynomial.
 
@@ -2023,7 +2217,7 @@ def legendre_polynomial_p(input: Tensor, n: Union[int, Tensor], *, out: Optional
 
         result = mx.zeros_like(x)
         for k in range(max_n + 1):
-            mask = (n_arr == k)
+            mask = n_arr == k
             result = mx.where(mask, polys[k], result)
     else:
         result = _legendre_p_scalar(x, int(n))
@@ -2037,68 +2231,68 @@ def legendre_polynomial_p(input: Tensor, n: Union[int, Tensor], *, out: Optional
 
 __all__ = [
     # Error functions
-    'erf',
-    'erfc',
-    'erfcx',
-    'erfinv',
+    "erf",
+    "erfc",
+    "erfcx",
+    "erfinv",
     # Gamma functions
-    'gammaln',
-    'digamma',
-    'psi',
-    'polygamma',
-    'multigammaln',
-    'gammainc',
-    'gammaincc',
+    "gammaln",
+    "digamma",
+    "psi",
+    "polygamma",
+    "multigammaln",
+    "gammainc",
+    "gammaincc",
     # Bessel functions
-    'bessel_j0',
-    'bessel_j1',
-    'bessel_y0',
-    'bessel_y1',
-    'modified_bessel_i0',
-    'modified_bessel_i1',
-    'modified_bessel_k0',
-    'modified_bessel_k1',
-    'scaled_modified_bessel_k0',
-    'scaled_modified_bessel_k1',
-    'spherical_bessel_j0',
-    'i0',
-    'i0e',
-    'i1',
-    'i1e',
+    "bessel_j0",
+    "bessel_j1",
+    "bessel_y0",
+    "bessel_y1",
+    "modified_bessel_i0",
+    "modified_bessel_i1",
+    "modified_bessel_k0",
+    "modified_bessel_k1",
+    "scaled_modified_bessel_k0",
+    "scaled_modified_bessel_k1",
+    "spherical_bessel_j0",
+    "i0",
+    "i0e",
+    "i1",
+    "i1e",
     # Exponential/logarithmic
-    'exp2',
-    'expm1',
-    'log1p',
-    'xlog1py',
-    'xlogy',
+    "exp2",
+    "expm1",
+    "log1p",
+    "xlog1py",
+    "xlogy",
     # Logit/sigmoid
-    'expit',
-    'logit',
+    "expit",
+    "logit",
     # Softmax
-    'softmax',
-    'log_softmax',
-    'logsumexp',
+    "softmax",
+    "log_softmax",
+    "logsumexp",
     # Normal distribution
-    'ndtr',
-    'ndtri',
-    'log_ndtr',
+    "ndtr",
+    "ndtri",
+    "log_ndtr",
     # Other
-    'entr',
-    'sinc',
-    'round',
-    'zeta',
-    'airy_ai',
+    "entr",
+    "sinc",
+    "round",
+    "zeta",
+    "airy_ai",
     # Polynomials
-    'chebyshev_polynomial_t',
-    'chebyshev_polynomial_u',
-    'chebyshev_polynomial_v',
-    'chebyshev_polynomial_w',
-    'shifted_chebyshev_polynomial_t',
-    'shifted_chebyshev_polynomial_u',
-    'shifted_chebyshev_polynomial_v',
-    'shifted_chebyshev_polynomial_w',
-    'hermite_polynomial_h',
-    'hermite_polynomial_he',
-    'laguerre_polynomial_l',
-    'legendre_polynomial_p',
+    "chebyshev_polynomial_t",
+    "chebyshev_polynomial_u",
+    "chebyshev_polynomial_v",
+    "chebyshev_polynomial_w",
+    "shifted_chebyshev_polynomial_t",
+    "shifted_chebyshev_polynomial_u",
+    "shifted_chebyshev_polynomial_v",
+    "shifted_chebyshev_polynomial_w",
+    "hermite_polynomial_h",
+    "hermite_polynomial_he",
+    "laguerre_polynomial_l",
+    "legendre_polynomial_p",
 ]

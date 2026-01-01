@@ -2,17 +2,18 @@
 
 import math
 from typing import Optional, Tuple, Union
+
 import mlx.core as mx
 
 from ..tensor import Tensor
-from .distribution import Distribution
 from . import constraints
+from .distribution import Distribution
 
 
 class HalfNormal(Distribution):
     """Half-Normal distribution (absolute value of Normal)."""
 
-    arg_constraints = {'scale': constraints.positive}
+    arg_constraints = {"scale": constraints.positive}
     support = constraints.nonnegative
     has_rsample = True
 
@@ -30,7 +31,7 @@ class HalfNormal(Distribution):
 
     @property
     def variance(self) -> Tensor:
-        return Tensor(self.scale ** 2 * (1 - 2 / math.pi))
+        return Tensor(self.scale**2 * (1 - 2 / math.pi))
 
     def sample(self, sample_shape: Tuple[int, ...] = ()) -> Tensor:
         shape = sample_shape + self._batch_shape
@@ -41,7 +42,9 @@ class HalfNormal(Distribution):
 
     def log_prob(self, value: Tensor) -> Tensor:
         data = value._mlx_array if isinstance(value, Tensor) else value
-        log_prob = 0.5 * math.log(2 / math.pi) - mx.log(self.scale) - (data ** 2) / (2 * self.scale ** 2)
+        log_prob = (
+            0.5 * math.log(2 / math.pi) - mx.log(self.scale) - (data**2) / (2 * self.scale**2)
+        )
         return Tensor(log_prob)
 
     def cdf(self, value: Tensor) -> Tensor:
@@ -56,4 +59,4 @@ class HalfNormal(Distribution):
         return Tensor(0.5 * math.log(math.pi * math.e / 2) + mx.log(self.scale))
 
 
-__all__ = ['HalfNormal']
+__all__ = ["HalfNormal"]

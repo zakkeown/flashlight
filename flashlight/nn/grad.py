@@ -5,17 +5,19 @@ PyTorch-compatible torch.nn.grad module with gradient computation utilities.
 These functions compute gradients of convolution operations w.r.t. inputs and weights.
 """
 
+from typing import Tuple, Union
+
 import mlx.core as mx
-from typing import Union, Tuple
+
 from ..tensor import Tensor
 
 __all__ = [
-    'conv1d_weight',
-    'conv2d_weight',
-    'conv3d_weight',
-    'conv1d_input',
-    'conv2d_input',
-    'conv3d_input',
+    "conv1d_weight",
+    "conv2d_weight",
+    "conv3d_weight",
+    "conv1d_input",
+    "conv2d_input",
+    "conv3d_input",
 ]
 
 
@@ -111,7 +113,9 @@ def conv1d_input(
         c_out_per_group = C_out // groups
         weight_groups = []
         for g in range(groups):
-            w_g = weight_arr[g * c_out_per_group:(g + 1) * c_out_per_group]  # [c_out_per_group, C_in_per_group, K]
+            w_g = weight_arr[
+                g * c_out_per_group : (g + 1) * c_out_per_group
+            ]  # [c_out_per_group, C_in_per_group, K]
             w_g_transposed = mx.transpose(w_g, [1, 2, 0])  # [C_in_per_group, K, c_out_per_group]
             weight_groups.append(w_g_transposed)
         weight_transposed = mx.concatenate(weight_groups, axis=0)  # [C_in, K, c_out_per_group]
@@ -130,7 +134,7 @@ def conv1d_input(
         padding=(0, padding),
         dilation=(1, dilation),
         output_padding=(0, output_padding),
-        groups=groups
+        groups=groups,
     )
 
     # Remove H dimension and transpose back: [N, 1, L, C_in] -> [N, C_in, L]
@@ -254,7 +258,9 @@ def conv1d_weight(
                     gw_k = mx.matmul(grad_flat, mx.transpose(input_flat, [1, 0]))
                     grad_weight_g_slices.append(gw_k)
                 else:
-                    grad_weight_g_slices.append(mx.zeros((c_out_per_group, c_in_per_group), dtype=input_arr.dtype))
+                    grad_weight_g_slices.append(
+                        mx.zeros((c_out_per_group, c_in_per_group), dtype=input_arr.dtype)
+                    )
 
             # Stack for this group: [c_out_per_group, c_in_per_group, K]
             grad_weight_g = mx.stack(grad_weight_g_slices, axis=2)
@@ -325,8 +331,12 @@ def conv2d_input(
         c_out_per_group = C_out // groups
         weight_groups = []
         for g in range(groups):
-            w_g = weight_arr[g * c_out_per_group:(g + 1) * c_out_per_group]  # [c_out_per_group, C_in_per_group, kH, kW]
-            w_g_transposed = mx.transpose(w_g, [1, 2, 3, 0])  # [C_in_per_group, kH, kW, c_out_per_group]
+            w_g = weight_arr[
+                g * c_out_per_group : (g + 1) * c_out_per_group
+            ]  # [c_out_per_group, C_in_per_group, kH, kW]
+            w_g_transposed = mx.transpose(
+                w_g, [1, 2, 3, 0]
+            )  # [C_in_per_group, kH, kW, c_out_per_group]
             weight_groups.append(w_g_transposed)
         weight_transposed = mx.concatenate(weight_groups, axis=0)  # [C_in, kH, kW, c_out_per_group]
 
@@ -338,7 +348,7 @@ def conv2d_input(
         padding=padding,
         dilation=dilation,
         output_padding=(output_padding_h, output_padding_w),
-        groups=groups
+        groups=groups,
     )
 
     # Handle any remaining size mismatch (shouldn't happen with correct output_padding)
@@ -397,12 +407,9 @@ def conv2d_weight(
 
     # Pad input if needed
     if padding[0] > 0 or padding[1] > 0:
-        input_arr = mx.pad(input_arr, [
-            (0, 0),
-            (0, 0),
-            (padding[0], padding[0]),
-            (padding[1], padding[1])
-        ])
+        input_arr = mx.pad(
+            input_arr, [(0, 0), (0, 0), (padding[0], padding[0]), (padding[1], padding[1])]
+        )
 
     if groups == 1:
         # Collect results in nested list, then reshape
@@ -455,7 +462,9 @@ def conv2d_weight(
 
         # Stack and reshape: [kH*kW, C_out, C_in] -> [C_out, C_in, kH, kW]
         grad_weight_stacked = mx.stack(grad_weight_rows, axis=0)  # [kH*kW, C_out, C_in]
-        grad_weight_stacked = mx.reshape(grad_weight_stacked, (kH, kW, C_out, C_in))  # [kH, kW, C_out, C_in]
+        grad_weight_stacked = mx.reshape(
+            grad_weight_stacked, (kH, kW, C_out, C_in)
+        )  # [kH, kW, C_out, C_in]
         grad_weight = mx.transpose(grad_weight_stacked, [2, 3, 0, 1])  # [C_out, C_in, kH, kW]
     else:
         # Handle grouped convolution
@@ -488,7 +497,9 @@ def conv2d_weight(
                             break
                         h_indices.append(h_in)
                     if not valid:
-                        grad_weight_g_rows.append(mx.zeros((c_out_per_group, c_in_per_group), dtype=input_arr.dtype))
+                        grad_weight_g_rows.append(
+                            mx.zeros((c_out_per_group, c_in_per_group), dtype=input_arr.dtype)
+                        )
                         continue
 
                     for w_out in range(W_out):
@@ -498,7 +509,9 @@ def conv2d_weight(
                             break
                         w_indices.append(w_in)
                     if not valid:
-                        grad_weight_g_rows.append(mx.zeros((c_out_per_group, c_in_per_group), dtype=input_arr.dtype))
+                        grad_weight_g_rows.append(
+                            mx.zeros((c_out_per_group, c_in_per_group), dtype=input_arr.dtype)
+                        )
                         continue
 
                     h_idx = mx.array(h_indices)
@@ -518,7 +531,9 @@ def conv2d_weight(
 
             # Stack and reshape for this group
             grad_weight_g_stacked = mx.stack(grad_weight_g_rows, axis=0)
-            grad_weight_g_stacked = mx.reshape(grad_weight_g_stacked, (kH, kW, c_out_per_group, c_in_per_group))
+            grad_weight_g_stacked = mx.reshape(
+                grad_weight_g_stacked, (kH, kW, c_out_per_group, c_in_per_group)
+            )
             grad_weight_g = mx.transpose(grad_weight_g_stacked, [2, 3, 0, 1])
             group_results.append(grad_weight_g)
 
@@ -586,7 +601,7 @@ def conv3d_input(
         c_out_per_group = C_out // groups
         weight_groups = []
         for g in range(groups):
-            w_g = weight_arr[g * c_out_per_group:(g + 1) * c_out_per_group]
+            w_g = weight_arr[g * c_out_per_group : (g + 1) * c_out_per_group]
             w_g_transposed = mx.transpose(w_g, [1, 2, 3, 4, 0])
             weight_groups.append(w_g_transposed)
         weight_transposed = mx.concatenate(weight_groups, axis=0)
@@ -599,7 +614,7 @@ def conv3d_input(
         padding=padding,
         dilation=dilation,
         output_padding=(output_padding_d, output_padding_h, output_padding_w),
-        groups=groups
+        groups=groups,
     )
 
     # Handle any remaining output size matching
@@ -664,13 +679,16 @@ def conv3d_weight(
 
     # Pad input if needed
     if padding[0] > 0 or padding[1] > 0 or padding[2] > 0:
-        input_arr = mx.pad(input_arr, [
-            (0, 0),
-            (0, 0),
-            (padding[0], padding[0]),
-            (padding[1], padding[1]),
-            (padding[2], padding[2])
-        ])
+        input_arr = mx.pad(
+            input_arr,
+            [
+                (0, 0),
+                (0, 0),
+                (padding[0], padding[0]),
+                (padding[1], padding[1]),
+                (padding[2], padding[2]),
+            ],
+        )
 
     if groups == 1:
         # Collect results for all kernel positions
@@ -738,7 +756,9 @@ def conv3d_weight(
         # Stack and reshape: [kD*kH*kW, C_out, C_in] -> [C_out, C_in, kD, kH, kW]
         grad_weight_stacked = mx.stack(grad_weight_rows, axis=0)  # [kD*kH*kW, C_out, C_in]
         grad_weight_stacked = mx.reshape(grad_weight_stacked, (kD, kH, kW, C_out, C_in))
-        grad_weight = mx.transpose(grad_weight_stacked, [3, 4, 0, 1, 2])  # [C_out, C_in, kD, kH, kW]
+        grad_weight = mx.transpose(
+            grad_weight_stacked, [3, 4, 0, 1, 2]
+        )  # [C_out, C_in, kD, kH, kW]
     else:
         # Handle grouped convolution
         c_in_per_group = C_in // groups
@@ -774,7 +794,9 @@ def conv3d_weight(
                                 break
                             d_indices.append(d_in)
                         if not valid:
-                            grad_weight_g_rows.append(mx.zeros((c_out_per_group, c_in_per_group), dtype=input_arr.dtype))
+                            grad_weight_g_rows.append(
+                                mx.zeros((c_out_per_group, c_in_per_group), dtype=input_arr.dtype)
+                            )
                             continue
 
                         for h_out in range(H_out):
@@ -784,7 +806,9 @@ def conv3d_weight(
                                 break
                             h_indices.append(h_in)
                         if not valid:
-                            grad_weight_g_rows.append(mx.zeros((c_out_per_group, c_in_per_group), dtype=input_arr.dtype))
+                            grad_weight_g_rows.append(
+                                mx.zeros((c_out_per_group, c_in_per_group), dtype=input_arr.dtype)
+                            )
                             continue
 
                         for w_out in range(W_out):
@@ -794,7 +818,9 @@ def conv3d_weight(
                                 break
                             w_indices.append(w_in)
                         if not valid:
-                            grad_weight_g_rows.append(mx.zeros((c_out_per_group, c_in_per_group), dtype=input_arr.dtype))
+                            grad_weight_g_rows.append(
+                                mx.zeros((c_out_per_group, c_in_per_group), dtype=input_arr.dtype)
+                            )
                             continue
 
                         d_idx = mx.array(d_indices)
@@ -806,17 +832,23 @@ def conv3d_weight(
                         input_at_kdkhkw = mx.take(input_at_kdkh, w_idx, axis=4)
 
                         input_flat = mx.transpose(input_at_kdkhkw, [1, 0, 2, 3, 4])
-                        input_flat = mx.reshape(input_flat, (c_in_per_group, N * D_out * H_out * W_out))
+                        input_flat = mx.reshape(
+                            input_flat, (c_in_per_group, N * D_out * H_out * W_out)
+                        )
 
                         grad_flat = mx.transpose(grad_output_g, [1, 0, 2, 3, 4])
-                        grad_flat = mx.reshape(grad_flat, (c_out_per_group, N * D_out * H_out * W_out))
+                        grad_flat = mx.reshape(
+                            grad_flat, (c_out_per_group, N * D_out * H_out * W_out)
+                        )
 
                         gw_kdkhkw = mx.matmul(grad_flat, mx.transpose(input_flat, [1, 0]))
                         grad_weight_g_rows.append(gw_kdkhkw)
 
             # Stack and reshape for this group
             grad_weight_g_stacked = mx.stack(grad_weight_g_rows, axis=0)
-            grad_weight_g_stacked = mx.reshape(grad_weight_g_stacked, (kD, kH, kW, c_out_per_group, c_in_per_group))
+            grad_weight_g_stacked = mx.reshape(
+                grad_weight_g_stacked, (kD, kH, kW, c_out_per_group, c_in_per_group)
+            )
             grad_weight_g = mx.transpose(grad_weight_g_stacked, [3, 4, 0, 1, 2])
             group_results.append(grad_weight_g)
 

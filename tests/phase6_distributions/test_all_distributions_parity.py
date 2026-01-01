@@ -6,24 +6,28 @@ PyTorch's torch.distributions for numerical parity.
 """
 
 import sys
-sys.path.insert(0, '../..')
 
-import unittest
+sys.path.insert(0, "../..")
+
 import math
+import unittest
 
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
     import torch
     import torch.distributions as td
+
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
 
 try:
+    import mlx.core as mx
+
     import flashlight
     from flashlight import distributions as dist
-    import mlx.core as mx
+
     MLX_AVAILABLE = True
 except ImportError:
     MLX_AVAILABLE = False
@@ -81,7 +85,7 @@ def compare_entropy(mlx_dist, torch_dist, rtol=1e-4, atol=1e-5):
 
 def compare_mean_var(mlx_dist, torch_dist, rtol=1e-4, atol=1e-5):
     """Compare mean and variance between MLX and PyTorch distributions."""
-    if hasattr(mlx_dist, 'mean') and hasattr(torch_dist, 'mean'):
+    if hasattr(mlx_dist, "mean") and hasattr(torch_dist, "mean"):
         try:
             mlx_mean = mlx_dist.mean.numpy()
             torch_mean = torch_dist.mean.numpy()
@@ -94,7 +98,7 @@ def compare_mean_var(mlx_dist, torch_dist, rtol=1e-4, atol=1e-5):
         except Exception:
             pass  # Some distributions don't have finite mean
 
-    if hasattr(mlx_dist, 'variance') and hasattr(torch_dist, 'variance'):
+    if hasattr(mlx_dist, "variance") and hasattr(torch_dist, "variance"):
         try:
             mlx_var = mlx_dist.variance.numpy()
             torch_var = torch_dist.variance.numpy()
@@ -112,15 +116,12 @@ def compare_mean_var(mlx_dist, torch_dist, rtol=1e-4, atol=1e-5):
 # Continuous Distributions
 # =============================================================================
 
+
 @skipIfNoMLX
 class TestNormalParity(TestCase):
     @skip_if_no_torch
     def test_log_prob(self):
-        compare_log_prob(
-            dist.Normal(0.0, 1.0),
-            td.Normal(0.0, 1.0),
-            [-2.0, -1.0, 0.0, 1.0, 2.0]
-        )
+        compare_log_prob(dist.Normal(0.0, 1.0), td.Normal(0.0, 1.0), [-2.0, -1.0, 0.0, 1.0, 2.0])
 
     @skip_if_no_torch
     def test_entropy(self):
@@ -136,11 +137,7 @@ class TestNormalParity(TestCase):
 class TestUniformParity(TestCase):
     @skip_if_no_torch
     def test_log_prob(self):
-        compare_log_prob(
-            dist.Uniform(0.0, 1.0),
-            td.Uniform(0.0, 1.0),
-            [0.1, 0.5, 0.9]
-        )
+        compare_log_prob(dist.Uniform(0.0, 1.0), td.Uniform(0.0, 1.0), [0.1, 0.5, 0.9])
 
     @skip_if_no_torch
     def test_entropy(self):
@@ -152,11 +149,7 @@ class TestUniformParity(TestCase):
 class TestExponentialParity(TestCase):
     @skip_if_no_torch
     def test_log_prob(self):
-        compare_log_prob(
-            dist.Exponential(1.0),
-            td.Exponential(1.0),
-            [0.1, 0.5, 1.0, 2.0, 5.0]
-        )
+        compare_log_prob(dist.Exponential(1.0), td.Exponential(1.0), [0.1, 0.5, 1.0, 2.0, 5.0])
 
     @skip_if_no_torch
     def test_entropy(self):
@@ -168,11 +161,7 @@ class TestExponentialParity(TestCase):
 class TestGammaParity(TestCase):
     @skip_if_no_torch
     def test_log_prob(self):
-        compare_log_prob(
-            dist.Gamma(2.0, 1.0),
-            td.Gamma(2.0, 1.0),
-            [0.1, 0.5, 1.0, 2.0, 5.0]
-        )
+        compare_log_prob(dist.Gamma(2.0, 1.0), td.Gamma(2.0, 1.0), [0.1, 0.5, 1.0, 2.0, 5.0])
 
     @skip_if_no_torch
     def test_entropy(self):
@@ -188,11 +177,7 @@ class TestGammaParity(TestCase):
 class TestBetaParity(TestCase):
     @skip_if_no_torch
     def test_log_prob(self):
-        compare_log_prob(
-            dist.Beta(2.0, 5.0),
-            td.Beta(2.0, 5.0),
-            [0.1, 0.3, 0.5, 0.7, 0.9]
-        )
+        compare_log_prob(dist.Beta(2.0, 5.0), td.Beta(2.0, 5.0), [0.1, 0.3, 0.5, 0.7, 0.9])
 
     @skip_if_no_torch
     def test_entropy(self):
@@ -208,11 +193,7 @@ class TestBetaParity(TestCase):
 class TestCauchyParity(TestCase):
     @skip_if_no_torch
     def test_log_prob(self):
-        compare_log_prob(
-            dist.Cauchy(0.0, 1.0),
-            td.Cauchy(0.0, 1.0),
-            [-5.0, -1.0, 0.0, 1.0, 5.0]
-        )
+        compare_log_prob(dist.Cauchy(0.0, 1.0), td.Cauchy(0.0, 1.0), [-5.0, -1.0, 0.0, 1.0, 5.0])
 
     @skip_if_no_torch
     def test_entropy(self):
@@ -223,11 +204,7 @@ class TestCauchyParity(TestCase):
 class TestLaplaceParity(TestCase):
     @skip_if_no_torch
     def test_log_prob(self):
-        compare_log_prob(
-            dist.Laplace(0.0, 1.0),
-            td.Laplace(0.0, 1.0),
-            [-2.0, -1.0, 0.0, 1.0, 2.0]
-        )
+        compare_log_prob(dist.Laplace(0.0, 1.0), td.Laplace(0.0, 1.0), [-2.0, -1.0, 0.0, 1.0, 2.0])
 
     @skip_if_no_torch
     def test_entropy(self):
@@ -243,9 +220,7 @@ class TestLogNormalParity(TestCase):
     @skip_if_no_torch
     def test_log_prob(self):
         compare_log_prob(
-            dist.LogNormal(0.0, 1.0),
-            td.LogNormal(0.0, 1.0),
-            [0.1, 0.5, 1.0, 2.0, 5.0]
+            dist.LogNormal(0.0, 1.0), td.LogNormal(0.0, 1.0), [0.1, 0.5, 1.0, 2.0, 5.0]
         )
 
     @skip_if_no_torch
@@ -261,11 +236,7 @@ class TestLogNormalParity(TestCase):
 class TestGumbelParity(TestCase):
     @skip_if_no_torch
     def test_log_prob(self):
-        compare_log_prob(
-            dist.Gumbel(0.0, 1.0),
-            td.Gumbel(0.0, 1.0),
-            [-2.0, -1.0, 0.0, 1.0, 2.0]
-        )
+        compare_log_prob(dist.Gumbel(0.0, 1.0), td.Gumbel(0.0, 1.0), [-2.0, -1.0, 0.0, 1.0, 2.0])
 
     @skip_if_no_torch
     def test_entropy(self):
@@ -276,11 +247,7 @@ class TestGumbelParity(TestCase):
 class TestParetoParity(TestCase):
     @skip_if_no_torch
     def test_log_prob(self):
-        compare_log_prob(
-            dist.Pareto(1.0, 2.0),
-            td.Pareto(1.0, 2.0),
-            [1.1, 1.5, 2.0, 5.0, 10.0]
-        )
+        compare_log_prob(dist.Pareto(1.0, 2.0), td.Pareto(1.0, 2.0), [1.1, 1.5, 2.0, 5.0, 10.0])
 
     @skip_if_no_torch
     def test_entropy(self):
@@ -291,11 +258,7 @@ class TestParetoParity(TestCase):
 class TestWeibullParity(TestCase):
     @skip_if_no_torch
     def test_log_prob(self):
-        compare_log_prob(
-            dist.Weibull(1.0, 1.0),
-            td.Weibull(1.0, 1.0),
-            [0.1, 0.5, 1.0, 2.0]
-        )
+        compare_log_prob(dist.Weibull(1.0, 1.0), td.Weibull(1.0, 1.0), [0.1, 0.5, 1.0, 2.0])
 
     @skip_if_no_torch
     def test_entropy(self):
@@ -306,11 +269,7 @@ class TestWeibullParity(TestCase):
 class TestChi2Parity(TestCase):
     @skip_if_no_torch
     def test_log_prob(self):
-        compare_log_prob(
-            dist.Chi2(3.0),
-            td.Chi2(3.0),
-            [0.5, 1.0, 2.0, 5.0]
-        )
+        compare_log_prob(dist.Chi2(3.0), td.Chi2(3.0), [0.5, 1.0, 2.0, 5.0])
 
     @skip_if_no_torch
     def test_entropy(self):
@@ -321,11 +280,7 @@ class TestChi2Parity(TestCase):
 class TestStudentTParity(TestCase):
     @skip_if_no_torch
     def test_log_prob(self):
-        compare_log_prob(
-            dist.StudentT(5.0),
-            td.StudentT(5.0),
-            [-2.0, -1.0, 0.0, 1.0, 2.0]
-        )
+        compare_log_prob(dist.StudentT(5.0), td.StudentT(5.0), [-2.0, -1.0, 0.0, 1.0, 2.0])
 
     @skip_if_no_torch
     def test_entropy(self):
@@ -336,11 +291,7 @@ class TestStudentTParity(TestCase):
 class TestHalfNormalParity(TestCase):
     @skip_if_no_torch
     def test_log_prob(self):
-        compare_log_prob(
-            dist.HalfNormal(1.0),
-            td.HalfNormal(1.0),
-            [0.1, 0.5, 1.0, 2.0]
-        )
+        compare_log_prob(dist.HalfNormal(1.0), td.HalfNormal(1.0), [0.1, 0.5, 1.0, 2.0])
 
     @skip_if_no_torch
     def test_entropy(self):
@@ -351,11 +302,7 @@ class TestHalfNormalParity(TestCase):
 class TestHalfCauchyParity(TestCase):
     @skip_if_no_torch
     def test_log_prob(self):
-        compare_log_prob(
-            dist.HalfCauchy(1.0),
-            td.HalfCauchy(1.0),
-            [0.1, 0.5, 1.0, 2.0, 5.0]
-        )
+        compare_log_prob(dist.HalfCauchy(1.0), td.HalfCauchy(1.0), [0.1, 0.5, 1.0, 2.0, 5.0])
 
     @skip_if_no_torch
     def test_entropy(self):
@@ -367,9 +314,7 @@ class TestInverseGammaParity(TestCase):
     @skip_if_no_torch
     def test_log_prob(self):
         compare_log_prob(
-            dist.InverseGamma(2.0, 1.0),
-            td.InverseGamma(2.0, 1.0),
-            [0.1, 0.5, 1.0, 2.0]
+            dist.InverseGamma(2.0, 1.0), td.InverseGamma(2.0, 1.0), [0.1, 0.5, 1.0, 2.0]
         )
 
     @skip_if_no_torch
@@ -382,9 +327,7 @@ class TestKumaraswamyParity(TestCase):
     @skip_if_no_torch
     def test_log_prob(self):
         compare_log_prob(
-            dist.Kumaraswamy(2.0, 5.0),
-            td.Kumaraswamy(2.0, 5.0),
-            [0.1, 0.3, 0.5, 0.7, 0.9]
+            dist.Kumaraswamy(2.0, 5.0), td.Kumaraswamy(2.0, 5.0), [0.1, 0.3, 0.5, 0.7, 0.9]
         )
 
     @skip_if_no_torch
@@ -397,9 +340,7 @@ class TestFisherSnedecorParity(TestCase):
     @skip_if_no_torch
     def test_log_prob(self):
         compare_log_prob(
-            dist.FisherSnedecor(5.0, 10.0),
-            td.FisherSnedecor(5.0, 10.0),
-            [0.1, 0.5, 1.0, 2.0]
+            dist.FisherSnedecor(5.0, 10.0), td.FisherSnedecor(5.0, 10.0), [0.1, 0.5, 1.0, 2.0]
         )
 
 
@@ -408,9 +349,7 @@ class TestVonMisesParity(TestCase):
     @skip_if_no_torch
     def test_log_prob(self):
         compare_log_prob(
-            dist.VonMises(0.0, 1.0),
-            td.VonMises(0.0, 1.0),
-            [-3.0, -1.0, 0.0, 1.0, 3.0]
+            dist.VonMises(0.0, 1.0), td.VonMises(0.0, 1.0), [-3.0, -1.0, 0.0, 1.0, 3.0]
         )
 
 
@@ -418,15 +357,12 @@ class TestVonMisesParity(TestCase):
 # Discrete Distributions
 # =============================================================================
 
+
 @skipIfNoMLX
 class TestBernoulliParity(TestCase):
     @skip_if_no_torch
     def test_log_prob(self):
-        compare_log_prob(
-            dist.Bernoulli(probs=0.3),
-            td.Bernoulli(probs=0.3),
-            [0, 1]
-        )
+        compare_log_prob(dist.Bernoulli(probs=0.3), td.Bernoulli(probs=0.3), [0, 1])
 
     @skip_if_no_torch
     def test_entropy(self):
@@ -442,7 +378,7 @@ class TestCategoricalParity(TestCase):
         compare_log_prob(
             dist.Categorical(probs=flashlight.tensor(probs)),
             td.Categorical(probs=torch.tensor(probs)),
-            [0, 1, 2]
+            [0, 1, 2],
         )
 
     @skip_if_no_torch
@@ -450,7 +386,7 @@ class TestCategoricalParity(TestCase):
         probs = [0.2, 0.3, 0.5]
         compare_entropy(
             dist.Categorical(probs=flashlight.tensor(probs)),
-            td.Categorical(probs=torch.tensor(probs))
+            td.Categorical(probs=torch.tensor(probs)),
         )
 
 
@@ -458,11 +394,7 @@ class TestCategoricalParity(TestCase):
 class TestPoissonParity(TestCase):
     @skip_if_no_torch
     def test_log_prob(self):
-        compare_log_prob(
-            dist.Poisson(4.0),
-            td.Poisson(4.0),
-            [0, 1, 2, 3, 5, 10]
-        )
+        compare_log_prob(dist.Poisson(4.0), td.Poisson(4.0), [0, 1, 2, 3, 5, 10])
 
 
 @skipIfNoMLX
@@ -473,7 +405,7 @@ class TestBinomialParity(TestCase):
             dist.Binomial(10, probs=0.4),
             td.Binomial(10, probs=0.4),
             [0, 2, 4, 6, 10],
-            rtol=1e-4  # lgamma differences may require slight relaxation
+            rtol=1e-4,  # lgamma differences may require slight relaxation
         )
 
 
@@ -481,11 +413,7 @@ class TestBinomialParity(TestCase):
 class TestGeometricParity(TestCase):
     @skip_if_no_torch
     def test_log_prob(self):
-        compare_log_prob(
-            dist.Geometric(probs=0.3),
-            td.Geometric(probs=0.3),
-            [0, 1, 2, 5, 10]
-        )
+        compare_log_prob(dist.Geometric(probs=0.3), td.Geometric(probs=0.3), [0, 1, 2, 5, 10])
 
     @skip_if_no_torch
     def test_entropy(self):
@@ -500,13 +428,14 @@ class TestNegativeBinomialParity(TestCase):
             dist.NegativeBinomial(5.0, probs=0.4),
             td.NegativeBinomial(5.0, probs=0.4),
             [0, 1, 2, 5, 10],
-            rtol=1e-4
+            rtol=1e-4,
         )
 
 
 # =============================================================================
 # Multivariate Distributions
 # =============================================================================
+
 
 @skipIfNoMLX
 class TestDirichletParity(TestCase):
@@ -526,10 +455,7 @@ class TestDirichletParity(TestCase):
     @skip_if_no_torch
     def test_entropy(self):
         alpha = [2.0, 3.0, 5.0]
-        compare_entropy(
-            dist.Dirichlet(flashlight.tensor(alpha)),
-            td.Dirichlet(torch.tensor(alpha))
-        )
+        compare_entropy(dist.Dirichlet(flashlight.tensor(alpha)), td.Dirichlet(torch.tensor(alpha)))
 
 
 @skipIfNoMLX
@@ -557,12 +483,10 @@ class TestMultivariateNormalParity(TestCase):
         cov = [[1.0, 0.5], [0.5, 1.0]]
 
         mlx_mvn = dist.MultivariateNormal(
-            loc=flashlight.tensor(loc),
-            covariance_matrix=flashlight.tensor(cov)
+            loc=flashlight.tensor(loc), covariance_matrix=flashlight.tensor(cov)
         )
         torch_mvn = td.MultivariateNormal(
-            loc=torch.tensor(loc),
-            covariance_matrix=torch.tensor(cov)
+            loc=torch.tensor(loc), covariance_matrix=torch.tensor(cov)
         )
 
         val = [0.5, 0.5]
@@ -577,19 +501,16 @@ class TestMultivariateNormalParity(TestCase):
         cov = [[1.0, 0.0], [0.0, 1.0]]
         compare_entropy(
             dist.MultivariateNormal(
-                loc=flashlight.tensor(loc),
-                covariance_matrix=flashlight.tensor(cov)
+                loc=flashlight.tensor(loc), covariance_matrix=flashlight.tensor(cov)
             ),
-            td.MultivariateNormal(
-                loc=torch.tensor(loc),
-                covariance_matrix=torch.tensor(cov)
-            )
+            td.MultivariateNormal(loc=torch.tensor(loc), covariance_matrix=torch.tensor(cov)),
         )
 
 
 # =============================================================================
 # Relaxed Distributions
 # =============================================================================
+
 
 @skipIfNoMLX
 class TestRelaxedBernoulliParity(TestCase):
@@ -625,7 +546,7 @@ class TestOneHotCategoricalParity(TestCase):
         probs = [0.2, 0.3, 0.5]
         compare_entropy(
             dist.OneHotCategorical(probs=flashlight.tensor(probs)),
-            td.OneHotCategorical(probs=torch.tensor(probs))
+            td.OneHotCategorical(probs=torch.tensor(probs)),
         )
 
 
@@ -634,15 +555,14 @@ class TestContinuousBernoulliParity(TestCase):
     @skip_if_no_torch
     def test_log_prob(self):
         compare_log_prob(
-            dist.ContinuousBernoulli(probs=0.3),
-            td.ContinuousBernoulli(probs=0.3),
-            [0.1, 0.5, 0.9]
+            dist.ContinuousBernoulli(probs=0.3), td.ContinuousBernoulli(probs=0.3), [0.1, 0.5, 0.9]
         )
 
 
 # =============================================================================
 # Summary Test
 # =============================================================================
+
 
 @skipIfNoMLX
 class TestDistributionCoverage(TestCase):
@@ -651,16 +571,40 @@ class TestDistributionCoverage(TestCase):
     def test_all_distributions_have_tests(self):
         """Check that we're testing a comprehensive set."""
         tested = [
-            'Normal', 'Uniform', 'Exponential', 'Gamma', 'Beta',
-            'Cauchy', 'Laplace', 'LogNormal', 'Gumbel', 'Pareto',
-            'Weibull', 'Chi2', 'StudentT', 'HalfNormal', 'HalfCauchy',
-            'InverseGamma', 'Kumaraswamy', 'FisherSnedecor', 'VonMises',
-            'Bernoulli', 'Categorical', 'Poisson', 'Binomial', 'Geometric',
-            'NegativeBinomial', 'Dirichlet', 'Multinomial', 'MultivariateNormal',
-            'RelaxedBernoulli', 'OneHotCategorical', 'ContinuousBernoulli'
+            "Normal",
+            "Uniform",
+            "Exponential",
+            "Gamma",
+            "Beta",
+            "Cauchy",
+            "Laplace",
+            "LogNormal",
+            "Gumbel",
+            "Pareto",
+            "Weibull",
+            "Chi2",
+            "StudentT",
+            "HalfNormal",
+            "HalfCauchy",
+            "InverseGamma",
+            "Kumaraswamy",
+            "FisherSnedecor",
+            "VonMises",
+            "Bernoulli",
+            "Categorical",
+            "Poisson",
+            "Binomial",
+            "Geometric",
+            "NegativeBinomial",
+            "Dirichlet",
+            "Multinomial",
+            "MultivariateNormal",
+            "RelaxedBernoulli",
+            "OneHotCategorical",
+            "ContinuousBernoulli",
         ]
         self.assertGreaterEqual(len(tested), 30, "Should test at least 30 distributions")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

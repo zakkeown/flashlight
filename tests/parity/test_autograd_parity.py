@@ -7,9 +7,11 @@ within tolerance (1e-5 by default, 1e-4 for some operations).
 """
 
 import sys
-sys.path.insert(0, '../..')
+
+sys.path.insert(0, "../..")
 
 import unittest
+
 import numpy as np
 import pytest
 
@@ -17,6 +19,7 @@ from tests.common_utils import TestCase, skipIfNoMLX, skipIfNoTorch
 
 try:
     import flashlight
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -45,10 +48,7 @@ class TestMaxBackwardParity(TestCase):
         mlx_y = mlx_x.max()
         mlx_y.backward()
 
-        np.testing.assert_allclose(
-            mlx_x.grad.numpy(), torch_x.grad.numpy(),
-            rtol=1e-5, atol=1e-5
-        )
+        np.testing.assert_allclose(mlx_x.grad.numpy(), torch_x.grad.numpy(), rtol=1e-5, atol=1e-5)
 
     def test_max_dim_parity(self):
         """Test max along dimension gradient matches PyTorch."""
@@ -69,9 +69,11 @@ class TestMaxBackwardParity(TestCase):
             flashlight.sum(mlx_y).backward()
 
             np.testing.assert_allclose(
-                mlx_x.grad.numpy(), torch_x.grad.numpy(),
-                rtol=1e-5, atol=1e-5,
-                err_msg=f"Max dim={dim} gradient mismatch"
+                mlx_x.grad.numpy(),
+                torch_x.grad.numpy(),
+                rtol=1e-5,
+                atol=1e-5,
+                err_msg=f"Max dim={dim} gradient mismatch",
             )
 
     def test_max_ties_parity(self):
@@ -89,10 +91,7 @@ class TestMaxBackwardParity(TestCase):
         mlx_x = flashlight.tensor(data, requires_grad=True)
         mlx_x.max().backward()
 
-        np.testing.assert_allclose(
-            mlx_x.grad.numpy(), torch_x.grad.numpy(),
-            rtol=1e-5, atol=1e-5
-        )
+        np.testing.assert_allclose(mlx_x.grad.numpy(), torch_x.grad.numpy(), rtol=1e-5, atol=1e-5)
 
 
 @skipIfNoMLX
@@ -116,10 +115,7 @@ class TestSumMeanBackwardParity(TestCase):
         mlx_x = flashlight.tensor(data, requires_grad=True)
         flashlight.sum(mlx_x).backward()
 
-        np.testing.assert_allclose(
-            mlx_x.grad.numpy(), torch_x.grad.numpy(),
-            rtol=1e-5, atol=1e-5
-        )
+        np.testing.assert_allclose(mlx_x.grad.numpy(), torch_x.grad.numpy(), rtol=1e-5, atol=1e-5)
 
     def test_sum_dim_parity(self):
         """Test sum along dimension gradient matches PyTorch."""
@@ -138,9 +134,11 @@ class TestSumMeanBackwardParity(TestCase):
             flashlight.sum(flashlight.sum(mlx_x, dim=dim)).backward()
 
             np.testing.assert_allclose(
-                mlx_x.grad.numpy(), torch_x.grad.numpy(),
-                rtol=1e-5, atol=1e-5,
-                err_msg=f"Sum dim={dim} gradient mismatch"
+                mlx_x.grad.numpy(),
+                torch_x.grad.numpy(),
+                rtol=1e-5,
+                atol=1e-5,
+                err_msg=f"Sum dim={dim} gradient mismatch",
             )
 
     def test_mean_parity(self):
@@ -158,10 +156,7 @@ class TestSumMeanBackwardParity(TestCase):
         mlx_x = flashlight.tensor(data, requires_grad=True)
         flashlight.mean(mlx_x).backward()
 
-        np.testing.assert_allclose(
-            mlx_x.grad.numpy(), torch_x.grad.numpy(),
-            rtol=1e-5, atol=1e-5
-        )
+        np.testing.assert_allclose(mlx_x.grad.numpy(), torch_x.grad.numpy(), rtol=1e-5, atol=1e-5)
 
 
 @skipIfNoMLX
@@ -242,11 +237,11 @@ class TestArithmeticBackwardParity(TestCase):
 
         # PyTorch
         torch_x = torch.tensor(data, requires_grad=True)
-        (torch_x ** 2.5).sum().backward()
+        (torch_x**2.5).sum().backward()
 
         # MLX Compat
         mlx_x = flashlight.tensor(data, requires_grad=True)
-        flashlight.sum(mlx_x ** 2.5).backward()
+        flashlight.sum(mlx_x**2.5).backward()
 
         np.testing.assert_allclose(mlx_x.grad.numpy(), torch_x.grad.numpy(), rtol=1e-4, atol=1e-4)
 
@@ -336,7 +331,7 @@ class TestActivationBackwardParity(TestCase):
 
         # PyTorch with tanh approximation
         torch_x = torch.tensor(data, requires_grad=True)
-        F.gelu(torch_x, approximate='tanh').sum().backward()
+        F.gelu(torch_x, approximate="tanh").sum().backward()
 
         # MLX Compat
         mlx_x = flashlight.tensor(data, requires_grad=True)
@@ -502,10 +497,7 @@ class TestConv2dBackwardParity(TestCase):
         mlx_x = flashlight.tensor(data, requires_grad=True)
         flashlight.sum(mlx_conv(mlx_x)).backward()
 
-        np.testing.assert_allclose(
-            mlx_x.grad.numpy(), torch_x.grad.numpy(),
-            rtol=1e-4, atol=1e-4
-        )
+        np.testing.assert_allclose(mlx_x.grad.numpy(), torch_x.grad.numpy(), rtol=1e-4, atol=1e-4)
 
 
 @skipIfNoMLX
@@ -810,10 +802,7 @@ class TestPoolingBackwardParity(TestCase):
         mlx_x = flashlight.tensor(data, requires_grad=True)
         flashlight.sum(mlx_pool(mlx_x)).backward()
 
-        np.testing.assert_allclose(
-            mlx_x.grad.numpy(), torch_x.grad.numpy(),
-            rtol=1e-5, atol=1e-5
-        )
+        np.testing.assert_allclose(mlx_x.grad.numpy(), torch_x.grad.numpy(), rtol=1e-5, atol=1e-5)
 
     def test_avg_pool2d_parity(self):
         """Test AvgPool2d gradient matches PyTorch."""
@@ -833,10 +822,7 @@ class TestPoolingBackwardParity(TestCase):
         mlx_x = flashlight.tensor(data, requires_grad=True)
         flashlight.sum(mlx_pool(mlx_x)).backward()
 
-        np.testing.assert_allclose(
-            mlx_x.grad.numpy(), torch_x.grad.numpy(),
-            rtol=1e-5, atol=1e-5
-        )
+        np.testing.assert_allclose(mlx_x.grad.numpy(), torch_x.grad.numpy(), rtol=1e-5, atol=1e-5)
 
 
 @skipIfNoMLX
@@ -864,6 +850,7 @@ class TestEmbeddingBackwardParity(TestCase):
 
         # MLX Compat - use Parameter to ensure requires_grad=True
         from flashlight.nn.parameter import Parameter
+
         mlx_emb = flashlight.nn.Embedding(10, 5)
         mlx_emb.weight = Parameter(flashlight.tensor(weight, requires_grad=True))
         mlx_indices = flashlight.tensor(indices, dtype=flashlight.int32)
@@ -871,8 +858,7 @@ class TestEmbeddingBackwardParity(TestCase):
         flashlight.sum(mlx_out).backward()
 
         np.testing.assert_allclose(
-            mlx_emb.weight.grad.numpy(), torch_emb.weight.grad.numpy(),
-            rtol=1e-5, atol=1e-5
+            mlx_emb.weight.grad.numpy(), torch_emb.weight.grad.numpy(), rtol=1e-5, atol=1e-5
         )
 
 
@@ -885,6 +871,7 @@ class TestCustomFunctionBackwardParity(TestCase):
     def test_custom_function_parity(self):
         """Test custom Function gradient matches PyTorch custom function."""
         import torch
+
         from flashlight.autograd import Function
 
         np.random.seed(42)
@@ -895,11 +882,11 @@ class TestCustomFunctionBackwardParity(TestCase):
             @staticmethod
             def forward(ctx, x):
                 ctx.save_for_backward(x)
-                return x ** 2
+                return x**2
 
             @staticmethod
             def backward(ctx, grad_output):
-                x, = ctx.saved_tensors
+                (x,) = ctx.saved_tensors
                 return grad_output * 2 * x
 
         # MLX Compat custom function
@@ -907,13 +894,15 @@ class TestCustomFunctionBackwardParity(TestCase):
             @staticmethod
             def forward(ctx, x):
                 import mlx.core as mx
+
                 ctx.save_for_backward(x)
-                return x._mlx_array ** 2
+                return x._mlx_array**2
 
             @staticmethod
             def backward(ctx, grad_output):
                 import mlx.core as mx
-                x, = ctx.saved_tensors
+
+                (x,) = ctx.saved_tensors
                 return flashlight.tensor(grad_output._mlx_array * 2 * x._mlx_array)
 
         # PyTorch
@@ -927,6 +916,7 @@ class TestCustomFunctionBackwardParity(TestCase):
         np.testing.assert_allclose(mlx_x.grad.numpy(), torch_x.grad.numpy(), rtol=1e-5, atol=1e-5)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from tests.common_utils import run_tests
+
     run_tests()

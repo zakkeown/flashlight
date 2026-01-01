@@ -10,9 +10,11 @@ Tests the nn.layers.padding module:
 """
 
 import sys
-sys.path.insert(0, '../..')
+
+sys.path.insert(0, "../..")
 
 import unittest
+
 import numpy as np
 import pytest
 
@@ -20,12 +22,14 @@ from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
     import flashlight
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
 
 try:
     import torch
+
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
@@ -172,9 +176,7 @@ class TestReflectionPad1d(TestCase):
         out_torch = pad_torch(torch.tensor(x_np))
         out_mlx = pad_mlx(flashlight.tensor(x_np))
 
-        np.testing.assert_allclose(
-            out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
 
 @skipIfNoMLX
@@ -211,9 +213,7 @@ class TestReflectionPad3d(TestCase):
         out_torch = pad_torch(torch.tensor(x_np))
         out_mlx = pad_mlx(flashlight.tensor(x_np))
 
-        np.testing.assert_allclose(
-            out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
 
 @skipIfNoMLX
@@ -288,5 +288,5 @@ class TestCircularPad3d(TestCase):
         self.assertEqual(output.shape, (2, 3, 10, 10, 10))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

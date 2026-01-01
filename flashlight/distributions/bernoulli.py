@@ -1,12 +1,13 @@
 """Bernoulli Distribution"""
 
 from typing import Optional, Tuple, Union
+
 import mlx.core as mx
 
 from ..tensor import Tensor
-from .exp_family import ExponentialFamily
 from . import constraints
 from ._constants import xlogy
+from .exp_family import ExponentialFamily
 
 
 class Bernoulli(ExponentialFamily):
@@ -19,7 +20,7 @@ class Bernoulli(ExponentialFamily):
         validate_args: Whether to validate arguments
     """
 
-    arg_constraints = {'probs': constraints.unit_interval, 'logits': constraints.real}
+    arg_constraints = {"probs": constraints.unit_interval, "logits": constraints.real}
     support = constraints.boolean
     has_enumerate_support = True
 
@@ -71,8 +72,9 @@ class Bernoulli(ExponentialFamily):
     def enumerate_support(self, expand: bool = True) -> Tensor:
         values = mx.array([0.0, 1.0])
         if expand:
-            values = mx.broadcast_to(values.reshape(-1, *([1] * len(self._batch_shape))),
-                                    (2,) + self._batch_shape)
+            values = mx.broadcast_to(
+                values.reshape(-1, *([1] * len(self._batch_shape))), (2,) + self._batch_shape
+            )
         return Tensor(values)
 
     @property
@@ -84,4 +86,4 @@ class Bernoulli(ExponentialFamily):
         return Tensor(mx.logaddexp(mx.array(0.0), x_data))
 
 
-__all__ = ['Bernoulli']
+__all__ = ["Bernoulli"]

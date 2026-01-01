@@ -1,18 +1,19 @@
 """One-Hot Categorical Distribution"""
 
 from typing import Optional, Tuple, Union
+
 import mlx.core as mx
 
 from ..tensor import Tensor
-from .distribution import Distribution
-from .categorical import Categorical
 from . import constraints
+from .categorical import Categorical
+from .distribution import Distribution
 
 
 class OneHotCategorical(Distribution):
     """One-hot categorical distribution."""
 
-    arg_constraints = {'probs': constraints.simplex, 'logits': constraints.real_vector}
+    arg_constraints = {"probs": constraints.simplex, "logits": constraints.real_vector}
     support = constraints.one_hot
     has_enumerate_support = True
 
@@ -66,8 +67,10 @@ class OneHotCategorical(Distribution):
         n = self._event_shape[0]
         values = mx.eye(n)
         if expand:
-            values = mx.broadcast_to(values.reshape(n, *([1] * len(self._batch_shape)), n),
-                                    (n,) + self._batch_shape + (n,))
+            values = mx.broadcast_to(
+                values.reshape(n, *([1] * len(self._batch_shape)), n),
+                (n,) + self._batch_shape + (n,),
+            )
         return Tensor(values)
 
 
@@ -88,4 +91,4 @@ class OneHotCategoricalStraightThrough(OneHotCategorical):
         return Tensor(samples._mlx_array + probs - mx.stop_gradient(probs))
 
 
-__all__ = ['OneHotCategorical', 'OneHotCategoricalStraightThrough']
+__all__ = ["OneHotCategorical", "OneHotCategoricalStraightThrough"]

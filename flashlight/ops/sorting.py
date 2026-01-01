@@ -5,13 +5,16 @@ Implements PyTorch-compatible sorting operations with MLX backend.
 """
 
 from typing import Optional, Tuple, Union
+
 import mlx.core as mx
 
-from ..tensor import Tensor
 from ..autograd.context import is_grad_enabled
+from ..tensor import Tensor
 
 
-def sort(input: Tensor, dim: int = -1, descending: bool = False, stable: bool = False) -> Tuple[Tensor, Tensor]:
+def sort(
+    input: Tensor, dim: int = -1, descending: bool = False, stable: bool = False
+) -> Tuple[Tensor, Tensor]:
     """
     Sorts the elements of input along a given dimension.
 
@@ -88,7 +91,9 @@ def argsort(input: Tensor, dim: int = -1, descending: bool = False, stable: bool
     return Tensor._from_mlx_array(indices.astype(mx.int64))
 
 
-def topk(input: Tensor, k: int, dim: int = -1, largest: bool = True, sorted: bool = True) -> Tuple[Tensor, Tensor]:
+def topk(
+    input: Tensor, k: int, dim: int = -1, largest: bool = True, sorted: bool = True
+) -> Tuple[Tensor, Tensor]:
     """
     Returns the k largest (or smallest) elements along a dimension.
 
@@ -200,12 +205,12 @@ def msort(input: Tensor) -> Tensor:
 
 
 def _unique_dim(
-    input: 'Tensor',
+    input: "Tensor",
     dim: int,
     sorted: bool = True,
     return_inverse: bool = False,
-    return_counts: bool = False
-) -> Union['Tensor', Tuple['Tensor', ...]]:
+    return_counts: bool = False,
+) -> Union["Tensor", Tuple["Tensor", ...]]:
     """
     Find unique slices along a dimension.
 
@@ -332,7 +337,7 @@ def unique(
     sorted: bool = True,
     return_inverse: bool = False,
     return_counts: bool = False,
-    dim: Optional[int] = None
+    dim: Optional[int] = None,
 ) -> Union[Tensor, Tuple[Tensor, ...]]:
     """
     Returns the unique elements of the input tensor.
@@ -376,10 +381,7 @@ def unique(
         return Tensor._from_mlx_array(unique_vals)
 
     # Compare adjacent elements - find where consecutive elements differ
-    diff_mask = mx.concatenate([
-        mx.array([True]),
-        sorted_arr[1:] != sorted_arr[:-1]
-    ])
+    diff_mask = mx.concatenate([mx.array([True]), sorted_arr[1:] != sorted_arr[:-1]])
 
     # Use cumsum to count unique elements and create indices
     # cumsum gives us the unique index for each position
@@ -429,11 +431,8 @@ def unique(
 
 
 def _unique_consecutive_dim(
-    input: 'Tensor',
-    dim: int,
-    return_inverse: bool = False,
-    return_counts: bool = False
-) -> Union['Tensor', Tuple['Tensor', ...]]:
+    input: "Tensor", dim: int, return_inverse: bool = False, return_counts: bool = False
+) -> Union["Tensor", Tuple["Tensor", ...]]:
     """
     Find unique consecutive slices along a dimension.
 
@@ -492,7 +491,7 @@ def _unique_consecutive_dim(
     current_unique_idx = 0
     for i in range(1, n_slices):
         # Compare current slice with previous slice
-        slices_equal = mx.all(flat_slices[i] == flat_slices[i-1]).item()
+        slices_equal = mx.all(flat_slices[i] == flat_slices[i - 1]).item()
         if not slices_equal:
             current_unique_idx += 1
             unique_indices.append(i)
@@ -536,10 +535,7 @@ def _unique_consecutive_dim(
     return tuple(results)
 
 
-def unique_consecutive(
-    *args,
-    **kwargs
-) -> Union[Tensor, Tuple[Tensor, ...]]:
+def unique_consecutive(*args, **kwargs) -> Union[Tensor, Tuple[Tensor, ...]]:
     """
     Eliminates all but the first element from every consecutive group of equivalent elements.
 
@@ -558,11 +554,11 @@ def unique_consecutive(
         input = args[0]
         args = args[1:]
     else:
-        input = kwargs.pop('input')
+        input = kwargs.pop("input")
 
-    return_inverse = kwargs.pop('return_inverse', False)
-    return_counts = kwargs.pop('return_counts', False)
-    dim = kwargs.pop('dim', None)
+    return_inverse = kwargs.pop("return_inverse", False)
+    return_counts = kwargs.pop("return_counts", False)
+    dim = kwargs.pop("dim", None)
 
     mlx_array = input._mlx_array
 
@@ -584,10 +580,7 @@ def unique_consecutive(
         return result
 
     # Find where consecutive elements differ
-    diff_mask = mx.concatenate([
-        mx.array([True]),
-        flat[1:] != flat[:-1]
-    ])
+    diff_mask = mx.concatenate([mx.array([True]), flat[1:] != flat[:-1]])
 
     # Get indices where diff_mask is True (MLX doesn't support boolean indexing or argwhere)
     unique_indices_list = []
@@ -618,11 +611,11 @@ def unique_consecutive(
 
 
 __all__ = [
-    'sort',
-    'argsort',
-    'topk',
-    'kthvalue',
-    'msort',
-    'unique',
-    'unique_consecutive',
+    "sort",
+    "argsort",
+    "topk",
+    "kthvalue",
+    "msort",
+    "unique",
+    "unique_consecutive",
 ]

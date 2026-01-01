@@ -6,10 +6,11 @@ Includes numerical parity tests against PyTorch.
 """
 
 import sys
-sys.path.insert(0, '../..')
 
-import unittest
+sys.path.insert(0, "../..")
+
 import math
+import unittest
 
 import numpy as np
 
@@ -18,15 +19,18 @@ from tests.common_utils import TestCase, skipIfNoMLX
 try:
     import torch
     import torch.signal.windows as tw
+
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
 
 try:
+    import mlx.core as mx
+
     import flashlight
     from flashlight import signal
     from flashlight.signal import windows
-    import mlx.core as mx
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -42,6 +46,7 @@ def requires_torch(func):
 # =============================================================================
 # Basic Functionality Tests
 # =============================================================================
+
 
 @skipIfNoMLX
 class TestBartlettWindow(TestCase):
@@ -104,7 +109,7 @@ class TestBartlettWindow(TestCase):
                     torch_win.numpy(),
                     rtol=1e-4,
                     atol=1e-6,
-                    err_msg=f"Mismatch for M={M}, sym={sym}"
+                    err_msg=f"Mismatch for M={M}, sym={sym}",
                 )
 
 
@@ -153,7 +158,7 @@ class TestBlackmanWindow(TestCase):
                     torch_win.numpy(),
                     rtol=1e-4,
                     atol=1e-6,
-                    err_msg=f"Mismatch for M={M}, sym={sym}"
+                    err_msg=f"Mismatch for M={M}, sym={sym}",
                 )
 
 
@@ -194,7 +199,7 @@ class TestCosineWindow(TestCase):
                     torch_win.numpy(),
                     rtol=1e-4,
                     atol=1e-6,
-                    err_msg=f"Mismatch for M={M}, sym={sym}"
+                    err_msg=f"Mismatch for M={M}, sym={sym}",
                 )
 
 
@@ -224,11 +229,7 @@ class TestExponentialWindow(TestCase):
         win_default = windows.exponential(M)
         win_center = windows.exponential(M, center=31.5)
         # Should be similar (default is (M-1)/2 = 31.5)
-        np.testing.assert_allclose(
-            win_default.numpy(),
-            win_center.numpy(),
-            rtol=1e-5
-        )
+        np.testing.assert_allclose(win_default.numpy(), win_center.numpy(), rtol=1e-5)
 
         # Custom center should shift the peak
         win_left = windows.exponential(M, center=10.0)
@@ -243,10 +244,7 @@ class TestExponentialWindow(TestCase):
         win_small_tau = windows.exponential(M, tau=1.0)
         win_large_tau = windows.exponential(M, tau=10.0)
         # With larger tau, endpoints should be larger (slower decay)
-        self.assertGreater(
-            float(win_large_tau.numpy()[0]),
-            float(win_small_tau.numpy()[0])
-        )
+        self.assertGreater(float(win_large_tau.numpy()[0]), float(win_small_tau.numpy()[0]))
 
     @requires_torch
     def test_parity(self):
@@ -261,7 +259,7 @@ class TestExponentialWindow(TestCase):
                         torch_win.numpy(),
                         rtol=1e-4,
                         atol=1e-6,
-                        err_msg=f"Mismatch for M={M}, tau={tau}, sym={sym}"
+                        err_msg=f"Mismatch for M={M}, tau={tau}, sym={sym}",
                     )
 
 
@@ -297,10 +295,7 @@ class TestGaussianWindow(TestCase):
         win_small_std = windows.gaussian(M, std=3.0)
         win_large_std = windows.gaussian(M, std=15.0)
         # With larger std, endpoints should be larger (slower falloff)
-        self.assertGreater(
-            float(win_large_std.numpy()[0]),
-            float(win_small_std.numpy()[0])
-        )
+        self.assertGreater(float(win_large_std.numpy()[0]), float(win_small_std.numpy()[0]))
 
     def test_peak_at_center(self):
         """Test that peak is at center."""
@@ -322,7 +317,7 @@ class TestGaussianWindow(TestCase):
                         torch_win.numpy(),
                         rtol=1e-4,
                         atol=1e-6,
-                        err_msg=f"Mismatch for M={M}, std={std}, sym={sym}"
+                        err_msg=f"Mismatch for M={M}, std={std}, sym={sym}",
                     )
 
 
@@ -351,11 +346,7 @@ class TestGeneralCosineWindow(TestCase):
         # Hann window: a = [0.5, 0.5]
         win_gc = windows.general_cosine(M, a=[0.5, 0.5])
         win_hann = windows.hann(M)
-        np.testing.assert_allclose(
-            win_gc.numpy(),
-            win_hann.numpy(),
-            rtol=1e-5
-        )
+        np.testing.assert_allclose(win_gc.numpy(), win_hann.numpy(), rtol=1e-5)
 
     def test_blackman_coefficients(self):
         """Test that Blackman coefficients produce Blackman window."""
@@ -363,11 +354,7 @@ class TestGeneralCosineWindow(TestCase):
         # Blackman window: a = [0.42, 0.5, 0.08]
         win_gc = windows.general_cosine(M, a=[0.42, 0.5, 0.08])
         win_bm = windows.blackman(M)
-        np.testing.assert_allclose(
-            win_gc.numpy(),
-            win_bm.numpy(),
-            rtol=1e-5
-        )
+        np.testing.assert_allclose(win_gc.numpy(), win_bm.numpy(), rtol=1e-5)
 
     @requires_torch
     def test_parity(self):
@@ -388,7 +375,7 @@ class TestGeneralCosineWindow(TestCase):
                         torch_win.numpy(),
                         rtol=1e-4,
                         atol=1e-6,
-                        err_msg=f"Mismatch for M={M}, a={a}, sym={sym}"
+                        err_msg=f"Mismatch for M={M}, a={a}, sym={sym}",
                     )
 
 
@@ -416,22 +403,14 @@ class TestGeneralHammingWindow(TestCase):
         M = 64
         win_gh = windows.general_hamming(M, alpha=0.54)
         win_ham = windows.hamming(M)
-        np.testing.assert_allclose(
-            win_gh.numpy(),
-            win_ham.numpy(),
-            rtol=1e-5
-        )
+        np.testing.assert_allclose(win_gh.numpy(), win_ham.numpy(), rtol=1e-5)
 
     def test_alpha_05_is_hann(self):
         """Test alpha=0.5 produces Hann window."""
         M = 64
         win_gh = windows.general_hamming(M, alpha=0.5)
         win_hann = windows.hann(M)
-        np.testing.assert_allclose(
-            win_gh.numpy(),
-            win_hann.numpy(),
-            rtol=1e-5
-        )
+        np.testing.assert_allclose(win_gh.numpy(), win_hann.numpy(), rtol=1e-5)
 
     @requires_torch
     def test_parity(self):
@@ -446,7 +425,7 @@ class TestGeneralHammingWindow(TestCase):
                         torch_win.numpy(),
                         rtol=1e-4,
                         atol=1e-6,
-                        err_msg=f"Mismatch for M={M}, alpha={alpha}, sym={sym}"
+                        err_msg=f"Mismatch for M={M}, alpha={alpha}, sym={sym}",
                     )
 
 
@@ -495,7 +474,7 @@ class TestHammingWindow(TestCase):
                     torch_win.numpy(),
                     rtol=1e-4,
                     atol=1e-6,
-                    err_msg=f"Mismatch for M={M}, sym={sym}"
+                    err_msg=f"Mismatch for M={M}, sym={sym}",
                 )
 
 
@@ -544,7 +523,7 @@ class TestHannWindow(TestCase):
                     torch_win.numpy(),
                     rtol=1e-4,
                     atol=1e-6,
-                    err_msg=f"Mismatch for M={M}, sym={sym}"
+                    err_msg=f"Mismatch for M={M}, sym={sym}",
                 )
 
 
@@ -580,16 +559,9 @@ class TestKaiserWindow(TestCase):
         win_small_beta = windows.kaiser(M, beta=0.0)
         win_large_beta = windows.kaiser(M, beta=14.0)
         # With beta=0, should be rectangular (all ones)
-        np.testing.assert_allclose(
-            win_small_beta.numpy(),
-            np.ones(M),
-            rtol=1e-5
-        )
+        np.testing.assert_allclose(win_small_beta.numpy(), np.ones(M), rtol=1e-5)
         # With large beta, endpoints should be smaller
-        self.assertLess(
-            float(win_large_beta.numpy()[0]),
-            float(win_small_beta.numpy()[0])
-        )
+        self.assertLess(float(win_large_beta.numpy()[0]), float(win_small_beta.numpy()[0]))
 
     def test_various_betas(self):
         """Test various beta values."""
@@ -616,7 +588,7 @@ class TestKaiserWindow(TestCase):
                         torch_win.numpy(),
                         rtol=1e-4,  # Slightly relaxed due to I0 approximation
                         atol=1e-6,
-                        err_msg=f"Mismatch for M={M}, beta={beta}, sym={sym}"
+                        err_msg=f"Mismatch for M={M}, beta={beta}, sym={sym}",
                     )
 
 
@@ -666,13 +638,14 @@ class TestNuttallWindow(TestCase):
                     torch_win.numpy(),
                     rtol=1e-4,
                     atol=1e-6,
-                    err_msg=f"Mismatch for M={M}, sym={sym}"
+                    err_msg=f"Mismatch for M={M}, sym={sym}",
                 )
 
 
 # =============================================================================
 # Cross-Function Tests
 # =============================================================================
+
 
 @skipIfNoMLX
 class TestWindowProperties(TestCase):
@@ -682,17 +655,17 @@ class TestWindowProperties(TestCase):
         """Test all windows return correct shape."""
         M = 64
         window_funcs = [
-            ('bartlett', {}),
-            ('blackman', {}),
-            ('cosine', {}),
-            ('exponential', {}),
-            ('gaussian', {}),
-            ('general_cosine', {'a': [0.5, 0.5]}),
-            ('general_hamming', {}),
-            ('hamming', {}),
-            ('hann', {}),
-            ('kaiser', {}),
-            ('nuttall', {}),
+            ("bartlett", {}),
+            ("blackman", {}),
+            ("cosine", {}),
+            ("exponential", {}),
+            ("gaussian", {}),
+            ("general_cosine", {"a": [0.5, 0.5]}),
+            ("general_hamming", {}),
+            ("hamming", {}),
+            ("hann", {}),
+            ("kaiser", {}),
+            ("nuttall", {}),
         ]
         for name, kwargs in window_funcs:
             func = getattr(windows, name)
@@ -702,17 +675,17 @@ class TestWindowProperties(TestCase):
     def test_all_windows_empty_for_zero(self):
         """Test all windows return empty tensor for M=0."""
         window_funcs = [
-            ('bartlett', {}),
-            ('blackman', {}),
-            ('cosine', {}),
-            ('exponential', {}),
-            ('gaussian', {}),
-            ('general_cosine', {'a': [0.5, 0.5]}),
-            ('general_hamming', {}),
-            ('hamming', {}),
-            ('hann', {}),
-            ('kaiser', {}),
-            ('nuttall', {}),
+            ("bartlett", {}),
+            ("blackman", {}),
+            ("cosine", {}),
+            ("exponential", {}),
+            ("gaussian", {}),
+            ("general_cosine", {"a": [0.5, 0.5]}),
+            ("general_hamming", {}),
+            ("hamming", {}),
+            ("hann", {}),
+            ("kaiser", {}),
+            ("nuttall", {}),
         ]
         for name, kwargs in window_funcs:
             func = getattr(windows, name)
@@ -722,57 +695,48 @@ class TestWindowProperties(TestCase):
     def test_all_windows_one_for_single(self):
         """Test all windows return [1.0] for M=1."""
         window_funcs = [
-            ('bartlett', {}),
-            ('blackman', {}),
-            ('cosine', {}),
-            ('exponential', {}),
-            ('gaussian', {}),
-            ('general_cosine', {'a': [0.5, 0.5]}),
-            ('general_hamming', {}),
-            ('hamming', {}),
-            ('hann', {}),
-            ('kaiser', {}),
-            ('nuttall', {}),
+            ("bartlett", {}),
+            ("blackman", {}),
+            ("cosine", {}),
+            ("exponential", {}),
+            ("gaussian", {}),
+            ("general_cosine", {"a": [0.5, 0.5]}),
+            ("general_hamming", {}),
+            ("hamming", {}),
+            ("hann", {}),
+            ("kaiser", {}),
+            ("nuttall", {}),
         ]
         for name, kwargs in window_funcs:
             func = getattr(windows, name)
             win = func(1, **kwargs)
             self.assertEqual(win.shape, (1,), f"{name} should have shape (1,) for M=1")
             self.assertAlmostEqual(
-                float(win.numpy()[0]),
-                1.0,
-                places=5,
-                msg=f"{name} should return [1.0] for M=1"
+                float(win.numpy()[0]), 1.0, places=5, msg=f"{name} should return [1.0] for M=1"
             )
 
     def test_all_windows_bounded(self):
         """Test all window values are in [0, 1]."""
         M = 64
         window_funcs = [
-            ('bartlett', {}),
-            ('blackman', {}),
-            ('cosine', {}),
-            ('exponential', {}),
-            ('gaussian', {}),
-            ('general_cosine', {'a': [0.5, 0.5]}),
-            ('general_hamming', {}),
-            ('hamming', {}),
-            ('hann', {}),
-            ('kaiser', {}),
-            ('nuttall', {}),
+            ("bartlett", {}),
+            ("blackman", {}),
+            ("cosine", {}),
+            ("exponential", {}),
+            ("gaussian", {}),
+            ("general_cosine", {"a": [0.5, 0.5]}),
+            ("general_hamming", {}),
+            ("hamming", {}),
+            ("hann", {}),
+            ("kaiser", {}),
+            ("nuttall", {}),
         ]
         for name, kwargs in window_funcs:
             func = getattr(windows, name)
             win = func(M, **kwargs)
             arr = win.numpy()
-            self.assertTrue(
-                np.all(arr >= -1e-6),
-                f"{name} has negative values"
-            )
-            self.assertTrue(
-                np.all(arr <= 1.0 + 1e-6),
-                f"{name} has values > 1"
-            )
+            self.assertTrue(np.all(arr >= -1e-6), f"{name} has negative values")
+            self.assertTrue(np.all(arr <= 1.0 + 1e-6), f"{name} has values > 1")
 
 
 @skipIfNoMLX
@@ -781,47 +745,41 @@ class TestModuleExports(TestCase):
 
     def test_windows_submodule_exists(self):
         """Test windows submodule is accessible."""
-        self.assertTrue(hasattr(signal, 'windows'))
+        self.assertTrue(hasattr(signal, "windows"))
 
     def test_all_functions_exported(self):
         """Test all expected functions are exported."""
         expected_functions = [
-            'bartlett',
-            'blackman',
-            'cosine',
-            'exponential',
-            'gaussian',
-            'general_cosine',
-            'general_hamming',
-            'hamming',
-            'hann',
-            'kaiser',
-            'nuttall',
+            "bartlett",
+            "blackman",
+            "cosine",
+            "exponential",
+            "gaussian",
+            "general_cosine",
+            "general_hamming",
+            "hamming",
+            "hann",
+            "kaiser",
+            "nuttall",
         ]
         for name in expected_functions:
-            self.assertTrue(
-                hasattr(windows, name),
-                f"{name} not found in windows module"
-            )
-            self.assertTrue(
-                callable(getattr(windows, name)),
-                f"{name} is not callable"
-            )
+            self.assertTrue(hasattr(windows, name), f"{name} not found in windows module")
+            self.assertTrue(callable(getattr(windows, name)), f"{name} is not callable")
 
     def test_all_list(self):
         """Test __all__ contains expected functions."""
         expected = [
-            'bartlett',
-            'blackman',
-            'cosine',
-            'exponential',
-            'gaussian',
-            'general_cosine',
-            'general_hamming',
-            'hamming',
-            'hann',
-            'kaiser',
-            'nuttall',
+            "bartlett",
+            "blackman",
+            "cosine",
+            "exponential",
+            "gaussian",
+            "general_cosine",
+            "general_hamming",
+            "hamming",
+            "hann",
+            "kaiser",
+            "nuttall",
         ]
         for name in expected:
             self.assertIn(name, windows.__all__)
@@ -831,6 +789,7 @@ class TestModuleExports(TestCase):
 # Large Scale Parity Tests
 # =============================================================================
 
+
 @skipIfNoMLX
 class TestLargeScaleParity(TestCase):
     """Large scale parity tests for all windows."""
@@ -839,14 +798,14 @@ class TestLargeScaleParity(TestCase):
     def test_all_windows_parity_comprehensive(self):
         """Comprehensive parity test across all windows and sizes."""
         window_funcs = [
-            ('bartlett', {}),
-            ('blackman', {}),
-            ('cosine', {}),
-            ('exponential', {'tau': 1.0}),
-            ('gaussian', {'std': 7.0}),
-            ('hamming', {}),
-            ('hann', {}),
-            ('nuttall', {}),
+            ("bartlett", {}),
+            ("blackman", {}),
+            ("cosine", {}),
+            ("exponential", {"tau": 1.0}),
+            ("gaussian", {"std": 7.0}),
+            ("hamming", {}),
+            ("hann", {}),
+            ("nuttall", {}),
         ]
 
         sizes = [10, 64, 128, 256, 512, 1024]
@@ -864,7 +823,7 @@ class TestLargeScaleParity(TestCase):
                         torch_win.numpy(),
                         rtol=1e-4,
                         atol=1e-6,
-                        err_msg=f"Parity failed: {name}, M={M}, sym={sym}"
+                        err_msg=f"Parity failed: {name}, M={M}, sym={sym}",
                     )
 
     @requires_torch
@@ -884,7 +843,7 @@ class TestLargeScaleParity(TestCase):
                         torch_win.numpy(),
                         rtol=1e-4,  # Relaxed for I0 approximation
                         atol=1e-6,
-                        err_msg=f"Kaiser parity failed: M={M}, beta={beta}, sym={sym}"
+                        err_msg=f"Kaiser parity failed: M={M}, beta={beta}, sym={sym}",
                     )
 
     @requires_torch
@@ -910,7 +869,7 @@ class TestLargeScaleParity(TestCase):
                         torch_win.numpy(),
                         rtol=1e-4,
                         atol=1e-6,
-                        err_msg=f"general_cosine parity failed: M={M}, a={a}, sym={sym}"
+                        err_msg=f"general_cosine parity failed: M={M}, a={a}, sym={sym}",
                     )
 
     @requires_torch
@@ -929,9 +888,9 @@ class TestLargeScaleParity(TestCase):
                         torch_win.numpy(),
                         rtol=1e-4,
                         atol=1e-6,
-                        err_msg=f"general_hamming parity failed: M={M}, alpha={alpha}, sym={sym}"
+                        err_msg=f"general_hamming parity failed: M={M}, alpha={alpha}, sym={sym}",
                     )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

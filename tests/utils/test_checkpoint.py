@@ -14,11 +14,12 @@ import unittest
 import warnings
 
 import mlx.core as mx
+
 import flashlight
 from flashlight.utils.checkpoint import (
+    check_backward_validity,
     checkpoint,
     checkpoint_sequential,
-    check_backward_validity,
     noop_context_fn,
 )
 
@@ -28,6 +29,7 @@ class TestCheckpointBasic(unittest.TestCase):
 
     def test_checkpoint_simple_function(self):
         """Test checkpoint with a simple function."""
+
         def simple_fn(x):
             return x * 2 + 1
 
@@ -45,6 +47,7 @@ class TestCheckpointBasic(unittest.TestCase):
 
     def test_checkpoint_preserves_output(self):
         """Test that checkpoint output matches non-checkpointed output."""
+
         def fn(x):
             y = x * 2
             z = y + 3
@@ -62,14 +65,12 @@ class TestCheckpointBasic(unittest.TestCase):
         mx.eval(result_checkpointed._mlx_array)
 
         # Compare
-        for r, c in zip(
-            result_normal._mlx_array.tolist(),
-            result_checkpointed._mlx_array.tolist()
-        ):
+        for r, c in zip(result_normal._mlx_array.tolist(), result_checkpointed._mlx_array.tolist()):
             self.assertAlmostEqual(r, c, places=5)
 
     def test_checkpoint_with_no_grad_input(self):
         """Test checkpoint with input that doesn't require grad."""
+
         def fn(x):
             return x * 2
 
@@ -86,6 +87,7 @@ class TestCheckpointBasic(unittest.TestCase):
 
     def test_checkpoint_multiple_inputs(self):
         """Test checkpoint with multiple inputs."""
+
         def fn(a, b):
             return a * b + a
 
@@ -101,6 +103,7 @@ class TestCheckpointBasic(unittest.TestCase):
 
     def test_checkpoint_with_non_tensor_args(self):
         """Test checkpoint with mixed tensor and non-tensor args."""
+
         def fn(x, multiplier):
             return x * multiplier
 
@@ -118,6 +121,7 @@ class TestNonReentrantCheckpoint(unittest.TestCase):
 
     def test_non_reentrant_basic(self):
         """Test basic non-reentrant checkpoint."""
+
         def fn(x):
             return x * 2 + 1
 
@@ -131,6 +135,7 @@ class TestNonReentrantCheckpoint(unittest.TestCase):
 
     def test_non_reentrant_preserves_output(self):
         """Test that non-reentrant checkpoint output matches non-checkpointed output."""
+
         def fn(x):
             y = x * 2
             z = y + 3
@@ -148,14 +153,12 @@ class TestNonReentrantCheckpoint(unittest.TestCase):
         mx.eval(result_checkpointed._mlx_array)
 
         # Compare
-        for r, c in zip(
-            result_normal._mlx_array.tolist(),
-            result_checkpointed._mlx_array.tolist()
-        ):
+        for r, c in zip(result_normal._mlx_array.tolist(), result_checkpointed._mlx_array.tolist()):
             self.assertAlmostEqual(r, c, places=5)
 
     def test_non_reentrant_multiple_inputs(self):
         """Test non-reentrant checkpoint with multiple inputs."""
+
         def fn(a, b):
             return a * b + a
 
@@ -171,6 +174,7 @@ class TestNonReentrantCheckpoint(unittest.TestCase):
 
     def test_non_reentrant_with_non_tensor_args(self):
         """Test non-reentrant checkpoint with mixed tensor and non-tensor args."""
+
         def fn(x, multiplier):
             return x * multiplier
 
@@ -216,6 +220,7 @@ class TestContextFn(unittest.TestCase):
 
     def test_context_fn_with_noop(self):
         """Test that noop_context_fn works correctly."""
+
         def fn(x):
             return x * 2
 
@@ -229,6 +234,7 @@ class TestContextFn(unittest.TestCase):
 
     def test_context_fn_error_with_reentrant(self):
         """Test that context_fn with use_reentrant=True raises ValueError."""
+
         def custom_context_fn():
             return contextlib.nullcontext(), contextlib.nullcontext()
 
@@ -248,6 +254,7 @@ class TestDeterminismCheck(unittest.TestCase):
 
     def test_determinism_check_default(self):
         """Test that determinism_check='default' works for deterministic functions."""
+
         def fn(x):
             return x * 2 + 1
 
@@ -261,6 +268,7 @@ class TestDeterminismCheck(unittest.TestCase):
 
     def test_determinism_check_none(self):
         """Test that determinism_check='none' disables checking."""
+
         def fn(x):
             return x * 2
 
@@ -274,6 +282,7 @@ class TestDeterminismCheck(unittest.TestCase):
 
     def test_determinism_check_invalid_value(self):
         """Test that invalid determinism_check value raises ValueError."""
+
         def fn(x):
             return x * 2
 
@@ -286,6 +295,7 @@ class TestDeterminismCheck(unittest.TestCase):
 
     def test_determinism_check_error_with_reentrant(self):
         """Test that determinism_check with use_reentrant=True raises ValueError."""
+
         def fn(x):
             return x * 2
 
@@ -403,6 +413,7 @@ class TestCheckpointRNGPreservation(unittest.TestCase):
 
     def test_rng_preservation_enabled(self):
         """Test that RNG state is preserved when enabled."""
+
         def fn_with_random(x):
             noise = flashlight.randn(x.shape)
             return x + noise
@@ -419,6 +430,7 @@ class TestCheckpointRNGPreservation(unittest.TestCase):
 
     def test_rng_preservation_disabled(self):
         """Test checkpoint works with RNG preservation disabled."""
+
         def fn_with_random(x):
             noise = flashlight.randn(x.shape)
             return x + noise
@@ -431,6 +443,7 @@ class TestCheckpointRNGPreservation(unittest.TestCase):
 
     def test_rng_preservation_non_reentrant(self):
         """Test RNG preservation in non-reentrant mode."""
+
         def fn_with_random(x):
             noise = flashlight.randn(x.shape)
             return x + noise
@@ -449,6 +462,7 @@ class TestCheckpointWarnings(unittest.TestCase):
 
     def test_use_reentrant_none_warning(self):
         """Test FutureWarning when use_reentrant is not specified."""
+
         def fn(x):
             return x * 2
 
@@ -459,8 +473,7 @@ class TestCheckpointWarnings(unittest.TestCase):
             checkpoint(fn, x)  # use_reentrant not specified
             # Should warn about use_reentrant needing to be specified
             future_warnings = [
-                warning for warning in w
-                if issubclass(warning.category, FutureWarning)
+                warning for warning in w if issubclass(warning.category, FutureWarning)
             ]
             self.assertGreater(len(future_warnings), 0)
             self.assertIn("use_reentrant", str(future_warnings[0].message))
@@ -487,10 +500,7 @@ class TestCheckBackwardValidity(unittest.TestCase):
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             check_backward_validity((x,))
-            grad_warnings = [
-                warning for warning in w
-                if "requires_grad" in str(warning.message)
-            ]
+            grad_warnings = [warning for warning in w if "requires_grad" in str(warning.message)]
             self.assertEqual(len(grad_warnings), 0)
 
     def test_mixed_inputs(self):
@@ -502,10 +512,7 @@ class TestCheckBackwardValidity(unittest.TestCase):
             warnings.simplefilter("always")
             check_backward_validity((x, y))
             # Should not warn since at least one requires grad
-            grad_warnings = [
-                warning for warning in w
-                if "requires_grad" in str(warning.message)
-            ]
+            grad_warnings = [warning for warning in w if "requires_grad" in str(warning.message)]
             self.assertEqual(len(grad_warnings), 0)
 
 

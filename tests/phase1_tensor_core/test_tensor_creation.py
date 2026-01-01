@@ -5,15 +5,18 @@ Tests tensor creation operations and factory functions.
 """
 
 import sys
-sys.path.insert(0, '../..')
+
+sys.path.insert(0, "../..")
 
 import unittest
+
 import numpy as np
 
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
     import flashlight
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -351,7 +354,7 @@ class TestMeshgrid(TestCase):
         x = flashlight.arange(3)
         y = flashlight.arange(4)
         # Default is 'ij' indexing in flashlight
-        X, Y = flashlight.meshgrid(x, y, indexing='ij')
+        X, Y = flashlight.meshgrid(x, y, indexing="ij")
         self.assert_shape_equal(X.shape, (3, 4))
         self.assert_shape_equal(Y.shape, (3, 4))
 
@@ -359,14 +362,14 @@ class TestMeshgrid(TestCase):
         """Test meshgrid with xy indexing."""
         x = flashlight.tensor([1, 2, 3])
         y = flashlight.tensor([4, 5])
-        X, Y = flashlight.meshgrid(x, y, indexing='xy')
+        X, Y = flashlight.meshgrid(x, y, indexing="xy")
         self.assert_shape_equal(X.shape, (2, 3))
 
     def test_meshgrid_indexing_ij(self):
         """Test meshgrid with ij indexing."""
         x = flashlight.tensor([1, 2, 3])
         y = flashlight.tensor([4, 5])
-        X, Y = flashlight.meshgrid(x, y, indexing='ij')
+        X, Y = flashlight.meshgrid(x, y, indexing="ij")
         self.assert_shape_equal(X.shape, (3, 2))
 
 
@@ -516,6 +519,7 @@ class TestPoisson(TestCase):
         self.assertLess(abs(mean - 3.0), 1.0)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from tests.common_utils import run_tests
+
     run_tests()

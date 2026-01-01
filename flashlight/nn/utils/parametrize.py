@@ -5,12 +5,17 @@ PyTorch-compatible torch.nn.utils.parametrize module.
 Provides utilities for module parametrization.
 """
 
-import warnings
-from typing import Optional, Union, Sequence
-from contextlib import contextmanager
+from __future__ import annotations
 
-from ..module import Module
+import warnings
+from contextlib import contextmanager
+from typing import TYPE_CHECKING, Optional, Sequence, Union
+
 from ...tensor import Tensor
+from ..module import Module
+
+if TYPE_CHECKING:
+    from ..parameter import Parameter
 
 
 class ParametrizationList(Module):
@@ -39,7 +44,7 @@ class ParametrizationList(Module):
     def right_inverse(self, x):
         """Compute the right inverse through all parametrizations."""
         for module in reversed(self._modules_list):
-            if hasattr(module, 'right_inverse'):
+            if hasattr(module, "right_inverse"):
                 x = module.right_inverse(x)
         return x
 
@@ -55,7 +60,7 @@ def is_parametrized(module: Module, tensor_name: Optional[str] = None) -> bool:
     Returns:
         True if the module (or tensor) is parametrized
     """
-    if not hasattr(module, 'parametrizations'):
+    if not hasattr(module, "parametrizations"):
         return False
 
     if tensor_name is None:
@@ -84,7 +89,7 @@ def register_parametrization(
     Returns:
         The module with parametrization registered
     """
-    if not hasattr(module, 'parametrizations'):
+    if not hasattr(module, "parametrizations"):
         module.parametrizations = {}
 
     if tensor_name not in module.parametrizations:
@@ -116,7 +121,7 @@ def remove_parametrizations(
     Returns:
         The module with parametrizations removed
     """
-    if not hasattr(module, 'parametrizations'):
+    if not hasattr(module, "parametrizations"):
         return module
 
     if tensor_name not in module.parametrizations:
@@ -135,7 +140,7 @@ def remove_parametrizations(
     del module.parametrizations[tensor_name]
 
     if len(module.parametrizations) == 0:
-        delattr(module, 'parametrizations')
+        delattr(module, "parametrizations")
 
     return module
 
@@ -179,12 +184,12 @@ def transfer_parametrizations_and_params(
     Returns:
         The target module with transferred parametrizations
     """
-    if not hasattr(from_module, 'parametrizations'):
+    if not hasattr(from_module, "parametrizations"):
         return to_module
 
     if tensor_name is not None:
         if tensor_name in from_module.parametrizations:
-            if not hasattr(to_module, 'parametrizations'):
+            if not hasattr(to_module, "parametrizations"):
                 to_module.parametrizations = {}
             to_module.parametrizations[tensor_name] = from_module.parametrizations[tensor_name]
     else:
@@ -194,11 +199,11 @@ def transfer_parametrizations_and_params(
 
 
 __all__ = [
-    'ParametrizationList',
-    'is_parametrized',
-    'register_parametrization',
-    'remove_parametrizations',
-    'cached',
-    'type_before_parametrizations',
-    'transfer_parametrizations_and_params',
+    "ParametrizationList",
+    "is_parametrized",
+    "register_parametrization",
+    "remove_parametrizations",
+    "cached",
+    "type_before_parametrizations",
+    "transfer_parametrizations_and_params",
 ]

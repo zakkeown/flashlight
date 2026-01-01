@@ -11,17 +11,23 @@ Reference:
 - pytorch-mlx-porting-docs/02-OPERATORS/operator-reference/shape-manipulation.md
 """
 
-from typing import Union, Tuple, Sequence, Optional
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Optional, Sequence, Tuple, Union
+
+if TYPE_CHECKING:
+    from .tensor import Tensor
 
 try:
     import mlx.core as mx
+
     MLX_AVAILABLE = True
 except ImportError:
     MLX_AVAILABLE = False
     mx = None
 
 
-def reshape(input: 'Tensor', shape: Union[Tuple[int, ...], Sequence[int]]) -> 'Tensor':
+def reshape(input: "Tensor", shape: Union[Tuple[int, ...], Sequence[int]]) -> "Tensor":
     """
     Reshape tensor to new shape.
 
@@ -50,9 +56,11 @@ def reshape(input: 'Tensor', shape: Union[Tuple[int, ...], Sequence[int]]) -> 'T
 
     # Attach gradient function if needed
     from .autograd.context import is_grad_enabled
+
     if is_grad_enabled() and input.requires_grad:
         result.requires_grad = True
         from .autograd.function import ViewBackward
+
         grad_fn = ViewBackward(input)
         grad_fn.output_tensor = result
         result._grad_fn = grad_fn
@@ -60,7 +68,7 @@ def reshape(input: 'Tensor', shape: Union[Tuple[int, ...], Sequence[int]]) -> 'T
     return result
 
 
-def view(input: 'Tensor', *shape: int) -> 'Tensor':
+def view(input: "Tensor", *shape: int) -> "Tensor":
     """
     View tensor with new shape (PyTorch alias for reshape).
 
@@ -82,7 +90,7 @@ def view(input: 'Tensor', *shape: int) -> 'Tensor':
     return reshape(input, shape)
 
 
-def transpose(input: 'Tensor', dim0: int, dim1: int) -> 'Tensor':
+def transpose(input: "Tensor", dim0: int, dim1: int) -> "Tensor":
     """
     Transpose two dimensions of a tensor.
 
@@ -116,9 +124,11 @@ def transpose(input: 'Tensor', dim0: int, dim1: int) -> 'Tensor':
 
     # Attach gradient function if needed
     from .autograd.context import is_grad_enabled
+
     if is_grad_enabled() and input.requires_grad:
         result.requires_grad = True
         from .autograd.function import TransposeBackward
+
         grad_fn = TransposeBackward(input, dim0, dim1)
         grad_fn.output_tensor = result
         result._grad_fn = grad_fn
@@ -126,7 +136,7 @@ def transpose(input: 'Tensor', dim0: int, dim1: int) -> 'Tensor':
     return result
 
 
-def permute(input: 'Tensor', *dims: int) -> 'Tensor':
+def permute(input: "Tensor", *dims: int) -> "Tensor":
     """
     Permute dimensions of a tensor.
 
@@ -159,7 +169,7 @@ def permute(input: 'Tensor', *dims: int) -> 'Tensor':
     return result
 
 
-def squeeze(input: 'Tensor', dim: Optional[int] = None) -> 'Tensor':
+def squeeze(input: "Tensor", dim: Optional[int] = None) -> "Tensor":
     """
     Remove dimensions of size 1.
 
@@ -197,7 +207,7 @@ def squeeze(input: 'Tensor', dim: Optional[int] = None) -> 'Tensor':
     return result
 
 
-def unsqueeze(input: 'Tensor', dim: int) -> 'Tensor':
+def unsqueeze(input: "Tensor", dim: int) -> "Tensor":
     """
     Add a dimension of size 1.
 
@@ -227,11 +237,7 @@ def unsqueeze(input: 'Tensor', dim: int) -> 'Tensor':
     return result
 
 
-def flatten(
-    input: 'Tensor',
-    start_dim: int = 0,
-    end_dim: int = -1
-) -> 'Tensor':
+def flatten(input: "Tensor", start_dim: int = 0, end_dim: int = -1) -> "Tensor":
     """
     Flatten dimensions from start_dim to end_dim.
 
@@ -271,7 +277,7 @@ def flatten(
     new_shape.append(flat_dim)
 
     # Add remaining dimensions
-    new_shape.extend(input.shape[end_dim + 1:])
+    new_shape.extend(input.shape[end_dim + 1 :])
 
     mlx_array = mx.reshape(input._mlx_array, new_shape)
     result = Tensor._from_mlx_array(mlx_array, requires_grad=input.requires_grad)
@@ -282,7 +288,7 @@ def flatten(
     return result
 
 
-def contiguous(input: 'Tensor') -> 'Tensor':
+def contiguous(input: "Tensor") -> "Tensor":
     """
     Return a contiguous tensor (no-op in MLX).
 
@@ -306,12 +312,12 @@ def contiguous(input: 'Tensor') -> 'Tensor':
 
 
 __all__ = [
-    'reshape',
-    'view',
-    'transpose',
-    'permute',
-    'squeeze',
-    'unsqueeze',
-    'flatten',
-    'contiguous',
+    "reshape",
+    "view",
+    "transpose",
+    "permute",
+    "squeeze",
+    "unsqueeze",
+    "flatten",
+    "contiguous",
 ]

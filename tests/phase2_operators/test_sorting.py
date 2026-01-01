@@ -5,21 +5,25 @@ Tests sorting operations (sort, argsort, topk, kthvalue, msort)
 """
 
 import sys
-sys.path.insert(0, '../..')
+
+sys.path.insert(0, "../..")
 
 import unittest
+
 import numpy as np
 
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
     import flashlight
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
 
 try:
     import torch
+
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
@@ -72,9 +76,7 @@ class TestSort(TestCase):
         mlx_vals, mlx_idx = flashlight.sort(mlx_x, dim=-1)
         torch_vals, torch_idx = torch.sort(torch_x, dim=-1)
 
-        np.testing.assert_allclose(
-            mlx_vals.numpy(), torch_vals.numpy(), rtol=1e-5, atol=1e-5
-        )
+        np.testing.assert_allclose(mlx_vals.numpy(), torch_vals.numpy(), rtol=1e-5, atol=1e-5)
 
 
 @skipIfNoMLX
@@ -150,9 +152,7 @@ class TestTopk(TestCase):
         mlx_vals, mlx_idx = flashlight.topk(mlx_x, k=3, dim=-1)
         torch_vals, torch_idx = torch.topk(torch_x, k=3, dim=-1)
 
-        np.testing.assert_allclose(
-            mlx_vals.numpy(), torch_vals.numpy(), rtol=1e-5, atol=1e-5
-        )
+        np.testing.assert_allclose(mlx_vals.numpy(), torch_vals.numpy(), rtol=1e-5, atol=1e-5)
 
 
 @skipIfNoMLX
@@ -186,5 +186,5 @@ class TestMsort(TestCase):
         np.testing.assert_array_equal(result.numpy(), expected)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

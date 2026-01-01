@@ -7,14 +7,14 @@ Tests model weight downloading and caching functionality.
 import os
 import tempfile
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from flashlight.utils.model_zoo import (
-    get_dir,
-    set_dir,
-    load_url,
-    download_url_to_file,
     _download_url_to_file,
+    download_url_to_file,
+    get_dir,
+    load_url,
+    set_dir,
 )
 
 
@@ -166,6 +166,7 @@ class TestLoadUrl(unittest.TestCase):
 
             # Create a valid safetensors-like file
             import struct
+
             header = b'{"test": {"dtype": "F32", "shape": [2], "data_offsets": [0, 8]}}'
             header_size = len(header)
             data = struct.pack("<ff", 1.0, 2.0)

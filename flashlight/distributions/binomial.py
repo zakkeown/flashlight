@@ -1,21 +1,24 @@
 """Binomial Distribution"""
 
 from typing import Optional, Tuple, Union
+
 import mlx.core as mx
 
-from ..tensor import Tensor
 from ..ops.special import lgamma
-from .distribution import Distribution
+from ..tensor import Tensor
 from . import constraints
 from ._constants import PROB_EPSILON, xlogy
+from .distribution import Distribution
 
 
 class Binomial(Distribution):
     """Binomial distribution."""
 
-    arg_constraints = {'total_count': constraints.nonnegative_integer,
-                      'probs': constraints.unit_interval,
-                      'logits': constraints.real}
+    arg_constraints = {
+        "total_count": constraints.nonnegative_integer,
+        "probs": constraints.unit_interval,
+        "logits": constraints.real,
+    }
 
     def __init__(
         self,
@@ -27,7 +30,9 @@ class Binomial(Distribution):
         if (probs is None) == (logits is None):
             raise ValueError("Exactly one of probs or logits must be specified")
 
-        self.total_count = total_count._mlx_array if isinstance(total_count, Tensor) else mx.array(total_count)
+        self.total_count = (
+            total_count._mlx_array if isinstance(total_count, Tensor) else mx.array(total_count)
+        )
         if probs is not None:
             self.probs = probs._mlx_array if isinstance(probs, Tensor) else mx.array(probs)
             self.logits = mx.log(self.probs) - mx.log(1 - self.probs)
@@ -89,7 +94,9 @@ class Binomial(Distribution):
 
         return Tensor(samples)
 
-    def _sample_inverse_transform(self, n: mx.array, p: mx.array, shape: Tuple[int, ...]) -> mx.array:
+    def _sample_inverse_transform(
+        self, n: mx.array, p: mx.array, shape: Tuple[int, ...]
+    ) -> mx.array:
         """Inverse transform sampling using geometric skipping.
 
         More efficient than direct Bernoulli sum for medium n.
@@ -105,7 +112,7 @@ class Binomial(Distribution):
         for i in range(max_n):
             u = mx.random.uniform(shape=shape)
             # Only count if we haven't exceeded n
-            mask = (mx.array(float(i)) < n)
+            mask = mx.array(float(i)) < n
             samples = samples + mx.where(mask & (u < p), 1.0, 0.0)
 
         return samples
@@ -192,10 +199,15 @@ class Binomial(Distribution):
             # Stirling-based correction factor
             # For k near m, the correction is small
             delta = (k - mu) / sigma
-            correction = mx.exp(-delta * delta / 2.0 * (
-                delta * delta / (12.0 * npq) -
-                delta * delta * delta * delta / (360.0 * npq * npq)
-            ))
+            correction = mx.exp(
+                -delta
+                * delta
+                / 2.0
+                * (
+                    delta * delta / (12.0 * npq)
+                    - delta * delta * delta * delta / (360.0 * npq * npq)
+                )
+            )
 
             # Accept with probability proportional to correction
             accept = in_range & (u < mx.minimum(1.0, correction)) & (~accepted)
@@ -223,4 +235,4 @@ class Binomial(Distribution):
         return Tensor(log_comb + log_p_term + log_1mp_term)
 
 
-__all__ = ['Binomial']
+__all__ = ["Binomial"]

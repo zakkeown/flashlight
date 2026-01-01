@@ -16,9 +16,9 @@ Usage:
     # Output automatically converted to NCHW when leaving context
 """
 
-from enum import Enum, auto
-from typing import Optional, TYPE_CHECKING
 import threading
+from enum import Enum, auto
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from .tensor import Tensor
@@ -26,12 +26,13 @@ if TYPE_CHECKING:
 
 class Layout(Enum):
     """Memory layout for tensor data."""
-    NCHW = auto()    # PyTorch default: [N, C, H, W] - channels first (2D)
-    NHWC = auto()    # MLX native: [N, H, W, C] - channels last (2D)
-    NCL = auto()     # 1D channels-first: [N, C, L]
-    NLC = auto()     # 1D channels-last: [N, L, C]
-    NCDHW = auto()   # 3D channels-first: [N, C, D, H, W]
-    NDHWC = auto()   # 3D channels-last: [N, D, H, W, C]
+
+    NCHW = auto()  # PyTorch default: [N, C, H, W] - channels first (2D)
+    NHWC = auto()  # MLX native: [N, H, W, C] - channels last (2D)
+    NCL = auto()  # 1D channels-first: [N, C, L]
+    NLC = auto()  # 1D channels-last: [N, L, C]
+    NCDHW = auto()  # 3D channels-first: [N, C, D, H, W]
+    NDHWC = auto()  # 3D channels-last: [N, D, H, W, C]
     CONTIGUOUS = auto()  # Non-spatial tensor (no specific layout)
 
 
@@ -41,7 +42,7 @@ _layout_mode = threading.local()
 
 def is_nhwc_mode() -> bool:
     """Check if NHWC-native mode is enabled."""
-    return getattr(_layout_mode, 'enabled', False)
+    return getattr(_layout_mode, "enabled", False)
 
 
 def _set_nhwc_mode(mode: bool) -> bool:
@@ -93,9 +94,11 @@ class nhwc_mode:
 
     def __call__(self, func):
         """Allow using as a decorator."""
+
         def wrapper(*args, **kwargs):
             with self:
                 return func(*args, **kwargs)
+
         return wrapper
 
 
@@ -141,7 +144,7 @@ _LAYOUT_TRANSPOSE = {
 }
 
 
-def infer_layout(tensor: 'Tensor') -> Layout:
+def infer_layout(tensor: "Tensor") -> Layout:
     """
     Infer the layout of a tensor based on its explicit _layout attribute.
 
@@ -156,7 +159,7 @@ def infer_layout(tensor: 'Tensor') -> Layout:
         The inferred Layout enum value
     """
     # If tensor has explicit layout, use it
-    if hasattr(tensor, '_layout') and tensor._layout is not None:
+    if hasattr(tensor, "_layout") and tensor._layout is not None:
         return tensor._layout
 
     # Default: assume NCHW format (PyTorch convention)
@@ -172,7 +175,7 @@ def infer_layout(tensor: 'Tensor') -> Layout:
     return Layout.CONTIGUOUS
 
 
-def convert_layout(tensor: 'Tensor', target_layout: Layout) -> 'Tensor':
+def convert_layout(tensor: "Tensor", target_layout: Layout) -> "Tensor":
     """
     Convert tensor to target layout.
 
@@ -184,6 +187,7 @@ def convert_layout(tensor: 'Tensor', target_layout: Layout) -> 'Tensor':
         Tensor in target layout (same tensor if already in correct layout)
     """
     import mlx.core as mx
+
     from .tensor import Tensor
 
     current = infer_layout(tensor)
@@ -208,7 +212,7 @@ def convert_layout(tensor: 'Tensor', target_layout: Layout) -> 'Tensor':
     return result
 
 
-def ensure_layout(tensor: 'Tensor', layout: Layout) -> 'Tensor':
+def ensure_layout(tensor: "Tensor", layout: Layout) -> "Tensor":
     """
     Ensure tensor has specified layout, converting if necessary.
 
@@ -225,7 +229,7 @@ def ensure_layout(tensor: 'Tensor', layout: Layout) -> 'Tensor':
     return convert_layout(tensor, layout)
 
 
-def ensure_nhwc(tensor: 'Tensor') -> 'Tensor':
+def ensure_nhwc(tensor: "Tensor") -> "Tensor":
     """
     Ensure 4D tensor is in NHWC layout.
 
@@ -238,7 +242,7 @@ def ensure_nhwc(tensor: 'Tensor') -> 'Tensor':
     return ensure_layout(tensor, Layout.NHWC)
 
 
-def ensure_nchw(tensor: 'Tensor') -> 'Tensor':
+def ensure_nchw(tensor: "Tensor") -> "Tensor":
     """
     Ensure 4D tensor is in NCHW layout.
 

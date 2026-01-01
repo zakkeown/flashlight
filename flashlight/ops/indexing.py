@@ -5,7 +5,8 @@ Implements PyTorch-compatible indexing operations with MLX backend.
 Optimized to use native MLX operations where possible.
 """
 
-from typing import Optional, Union, Tuple
+from typing import Optional, Tuple, Union
+
 import mlx.core as mx
 
 from ..tensor import Tensor
@@ -260,7 +261,9 @@ def masked_select(input: Tensor, mask: Tensor) -> Tensor:
     return result
 
 
-def index_add(input: Tensor, dim: int, index: Tensor, source: Tensor, *, alpha: float = 1) -> Tensor:
+def index_add(
+    input: Tensor, dim: int, index: Tensor, source: Tensor, *, alpha: float = 1
+) -> Tensor:
     """
     Add values from source to input at indices along a dimension.
 
@@ -351,7 +354,9 @@ def nonzero(input: Tensor, as_tuple: bool = False) -> Union[Tensor, tuple]:
 
         if num_nonzero == 0:
             # No non-zero elements
-            return tuple(Tensor._from_mlx_array(mx.array([], dtype=mx.int32)) for _ in range(input.ndim))
+            return tuple(
+                Tensor._from_mlx_array(mx.array([], dtype=mx.int32)) for _ in range(input.ndim)
+            )
 
         # Get flat indices
         flat_indices = mx.arange(flat_mask.shape[0])
@@ -470,6 +475,7 @@ def put(input: Tensor, index: Tensor, source: Tensor, accumulate: bool = False) 
 # =============================================================================
 # Extended Indexing Operations (Sprint 5)
 # =============================================================================
+
 
 def index_fill(input: Tensor, dim: int, index: Tensor, value: float) -> Tensor:
     """
@@ -590,7 +596,9 @@ def index_copy(input: Tensor, dim: int, index: Tensor, source: Tensor) -> Tensor
     return result
 
 
-def index_put(input: Tensor, indices: tuple, values: Union[Tensor, float], accumulate: bool = False) -> Tensor:
+def index_put(
+    input: Tensor, indices: tuple, values: Union[Tensor, float], accumulate: bool = False
+) -> Tensor:
     """
     Put values into input at indices.
 
@@ -716,7 +724,9 @@ def argwhere(input: Tensor) -> Tensor:
     return nonzero(input, as_tuple=False)
 
 
-def isin(elements: Tensor, test_elements: Tensor, assume_unique: bool = False, invert: bool = False) -> Tensor:
+def isin(
+    elements: Tensor, test_elements: Tensor, assume_unique: bool = False, invert: bool = False
+) -> Tensor:
     """
     Test if elements are contained in test_elements.
 
@@ -754,7 +764,9 @@ def isin(elements: Tensor, test_elements: Tensor, assume_unique: bool = False, i
     return result
 
 
-def diagonal_scatter(input: Tensor, src: Tensor, offset: int = 0, dim1: int = 0, dim2: int = 1) -> Tensor:
+def diagonal_scatter(
+    input: Tensor, src: Tensor, offset: int = 0, dim1: int = 0, dim2: int = 1
+) -> Tensor:
     """
     Embed values from src into the diagonals of input.
 
@@ -805,7 +817,9 @@ def diagonal_scatter(input: Tensor, src: Tensor, offset: int = 0, dim1: int = 0,
 
     if ndim == 2:
         # Simple 2D case
-        result_arr = input._mlx_array.at[row_indices.astype(mx.int32), col_indices.astype(mx.int32)].add(
+        result_arr = input._mlx_array.at[
+            row_indices.astype(mx.int32), col_indices.astype(mx.int32)
+        ].add(
             src_arr - input._mlx_array[row_indices.astype(mx.int32), col_indices.astype(mx.int32)]
         )
     else:
@@ -858,8 +872,14 @@ def diagonal_scatter(input: Tensor, src: Tensor, offset: int = 0, dim1: int = 0,
     return result
 
 
-def slice_scatter(input: Tensor, src: Tensor, dim: int = 0, start: Optional[int] = None,
-                  end: Optional[int] = None, step: int = 1) -> Tensor:
+def slice_scatter(
+    input: Tensor,
+    src: Tensor,
+    dim: int = 0,
+    start: Optional[int] = None,
+    end: Optional[int] = None,
+    step: int = 1,
+) -> Tensor:
     """
     Embed values from src into input at a slice.
 
@@ -990,8 +1010,9 @@ def select_scatter(input: Tensor, src: Tensor, dim: int, index: int) -> Tensor:
     return result
 
 
-def scatter_reduce(input: Tensor, dim: int, index: Tensor, src: Tensor,
-                   reduce: str, include_self: bool = True) -> Tensor:
+def scatter_reduce(
+    input: Tensor, dim: int, index: Tensor, src: Tensor, reduce: str, include_self: bool = True
+) -> Tensor:
     """
     Scatter and reduce values from src into input.
 
@@ -1019,23 +1040,23 @@ def scatter_reduce(input: Tensor, dim: int, index: Tensor, src: Tensor,
     if include_self:
         result_arr = input._mlx_array
     else:
-        if reduce == 'sum' or reduce == 'mean':
+        if reduce == "sum" or reduce == "mean":
             result_arr = mx.zeros(input.shape, dtype=input._mlx_array.dtype)
-        elif reduce == 'prod':
+        elif reduce == "prod":
             result_arr = mx.ones(input.shape, dtype=input._mlx_array.dtype)
-        elif reduce == 'amax':
-            result_arr = mx.full(input.shape, float('-inf'), dtype=input._mlx_array.dtype)
-        elif reduce == 'amin':
-            result_arr = mx.full(input.shape, float('inf'), dtype=input._mlx_array.dtype)
+        elif reduce == "amax":
+            result_arr = mx.full(input.shape, float("-inf"), dtype=input._mlx_array.dtype)
+        elif reduce == "amin":
+            result_arr = mx.full(input.shape, float("inf"), dtype=input._mlx_array.dtype)
         else:
             result_arr = input._mlx_array
 
     # Apply reduction using MLX .at[] operations
     src_flat = src._mlx_array.reshape(-1)
 
-    if reduce == 'sum' or reduce == 'mean':
+    if reduce == "sum" or reduce == "mean":
         result_arr = result_arr.at[indices].add(src_flat)
-        if reduce == 'mean':
+        if reduce == "mean":
             # Count occurrences for mean calculation
             ones = mx.ones_like(src_flat)
             count = mx.zeros(input.shape, dtype=input._mlx_array.dtype)
@@ -1045,11 +1066,11 @@ def scatter_reduce(input: Tensor, dim: int, index: Tensor, src: Tensor,
             # Avoid division by zero
             count = mx.maximum(count, mx.ones_like(count))
             result_arr = result_arr / count
-    elif reduce == 'prod':
+    elif reduce == "prod":
         result_arr = result_arr.at[indices].multiply(src_flat)
-    elif reduce == 'amax':
+    elif reduce == "amax":
         result_arr = result_arr.at[indices].maximum(src_flat)
-    elif reduce == 'amin':
+    elif reduce == "amin":
         result_arr = result_arr.at[indices].minimum(src_flat)
 
     result = Tensor._from_mlx_array(result_arr)

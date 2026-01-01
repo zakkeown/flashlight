@@ -6,11 +6,19 @@ These modules allow creating layers without specifying input dimensions upfront.
 """
 
 from typing import Any, Optional, Tuple, Union
+
 from ..module import Module
 from ..parameter import UninitializedParameter
-from .linear import Linear
 from .conv import Conv1d, Conv2d, Conv3d, ConvTranspose1d, ConvTranspose2d, ConvTranspose3d
-from .normalization import BatchNorm1d, BatchNorm2d, BatchNorm3d, InstanceNorm1d, InstanceNorm2d, InstanceNorm3d
+from .linear import Linear
+from .normalization import (
+    BatchNorm1d,
+    BatchNorm2d,
+    BatchNorm3d,
+    InstanceNorm1d,
+    InstanceNorm2d,
+    InstanceNorm3d,
+)
 
 
 class LazyModuleMixin:
@@ -58,8 +66,8 @@ class LazyLinear(LazyModuleMixin, Module):
     @property
     def in_features(self):
         """Return in_features if initialized, else None."""
-        if self._initialized and '_linear' in self._modules:
-            return self._modules['_linear'].in_features
+        if self._initialized and "_linear" in self._modules:
+            return self._modules["_linear"].in_features
         return None
 
     def _initialize(self, input):
@@ -71,7 +79,7 @@ class LazyLinear(LazyModuleMixin, Module):
     def forward(self, input):
         if not self._initialized:
             self._initialize(input)
-        return self._modules['_linear'](input)
+        return self._modules["_linear"](input)
 
 
 class LazyConv1d(LazyModuleMixin, Module):
@@ -86,7 +94,7 @@ class LazyConv1d(LazyModuleMixin, Module):
         dilation: int = 1,
         groups: int = 1,
         bias: bool = True,
-        padding_mode: str = 'zeros',
+        padding_mode: str = "zeros",
         device=None,
         dtype=None,
     ):
@@ -105,23 +113,29 @@ class LazyConv1d(LazyModuleMixin, Module):
     @property
     def in_channels(self):
         """Return in_channels if initialized, else None."""
-        if self._initialized and '_conv' in self._modules:
-            return self._modules['_conv'].in_channels
+        if self._initialized and "_conv" in self._modules:
+            return self._modules["_conv"].in_channels
         return None
 
     def _initialize(self, input):
         in_channels = input.shape[1]  # NCHW format
         self._conv = Conv1d(
-            in_channels, self.out_channels, self.kernel_size,
-            stride=self.stride, padding=self.padding, dilation=self.dilation,
-            groups=self.groups, bias=self.use_bias, padding_mode=self.padding_mode
+            in_channels,
+            self.out_channels,
+            self.kernel_size,
+            stride=self.stride,
+            padding=self.padding,
+            dilation=self.dilation,
+            groups=self.groups,
+            bias=self.use_bias,
+            padding_mode=self.padding_mode,
         )
         self._initialized = True
 
     def forward(self, input):
         if not self._initialized:
             self._initialize(input)
-        return self._modules['_conv'](input)
+        return self._modules["_conv"](input)
 
 
 class LazyConv2d(LazyModuleMixin, Module):
@@ -136,7 +150,7 @@ class LazyConv2d(LazyModuleMixin, Module):
         dilation: Union[int, Tuple[int, int]] = 1,
         groups: int = 1,
         bias: bool = True,
-        padding_mode: str = 'zeros',
+        padding_mode: str = "zeros",
         device=None,
         dtype=None,
     ):
@@ -155,23 +169,29 @@ class LazyConv2d(LazyModuleMixin, Module):
     @property
     def in_channels(self):
         """Return in_channels if initialized, else None."""
-        if self._initialized and '_conv' in self._modules:
-            return self._modules['_conv'].in_channels
+        if self._initialized and "_conv" in self._modules:
+            return self._modules["_conv"].in_channels
         return None
 
     def _initialize(self, input):
         in_channels = input.shape[1]  # NCHW format
         self._conv = Conv2d(
-            in_channels, self.out_channels, self.kernel_size,
-            stride=self.stride, padding=self.padding, dilation=self.dilation,
-            groups=self.groups, bias=self.use_bias, padding_mode=self.padding_mode
+            in_channels,
+            self.out_channels,
+            self.kernel_size,
+            stride=self.stride,
+            padding=self.padding,
+            dilation=self.dilation,
+            groups=self.groups,
+            bias=self.use_bias,
+            padding_mode=self.padding_mode,
         )
         self._initialized = True
 
     def forward(self, input):
         if not self._initialized:
             self._initialize(input)
-        return self._modules['_conv'](input)
+        return self._modules["_conv"](input)
 
 
 class LazyConv3d(LazyModuleMixin, Module):
@@ -186,7 +206,7 @@ class LazyConv3d(LazyModuleMixin, Module):
         dilation: Union[int, Tuple[int, int, int]] = 1,
         groups: int = 1,
         bias: bool = True,
-        padding_mode: str = 'zeros',
+        padding_mode: str = "zeros",
         device=None,
         dtype=None,
     ):
@@ -205,23 +225,29 @@ class LazyConv3d(LazyModuleMixin, Module):
     @property
     def in_channels(self):
         """Return in_channels if initialized, else None."""
-        if self._initialized and '_conv' in self._modules:
-            return self._modules['_conv'].in_channels
+        if self._initialized and "_conv" in self._modules:
+            return self._modules["_conv"].in_channels
         return None
 
     def _initialize(self, input):
         in_channels = input.shape[1]  # NCDHW format
         self._conv = Conv3d(
-            in_channels, self.out_channels, self.kernel_size,
-            stride=self.stride, padding=self.padding, dilation=self.dilation,
-            groups=self.groups, bias=self.use_bias, padding_mode=self.padding_mode
+            in_channels,
+            self.out_channels,
+            self.kernel_size,
+            stride=self.stride,
+            padding=self.padding,
+            dilation=self.dilation,
+            groups=self.groups,
+            bias=self.use_bias,
+            padding_mode=self.padding_mode,
         )
         self._initialized = True
 
     def forward(self, input):
         if not self._initialized:
             self._initialize(input)
-        return self._modules['_conv'](input)
+        return self._modules["_conv"](input)
 
 
 class LazyConvTranspose1d(LazyModuleMixin, Module):
@@ -237,7 +263,7 @@ class LazyConvTranspose1d(LazyModuleMixin, Module):
         groups: int = 1,
         bias: bool = True,
         dilation: int = 1,
-        padding_mode: str = 'zeros',
+        padding_mode: str = "zeros",
         device=None,
         dtype=None,
     ):
@@ -257,24 +283,30 @@ class LazyConvTranspose1d(LazyModuleMixin, Module):
     @property
     def in_channels(self):
         """Return in_channels if initialized, else None."""
-        if self._initialized and '_conv' in self._modules:
-            return self._modules['_conv'].in_channels
+        if self._initialized and "_conv" in self._modules:
+            return self._modules["_conv"].in_channels
         return None
 
     def _initialize(self, input):
         in_channels = input.shape[1]
         self._conv = ConvTranspose1d(
-            in_channels, self.out_channels, self.kernel_size,
-            stride=self.stride, padding=self.padding, output_padding=self.output_padding,
-            groups=self.groups, bias=self.use_bias, dilation=self.dilation,
-            padding_mode=self.padding_mode
+            in_channels,
+            self.out_channels,
+            self.kernel_size,
+            stride=self.stride,
+            padding=self.padding,
+            output_padding=self.output_padding,
+            groups=self.groups,
+            bias=self.use_bias,
+            dilation=self.dilation,
+            padding_mode=self.padding_mode,
         )
         self._initialized = True
 
     def forward(self, input):
         if not self._initialized:
             self._initialize(input)
-        return self._modules['_conv'](input)
+        return self._modules["_conv"](input)
 
 
 class LazyConvTranspose2d(LazyModuleMixin, Module):
@@ -290,7 +322,7 @@ class LazyConvTranspose2d(LazyModuleMixin, Module):
         groups: int = 1,
         bias: bool = True,
         dilation: Union[int, Tuple[int, int]] = 1,
-        padding_mode: str = 'zeros',
+        padding_mode: str = "zeros",
         device=None,
         dtype=None,
     ):
@@ -310,24 +342,30 @@ class LazyConvTranspose2d(LazyModuleMixin, Module):
     @property
     def in_channels(self):
         """Return in_channels if initialized, else None."""
-        if self._initialized and '_conv' in self._modules:
-            return self._modules['_conv'].in_channels
+        if self._initialized and "_conv" in self._modules:
+            return self._modules["_conv"].in_channels
         return None
 
     def _initialize(self, input):
         in_channels = input.shape[1]
         self._conv = ConvTranspose2d(
-            in_channels, self.out_channels, self.kernel_size,
-            stride=self.stride, padding=self.padding, output_padding=self.output_padding,
-            groups=self.groups, bias=self.use_bias, dilation=self.dilation,
-            padding_mode=self.padding_mode
+            in_channels,
+            self.out_channels,
+            self.kernel_size,
+            stride=self.stride,
+            padding=self.padding,
+            output_padding=self.output_padding,
+            groups=self.groups,
+            bias=self.use_bias,
+            dilation=self.dilation,
+            padding_mode=self.padding_mode,
         )
         self._initialized = True
 
     def forward(self, input):
         if not self._initialized:
             self._initialize(input)
-        return self._modules['_conv'](input)
+        return self._modules["_conv"](input)
 
 
 class LazyConvTranspose3d(LazyModuleMixin, Module):
@@ -343,7 +381,7 @@ class LazyConvTranspose3d(LazyModuleMixin, Module):
         groups: int = 1,
         bias: bool = True,
         dilation: Union[int, Tuple[int, int, int]] = 1,
-        padding_mode: str = 'zeros',
+        padding_mode: str = "zeros",
         device=None,
         dtype=None,
     ):
@@ -363,24 +401,30 @@ class LazyConvTranspose3d(LazyModuleMixin, Module):
     @property
     def in_channels(self):
         """Return in_channels if initialized, else None."""
-        if self._initialized and '_conv' in self._modules:
-            return self._modules['_conv'].in_channels
+        if self._initialized and "_conv" in self._modules:
+            return self._modules["_conv"].in_channels
         return None
 
     def _initialize(self, input):
         in_channels = input.shape[1]
         self._conv = ConvTranspose3d(
-            in_channels, self.out_channels, self.kernel_size,
-            stride=self.stride, padding=self.padding, output_padding=self.output_padding,
-            groups=self.groups, bias=self.use_bias, dilation=self.dilation,
-            padding_mode=self.padding_mode
+            in_channels,
+            self.out_channels,
+            self.kernel_size,
+            stride=self.stride,
+            padding=self.padding,
+            output_padding=self.output_padding,
+            groups=self.groups,
+            bias=self.use_bias,
+            dilation=self.dilation,
+            padding_mode=self.padding_mode,
         )
         self._initialized = True
 
     def forward(self, input):
         if not self._initialized:
             self._initialize(input)
-        return self._modules['_conv'](input)
+        return self._modules["_conv"](input)
 
 
 class LazyBatchNorm1d(LazyModuleMixin, Module):
@@ -406,22 +450,25 @@ class LazyBatchNorm1d(LazyModuleMixin, Module):
     @property
     def num_features(self):
         """Return num_features if initialized, else None."""
-        if self._initialized and '_bn' in self._modules:
-            return self._modules['_bn'].num_features
+        if self._initialized and "_bn" in self._modules:
+            return self._modules["_bn"].num_features
         return None
 
     def _initialize(self, input):
         num_features = input.shape[1]
         self._bn = BatchNorm1d(
-            num_features, eps=self.eps, momentum=self.momentum,
-            affine=self.affine, track_running_stats=self.track_running_stats
+            num_features,
+            eps=self.eps,
+            momentum=self.momentum,
+            affine=self.affine,
+            track_running_stats=self.track_running_stats,
         )
         self._initialized = True
 
     def forward(self, input):
         if not self._initialized:
             self._initialize(input)
-        return self._modules['_bn'](input)
+        return self._modules["_bn"](input)
 
 
 class LazyBatchNorm2d(LazyModuleMixin, Module):
@@ -447,22 +494,25 @@ class LazyBatchNorm2d(LazyModuleMixin, Module):
     @property
     def num_features(self):
         """Return num_features if initialized, else None."""
-        if self._initialized and '_bn' in self._modules:
-            return self._modules['_bn'].num_features
+        if self._initialized and "_bn" in self._modules:
+            return self._modules["_bn"].num_features
         return None
 
     def _initialize(self, input):
         num_features = input.shape[1]
         self._bn = BatchNorm2d(
-            num_features, eps=self.eps, momentum=self.momentum,
-            affine=self.affine, track_running_stats=self.track_running_stats
+            num_features,
+            eps=self.eps,
+            momentum=self.momentum,
+            affine=self.affine,
+            track_running_stats=self.track_running_stats,
         )
         self._initialized = True
 
     def forward(self, input):
         if not self._initialized:
             self._initialize(input)
-        return self._modules['_bn'](input)
+        return self._modules["_bn"](input)
 
 
 class LazyBatchNorm3d(LazyModuleMixin, Module):
@@ -488,22 +538,25 @@ class LazyBatchNorm3d(LazyModuleMixin, Module):
     @property
     def num_features(self):
         """Return num_features if initialized, else None."""
-        if self._initialized and '_bn' in self._modules:
-            return self._modules['_bn'].num_features
+        if self._initialized and "_bn" in self._modules:
+            return self._modules["_bn"].num_features
         return None
 
     def _initialize(self, input):
         num_features = input.shape[1]
         self._bn = BatchNorm3d(
-            num_features, eps=self.eps, momentum=self.momentum,
-            affine=self.affine, track_running_stats=self.track_running_stats
+            num_features,
+            eps=self.eps,
+            momentum=self.momentum,
+            affine=self.affine,
+            track_running_stats=self.track_running_stats,
         )
         self._initialized = True
 
     def forward(self, input):
         if not self._initialized:
             self._initialize(input)
-        return self._modules['_bn'](input)
+        return self._modules["_bn"](input)
 
 
 class LazyInstanceNorm1d(LazyModuleMixin, Module):
@@ -529,22 +582,25 @@ class LazyInstanceNorm1d(LazyModuleMixin, Module):
     @property
     def num_features(self):
         """Return num_features if initialized, else None."""
-        if self._initialized and '_norm' in self._modules:
-            return self._modules['_norm'].num_features
+        if self._initialized and "_norm" in self._modules:
+            return self._modules["_norm"].num_features
         return None
 
     def _initialize(self, input):
         num_features = input.shape[1]
         self._norm = InstanceNorm1d(
-            num_features, eps=self.eps, momentum=self.momentum,
-            affine=self.affine, track_running_stats=self.track_running_stats
+            num_features,
+            eps=self.eps,
+            momentum=self.momentum,
+            affine=self.affine,
+            track_running_stats=self.track_running_stats,
         )
         self._initialized = True
 
     def forward(self, input):
         if not self._initialized:
             self._initialize(input)
-        return self._modules['_norm'](input)
+        return self._modules["_norm"](input)
 
 
 class LazyInstanceNorm2d(LazyModuleMixin, Module):
@@ -570,22 +626,25 @@ class LazyInstanceNorm2d(LazyModuleMixin, Module):
     @property
     def num_features(self):
         """Return num_features if initialized, else None."""
-        if self._initialized and '_norm' in self._modules:
-            return self._modules['_norm'].num_features
+        if self._initialized and "_norm" in self._modules:
+            return self._modules["_norm"].num_features
         return None
 
     def _initialize(self, input):
         num_features = input.shape[1]
         self._norm = InstanceNorm2d(
-            num_features, eps=self.eps, momentum=self.momentum,
-            affine=self.affine, track_running_stats=self.track_running_stats
+            num_features,
+            eps=self.eps,
+            momentum=self.momentum,
+            affine=self.affine,
+            track_running_stats=self.track_running_stats,
         )
         self._initialized = True
 
     def forward(self, input):
         if not self._initialized:
             self._initialize(input)
-        return self._modules['_norm'](input)
+        return self._modules["_norm"](input)
 
 
 class LazyInstanceNorm3d(LazyModuleMixin, Module):
@@ -611,29 +670,40 @@ class LazyInstanceNorm3d(LazyModuleMixin, Module):
     @property
     def num_features(self):
         """Return num_features if initialized, else None."""
-        if self._initialized and '_norm' in self._modules:
-            return self._modules['_norm'].num_features
+        if self._initialized and "_norm" in self._modules:
+            return self._modules["_norm"].num_features
         return None
 
     def _initialize(self, input):
         num_features = input.shape[1]
         self._norm = InstanceNorm3d(
-            num_features, eps=self.eps, momentum=self.momentum,
-            affine=self.affine, track_running_stats=self.track_running_stats
+            num_features,
+            eps=self.eps,
+            momentum=self.momentum,
+            affine=self.affine,
+            track_running_stats=self.track_running_stats,
         )
         self._initialized = True
 
     def forward(self, input):
         if not self._initialized:
             self._initialize(input)
-        return self._modules['_norm'](input)
+        return self._modules["_norm"](input)
 
 
 __all__ = [
-    'LazyModuleMixin',
-    'LazyLinear',
-    'LazyConv1d', 'LazyConv2d', 'LazyConv3d',
-    'LazyConvTranspose1d', 'LazyConvTranspose2d', 'LazyConvTranspose3d',
-    'LazyBatchNorm1d', 'LazyBatchNorm2d', 'LazyBatchNorm3d',
-    'LazyInstanceNorm1d', 'LazyInstanceNorm2d', 'LazyInstanceNorm3d',
+    "LazyModuleMixin",
+    "LazyLinear",
+    "LazyConv1d",
+    "LazyConv2d",
+    "LazyConv3d",
+    "LazyConvTranspose1d",
+    "LazyConvTranspose2d",
+    "LazyConvTranspose3d",
+    "LazyBatchNorm1d",
+    "LazyBatchNorm2d",
+    "LazyBatchNorm3d",
+    "LazyInstanceNorm1d",
+    "LazyInstanceNorm2d",
+    "LazyInstanceNorm3d",
 ]

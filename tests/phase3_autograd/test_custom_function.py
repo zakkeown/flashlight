@@ -8,17 +8,21 @@ Tests the custom autograd Function class:
 """
 
 import sys
-sys.path.insert(0, '../..')
+
+sys.path.insert(0, "../..")
 
 import unittest
+
 import numpy as np
 
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
-    import flashlight
     import mlx.core as mx
+
+    import flashlight
     from flashlight.autograd.function import Function
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -30,6 +34,7 @@ class TestCustomFunction(TestCase):
 
     def test_custom_relu(self):
         """Test custom ReLU implementation."""
+
         class MyReLU(Function):
             @staticmethod
             def forward(ctx, input):
@@ -38,7 +43,7 @@ class TestCustomFunction(TestCase):
 
             @staticmethod
             def backward(ctx, grad_output):
-                input, = ctx.saved_tensors
+                (input,) = ctx.saved_tensors
                 mask = (input._mlx_array > 0).astype(grad_output._mlx_array.dtype)
                 return flashlight.tensor(grad_output._mlx_array * mask)
 
@@ -52,6 +57,7 @@ class TestCustomFunction(TestCase):
 
     def test_custom_scale(self):
         """Test custom scaling function."""
+
         class Scale(Function):
             @staticmethod
             def forward(ctx, input, scale):
@@ -72,6 +78,7 @@ class TestCustomFunction(TestCase):
 
     def test_custom_square(self):
         """Test custom square function."""
+
         class Square(Function):
             @staticmethod
             def forward(ctx, input):
@@ -80,7 +87,7 @@ class TestCustomFunction(TestCase):
 
             @staticmethod
             def backward(ctx, grad_output):
-                input, = ctx.saved_tensors
+                (input,) = ctx.saved_tensors
                 return flashlight.tensor(2 * input._mlx_array * grad_output._mlx_array)
 
         x = flashlight.tensor([1.0, 2.0, 3.0], requires_grad=True)
@@ -99,6 +106,7 @@ class TestSavedTensorsContext(TestCase):
 
     def test_save_single_tensor(self):
         """Test saving a single tensor."""
+
         class SaveOne(Function):
             @staticmethod
             def forward(ctx, x):
@@ -107,7 +115,7 @@ class TestSavedTensorsContext(TestCase):
 
             @staticmethod
             def backward(ctx, grad_output):
-                x, = ctx.saved_tensors
+                (x,) = ctx.saved_tensors
                 self.assertIsNotNone(x)
                 return grad_output
 
@@ -118,6 +126,7 @@ class TestSavedTensorsContext(TestCase):
 
     def test_save_multiple_tensors(self):
         """Test saving multiple tensors."""
+
         class SaveMultiple(Function):
             @staticmethod
             def forward(ctx, x, y):
@@ -145,6 +154,7 @@ class TestCustomFunctionChain(TestCase):
 
     def test_chain_custom_functions(self):
         """Test chaining multiple custom functions."""
+
         class Double(Function):
             @staticmethod
             def forward(ctx, input):
@@ -174,6 +184,7 @@ class TestCustomFunctionChain(TestCase):
         np.testing.assert_array_almost_equal(x.grad.numpy(), expected)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from tests.common_utils import run_tests
+
     run_tests()

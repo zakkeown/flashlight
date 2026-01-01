@@ -9,11 +9,12 @@ Reference:
 - pytorch-mlx-porting-docs/08-PORTING-GUIDE/mlx-mapping.md
 """
 
-from typing import Union, Optional, Tuple, List, Sequence
 import warnings
+from typing import List, Optional, Sequence, Tuple, Union
 
 try:
     import mlx.core as mx
+
     MLX_AVAILABLE = True
 except ImportError:
     MLX_AVAILABLE = False
@@ -21,8 +22,8 @@ except ImportError:
 
 import numpy as np
 
-from .dtype import DType, get_dtype, get_default_dtype
 from .device import Device, get_default_device
+from .dtype import DType, get_default_dtype, get_dtype
 
 # Module-level cached dtype map for fast inference (computed once on first use)
 _CACHED_DTYPE_MAP = None
@@ -34,6 +35,7 @@ def _get_dtype_map():
     global _CACHED_DTYPE_MAP
     if _CACHED_DTYPE_MAP is None:
         from . import dtype as dtype_module
+
         _CACHED_DTYPE_MAP = {
             mx.float32: dtype_module.float32,
             mx.float16: dtype_module.float16,
@@ -49,7 +51,7 @@ def _get_dtype_map():
             mx.bool_: dtype_module.bool,
         }
         # Add complex64 if available
-        if hasattr(mx, 'complex64') and dtype_module.complex64 is not None:
+        if hasattr(mx, "complex64") and dtype_module.complex64 is not None:
             _CACHED_DTYPE_MAP[mx.complex64] = dtype_module.complex64
     return _CACHED_DTYPE_MAP
 
@@ -111,7 +113,7 @@ class Tensor:
         """
         # Parse arguments to match PyTorch's flexible signature
         if len(args) == 0:
-            data = kwargs.pop('data', None)
+            data = kwargs.pop("data", None)
             if data is None:
                 raise TypeError("Tensor() requires 'data' argument")
         else:
@@ -119,9 +121,9 @@ class Tensor:
             args = args[1:]
 
         # Handle remaining positional args (rare but possible in PyTorch)
-        dtype = kwargs.pop('dtype', args[0] if len(args) > 0 else None)
-        device = kwargs.pop('device', args[1] if len(args) > 1 else None)
-        requires_grad = kwargs.pop('requires_grad', args[2] if len(args) > 2 else False)
+        dtype = kwargs.pop("dtype", args[0] if len(args) > 0 else None)
+        device = kwargs.pop("device", args[1] if len(args) > 1 else None)
+        requires_grad = kwargs.pop("requires_grad", args[2] if len(args) > 2 else False)
 
         # Ignore unknown kwargs for PyTorch compatibility
         # (PyTorch accepts things like pin_memory, etc.)
@@ -140,10 +142,10 @@ class Tensor:
                     "numpy float64 array is being converted to float32 because MLX "
                     "does not support float64. This may result in reduced precision.",
                     UserWarning,
-                    stacklevel=2
+                    stacklevel=2,
                 )
             self._mlx_array = mx.array(data)
-        elif hasattr(data, '__array__'):  # NumPy-like array interface
+        elif hasattr(data, "__array__"):  # NumPy-like array interface
             np_data = np.array(data)
             # Warn if float64 is being silently downgraded to float32
             if np_data.dtype == np.float64 and dtype is None:
@@ -151,7 +153,7 @@ class Tensor:
                     "float64 array is being converted to float32 because MLX "
                     "does not support float64. This may result in reduced precision.",
                     UserWarning,
-                    stacklevel=2
+                    stacklevel=2,
                 )
             self._mlx_array = mx.array(np_data)
         else:
@@ -190,7 +192,7 @@ class Tensor:
         requires_grad: bool = False,
         grad_fn=None,
         layout=None,
-    ) -> 'Tensor':
+    ) -> "Tensor":
         """
         Internal: Create tensor directly from MLX array.
 
@@ -317,9 +319,10 @@ class Tensor:
             Layout enum value (NCHW, NHWC, etc.) or None for non-spatial tensors.
         """
         from .layout import infer_layout
+
         return infer_layout(self)
 
-    def to_nhwc(self) -> 'Tensor':
+    def to_nhwc(self) -> "Tensor":
         """
         Convert 4D tensor to NHWC layout if not already.
 
@@ -327,9 +330,10 @@ class Tensor:
             Tensor in NHWC layout.
         """
         from .layout import ensure_nhwc
+
         return ensure_nhwc(self)
 
-    def to_nchw(self) -> 'Tensor':
+    def to_nchw(self) -> "Tensor":
         """
         Convert 4D tensor to NCHW layout if not already.
 
@@ -337,9 +341,10 @@ class Tensor:
             Tensor in NCHW layout.
         """
         from .layout import ensure_nchw
+
         return ensure_nchw(self)
 
-    def to_layout(self, target_layout) -> 'Tensor':
+    def to_layout(self, target_layout) -> "Tensor":
         """
         Convert tensor to specified layout.
 
@@ -350,6 +355,7 @@ class Tensor:
             Tensor in target layout.
         """
         from .layout import convert_layout
+
         return convert_layout(self, target_layout)
 
     # ==================== Type Conversion ====================
@@ -376,8 +382,8 @@ class Tensor:
         *args,
         dtype: Optional[Union[DType, str]] = None,
         device: Optional[Union[Device, str]] = None,
-        **kwargs
-    ) -> 'Tensor':
+        **kwargs,
+    ) -> "Tensor":
         """
         Convert tensor to different dtype/device.
 
@@ -420,47 +426,53 @@ class Tensor:
 
         return self
 
-    def type(self, dtype: Union[DType, str]) -> 'Tensor':
+    def type(self, dtype: Union[DType, str]) -> "Tensor":
         """Convert to specified dtype (alias for .to(dtype=...))."""
         return self.to(dtype=dtype)
 
-    def cpu(self) -> 'Tensor':
+    def cpu(self) -> "Tensor":
         """Move to CPU (no-op in MLX, for compatibility)."""
-        return self.to(device='cpu')
+        return self.to(device="cpu")
 
-    def cuda(self, device: Optional[int] = None) -> 'Tensor':
+    def cuda(self, device: Optional[int] = None) -> "Tensor":
         """Move to CUDA (no-op in MLX, for compatibility)."""
-        dev = f'cuda:{device}' if device is not None else 'cuda'
+        dev = f"cuda:{device}" if device is not None else "cuda"
         return self.to(device=dev)
 
-    def float(self) -> 'Tensor':
+    def float(self) -> "Tensor":
         """Convert to float32."""
         from . import dtype as dtype_module
+
         return self.to(dtype=dtype_module.float32)
 
-    def double(self) -> 'Tensor':
+    def double(self) -> "Tensor":
         """Convert to float64 (warns and uses float32 in MLX)."""
         from . import dtype as dtype_module
+
         return self.to(dtype=dtype_module.float64)
 
-    def half(self) -> 'Tensor':
+    def half(self) -> "Tensor":
         """Convert to float16."""
         from . import dtype as dtype_module
+
         return self.to(dtype=dtype_module.float16)
 
-    def int(self) -> 'Tensor':
+    def int(self) -> "Tensor":
         """Convert to int32."""
         from . import dtype as dtype_module
+
         return self.to(dtype=dtype_module.int32)
 
-    def long(self) -> 'Tensor':
+    def long(self) -> "Tensor":
         """Convert to int64."""
         from . import dtype as dtype_module
+
         return self.to(dtype=dtype_module.int64)
 
-    def bool(self) -> 'Tensor':
+    def bool(self) -> "Tensor":
         """Convert to bool."""
         from . import dtype as dtype_module
+
         return self.to(dtype=dtype_module.bool)
 
     # ==================== String Representation ====================
@@ -496,6 +508,7 @@ class Tensor:
     def __add__(self, other):
         """Element-wise addition (x + y)."""
         from .ops.arithmetic import add
+
         return add(self, other)
 
     def __radd__(self, other):
@@ -505,6 +518,7 @@ class Tensor:
     def __sub__(self, other):
         """Element-wise subtraction (x - y)."""
         from .ops.arithmetic import sub
+
         return sub(self, other)
 
     def __rsub__(self, other):
@@ -515,6 +529,7 @@ class Tensor:
     def __mul__(self, other):
         """Element-wise multiplication (x * y)."""
         from .ops.arithmetic import mul
+
         return mul(self, other)
 
     def __rmul__(self, other):
@@ -524,11 +539,13 @@ class Tensor:
     def __truediv__(self, other):
         """Element-wise division (x / y)."""
         from .ops.arithmetic import div
+
         return div(self, other)
 
     def __rtruediv__(self, other):
         """Reverse division (y / x where y is not a Tensor)."""
         from .ops.arithmetic import div
+
         if not isinstance(other, Tensor):
             other = Tensor(other)
         return div(other, self)
@@ -536,6 +553,7 @@ class Tensor:
     def __matmul__(self, other):
         """Matrix multiplication (x @ y)."""
         from .ops.arithmetic import matmul
+
         if not isinstance(other, Tensor):
             other = Tensor(other)
         return matmul(self, other)
@@ -543,6 +561,7 @@ class Tensor:
     def __rmatmul__(self, other):
         """Reverse matrix multiplication (y @ x where y is not a Tensor)."""
         from .ops.arithmetic import matmul
+
         if not isinstance(other, Tensor):
             other = Tensor(other)
         return matmul(other, self)
@@ -550,16 +569,19 @@ class Tensor:
     def __neg__(self):
         """Negation (-x)."""
         from .ops.arithmetic import neg
+
         return neg(self)
 
     def __pow__(self, other):
         """Power operator (x ** y)."""
         from .ops.arithmetic import pow
+
         return pow(self, other)
 
     def __rpow__(self, other):
         """Reverse power operator (y ** x where y is not a Tensor)."""
         from .ops.arithmetic import pow
+
         return pow(other, self)
 
     # ==================== Comparison Operators ====================
@@ -619,8 +641,10 @@ class Tensor:
         # Handle boolean mask indexing
         if isinstance(key, Tensor):
             from . import dtype as dtype_module
+
             if key.dtype == dtype_module.bool:
                 from .ops.indexing import masked_select
+
                 return masked_select(self, key)
 
         result_array = self._mlx_array[key]
@@ -645,7 +669,7 @@ class Tensor:
             value_arr = value._mlx_array
         elif isinstance(value, (int, float)):
             value_arr = value
-        elif hasattr(value, '__array__'):
+        elif hasattr(value, "__array__"):
             value_arr = mx.array(value)
         else:
             value_arr = value
@@ -681,7 +705,7 @@ class Tensor:
                 for k in key:
                     if isinstance(k, Tensor):
                         mlx_indices.append(k._mlx_array.reshape(-1).astype(mx.int32))
-                    elif hasattr(k, '__array__'):
+                    elif hasattr(k, "__array__"):
                         mlx_indices.append(mx.array(k).reshape(-1).astype(mx.int32))
                     elif isinstance(k, (int, slice)):
                         mlx_indices.append(k)
@@ -691,9 +715,15 @@ class Tensor:
                 # Use scatter-based assignment
                 if isinstance(value_arr, (int, float)):
                     current = self._mlx_array[tuple(mlx_indices)]
-                    self._mlx_array = self._mlx_array.at[tuple(mlx_indices)].add(value_arr - current)
+                    self._mlx_array = self._mlx_array.at[tuple(mlx_indices)].add(
+                        value_arr - current
+                    )
                 else:
-                    flat_vals = value_arr.reshape(-1) if hasattr(value_arr, 'reshape') else mx.array(value_arr).reshape(-1)
+                    flat_vals = (
+                        value_arr.reshape(-1)
+                        if hasattr(value_arr, "reshape")
+                        else mx.array(value_arr).reshape(-1)
+                    )
                     # Create mask for overwrite
                     mask = mx.zeros(self.shape, dtype=mx.bool_)
                     mask = mask.at[tuple(mlx_indices)].add(mx.ones(flat_vals.size, dtype=mx.bool_))
@@ -728,72 +758,85 @@ class Tensor:
                     current = self._mlx_array[flat_index]
                     self._mlx_array = self._mlx_array.at[flat_index].add(value_arr - current)
                 else:
-                    flat_vals = value_arr.reshape(-1) if hasattr(value_arr, 'reshape') else mx.array(value_arr).reshape(-1)
+                    flat_vals = (
+                        value_arr.reshape(-1)
+                        if hasattr(value_arr, "reshape")
+                        else mx.array(value_arr).reshape(-1)
+                    )
                     mask = mx.zeros(self.shape, dtype=mx.bool_)
                     mask = mask.at[flat_index].add(mx.ones(flat_vals.size, dtype=mx.bool_))
                     zeroed = mx.where(mask, mx.zeros_like(self._mlx_array), self._mlx_array)
                     scattered = mx.zeros_like(self._mlx_array)
                     scattered = scattered.at[flat_index].add(flat_vals)
                     self._mlx_array = zeroed + scattered
-        elif hasattr(key, '__array__'):
+        elif hasattr(key, "__array__"):
             # NumPy array indexing - convert to MLX
             key_arr = mx.array(key)
             self.__setitem__(Tensor._from_mlx_array(key_arr), value)
         else:
             # Fallback for other key types - use numpy conversion
             import numpy as np
+
             arr_np = np.array(self._mlx_array)
-            arr_np[key] = np.array(value_arr) if hasattr(value_arr, '__array__') else value_arr
+            arr_np[key] = np.array(value_arr) if hasattr(value_arr, "__array__") else value_arr
             self._mlx_array = mx.array(arr_np)
 
     # ==================== View Operations (Instance Methods) ====================
 
-    def reshape(self, *shape: int) -> 'Tensor':
+    def reshape(self, *shape: int) -> "Tensor":
         """Reshape tensor to new shape."""
         from .view_ops import reshape as reshape_fn
+
         if len(shape) == 1 and isinstance(shape[0], (tuple, list)):
             shape = tuple(shape[0])
         return reshape_fn(self, shape)
 
-    def view(self, *shape: int) -> 'Tensor':
+    def view(self, *shape: int) -> "Tensor":
         """View tensor with new shape (alias for reshape)."""
         from .view_ops import view as view_fn
+
         return view_fn(self, *shape)
 
-    def transpose(self, dim0: int, dim1: int) -> 'Tensor':
+    def transpose(self, dim0: int, dim1: int) -> "Tensor":
         """Transpose two dimensions."""
         from .view_ops import transpose as transpose_fn
+
         return transpose_fn(self, dim0, dim1)
 
-    def t(self) -> 'Tensor':
+    def t(self) -> "Tensor":
         """Transpose (2D tensors only - swaps dimensions 0 and 1)."""
         if self.ndim != 2:
             raise RuntimeError(f"t() expects a 2D tensor, but got {self.ndim}D")
         return self.transpose(0, 1)
 
-    def permute(self, *dims: int) -> 'Tensor':
+    def permute(self, *dims: int) -> "Tensor":
         """Permute dimensions."""
         from .view_ops import permute as permute_fn
+
         return permute_fn(self, *dims)
 
-    def squeeze(self, dim: Optional[int] = None) -> 'Tensor':
+    def squeeze(self, dim: Optional[int] = None) -> "Tensor":
         """Remove dimensions of size 1."""
         from .view_ops import squeeze as squeeze_fn
+
         return squeeze_fn(self, dim)
 
-    def unsqueeze(self, dim: int) -> 'Tensor':
+    def unsqueeze(self, dim: int) -> "Tensor":
         """Add a dimension of size 1."""
         from .view_ops import unsqueeze as unsqueeze_fn
+
         return unsqueeze_fn(self, dim)
 
-    def flatten(self, start_dim: int = 0, end_dim: int = -1) -> 'Tensor':
+    def flatten(self, start_dim: int = 0, end_dim: int = -1) -> "Tensor":
         """Flatten dimensions."""
         from .view_ops import flatten as flatten_fn
+
         return flatten_fn(self, start_dim, end_dim)
 
-    def contiguous(self) -> 'Tensor':
+    def contiguous(self) -> "Tensor":
         """Return contiguous tensor (no-op in MLX)."""
         from .view_ops import contiguous as contiguous_fn
+
         return contiguous_fn(self)
 
     # ==================== Autograd Methods (Stubs for Phase 3) ====================
@@ -809,7 +852,7 @@ class Tensor:
             "Currently only tensor creation and operations are supported."
         )
 
-    def detach(self) -> 'Tensor':
+    def detach(self) -> "Tensor":
         """
         Create a new tensor detached from the computation graph.
 
@@ -820,7 +863,7 @@ class Tensor:
         result._grad_fn = None
         return result
 
-    def requires_grad_(self, requires_grad: bool = True) -> 'Tensor':
+    def requires_grad_(self, requires_grad: bool = True) -> "Tensor":
         """
         Set requires_grad flag in-place.
 
@@ -859,6 +902,7 @@ class Tensor:
             >>> print(x.grad)  # Should be [2.0, 4.0, 6.0]
         """
         from .autograd.engine import backward as engine_backward
+
         engine_backward(self, gradient, retain_graph, create_graph)
 
     def mean(self, dim=None, keepdim=False):
@@ -873,6 +917,7 @@ class Tensor:
             Mean tensor.
         """
         from . import ops
+
         return ops.mean(self, dim=dim, keepdim=keepdim)
 
     def var(self, dim=None, unbiased=True, keepdim=False):
@@ -888,6 +933,7 @@ class Tensor:
             Variance tensor.
         """
         from . import ops
+
         return ops.var(self, dim=dim, unbiased=unbiased, keepdim=keepdim)
 
     def std(self, dim=None, unbiased=True, keepdim=False):
@@ -903,6 +949,7 @@ class Tensor:
             Standard deviation tensor.
         """
         from . import ops
+
         return ops.std(self, dim=dim, unbiased=unbiased, keepdim=keepdim)
 
     def sum(self, dim=None, keepdim=False):
@@ -917,6 +964,7 @@ class Tensor:
             Sum tensor.
         """
         from . import ops
+
         return ops.sum(self, dim=dim, keepdim=keepdim)
 
     def prod(self, dim=None, keepdim=False):
@@ -931,6 +979,7 @@ class Tensor:
             Product tensor.
         """
         from . import ops
+
         return ops.prod(self, dim=dim, keepdim=keepdim)
 
     def max(self, dim=None, keepdim=False):
@@ -946,6 +995,7 @@ class Tensor:
             If dim is specified: tuple of (values, indices).
         """
         from . import ops
+
         return ops.max(self, dim=dim, keepdim=keepdim)
 
     def min(self, dim=None, keepdim=False):
@@ -961,6 +1011,7 @@ class Tensor:
             If dim is specified: tuple of (values, indices).
         """
         from . import ops
+
         return ops.min(self, dim=dim, keepdim=keepdim)
 
     def argmax(self, dim=None, keepdim=False):
@@ -975,6 +1026,7 @@ class Tensor:
             Tensor of indices.
         """
         from . import ops
+
         return ops.argmax(self, dim=dim, keepdim=keepdim)
 
     def argmin(self, dim=None, keepdim=False):
@@ -989,6 +1041,7 @@ class Tensor:
             Tensor of indices.
         """
         from . import ops
+
         return ops.argmin(self, dim=dim, keepdim=keepdim)
 
     def all(self, dim=None, keepdim=False):
@@ -1003,6 +1056,7 @@ class Tensor:
             Boolean tensor.
         """
         from . import ops
+
         return ops.all(self, dim=dim, keepdim=keepdim)
 
     def any(self, dim=None, keepdim=False):
@@ -1017,6 +1071,7 @@ class Tensor:
             Boolean tensor.
         """
         from . import ops
+
         return ops.any(self, dim=dim, keepdim=keepdim)
 
     def abs(self):
@@ -1027,6 +1082,7 @@ class Tensor:
             Tensor with absolute values.
         """
         from . import ops
+
         return ops.abs(self)
 
     def clamp(self, min=None, max=None):
@@ -1041,6 +1097,7 @@ class Tensor:
             Clamped tensor.
         """
         from . import ops
+
         return ops.clamp(self, min=min, max=max)
 
     def zero_(self):
@@ -1055,6 +1112,7 @@ class Tensor:
             but maintains the same tensor object.
         """
         import mlx.core as mx
+
         self._mlx_array = mx.zeros_like(self._mlx_array)
         return self
 
@@ -1069,6 +1127,7 @@ class Tensor:
             self
         """
         import mlx.core as mx
+
         self._mlx_array = mx.full(self._mlx_array.shape, value, dtype=self._mlx_array.dtype)
         return self
 
@@ -1084,10 +1143,9 @@ class Tensor:
             self
         """
         import mlx.core as mx
+
         self._mlx_array = mx.random.uniform(
-            low=from_, high=to,
-            shape=self._mlx_array.shape,
-            dtype=self._mlx_array.dtype
+            low=from_, high=to, shape=self._mlx_array.shape, dtype=self._mlx_array.dtype
         )
         return self
 
@@ -1103,10 +1161,10 @@ class Tensor:
             self
         """
         import mlx.core as mx
-        self._mlx_array = mx.random.normal(
-            shape=self._mlx_array.shape,
-            dtype=self._mlx_array.dtype
-        ) * std + mean
+
+        self._mlx_array = (
+            mx.random.normal(shape=self._mlx_array.shape, dtype=self._mlx_array.dtype) * std + mean
+        )
         return self
 
     def clamp_(self, min=None, max=None):
@@ -1121,6 +1179,7 @@ class Tensor:
             self
         """
         import mlx.core as mx
+
         result = self._mlx_array
         if min is not None:
             result = mx.maximum(result, min)
@@ -1137,6 +1196,7 @@ class Tensor:
             self
         """
         import mlx.core as mx
+
         self._mlx_array = mx.maximum(self._mlx_array, 0)
         return self
 
@@ -1148,6 +1208,7 @@ class Tensor:
             self
         """
         import mlx.core as mx
+
         self._mlx_array = mx.sigmoid(self._mlx_array)
         return self
 
@@ -1159,6 +1220,7 @@ class Tensor:
             self
         """
         import mlx.core as mx
+
         self._mlx_array = mx.tanh(self._mlx_array)
         return self
 
@@ -1170,6 +1232,7 @@ class Tensor:
             self
         """
         import mlx.core as mx
+
         self._mlx_array = mx.exp(self._mlx_array)
         return self
 
@@ -1181,6 +1244,7 @@ class Tensor:
             self
         """
         import mlx.core as mx
+
         self._mlx_array = mx.log(self._mlx_array)
         return self
 
@@ -1192,6 +1256,7 @@ class Tensor:
             self
         """
         import mlx.core as mx
+
         self._mlx_array = mx.sqrt(self._mlx_array)
         return self
 
@@ -1203,6 +1268,7 @@ class Tensor:
             self
         """
         import mlx.core as mx
+
         self._mlx_array = mx.abs(self._mlx_array)
         return self
 
@@ -1297,6 +1363,7 @@ class Tensor:
             self
         """
         import mlx.core as mx
+
         if isinstance(exponent, Tensor):
             exponent = exponent._mlx_array
         self._mlx_array = mx.power(self._mlx_array, exponent)
@@ -1317,6 +1384,7 @@ class Tensor:
             self._mlx_array = src._mlx_array
         else:
             import mlx.core as mx
+
             self._mlx_array = mx.array(src, dtype=self._mlx_array.dtype)
         return self
 
@@ -1328,6 +1396,7 @@ class Tensor:
             self
         """
         import mlx.core as mx
+
         self._mlx_array = mx.floor(self._mlx_array)
         return self
 
@@ -1339,6 +1408,7 @@ class Tensor:
             self
         """
         import mlx.core as mx
+
         self._mlx_array = mx.ceil(self._mlx_array)
         return self
 
@@ -1350,6 +1420,7 @@ class Tensor:
             self
         """
         import mlx.core as mx
+
         self._mlx_array = mx.round(self._mlx_array)
         return self
 
@@ -1361,6 +1432,7 @@ class Tensor:
             self
         """
         import mlx.core as mx
+
         self._mlx_array = mx.sin(self._mlx_array)
         return self
 
@@ -1372,6 +1444,7 @@ class Tensor:
             self
         """
         import mlx.core as mx
+
         self._mlx_array = mx.cos(self._mlx_array)
         return self
 
@@ -1383,6 +1456,7 @@ class Tensor:
             self
         """
         import mlx.core as mx
+
         self._mlx_array = mx.erf(self._mlx_array)
         return self
 
@@ -1396,6 +1470,7 @@ class Tensor:
             self
         """
         import mlx.core as mx
+
         self._mlx_array = 1 - mx.erf(self._mlx_array)
         return self
 
@@ -1407,6 +1482,7 @@ class Tensor:
             self
         """
         import mlx.core as mx
+
         self._mlx_array = mx.power(mx.array(2.0, dtype=self._mlx_array.dtype), self._mlx_array)
         return self
 
@@ -1428,8 +1504,9 @@ class Tensor:
             self
         """
         import mlx.core as mx
+
         self._mlx_array = mx.rsqrt(self._mlx_array)
         return self
 
 
-__all__ = ['Tensor']
+__all__ = ["Tensor"]

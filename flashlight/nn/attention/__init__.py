@@ -22,6 +22,7 @@ class SDPBackend(IntEnum):
     MLX uses its own optimized backend, so these are provided for API compatibility.
     All backends effectively use the same MLX implementation.
     """
+
     ERROR = -1
     MATH = 0
     FLASH_ATTENTION = 1
@@ -54,9 +55,9 @@ def sdpa_kernel(backends: Union[SDPBackend, List[SDPBackend]], set_priority: boo
 
 
 __all__ = [
-    'MultiheadAttention',
-    'scaled_dot_product_attention',
-    'SDPBackend',
-    'sdpa_kernel',
-    'WARN_FOR_UNFUSED_KERNELS',
+    "MultiheadAttention",
+    "scaled_dot_product_attention",
+    "SDPBackend",
+    "sdpa_kernel",
+    "WARN_FOR_UNFUSED_KERNELS",
 ]

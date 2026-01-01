@@ -2,12 +2,14 @@
 
 import math
 from typing import Optional, Tuple, Union
+
 import mlx.core as mx
 
+from ..ops.special import digamma, gammainc, lgamma
 from ..tensor import Tensor
-from ..ops.special import lgamma, digamma, gammainc
-from .exp_family import ExponentialFamily
 from . import constraints
+from ._gamma_sampler import random_gamma
+from .exp_family import ExponentialFamily
 
 
 class Gamma(ExponentialFamily):
@@ -20,7 +22,7 @@ class Gamma(ExponentialFamily):
         validate_args: Whether to validate arguments
     """
 
-    arg_constraints = {'concentration': constraints.positive, 'rate': constraints.positive}
+    arg_constraints = {"concentration": constraints.positive, "rate": constraints.positive}
     support = constraints.positive
     has_rsample = True
 
@@ -30,7 +32,11 @@ class Gamma(ExponentialFamily):
         rate: Union[Tensor, float],
         validate_args: Optional[bool] = None,
     ):
-        self.concentration = concentration._mlx_array if isinstance(concentration, Tensor) else mx.array(concentration)
+        self.concentration = (
+            concentration._mlx_array
+            if isinstance(concentration, Tensor)
+            else mx.array(concentration)
+        )
         self.rate = rate._mlx_array if isinstance(rate, Tensor) else mx.array(rate)
 
         batch_shape = mx.broadcast_shapes(self.concentration.shape, self.rate.shape)
@@ -42,17 +48,20 @@ class Gamma(ExponentialFamily):
 
     @property
     def mode(self) -> Tensor:
-        return Tensor(mx.where(self.concentration >= 1, (self.concentration - 1) / self.rate, mx.array(0.0)))
+        return Tensor(
+            mx.where(self.concentration >= 1, (self.concentration - 1) / self.rate, mx.array(0.0))
+        )
 
     @property
     def variance(self) -> Tensor:
-        return Tensor(self.concentration / self.rate ** 2)
+        return Tensor(self.concentration / self.rate**2)
 
     def sample(self, sample_shape: Tuple[int, ...] = ()) -> Tensor:
-        """Sample from Gamma distribution using MLX's native gamma sampler.
+        """Sample from Gamma distribution.
 
-        MLX's mx.random.gamma uses shape parameterization (scale=1), so we need
-        to divide by rate to get proper Gamma(concentration, rate) samples.
+        Uses custom gamma sampler since mx.random.gamma doesn't exist yet.
+        The sampler uses Marsaglia-Tsang method for alpha >= 1 and
+        boost method for alpha < 1.
 
         Gamma(shape, rate) = Gamma(shape, scale=1) / rate
         """
@@ -62,9 +71,8 @@ class Gamma(ExponentialFamily):
         concentration = mx.broadcast_to(self.concentration, shape)
         rate = mx.broadcast_to(self.rate, shape)
 
-        # Use MLX's native gamma sampling (which uses shape parameterization with scale=1)
-        # mx.random.gamma(shape_param, sample_shape) samples from Gamma(shape_param, scale=1)
-        samples = mx.random.gamma(concentration, shape)
+        # Use custom gamma sampling (samples from Gamma(alpha, scale=1))
+        samples = random_gamma(concentration, shape)
 
         # Convert from scale=1 parameterization to rate parameterization
         # Gamma(alpha, rate=beta) = Gamma(alpha, scale=1) / beta
@@ -76,15 +84,20 @@ class Gamma(ExponentialFamily):
     def log_prob(self, value: Tensor) -> Tensor:
         data = value._mlx_array if isinstance(value, Tensor) else value
         log_gamma_val = lgamma(self.concentration)
-        log_prob = (self.concentration * mx.log(self.rate) +
-                   (self.concentration - 1) * mx.log(data) -
-                   self.rate * data - log_gamma_val)
+        log_prob = (
+            self.concentration * mx.log(self.rate)
+            + (self.concentration - 1) * mx.log(data)
+            - self.rate * data
+            - log_gamma_val
+        )
         return Tensor(log_prob)
 
     def entropy(self) -> Tensor:
         log_gamma_val = lgamma(self.concentration)
         psi = digamma(self.concentration)
-        return Tensor(self.concentration - mx.log(self.rate) + log_gamma_val + (1 - self.concentration) * psi)
+        return Tensor(
+            self.concentration - mx.log(self.rate) + log_gamma_val + (1 - self.concentration) * psi
+        )
 
     def cdf(self, value: Tensor) -> Tensor:
         data = value._mlx_array if isinstance(value, Tensor) else value
@@ -102,4 +115,4 @@ class Gamma(ExponentialFamily):
         return Tensor(log_gamma_val - (x_data + 1) * mx.log(-y_data))
 
 
-__all__ = ['Gamma']
+__all__ = ["Gamma"]

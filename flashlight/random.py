@@ -5,9 +5,9 @@ PyTorch-compatible torch.random module for MLX.
 Provides random number generation utilities and state management.
 """
 
-from typing import Optional, Any, List, Union
-from contextlib import contextmanager
 import warnings
+from contextlib import contextmanager
+from typing import Any, List, Optional, Union
 
 import mlx.core as mx
 
@@ -50,6 +50,7 @@ class Generator:
             A 64-bit number
         """
         import random
+
         new_seed = random.randint(0, 2**63 - 1)
         self._seed = new_seed
         self._key = mx.random.key(new_seed)
@@ -122,6 +123,7 @@ def seed() -> int:
         The seed used
     """
     import random
+
     new_seed = random.randint(0, 2**63 - 1)
     mx.random.seed(new_seed)
     default_generator.manual_seed(new_seed)
@@ -199,12 +201,12 @@ def fork_rng(
 
 
 __all__ = [
-    'Generator',
-    'default_generator',
-    'manual_seed',
-    'seed',
-    'initial_seed',
-    'get_rng_state',
-    'set_rng_state',
-    'fork_rng',
+    "Generator",
+    "default_generator",
+    "manual_seed",
+    "seed",
+    "initial_seed",
+    "get_rng_state",
+    "set_rng_state",
+    "fork_rng",
 ]

@@ -1,12 +1,13 @@
 """Categorical Distribution"""
 
 from typing import Optional, Tuple, Union
+
 import mlx.core as mx
 
 from ..tensor import Tensor
-from .distribution import Distribution
 from . import constraints
-from ._constants import UNIFORM_LOW, UNIFORM_HIGH, xlogy
+from ._constants import UNIFORM_HIGH, UNIFORM_LOW, xlogy
+from .distribution import Distribution
 
 
 class Categorical(Distribution):
@@ -19,7 +20,7 @@ class Categorical(Distribution):
         validate_args: Whether to validate arguments
     """
 
-    arg_constraints = {'probs': constraints.simplex, 'logits': constraints.real_vector}
+    arg_constraints = {"probs": constraints.simplex, "logits": constraints.real_vector}
     has_enumerate_support = True
 
     def __init__(
@@ -58,7 +59,7 @@ class Categorical(Distribution):
     def variance(self) -> Tensor:
         mean = mx.sum(self.probs * mx.arange(self._num_events), axis=-1)
         mean_sq = mx.sum(self.probs * mx.arange(self._num_events) ** 2, axis=-1)
-        return Tensor(mean_sq - mean ** 2)
+        return Tensor(mean_sq - mean**2)
 
     def sample(self, sample_shape: Tuple[int, ...] = ()) -> Tensor:
         shape = sample_shape + self._batch_shape
@@ -82,9 +83,11 @@ class Categorical(Distribution):
     def enumerate_support(self, expand: bool = True) -> Tensor:
         values = mx.arange(self._num_events)
         if expand:
-            values = mx.broadcast_to(values.reshape(-1, *([1] * len(self._batch_shape))),
-                                    (self._num_events,) + self._batch_shape)
+            values = mx.broadcast_to(
+                values.reshape(-1, *([1] * len(self._batch_shape))),
+                (self._num_events,) + self._batch_shape,
+            )
         return Tensor(values)
 
 
-__all__ = ['Categorical']
+__all__ = ["Categorical"]

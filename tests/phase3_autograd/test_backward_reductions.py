@@ -8,15 +8,18 @@ Tests gradient computation for reduction operations:
 """
 
 import sys
-sys.path.insert(0, '../..')
+
+sys.path.insert(0, "../..")
 
 import unittest
+
 import numpy as np
 
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
     import flashlight
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -58,7 +61,9 @@ class TestSumBackward(TestCase):
 
     def test_sum_3d(self):
         """Test sum on 3D tensor."""
-        x = flashlight.tensor([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]], requires_grad=True)
+        x = flashlight.tensor(
+            [[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]], requires_grad=True
+        )
         y = flashlight.sum(x, dim=1)
         loss = flashlight.sum(y)
         loss.backward()
@@ -181,7 +186,9 @@ class TestMaxBackward(TestCase):
 
     def test_max_3d(self):
         """Test max on 3D tensor."""
-        x = flashlight.tensor([[[1.0, 5.0], [3.0, 2.0]], [[4.0, 1.0], [2.0, 6.0]]], requires_grad=True)
+        x = flashlight.tensor(
+            [[[1.0, 5.0], [3.0, 2.0]], [[4.0, 1.0], [2.0, 6.0]]], requires_grad=True
+        )
         values, indices = x.max(dim=2)
         loss = values.sum()
         loss.backward()
@@ -234,7 +241,7 @@ class TestMaxBackwardEdgeCases(TestCase):
         y.backward()
 
         # Gradient distributed equally among all tied max values
-        expected = np.array([1/3, 1/3, 1/3])
+        expected = np.array([1 / 3, 1 / 3, 1 / 3])
         np.testing.assert_array_almost_equal(x.grad.numpy(), expected)
 
     def test_max_large_tensor(self):
@@ -252,6 +259,7 @@ class TestMaxBackwardEdgeCases(TestCase):
         np.testing.assert_array_almost_equal(x.grad.numpy(), expected)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from tests.common_utils import run_tests
+
     run_tests()

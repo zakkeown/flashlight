@@ -5,11 +5,11 @@ Implements nn.Upsample, nn.UpsamplingNearest2d, nn.UpsamplingBilinear2d,
 nn.PixelShuffle, and nn.PixelUnshuffle.
 """
 
-from typing import Optional, Tuple, Union, Any
+from typing import Any, Optional, Tuple, Union
 
-from ..module import Module
 from ...tensor import Tensor
 from ..functional import interpolate, pixel_shuffle, pixel_unshuffle
+from ..module import Module
 
 
 class Upsample(Module):
@@ -35,9 +35,9 @@ class Upsample(Module):
         self,
         size: Optional[Union[int, Tuple[int, ...]]] = None,
         scale_factor: Optional[Union[float, Tuple[float, ...]]] = None,
-        mode: str = 'nearest',
+        mode: str = "nearest",
         align_corners: Optional[bool] = None,
-        recompute_scale_factor: Optional[bool] = None
+        recompute_scale_factor: Optional[bool] = None,
     ):
         super().__init__()
         self.size = size
@@ -53,13 +53,13 @@ class Upsample(Module):
             scale_factor=self.scale_factor,
             mode=self.mode,
             align_corners=self.align_corners,
-            recompute_scale_factor=self.recompute_scale_factor
+            recompute_scale_factor=self.recompute_scale_factor,
         )
 
     def extra_repr(self) -> str:
         if self.size is not None:
-            return f'size={self.size}, mode={self.mode}'
-        return f'scale_factor={self.scale_factor}, mode={self.mode}'
+            return f"size={self.size}, mode={self.mode}"
+        return f"scale_factor={self.scale_factor}, mode={self.mode}"
 
 
 class UpsamplingNearest2d(Module):
@@ -78,19 +78,19 @@ class UpsamplingNearest2d(Module):
     def __init__(
         self,
         size: Optional[Union[int, Tuple[int, int]]] = None,
-        scale_factor: Optional[Union[float, Tuple[float, float]]] = None
+        scale_factor: Optional[Union[float, Tuple[float, float]]] = None,
     ):
         super().__init__()
         self.size = size
         self.scale_factor = scale_factor
 
     def forward(self, input: Tensor) -> Tensor:
-        return interpolate(input, size=self.size, scale_factor=self.scale_factor, mode='nearest')
+        return interpolate(input, size=self.size, scale_factor=self.scale_factor, mode="nearest")
 
     def extra_repr(self) -> str:
         if self.size is not None:
-            return f'size={self.size}'
-        return f'scale_factor={self.scale_factor}'
+            return f"size={self.size}"
+        return f"scale_factor={self.scale_factor}"
 
 
 class UpsamplingBilinear2d(Module):
@@ -109,7 +109,7 @@ class UpsamplingBilinear2d(Module):
     def __init__(
         self,
         size: Optional[Union[int, Tuple[int, int]]] = None,
-        scale_factor: Optional[Union[float, Tuple[float, float]]] = None
+        scale_factor: Optional[Union[float, Tuple[float, float]]] = None,
     ):
         super().__init__()
         self.size = size
@@ -117,12 +117,18 @@ class UpsamplingBilinear2d(Module):
 
     def forward(self, input: Tensor) -> Tensor:
         # PyTorch's UpsamplingBilinear2d uses align_corners=True by default
-        return interpolate(input, size=self.size, scale_factor=self.scale_factor, mode='bilinear', align_corners=True)
+        return interpolate(
+            input,
+            size=self.size,
+            scale_factor=self.scale_factor,
+            mode="bilinear",
+            align_corners=True,
+        )
 
     def extra_repr(self) -> str:
         if self.size is not None:
-            return f'size={self.size}'
-        return f'scale_factor={self.scale_factor}'
+            return f"size={self.size}"
+        return f"scale_factor={self.scale_factor}"
 
 
 class PixelShuffle(Module):
@@ -157,7 +163,7 @@ class PixelShuffle(Module):
         return pixel_shuffle(input, self.upscale_factor)
 
     def extra_repr(self) -> str:
-        return f'upscale_factor={self.upscale_factor}'
+        return f"upscale_factor={self.upscale_factor}"
 
 
 class PixelUnshuffle(Module):
@@ -189,13 +195,13 @@ class PixelUnshuffle(Module):
         return pixel_unshuffle(input, self.downscale_factor)
 
     def extra_repr(self) -> str:
-        return f'downscale_factor={self.downscale_factor}'
+        return f"downscale_factor={self.downscale_factor}"
 
 
 __all__ = [
-    'Upsample',
-    'UpsamplingNearest2d',
-    'UpsamplingBilinear2d',
-    'PixelShuffle',
-    'PixelUnshuffle',
+    "Upsample",
+    "UpsamplingNearest2d",
+    "UpsamplingBilinear2d",
+    "PixelShuffle",
+    "PixelUnshuffle",
 ]

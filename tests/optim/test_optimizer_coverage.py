@@ -5,11 +5,13 @@ Unit tests for edge cases, state management, and API coverage.
 These tests ensure 100% code coverage for the optimizer module.
 """
 
-import sys
 import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+import sys
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 import unittest
+
 import numpy as np
 
 from tests.common_utils import TestCase, skipIfNoMLX
@@ -19,6 +21,7 @@ try:
     import flashlight.nn as nn
     import flashlight.optim as optim
     from flashlight.optim import lr_scheduler
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -38,14 +41,11 @@ class TestOptimizerBase(TestCase):
         param1 = nn.Parameter(flashlight.tensor(np.zeros((3, 3), dtype=np.float32)))
         param2 = nn.Parameter(flashlight.tensor(np.zeros((2, 2), dtype=np.float32)))
 
-        opt = optim.SGD([
-            {'params': [param1], 'lr': 0.1},
-            {'params': [param2], 'lr': 0.01}
-        ])
+        opt = optim.SGD([{"params": [param1], "lr": 0.1}, {"params": [param2], "lr": 0.01}])
 
         self.assertEqual(len(opt.param_groups), 2)
-        self.assertEqual(opt.param_groups[0]['lr'], 0.1)
-        self.assertEqual(opt.param_groups[1]['lr'], 0.01)
+        self.assertEqual(opt.param_groups[0]["lr"], 0.1)
+        self.assertEqual(opt.param_groups[1]["lr"], 0.01)
 
     def test_duplicate_params_in_groups_raises(self):
         """Test that duplicate parameters across groups raise ValueError."""
@@ -53,7 +53,7 @@ class TestOptimizerBase(TestCase):
         opt = optim.SGD([param], lr=0.01)
         # Adding the same param again should raise
         with self.assertRaises(ValueError):
-            opt.add_param_group({'params': [param]})
+            opt.add_param_group({"params": [param]})
 
     def test_add_param_group(self):
         """Test add_param_group method."""
@@ -61,10 +61,10 @@ class TestOptimizerBase(TestCase):
         param2 = nn.Parameter(flashlight.tensor(np.zeros((2, 2), dtype=np.float32)))
 
         opt = optim.SGD([param1], lr=0.1)
-        opt.add_param_group({'params': [param2], 'lr': 0.01})
+        opt.add_param_group({"params": [param2], "lr": 0.01})
 
         self.assertEqual(len(opt.param_groups), 2)
-        self.assertEqual(opt.param_groups[1]['lr'], 0.01)
+        self.assertEqual(opt.param_groups[1]["lr"], 0.01)
 
 
 @skipIfNoMLX
@@ -121,7 +121,7 @@ class TestStateDictSaveLoad(TestCase):
         opt2.load_state_dict(state)
 
         # Verify state was loaded
-        self.assertEqual(opt.param_groups[0]['lr'], opt2.param_groups[0]['lr'])
+        self.assertEqual(opt.param_groups[0]["lr"], opt2.param_groups[0]["lr"])
 
     def test_adam_state_dict_roundtrip(self):
         """Test Adam state dict save and load."""
@@ -139,7 +139,7 @@ class TestStateDictSaveLoad(TestCase):
         opt2 = optim.Adam([param2], lr=0.001)
         opt2.load_state_dict(state)
 
-        self.assertEqual(opt.param_groups[0]['lr'], opt2.param_groups[0]['lr'])
+        self.assertEqual(opt.param_groups[0]["lr"], opt2.param_groups[0]["lr"])
 
 
 @skipIfNoMLX
@@ -266,19 +266,19 @@ class TestLRSchedulerEdgeCases(TestCase):
         """Test ReduceLROnPlateau in max mode."""
         param = nn.Parameter(flashlight.tensor(np.zeros((3, 3), dtype=np.float32)))
         opt = optim.SGD([param], lr=0.1)
-        sched = lr_scheduler.ReduceLROnPlateau(opt, mode='max', factor=0.5, patience=2)
+        sched = lr_scheduler.ReduceLROnPlateau(opt, mode="max", factor=0.5, patience=2)
 
         # Increasing metric - should not reduce
         sched.step(0.1)
         sched.step(0.2)
         sched.step(0.3)
-        self.assertEqual(opt.param_groups[0]['lr'], 0.1)
+        self.assertEqual(opt.param_groups[0]["lr"], 0.1)
 
         # Stagnant metric - should reduce after patience
         sched.step(0.3)
         sched.step(0.3)
         sched.step(0.3)  # Patience exceeded
-        self.assertLess(opt.param_groups[0]['lr'], 0.1)
+        self.assertLess(opt.param_groups[0]["lr"], 0.1)
 
     def test_step_lr_boundary(self):
         """Test StepLR at step size boundary."""
@@ -288,11 +288,11 @@ class TestLRSchedulerEdgeCases(TestCase):
 
         # Steps 1, 2 should not change LR
         sched.step()  # epoch 1
-        self.assertAlmostEqual(opt.param_groups[0]['lr'], 0.1, places=6)
+        self.assertAlmostEqual(opt.param_groups[0]["lr"], 0.1, places=6)
         sched.step()  # epoch 2
-        self.assertAlmostEqual(opt.param_groups[0]['lr'], 0.1, places=6)
+        self.assertAlmostEqual(opt.param_groups[0]["lr"], 0.1, places=6)
         sched.step()  # epoch 3 - should decay
-        self.assertAlmostEqual(opt.param_groups[0]['lr'], 0.01, places=6)
+        self.assertAlmostEqual(opt.param_groups[0]["lr"], 0.01, places=6)
 
 
 @skipIfNoMLX
@@ -304,10 +304,7 @@ class TestMultipleParamGroups(TestCase):
         param1 = nn.Parameter(flashlight.tensor(np.ones((3, 3), dtype=np.float32)))
         param2 = nn.Parameter(flashlight.tensor(np.ones((3, 3), dtype=np.float32)))
 
-        opt = optim.SGD([
-            {'params': [param1], 'lr': 0.1},
-            {'params': [param2], 'lr': 0.01}
-        ])
+        opt = optim.SGD([{"params": [param1], "lr": 0.1}, {"params": [param2], "lr": 0.01}])
 
         param1.grad = flashlight.tensor(np.ones((3, 3), dtype=np.float32))
         param2.grad = flashlight.tensor(np.ones((3, 3), dtype=np.float32))
@@ -324,10 +321,7 @@ class TestMultipleParamGroups(TestCase):
         param1 = nn.Parameter(flashlight.tensor(np.ones((2, 2), dtype=np.float32)))
         param2 = nn.Parameter(flashlight.tensor(np.ones((2, 2), dtype=np.float32)))
 
-        opt = optim.Adam([
-            {'params': [param1], 'lr': 0.01},
-            {'params': [param2], 'lr': 0.001}
-        ])
+        opt = optim.Adam([{"params": [param1], "lr": 0.01}, {"params": [param2], "lr": 0.001}])
 
         param1.grad = flashlight.tensor(np.ones((2, 2), dtype=np.float32))
         param2.grad = flashlight.tensor(np.ones((2, 2), dtype=np.float32))
@@ -383,6 +377,7 @@ class TestAdditionalOptimizers(TestCase):
         self.assertTrue(param.numpy().mean() < 1.0)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from tests.common_utils import run_tests
+
     run_tests()

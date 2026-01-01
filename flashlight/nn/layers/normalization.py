@@ -4,11 +4,13 @@ Normalization Layers
 Implements normalization layers for neural networks.
 """
 
+from typing import Any, List, Optional, Union
+
 import mlx.core as mx
+
+from ...tensor import Tensor
 from ..module import Module
 from ..parameter import Parameter
-from ...tensor import Tensor
-from typing import Optional, Any, Union, List
 
 
 class BatchNorm2d(Module):
@@ -42,7 +44,7 @@ class BatchNorm2d(Module):
         affine: bool = True,
         track_running_stats: bool = True,
         device: Optional[Any] = None,
-        dtype: Optional[Any] = None
+        dtype: Optional[Any] = None,
     ):
         # device and dtype are accepted for PyTorch compatibility but ignored
         # MLX uses unified memory and default dtype
@@ -84,21 +86,21 @@ class BatchNorm2d(Module):
 
         cache = self._affine_cache
         # Check if cache is valid
-        if cache.get('weight_id') != weight_id or cache.get('bias_id') != bias_id:
+        if cache.get("weight_id") != weight_id or cache.get("bias_id") != bias_id:
             # Cache invalidated - recompute both layouts using raw MLX arrays
             w = self.weight._mlx_array
             b = self.bias._mlx_array
-            cache['weight_nchw'] = mx.reshape(w, (1, -1, 1, 1))
-            cache['weight_nhwc'] = mx.reshape(w, (1, 1, 1, -1))
-            cache['bias_nchw'] = mx.reshape(b, (1, -1, 1, 1))
-            cache['bias_nhwc'] = mx.reshape(b, (1, 1, 1, -1))
-            cache['weight_id'] = weight_id
-            cache['bias_id'] = bias_id
+            cache["weight_nchw"] = mx.reshape(w, (1, -1, 1, 1))
+            cache["weight_nhwc"] = mx.reshape(w, (1, 1, 1, -1))
+            cache["bias_nchw"] = mx.reshape(b, (1, -1, 1, 1))
+            cache["bias_nhwc"] = mx.reshape(b, (1, 1, 1, -1))
+            cache["weight_id"] = weight_id
+            cache["bias_id"] = bias_id
 
         if is_nhwc:
-            return cache['weight_nhwc'], cache['bias_nhwc']
+            return cache["weight_nhwc"], cache["bias_nhwc"]
         else:
-            return cache['weight_nchw'], cache['bias_nchw']
+            return cache["weight_nchw"], cache["bias_nchw"]
 
     def _get_affine_params(self, is_nhwc: bool):
         """Get cached reshaped weight and bias as Tensors for given layout."""
@@ -117,14 +119,10 @@ class BatchNorm2d(Module):
         Returns:
             Normalized tensor of same shape as input
         """
-        from ...layout import is_nhwc_mode, Layout
+        from ...layout import Layout, is_nhwc_mode
 
         # Check if input is in NHWC layout
-        is_nhwc = (
-            is_nhwc_mode() and
-            hasattr(input, '_layout') and
-            input._layout == Layout.NHWC
-        )
+        is_nhwc = is_nhwc_mode() and hasattr(input, "_layout") and input._layout == Layout.NHWC
 
         if is_nhwc:
             # NHWC: [N, H, W, C] - normalize over N, H, W (dims 0, 1, 2)
@@ -144,13 +142,11 @@ class BatchNorm2d(Module):
             if self.track_running_stats:
                 momentum = self.momentum
                 self.running_mean._mlx_array = (
-                    (1 - momentum) * self.running_mean._mlx_array +
-                    momentum * batch_mean._mlx_array
-                )
+                    1 - momentum
+                ) * self.running_mean._mlx_array + momentum * batch_mean._mlx_array
                 self.running_var._mlx_array = (
-                    (1 - momentum) * self.running_var._mlx_array +
-                    momentum * batch_var._mlx_array
-                )
+                    1 - momentum
+                ) * self.running_var._mlx_array + momentum * batch_var._mlx_array
                 self.num_batches_tracked += 1
 
             mean = batch_mean
@@ -189,8 +185,8 @@ class BatchNorm2d(Module):
 
     def extra_repr(self) -> str:
         return (
-            f'{self.num_features}, eps={self.eps}, momentum={self.momentum}, '
-            f'affine={self.affine}, track_running_stats={self.track_running_stats}'
+            f"{self.num_features}, eps={self.eps}, momentum={self.momentum}, "
+            f"affine={self.affine}, track_running_stats={self.track_running_stats}"
         )
 
 
@@ -225,11 +221,13 @@ class LayerNorm(Module):
         elementwise_affine: bool = True,
         bias: bool = True,
         device: Optional[Any] = None,
-        dtype: Optional[Any] = None
+        dtype: Optional[Any] = None,
     ):
         # device and dtype are accepted for PyTorch compatibility but ignored
         super().__init__()
-        self.normalized_shape = (normalized_shape,) if isinstance(normalized_shape, int) else tuple(normalized_shape)
+        self.normalized_shape = (
+            (normalized_shape,) if isinstance(normalized_shape, int) else tuple(normalized_shape)
+        )
         self.eps = eps
         self.elementwise_affine = elementwise_affine
 
@@ -263,6 +261,7 @@ class LayerNorm(Module):
 
             # Handle autograd
             from ...autograd.context import is_grad_enabled
+
             if is_grad_enabled() and input.requires_grad:
                 result.requires_grad = True
             return result
@@ -277,9 +276,7 @@ class LayerNorm(Module):
         var = input.var(dim=axes, keepdim=True, unbiased=False)
 
         # Normalize
-        normalized = (input - mean) / Tensor._from_mlx_array(
-            mx.sqrt(var._mlx_array + self.eps)
-        )
+        normalized = (input - mean) / Tensor._from_mlx_array(mx.sqrt(var._mlx_array + self.eps))
 
         # Apply affine transformation
         if self.elementwise_affine:
@@ -290,7 +287,9 @@ class LayerNorm(Module):
         return output
 
     def extra_repr(self) -> str:
-        return f'{self.normalized_shape}, eps={self.eps}, elementwise_affine={self.elementwise_affine}'
+        return (
+            f"{self.normalized_shape}, eps={self.eps}, elementwise_affine={self.elementwise_affine}"
+        )
 
 
 class BatchNorm1d(Module):
@@ -321,7 +320,7 @@ class BatchNorm1d(Module):
         affine: bool = True,
         track_running_stats: bool = True,
         device: Optional[Any] = None,
-        dtype: Optional[Any] = None
+        dtype: Optional[Any] = None,
     ):
         # device and dtype are accepted for PyTorch compatibility but ignored
         super().__init__()
@@ -364,13 +363,11 @@ class BatchNorm1d(Module):
             if self.track_running_stats:
                 momentum = self.momentum
                 self.running_mean._mlx_array = (
-                    (1 - momentum) * self.running_mean._mlx_array +
-                    momentum * batch_mean._mlx_array
-                )
+                    1 - momentum
+                ) * self.running_mean._mlx_array + momentum * batch_mean._mlx_array
                 self.running_var._mlx_array = (
-                    (1 - momentum) * self.running_var._mlx_array +
-                    momentum * batch_var._mlx_array
-                )
+                    1 - momentum
+                ) * self.running_var._mlx_array + momentum * batch_var._mlx_array
                 self.num_batches_tracked += 1
 
             mean = batch_mean
@@ -414,8 +411,8 @@ class BatchNorm1d(Module):
 
     def extra_repr(self) -> str:
         return (
-            f'{self.num_features}, eps={self.eps}, momentum={self.momentum}, '
-            f'affine={self.affine}, track_running_stats={self.track_running_stats}'
+            f"{self.num_features}, eps={self.eps}, momentum={self.momentum}, "
+            f"affine={self.affine}, track_running_stats={self.track_running_stats}"
         )
 
 
@@ -447,7 +444,7 @@ class BatchNorm3d(Module):
         affine: bool = True,
         track_running_stats: bool = True,
         device: Optional[Any] = None,
-        dtype: Optional[Any] = None
+        dtype: Optional[Any] = None,
     ):
         # device and dtype are accepted for PyTorch compatibility but ignored
         super().__init__()
@@ -483,13 +480,11 @@ class BatchNorm3d(Module):
             if self.track_running_stats:
                 momentum = self.momentum
                 self.running_mean._mlx_array = (
-                    (1 - momentum) * self.running_mean._mlx_array +
-                    momentum * batch_mean._mlx_array
-                )
+                    1 - momentum
+                ) * self.running_mean._mlx_array + momentum * batch_mean._mlx_array
                 self.running_var._mlx_array = (
-                    (1 - momentum) * self.running_var._mlx_array +
-                    momentum * batch_var._mlx_array
-                )
+                    1 - momentum
+                ) * self.running_var._mlx_array + momentum * batch_var._mlx_array
                 self.num_batches_tracked += 1
 
             mean = batch_mean
@@ -521,8 +516,8 @@ class BatchNorm3d(Module):
 
     def extra_repr(self) -> str:
         return (
-            f'{self.num_features}, eps={self.eps}, momentum={self.momentum}, '
-            f'affine={self.affine}, track_running_stats={self.track_running_stats}'
+            f"{self.num_features}, eps={self.eps}, momentum={self.momentum}, "
+            f"affine={self.affine}, track_running_stats={self.track_running_stats}"
         )
 
 
@@ -552,7 +547,7 @@ class GroupNorm(Module):
         eps: float = 1e-5,
         affine: bool = True,
         device: Optional[Any] = None,
-        dtype: Optional[Any] = None
+        dtype: Optional[Any] = None,
     ):
         # device and dtype are accepted for PyTorch compatibility but ignored
         super().__init__()
@@ -562,7 +557,9 @@ class GroupNorm(Module):
         self.affine = affine
 
         if num_channels % num_groups != 0:
-            raise ValueError(f"num_channels ({num_channels}) must be divisible by num_groups ({num_groups})")
+            raise ValueError(
+                f"num_channels ({num_channels}) must be divisible by num_groups ({num_groups})"
+            )
 
         if self.affine:
             self.weight = Parameter(Tensor._from_mlx_array(mx.ones(num_channels)))
@@ -608,7 +605,7 @@ class GroupNorm(Module):
         return result
 
     def extra_repr(self) -> str:
-        return f'{self.num_groups}, {self.num_channels}, eps={self.eps}, affine={self.affine}'
+        return f"{self.num_groups}, {self.num_channels}, eps={self.eps}, affine={self.affine}"
 
 
 class InstanceNorm1d(Module):
@@ -639,7 +636,7 @@ class InstanceNorm1d(Module):
         affine: bool = False,
         track_running_stats: bool = False,
         device: Optional[Any] = None,
-        dtype: Optional[Any] = None
+        dtype: Optional[Any] = None,
     ):
         # device and dtype are accepted for PyTorch compatibility but ignored
         super().__init__()
@@ -682,7 +679,7 @@ class InstanceNorm1d(Module):
         return result
 
     def extra_repr(self) -> str:
-        return f'{self.num_features}, eps={self.eps}, affine={self.affine}'
+        return f"{self.num_features}, eps={self.eps}, affine={self.affine}"
 
 
 class InstanceNorm2d(Module):
@@ -713,7 +710,7 @@ class InstanceNorm2d(Module):
         affine: bool = False,
         track_running_stats: bool = False,
         device: Optional[Any] = None,
-        dtype: Optional[Any] = None
+        dtype: Optional[Any] = None,
     ):
         # device and dtype are accepted for PyTorch compatibility but ignored
         super().__init__()
@@ -756,7 +753,7 @@ class InstanceNorm2d(Module):
         return result
 
     def extra_repr(self) -> str:
-        return f'{self.num_features}, eps={self.eps}, affine={self.affine}'
+        return f"{self.num_features}, eps={self.eps}, affine={self.affine}"
 
 
 class InstanceNorm3d(Module):
@@ -787,7 +784,7 @@ class InstanceNorm3d(Module):
         affine: bool = False,
         track_running_stats: bool = False,
         device: Optional[Any] = None,
-        dtype: Optional[Any] = None
+        dtype: Optional[Any] = None,
     ):
         # device and dtype are accepted for PyTorch compatibility but ignored
         super().__init__()
@@ -830,7 +827,7 @@ class InstanceNorm3d(Module):
         return result
 
     def extra_repr(self) -> str:
-        return f'{self.num_features}, eps={self.eps}, affine={self.affine}'
+        return f"{self.num_features}, eps={self.eps}, affine={self.affine}"
 
 
 class RMSNorm(Module):
@@ -855,7 +852,7 @@ class RMSNorm(Module):
         eps: float = None,
         elementwise_affine: bool = True,
         device: Optional[Any] = None,
-        dtype: Optional[Any] = None
+        dtype: Optional[Any] = None,
     ):
         super().__init__()
         if isinstance(normalized_shape, int):
@@ -878,7 +875,7 @@ class RMSNorm(Module):
         # Compute RMS over the last dimension(s)
         ndim = len(self.normalized_shape)
         axes = tuple(range(-ndim, 0))
-        rms = mx.sqrt(mx.mean(x ** 2, axis=axes, keepdims=True) + self.eps)
+        rms = mx.sqrt(mx.mean(x**2, axis=axes, keepdims=True) + self.eps)
 
         # Normalize
         x = x / rms
@@ -891,7 +888,9 @@ class RMSNorm(Module):
         return result
 
     def extra_repr(self) -> str:
-        return f'{self.normalized_shape}, eps={self.eps}, elementwise_affine={self.elementwise_affine}'
+        return (
+            f"{self.normalized_shape}, eps={self.eps}, elementwise_affine={self.elementwise_affine}"
+        )
 
 
 class LocalResponseNorm(Module):
@@ -911,13 +910,7 @@ class LocalResponseNorm(Module):
         - Output: (N, C, ...)
     """
 
-    def __init__(
-        self,
-        size: int,
-        alpha: float = 1e-4,
-        beta: float = 0.75,
-        k: float = 1.0
-    ):
+    def __init__(self, size: int, alpha: float = 1e-4, beta: float = 0.75, k: float = 1.0):
         super().__init__()
         self.size = size
         self.alpha = alpha
@@ -953,11 +946,11 @@ class LocalResponseNorm(Module):
 
         # Sum over local window - use list comprehension for better accuracy
         if ndim == 3:
-            slices_list = [x_sq_padded[:, i:i+C, :] for i in range(self.size)]
+            slices_list = [x_sq_padded[:, i : i + C, :] for i in range(self.size)]
         elif ndim == 4:
-            slices_list = [x_sq_padded[:, i:i+C, :, :] for i in range(self.size)]
+            slices_list = [x_sq_padded[:, i : i + C, :, :] for i in range(self.size)]
         else:  # ndim == 5
-            slices_list = [x_sq_padded[:, i:i+C, :, :, :] for i in range(self.size)]
+            slices_list = [x_sq_padded[:, i : i + C, :, :, :] for i in range(self.size)]
 
         # Stack and sum
         local_sum = mx.sum(mx.stack(slices_list, axis=0), axis=0)
@@ -970,13 +963,14 @@ class LocalResponseNorm(Module):
         result = Tensor._from_mlx_array(output)
 
         from ...autograd.context import is_grad_enabled
+
         if is_grad_enabled() and input.requires_grad:
             result.requires_grad = True
 
         return result
 
     def extra_repr(self) -> str:
-        return f'{self.size}, alpha={self.alpha}, beta={self.beta}, k={self.k}'
+        return f"{self.size}, alpha={self.alpha}, beta={self.beta}, k={self.k}"
 
 
 class SyncBatchNorm(BatchNorm2d):
@@ -1011,14 +1005,14 @@ class SyncBatchNorm(BatchNorm2d):
         track_running_stats: bool = True,
         process_group=None,
         device=None,
-        dtype=None
+        dtype=None,
     ):
         super().__init__(
             num_features=num_features,
             eps=eps,
             momentum=momentum,
             affine=affine,
-            track_running_stats=track_running_stats
+            track_running_stats=track_running_stats,
         )
         # process_group ignored - MLX uses unified memory on single GPU
         self.process_group = process_group
@@ -1050,13 +1044,11 @@ class SyncBatchNorm(BatchNorm2d):
             if self.track_running_stats:
                 momentum = self.momentum
                 self.running_mean._mlx_array = (
-                    (1 - momentum) * self.running_mean._mlx_array +
-                    momentum * batch_mean._mlx_array
-                )
+                    1 - momentum
+                ) * self.running_mean._mlx_array + momentum * batch_mean._mlx_array
                 self.running_var._mlx_array = (
-                    (1 - momentum) * self.running_var._mlx_array +
-                    momentum * batch_var._mlx_array
-                )
+                    1 - momentum
+                ) * self.running_var._mlx_array + momentum * batch_var._mlx_array
                 self.num_batches_tracked += 1
 
             mean = batch_mean
@@ -1124,13 +1116,7 @@ class CrossMapLRN2d(Module):
         >>> output = lrn(x)
     """
 
-    def __init__(
-        self,
-        size: int,
-        alpha: float = 0.0001,
-        beta: float = 0.75,
-        k: float = 1
-    ):
+    def __init__(self, size: int, alpha: float = 0.0001, beta: float = 0.75, k: float = 1):
         super().__init__()
         self.size = size
         self.alpha = alpha
@@ -1198,13 +1184,20 @@ class CrossMapLRN2d(Module):
         return Tensor._from_mlx_array(output)
 
     def extra_repr(self) -> str:
-        return f'size={self.size}, alpha={self.alpha}, beta={self.beta}, k={self.k}'
+        return f"size={self.size}, alpha={self.alpha}, beta={self.beta}, k={self.k}"
 
 
 __all__ = [
-    'BatchNorm1d', 'BatchNorm2d', 'BatchNorm3d',
-    'LayerNorm', 'GroupNorm',
-    'InstanceNorm1d', 'InstanceNorm2d', 'InstanceNorm3d',
-    'RMSNorm', 'LocalResponseNorm', 'SyncBatchNorm',
-    'CrossMapLRN2d',
+    "BatchNorm1d",
+    "BatchNorm2d",
+    "BatchNorm3d",
+    "LayerNorm",
+    "GroupNorm",
+    "InstanceNorm1d",
+    "InstanceNorm2d",
+    "InstanceNorm3d",
+    "RMSNorm",
+    "LocalResponseNorm",
+    "SyncBatchNorm",
+    "CrossMapLRN2d",
 ]

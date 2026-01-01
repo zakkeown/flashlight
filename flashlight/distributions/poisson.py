@@ -1,19 +1,20 @@
 """Poisson Distribution"""
 
 from typing import Optional, Tuple, Union
+
 import mlx.core as mx
 
-from ..tensor import Tensor
 from ..ops.special import lgamma
-from .exp_family import ExponentialFamily
+from ..tensor import Tensor
 from . import constraints
-from ._constants import xlogy, safe_log
+from ._constants import safe_log, xlogy
+from .exp_family import ExponentialFamily
 
 
 class Poisson(ExponentialFamily):
     """Poisson distribution."""
 
-    arg_constraints = {'rate': constraints.nonnegative}
+    arg_constraints = {"rate": constraints.nonnegative}
     support = constraints.nonnegative_integer
 
     def __init__(self, rate: Union[Tensor, float], validate_args: Optional[bool] = None):
@@ -73,4 +74,4 @@ class Poisson(ExponentialFamily):
         return Tensor(mx.exp(x_data))
 
 
-__all__ = ['Poisson']
+__all__ = ["Poisson"]

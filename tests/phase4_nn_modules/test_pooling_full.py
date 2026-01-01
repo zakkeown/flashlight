@@ -10,9 +10,11 @@ Tests all pooling layers including:
 """
 
 import sys
-sys.path.insert(0, '../..')
+
+sys.path.insert(0, "../..")
 
 import unittest
+
 import numpy as np
 import pytest
 
@@ -20,12 +22,14 @@ from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
     import flashlight
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
 
 try:
     import torch
+
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
@@ -34,6 +38,7 @@ except ImportError:
 # ============================================================================
 # Max Pooling Tests
 # ============================================================================
+
 
 @skipIfNoMLX
 class TestMaxPool1d(TestCase):
@@ -74,6 +79,7 @@ class TestMaxPool3d(TestCase):
 # Average Pooling Tests
 # ============================================================================
 
+
 @skipIfNoMLX
 class TestAvgPool1d(TestCase):
     """Test nn.AvgPool1d."""
@@ -101,6 +107,7 @@ class TestAvgPool3d(TestCase):
 # ============================================================================
 # Adaptive Pooling Tests
 # ============================================================================
+
 
 @skipIfNoMLX
 class TestAdaptiveMaxPool1d(TestCase):
@@ -153,6 +160,7 @@ class TestAdaptiveAvgPool3d(TestCase):
 # ============================================================================
 # LP Pooling Tests (Converted from NumPy)
 # ============================================================================
+
 
 @skipIfNoMLX
 class TestLPPool1d(TestCase):
@@ -218,6 +226,7 @@ class TestLPPool3d(TestCase):
 # Fractional Max Pooling Tests (Converted from NumPy)
 # ============================================================================
 
+
 @skipIfNoMLX
 class TestFractionalMaxPool2d(TestCase):
     """Test nn.FractionalMaxPool2d (converted from NumPy to MLX)."""
@@ -267,6 +276,7 @@ class TestFractionalMaxPool3d(TestCase):
 # ============================================================================
 # Max Unpool Tests (Converted from NumPy)
 # ============================================================================
+
 
 @skipIfNoMLX
 class TestMaxUnpool1d(TestCase):
@@ -330,5 +340,5 @@ class TestMaxUnpool3d(TestCase):
         self.assertEqual(output.shape, (2, 3, 8, 8, 8))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -4,9 +4,10 @@ Tests for quick operations (flashlight.ops.quick_ops).
 Tests bitwise ops, matrix ops, special ops, and utility functions.
 """
 
-import pytest
 import numpy as np
+import pytest
 import torch
+
 import flashlight
 from flashlight import Tensor
 
@@ -49,8 +50,9 @@ class TestBitwiseOps:
         x = flashlight.tensor([5, 3, 7], dtype=flashlight.int32)
         y = flashlight.tensor([3, 3, 3], dtype=flashlight.int32)
         result = flashlight.bitwise_and(x, y)
-        expected = torch.bitwise_and(torch.tensor([5, 3, 7], dtype=torch.int32),
-                                      torch.tensor([3, 3, 3], dtype=torch.int32))
+        expected = torch.bitwise_and(
+            torch.tensor([5, 3, 7], dtype=torch.int32), torch.tensor([3, 3, 3], dtype=torch.int32)
+        )
         np.testing.assert_array_equal(np.array(result.tolist()), expected.numpy())
 
     def test_bitwise_or(self):
@@ -58,8 +60,9 @@ class TestBitwiseOps:
         x = flashlight.tensor([5, 3, 7], dtype=flashlight.int32)
         y = flashlight.tensor([3, 3, 3], dtype=flashlight.int32)
         result = flashlight.bitwise_or(x, y)
-        expected = torch.bitwise_or(torch.tensor([5, 3, 7], dtype=torch.int32),
-                                     torch.tensor([3, 3, 3], dtype=torch.int32))
+        expected = torch.bitwise_or(
+            torch.tensor([5, 3, 7], dtype=torch.int32), torch.tensor([3, 3, 3], dtype=torch.int32)
+        )
         np.testing.assert_array_equal(np.array(result.tolist()), expected.numpy())
 
     def test_bitwise_xor(self):
@@ -67,8 +70,9 @@ class TestBitwiseOps:
         x = flashlight.tensor([5, 3, 7], dtype=flashlight.int32)
         y = flashlight.tensor([3, 3, 3], dtype=flashlight.int32)
         result = flashlight.bitwise_xor(x, y)
-        expected = torch.bitwise_xor(torch.tensor([5, 3, 7], dtype=torch.int32),
-                                      torch.tensor([3, 3, 3], dtype=torch.int32))
+        expected = torch.bitwise_xor(
+            torch.tensor([5, 3, 7], dtype=torch.int32), torch.tensor([3, 3, 3], dtype=torch.int32)
+        )
         np.testing.assert_array_equal(np.array(result.tolist()), expected.numpy())
 
     def test_bitwise_not(self):
@@ -98,8 +102,9 @@ class TestConcatenate:
         x = flashlight.tensor([[1.0, 2.0], [3.0, 4.0]])
         y = flashlight.tensor([[5.0, 6.0]])
         result = flashlight.concatenate([x, y], dim=0)
-        expected = torch.concatenate([torch.tensor([[1.0, 2.0], [3.0, 4.0]]),
-                                       torch.tensor([[5.0, 6.0]])], dim=0)
+        expected = torch.concatenate(
+            [torch.tensor([[1.0, 2.0], [3.0, 4.0]]), torch.tensor([[5.0, 6.0]])], dim=0
+        )
         np.testing.assert_allclose(np.array(result.tolist()), expected.numpy(), rtol=1e-5)
 
 
@@ -163,10 +168,13 @@ class TestMatrixOps:
         mat1 = flashlight.tensor([[1.0, 0.0], [0.0, 1.0]])
         mat2 = flashlight.tensor([[2.0, 1.0], [1.0, 2.0]])
         result = flashlight.addmm(M, mat1, mat2, beta=0.5, alpha=2.0)
-        expected = torch.addmm(torch.tensor([[1.0, 2.0], [3.0, 4.0]]),
-                                torch.tensor([[1.0, 0.0], [0.0, 1.0]]),
-                                torch.tensor([[2.0, 1.0], [1.0, 2.0]]),
-                                beta=0.5, alpha=2.0)
+        expected = torch.addmm(
+            torch.tensor([[1.0, 2.0], [3.0, 4.0]]),
+            torch.tensor([[1.0, 0.0], [0.0, 1.0]]),
+            torch.tensor([[2.0, 1.0], [1.0, 2.0]]),
+            beta=0.5,
+            alpha=2.0,
+        )
         np.testing.assert_allclose(np.array(result.tolist()), expected.numpy(), rtol=1e-5)
 
     def test_mv(self):
@@ -191,10 +199,13 @@ class TestMatrixOps:
         vec1 = flashlight.tensor([1.0, 2.0, 3.0])
         vec2 = flashlight.tensor([1.0, 2.0])
         result = flashlight.addr(M, vec1, vec2, beta=0.5, alpha=2.0)
-        expected = torch.addr(torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]),
-                               torch.tensor([1.0, 2.0, 3.0]),
-                               torch.tensor([1.0, 2.0]),
-                               beta=0.5, alpha=2.0)
+        expected = torch.addr(
+            torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]),
+            torch.tensor([1.0, 2.0, 3.0]),
+            torch.tensor([1.0, 2.0]),
+            beta=0.5,
+            alpha=2.0,
+        )
         np.testing.assert_allclose(np.array(result.tolist()), expected.numpy(), rtol=1e-5)
 
 
@@ -225,7 +236,7 @@ class TestNorm:
         """Test frobenius_norm function."""
         x = flashlight.tensor([[1.0, 2.0], [3.0, 4.0]])
         result = flashlight.frobenius_norm(x)
-        expected = torch.linalg.norm(torch.tensor([[1.0, 2.0], [3.0, 4.0]]), ord='fro')
+        expected = torch.linalg.norm(torch.tensor([[1.0, 2.0], [3.0, 4.0]]), ord="fro")
         np.testing.assert_allclose(result.item(), expected.item(), rtol=1e-5)
 
 
@@ -316,9 +327,11 @@ class TestChainMatmul:
         b = flashlight.tensor([[5.0, 6.0], [7.0, 8.0]])
         c = flashlight.tensor([[9.0, 10.0], [11.0, 12.0]])
         result = flashlight.chain_matmul(a, b, c)
-        expected = torch.chain_matmul(torch.tensor([[1.0, 2.0], [3.0, 4.0]]),
-                                       torch.tensor([[5.0, 6.0], [7.0, 8.0]]),
-                                       torch.tensor([[9.0, 10.0], [11.0, 12.0]]))
+        expected = torch.chain_matmul(
+            torch.tensor([[1.0, 2.0], [3.0, 4.0]]),
+            torch.tensor([[5.0, 6.0], [7.0, 8.0]]),
+            torch.tensor([[9.0, 10.0], [11.0, 12.0]]),
+        )
         np.testing.assert_allclose(np.array(result.tolist()), expected.numpy(), rtol=1e-4)
 
 
@@ -340,8 +353,9 @@ class TestConstantPad:
         """Test constant_pad_nd function."""
         x = flashlight.tensor([[1.0, 2.0], [3.0, 4.0]])
         result = flashlight.constant_pad_nd(x, (1, 1, 1, 1), value=0.0)
-        expected = torch.nn.functional.pad(torch.tensor([[1.0, 2.0], [3.0, 4.0]]),
-                                            (1, 1, 1, 1), mode='constant', value=0.0)
+        expected = torch.nn.functional.pad(
+            torch.tensor([[1.0, 2.0], [3.0, 4.0]]), (1, 1, 1, 1), mode="constant", value=0.0
+        )
         np.testing.assert_allclose(np.array(result.tolist()), expected.numpy(), rtol=1e-5)
 
 
@@ -354,10 +368,13 @@ class TestAddmv:
         vec = flashlight.tensor([1.0, 2.0, 3.0])
         input_t = flashlight.tensor([1.0, 2.0])
         result = flashlight.addmv(input_t, M, vec, beta=1.0, alpha=1.0)
-        expected = torch.addmv(torch.tensor([1.0, 2.0]),
-                                torch.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]),
-                                torch.tensor([1.0, 2.0, 3.0]),
-                                beta=1.0, alpha=1.0)
+        expected = torch.addmv(
+            torch.tensor([1.0, 2.0]),
+            torch.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]),
+            torch.tensor([1.0, 2.0, 3.0]),
+            beta=1.0,
+            alpha=1.0,
+        )
         np.testing.assert_allclose(np.array(result.tolist()), expected.numpy(), rtol=1e-5)
 
 
@@ -377,7 +394,7 @@ class TestQuickOpsParity:
         np.testing.assert_allclose(
             np.array(result_mlx.tolist()),
             result_torch.numpy(),
-            rtol=1e-4  # MLX erf may have slightly different precision
+            rtol=1e-4,  # MLX erf may have slightly different precision
         )
 
     def test_sigmoid_parity_multidim(self):
@@ -389,11 +406,7 @@ class TestQuickOpsParity:
         result_mlx = flashlight.sigmoid(x_mlx)
         result_torch = torch.sigmoid(x_torch)
 
-        np.testing.assert_allclose(
-            np.array(result_mlx.tolist()),
-            result_torch.numpy(),
-            rtol=1e-5
-        )
+        np.testing.assert_allclose(np.array(result_mlx.tolist()), result_torch.numpy(), rtol=1e-5)
 
     def test_softmax_parity_multidim(self):
         """Test softmax parity with multi-dimensional tensors."""
@@ -405,9 +418,7 @@ class TestQuickOpsParity:
             result_mlx = flashlight.softmax(x_mlx, dim=dim)
             result_torch = torch.softmax(x_torch, dim=dim)
             np.testing.assert_allclose(
-                np.array(result_mlx.tolist()),
-                result_torch.numpy(),
-                rtol=1e-5
+                np.array(result_mlx.tolist()), result_torch.numpy(), rtol=1e-5
             )
 
     def test_addmm_parity(self):
@@ -427,8 +438,4 @@ class TestQuickOpsParity:
         result_mlx = flashlight.addmm(M_mlx, mat1_mlx, mat2_mlx, beta=0.5, alpha=2.0)
         result_torch = torch.addmm(M_torch, mat1_torch, mat2_torch, beta=0.5, alpha=2.0)
 
-        np.testing.assert_allclose(
-            np.array(result_mlx.tolist()),
-            result_torch.numpy(),
-            rtol=1e-4
-        )
+        np.testing.assert_allclose(np.array(result_mlx.tolist()), result_torch.numpy(), rtol=1e-4)

@@ -4,8 +4,8 @@ Pooling Layer Parity Tests
 Tests numerical parity between flashlight pooling layers and PyTorch.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 torch = pytest.importorskip("torch")
 

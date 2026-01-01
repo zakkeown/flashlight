@@ -5,19 +5,19 @@ PyTorch-compatible torch.nn.parameter module for neural network parameters and b
 """
 
 from collections import OrderedDict
-from typing import Optional, Iterator
+from typing import Iterator, Optional
 
 import mlx.core as mx
 
 from ...tensor import Tensor
 
 __all__ = [
-    'Parameter',
-    'Buffer',
-    'UninitializedParameter',
-    'UninitializedBuffer',
-    'UninitializedTensorMixin',
-    'is_lazy',
+    "Parameter",
+    "Buffer",
+    "UninitializedParameter",
+    "UninitializedBuffer",
+    "UninitializedTensorMixin",
+    "is_lazy",
 ]
 
 
@@ -53,9 +53,9 @@ class Parameter(Tensor):
             data = args[0]
             args = args[1:]
         else:
-            data = kwargs.pop('data', None)
+            data = kwargs.pop("data", None)
 
-        requires_grad = kwargs.pop('requires_grad', True)
+        requires_grad = kwargs.pop("requires_grad", True)
 
         if data is None:
             raise ValueError("Parameter data cannot be None")
@@ -70,15 +70,12 @@ class Parameter(Tensor):
 
     def __repr__(self):
         """String representation showing it's a parameter."""
-        return f'Parameter containing:\n{super().__repr__()}'
+        return f"Parameter containing:\n{super().__repr__()}"
 
     def __reduce_ex__(self, proto):
         """Support for pickling."""
         # Return a tuple (callable, args) to reconstruct the object
-        return (
-            Parameter,
-            (self.data, self.requires_grad)
-        )
+        return (Parameter, (self.data, self.requires_grad))
 
 
 class Buffer(Tensor):
@@ -111,10 +108,10 @@ class Buffer(Tensor):
             data = args[0]
             args = args[1:]
         else:
-            data = kwargs.pop('data', None)
+            data = kwargs.pop("data", None)
 
-        requires_grad = kwargs.pop('requires_grad', False)
-        persistent = kwargs.pop('persistent', True)
+        requires_grad = kwargs.pop("requires_grad", False)
+        persistent = kwargs.pop("persistent", True)
         self._persistent = persistent
 
         if data is None:
@@ -132,14 +129,11 @@ class Buffer(Tensor):
 
     def __repr__(self):
         """String representation showing it's a buffer."""
-        return f'Buffer containing:\n{super().__repr__()}'
+        return f"Buffer containing:\n{super().__repr__()}"
 
     def __reduce_ex__(self, proto):
         """Support for pickling."""
-        return (
-            Buffer,
-            (self.data, self.requires_grad, self._persistent)
-        )
+        return (Buffer, (self.data, self.requires_grad, self._persistent))
 
 
 class UninitializedTensorMixin:
@@ -169,7 +163,7 @@ class UninitializedTensorMixin:
     @property
     def is_materialized(self) -> bool:
         """Check if the tensor has been materialized."""
-        return not getattr(self, '_is_uninitialized', False)
+        return not getattr(self, "_is_uninitialized", False)
 
 
 class UninitializedParameter(UninitializedTensorMixin, Parameter):
@@ -202,9 +196,9 @@ class UninitializedParameter(UninitializedTensorMixin, Parameter):
         Args:
             *args, **kwargs: Flexible signature matching PyTorch
         """
-        requires_grad = kwargs.pop('requires_grad', True)
-        device = kwargs.pop('device', None)
-        dtype = kwargs.pop('dtype', None)
+        requires_grad = kwargs.pop("requires_grad", True)
+        device = kwargs.pop("device", None)
+        dtype = kwargs.pop("dtype", None)
 
         # Store configuration for materialization
         self._requires_grad = requires_grad
@@ -238,7 +232,7 @@ class UninitializedParameter(UninitializedTensorMixin, Parameter):
 
     def __repr__(self):
         if self._is_uninitialized:
-            return f'UninitializedParameter(requires_grad={self._requires_grad})'
+            return f"UninitializedParameter(requires_grad={self._requires_grad})"
         return super().__repr__()
 
 
@@ -268,9 +262,9 @@ class UninitializedBuffer(UninitializedTensorMixin, Buffer):
         Args:
             *args, **kwargs: Flexible signature matching PyTorch
         """
-        requires_grad = kwargs.pop('requires_grad', False)
-        device = kwargs.pop('device', None)
-        dtype = kwargs.pop('dtype', None)
+        requires_grad = kwargs.pop("requires_grad", False)
+        device = kwargs.pop("device", None)
+        dtype = kwargs.pop("dtype", None)
 
         self._requires_grad = requires_grad
         self._device = device
@@ -304,7 +298,7 @@ class UninitializedBuffer(UninitializedTensorMixin, Buffer):
 
     def __repr__(self):
         if self._is_uninitialized:
-            return f'UninitializedBuffer(requires_grad={self._requires_grad})'
+            return f"UninitializedBuffer(requires_grad={self._requires_grad})"
         return super().__repr__()
 
 
