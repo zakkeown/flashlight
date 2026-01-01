@@ -5,12 +5,17 @@ PyTorch-compatible torch.nn.utils.parametrize module.
 Provides utilities for module parametrization.
 """
 
+from __future__ import annotations
+
 import warnings
 from contextlib import contextmanager
-from typing import Optional, Sequence, Union
+from typing import TYPE_CHECKING, Optional, Sequence, Union
 
 from ...tensor import Tensor
 from ..module import Module
+
+if TYPE_CHECKING:
+    from ..parameter import Parameter
 
 
 class ParametrizationList(Module):

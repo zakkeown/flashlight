@@ -4,9 +4,14 @@ Reduction Operations
 Implements PyTorch-compatible reduction operations with MLX backend.
 """
 
-from typing import Optional, Tuple, Union
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Optional, Tuple, Union
 
 import mlx.core as mx
+
+if TYPE_CHECKING:
+    from ._reduction_results import MaxResult, MinResult
 
 from ..autograd.context import is_grad_enabled
 from ..autograd.function import MaxBackward, MeanBackward, SumBackward

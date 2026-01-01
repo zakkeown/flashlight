@@ -1413,6 +1413,7 @@ def lstm(
     # Process packed sequence
     data_arr = data._mlx_array
     data_offset = 0
+    prev_layer_output = None  # Will be set at end of each layer, used by subsequent layers
 
     for layer in range(num_layers):
         layer_output = []
@@ -1669,6 +1670,7 @@ def gru(
 
     # Process packed sequence
     data_arr = data._mlx_array
+    prev_layer_output = None  # Will be set at end of each layer, used by subsequent layers
 
     for layer in range(num_layers):
         layer_output = []
@@ -3569,6 +3571,8 @@ def _rnn_impl(
     h_list = []
     for layer in range(num_layers * num_directions):
         h_list.append(hx._mlx_array[layer])
+
+    prev_layer_output = None  # Will be set at end of each layer, used by subsequent layers
 
     for layer in range(num_layers):
         layer_output = []

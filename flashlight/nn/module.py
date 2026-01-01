@@ -4,8 +4,14 @@ Neural Network Module Base Class
 Implements PyTorch-compatible nn.Module for building neural networks.
 """
 
+from __future__ import annotations
+
 from collections import OrderedDict
-from typing import Any, Callable, Dict, Iterator, Optional, Set, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, Iterator, Optional, Set, Union
+
+if TYPE_CHECKING:
+    from ..tensor import Tensor
+    from .parameter import Parameter
 
 import mlx.core as mx
 

@@ -11,7 +11,12 @@ Reference:
 - pytorch-mlx-porting-docs/02-OPERATORS/operator-reference/shape-manipulation.md
 """
 
-from typing import Optional, Sequence, Tuple, Union
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Optional, Sequence, Tuple, Union
+
+if TYPE_CHECKING:
+    from .tensor import Tensor
 
 try:
     import mlx.core as mx
