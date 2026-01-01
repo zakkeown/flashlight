@@ -51,9 +51,11 @@ jobs:
 
       - name: Run benchmarks
         run: |
+          # Use CPU for PyTorch comparison to avoid MLX/MPS Metal conflicts
           python -m benchmarks \
             --level ${{ github.event.inputs.level || 'all' }} \
             --compare-pytorch \
+            --pytorch-device cpu \
             --quick \
             -o json \
             -f benchmark-results.json
