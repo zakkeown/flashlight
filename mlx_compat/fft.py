@@ -364,10 +364,17 @@ def fftfreq(
     Returns:
         Tensor of frequencies
     """
-    # Compute frequencies manually since MLX doesn't have fftfreq
-    import numpy as np
-    freqs = np.fft.fftfreq(n, d=d)
-    result = Tensor(mx.array(freqs.astype(np.float32)))
+    # Pure MLX implementation of fftfreq
+    # Frequencies are: [0, 1, ..., n//2-1, -n//2, ..., -1] / (n * d) for even n
+    # Frequencies are: [0, 1, ..., (n-1)//2, -(n-1)//2, ..., -1] / (n * d) for odd n
+    if n % 2 == 0:
+        pos = mx.arange(0, n // 2, dtype=mx.float32)
+        neg = mx.arange(-n // 2, 0, dtype=mx.float32)
+    else:
+        pos = mx.arange(0, (n + 1) // 2, dtype=mx.float32)
+        neg = mx.arange(-(n // 2), 0, dtype=mx.float32)
+    freqs = mx.concatenate([pos, neg]) / (n * d)
+    result = Tensor(freqs)
     if dtype is not None:
         result = result.to(dtype)
     result.requires_grad = requires_grad
@@ -397,9 +404,10 @@ def rfftfreq(
     Returns:
         Tensor of frequencies (one-sided)
     """
-    import numpy as np
-    freqs = np.fft.rfftfreq(n, d=d)
-    result = Tensor(mx.array(freqs.astype(np.float32)))
+    # Pure MLX implementation of rfftfreq
+    # Frequencies are: [0, 1, ..., n//2] / (n * d)
+    freqs = mx.arange(0, n // 2 + 1, dtype=mx.float32) / (n * d)
+    result = Tensor(freqs)
     if dtype is not None:
         result = result.to(dtype)
     result.requires_grad = requires_grad

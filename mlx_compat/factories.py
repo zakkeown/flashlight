@@ -1001,14 +1001,56 @@ def poisson(
     if not MLX_AVAILABLE:
         raise RuntimeError("MLX not available")
 
-    import numpy as np
+    # Pure MLX implementation of Poisson sampling
+    # Uses inverse transform method with rejection for large lambda
+    rates = input._mlx_array.astype(mx.float32)  # Ensure float type
 
-    # MLX doesn't have native Poisson, use numpy and convert
-    rates = np.array(input._mlx_array)
-    samples = np.random.poisson(rates)
-    mlx_array = mx.array(samples)
+    # For small lambda (< 30), use Knuth's algorithm (inverse transform)
+    # For large lambda (>= 30), use normal approximation
+    threshold = 30.0
 
-    return Tensor._from_mlx_array(mlx_array)
+    # Handle both small and large lambda cases
+    small_lambda_mask = rates < threshold
+
+    # Initialize result
+    result = mx.zeros(rates.shape, dtype=mx.int32)
+
+    # Small lambda: Knuth's algorithm
+    # P(X >= k) = exp(-lambda) * sum_{i=0}^{k-1} lambda^i / i!
+    # Generate U ~ Uniform(0,1), find smallest k such that prod_{i=1}^{k} U_i < exp(-lambda)
+    if mx.any(small_lambda_mask):
+        small_rates = mx.where(small_lambda_mask, rates, mx.ones(rates.shape, dtype=mx.float32))
+        L = mx.exp(-small_rates)
+        k = mx.zeros(small_rates.shape, dtype=mx.int32)
+        p = mx.ones(small_rates.shape, dtype=mx.float32)
+
+        # Iterate up to a maximum (for numerical stability)
+        max_iter = 200
+        for _ in range(max_iter):
+            u = mx.random.uniform(shape=small_rates.shape)
+            p = p * u
+            # Increment k where p >= L
+            increment = mx.where(p >= L, mx.ones(k.shape, dtype=mx.int32), mx.zeros(k.shape, dtype=mx.int32))
+            k = k + increment
+            # Check if all done
+            if mx.all(p < L):
+                break
+
+        result = mx.where(small_lambda_mask, k, result)
+
+    # Large lambda: Normal approximation with rounding
+    # Poisson(lambda) ~ N(lambda, lambda) for large lambda
+    if mx.any(~small_lambda_mask):
+        large_rates = mx.where(~small_lambda_mask, rates, mx.ones(rates.shape, dtype=mx.float32))
+        # Sample from normal distribution
+        normal_samples = mx.random.normal(shape=large_rates.shape)
+        # Scale and shift: X ~ lambda + sqrt(lambda) * Z
+        approx_samples = large_rates + mx.sqrt(large_rates) * normal_samples
+        # Round to nearest non-negative integer
+        approx_samples = mx.maximum(mx.round(approx_samples), mx.zeros(approx_samples.shape, dtype=mx.float32))
+        result = mx.where(~small_lambda_mask, approx_samples.astype(mx.int32), result)
+
+    return Tensor._from_mlx_array(result)
 
 
 __all__ = [

@@ -12,6 +12,56 @@ from collections import OrderedDict
 from .module import Module
 from ..tensor import Tensor
 
+# Module types that benefit from NHWC layout (spatial operations)
+_SPATIAL_LAYER_NAMES = frozenset({
+    'Conv1d', 'Conv2d', 'Conv3d',
+    'ConvTranspose1d', 'ConvTranspose2d', 'ConvTranspose3d',
+    'BatchNorm1d', 'BatchNorm2d', 'BatchNorm3d',
+    'InstanceNorm1d', 'InstanceNorm2d', 'InstanceNorm3d',
+    'GroupNorm',
+    'MaxPool1d', 'MaxPool2d', 'MaxPool3d',
+    'AvgPool1d', 'AvgPool2d', 'AvgPool3d',
+    'AdaptiveMaxPool1d', 'AdaptiveMaxPool2d', 'AdaptiveMaxPool3d',
+    'AdaptiveAvgPool1d', 'AdaptiveAvgPool2d', 'AdaptiveAvgPool3d',
+    'ZeroPad1d', 'ZeroPad2d',
+    'ReflectionPad1d', 'ReflectionPad2d',
+    'ReplicationPad1d', 'ReplicationPad2d',
+    'ConstantPad1d', 'ConstantPad2d', 'ConstantPad3d',
+})
+
+
+def _is_spatial_layer(module: Module) -> bool:
+    """Check if module is a spatial layer that benefits from NHWC mode."""
+    return type(module).__name__ in _SPATIAL_LAYER_NAMES
+
+
+def _has_consecutive_spatial_layers(modules) -> bool:
+    """
+    Check if there are 2+ consecutive spatial layers.
+
+    This is the threshold where NHWC mode becomes beneficial - avoiding
+    at least one intermediate NCHW<->NHWC conversion.
+    """
+    consecutive = 0
+    max_consecutive = 0
+    for module in modules:
+        if _is_spatial_layer(module):
+            consecutive += 1
+            max_consecutive = max(max_consecutive, consecutive)
+        else:
+            # Non-spatial layers like ReLU, Dropout don't break the chain
+            # because they're layout-agnostic
+            layer_name = type(module).__name__
+            layout_agnostic = layer_name in {
+                'ReLU', 'LeakyReLU', 'PReLU', 'ELU', 'SELU', 'GELU',
+                'Sigmoid', 'Tanh', 'Softmax', 'LogSoftmax',
+                'Dropout', 'Dropout2d', 'Dropout3d',
+                'Identity', 'Flatten',
+            }
+            if not layout_agnostic:
+                consecutive = 0
+    return max_consecutive >= 2
+
 
 class Sequential(Module):
     """
@@ -52,6 +102,8 @@ class Sequential(Module):
         else:
             for idx, module in enumerate(args):
                 self.add_module(str(idx), module)
+        # Cache whether this Sequential benefits from NHWC mode
+        self._use_nhwc_optimization = None
 
     def _get_item_by_idx(self, iterator, idx):
         """Get the idx-th item of the iterator"""
@@ -95,10 +147,60 @@ class Sequential(Module):
     def __iter__(self):
         return iter(self._modules.values())
 
+    def _should_use_nhwc(self) -> bool:
+        """Check if this Sequential should use NHWC optimization."""
+        if self._use_nhwc_optimization is None:
+            self._use_nhwc_optimization = _has_consecutive_spatial_layers(
+                self._modules.values()
+            )
+        return self._use_nhwc_optimization
+
     def forward(self, input: Tensor) -> Tensor:
+        # Use NHWC optimization for sequences with consecutive spatial layers
+        # and 4D input (spatial data)
+        if input.ndim == 4 and self._should_use_nhwc():
+            from ..layout import nhwc_mode, ensure_nchw, is_nhwc_mode
+            # Only apply optimization if we're not already in NHWC mode
+            if not is_nhwc_mode():
+                with nhwc_mode():
+                    for module in self._modules.values():
+                        input = module(input)
+                # Ensure output is in NCHW format for PyTorch compatibility
+                return ensure_nchw(input)
+
+        # Standard forward pass
         for module in self._modules.values():
             input = module(input)
         return input
+
+    def append(self, module: Module) -> 'Sequential':
+        """
+        Append a module to the end of the Sequential.
+
+        Args:
+            module: Module to append
+
+        Returns:
+            This Sequential for chaining
+        """
+        self.add_module(str(len(self)), module)
+        self._use_nhwc_optimization = None  # Invalidate cache
+        return self
+
+    def extend(self, modules: Iterable[Module]) -> 'Sequential':
+        """
+        Append modules from an iterable to the end of the Sequential.
+
+        Args:
+            modules: Iterable of modules to append
+
+        Returns:
+            This Sequential for chaining
+        """
+        for module in modules:
+            self.append(module)
+        # Cache already invalidated by append
+        return self
 
 
 class ModuleList(Module):

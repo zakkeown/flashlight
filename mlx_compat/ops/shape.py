@@ -851,6 +851,8 @@ def block_diag(*tensors: Tensor) -> Tensor:
     """
     Create a block diagonal matrix from provided tensors.
 
+    Pure MLX implementation.
+
     Args:
         *tensors: 2D tensors to form blocks
 
@@ -860,45 +862,70 @@ def block_diag(*tensors: Tensor) -> Tensor:
     if not tensors:
         return Tensor._from_mlx_array(mx.array([]))
 
-    import numpy as np
-
-    # Ensure all inputs are 2D
+    # Ensure all inputs are 2D MLX arrays
     processed = []
     for t in tensors:
-        if t.ndim == 0:
-            processed.append(np.array(t._mlx_array).reshape(1, 1))
-        elif t.ndim == 1:
-            processed.append(np.array(t._mlx_array).reshape(1, -1))
+        arr = t._mlx_array
+        if arr.ndim == 0:
+            processed.append(mx.reshape(arr, (1, 1)))
+        elif arr.ndim == 1:
+            processed.append(mx.reshape(arr, (1, -1)))
         else:
-            processed.append(np.array(t._mlx_array))
+            processed.append(arr)
 
     # Calculate total dimensions
     total_rows = sum(p.shape[0] for p in processed)
     total_cols = sum(p.shape[1] for p in processed)
 
-    # Create result matrix filled with zeros
-    result_np = np.zeros((total_rows, total_cols), dtype=processed[0].dtype)
+    # Get common dtype
+    dtype = processed[0].dtype
 
-    # Fill in blocks
+    # Build result by creating padded blocks and concatenating
+    # For each block, pad with zeros to align with its position in the result
     row_offset = 0
     col_offset = 0
-    for p in processed:
+    padded_blocks = []
+
+    for i, p in enumerate(processed):
         rows, cols = p.shape
-        result_np[row_offset:row_offset + rows, col_offset:col_offset + cols] = p
+        # Create left padding (zeros before this block's columns)
+        left_pad = mx.zeros((rows, col_offset), dtype=dtype) if col_offset > 0 else None
+        # Create right padding (zeros after this block's columns)
+        right_cols = total_cols - col_offset - cols
+        right_pad = mx.zeros((rows, right_cols), dtype=dtype) if right_cols > 0 else None
+
+        # Concatenate horizontally: [left_zeros | block | right_zeros]
+        row_parts = []
+        if left_pad is not None:
+            row_parts.append(left_pad)
+        row_parts.append(p.astype(dtype))
+        if right_pad is not None:
+            row_parts.append(right_pad)
+
+        if len(row_parts) == 1:
+            padded_row = row_parts[0]
+        else:
+            padded_row = mx.concatenate(row_parts, axis=1)
+
+        padded_blocks.append(padded_row)
         row_offset += rows
         col_offset += cols
 
-    result = Tensor._from_mlx_array(mx.array(result_np))
+    # Concatenate all padded blocks vertically
+    result = mx.concatenate(padded_blocks, axis=0)
+    result_tensor = Tensor._from_mlx_array(result)
 
     if any(t.requires_grad for t in tensors):
-        result.requires_grad = True
+        result_tensor.requires_grad = True
 
-    return result
+    return result_tensor
 
 
 def diag_embed(input: Tensor, offset: int = 0, dim1: int = -2, dim2: int = -1) -> Tensor:
     """
     Create a tensor whose diagonals of certain 2D planes are filled by input.
+
+    Pure MLX implementation.
 
     Args:
         input: Input tensor (last dimension becomes diagonal)
@@ -909,13 +936,8 @@ def diag_embed(input: Tensor, offset: int = 0, dim1: int = -2, dim2: int = -1) -
     Returns:
         Tensor with embedded diagonals
     """
-    import numpy as np
-
-    # Convert to numpy for easier manipulation
-    input_np = np.array(input._mlx_array)
-
-    # Get input shape and determine output shape
-    input_shape = input_np.shape
+    arr = input._mlx_array
+    input_shape = arr.shape
     diag_size = input_shape[-1]
 
     # Calculate output size based on offset
@@ -924,30 +946,81 @@ def diag_embed(input: Tensor, offset: int = 0, dim1: int = -2, dim2: int = -1) -
     # Build output shape
     out_shape = list(input_shape[:-1]) + [out_size, out_size]
 
-    # Normalize dim1, dim2
-    ndim = len(out_shape)
-    dim1 = dim1 if dim1 >= 0 else ndim + dim1
-    dim2 = dim2 if dim2 >= 0 else ndim + dim2
-
     # Create output filled with zeros
-    result_np = np.zeros(out_shape, dtype=input_np.dtype)
+    dtype = arr.dtype
+    result = mx.zeros(out_shape, dtype=dtype)
 
-    # Fill diagonals
-    for idx in np.ndindex(input_shape[:-1]):
-        diag_vals = input_np[idx]
+    # For 1D input (simple case), directly build diagonal matrix
+    if arr.ndim == 1:
+        # Create diagonal indices
+        diag_indices = mx.arange(diag_size)
         if offset >= 0:
-            for i, v in enumerate(diag_vals):
-                result_np[idx + (i, i + offset)] = v
+            row_indices = diag_indices
+            col_indices = diag_indices + offset
         else:
-            for i, v in enumerate(diag_vals):
-                result_np[idx + (i - offset, i)] = v
+            row_indices = diag_indices - offset
+            col_indices = diag_indices
 
-    result = Tensor._from_mlx_array(mx.array(result_np))
+        # Build diagonal matrix using scatter-like approach
+        # Create a full index array and use broadcasting
+        rows = mx.arange(out_size)[:, None]  # (out_size, 1)
+        cols = mx.arange(out_size)[None, :]  # (1, out_size)
+
+        # For each diagonal element, check if (row, col) matches
+        for i in range(diag_size):
+            r = int(row_indices[i].item())
+            c = int(col_indices[i].item())
+            mask = (rows == r) & (cols == c)
+            result = mx.where(mask, arr[i], result)
+    else:
+        # For higher dimensional inputs, flatten batch dims, process, reshape
+        batch_shape = input_shape[:-1]
+        batch_size = 1
+        for s in batch_shape:
+            batch_size *= s
+
+        # Reshape to (batch_size, diag_size)
+        flat_input = mx.reshape(arr, (batch_size, diag_size))
+
+        # Create result as (batch_size, out_size, out_size)
+        flat_result = mx.zeros((batch_size, out_size, out_size), dtype=dtype)
+
+        # Create diagonal indices
+        diag_indices = mx.arange(diag_size)
+        if offset >= 0:
+            row_indices = diag_indices
+            col_indices = diag_indices + offset
+        else:
+            row_indices = diag_indices - offset
+            col_indices = diag_indices
+
+        # Fill diagonals for each batch element
+        rows = mx.arange(out_size)[:, None]  # (out_size, 1)
+        cols = mx.arange(out_size)[None, :]  # (1, out_size)
+
+        for b in range(batch_size):
+            batch_result = mx.zeros((out_size, out_size), dtype=dtype)
+            for i in range(diag_size):
+                r = int(row_indices[i].item())
+                c = int(col_indices[i].item())
+                mask = (rows == r) & (cols == c)
+                batch_result = mx.where(mask, flat_input[b, i], batch_result)
+            # Update the batch slice
+            flat_result = mx.concatenate([
+                flat_result[:b],
+                mx.expand_dims(batch_result, axis=0),
+                flat_result[b+1:]
+            ], axis=0) if batch_size > 1 else mx.expand_dims(batch_result, axis=0)
+
+        # Reshape back to output shape
+        result = mx.reshape(flat_result, out_shape)
+
+    result_tensor = Tensor._from_mlx_array(result)
 
     if input.requires_grad:
-        result.requires_grad = True
+        result_tensor.requires_grad = True
 
-    return result
+    return result_tensor
 
 
 def diagflat(input: Tensor, offset: int = 0) -> Tensor:
@@ -979,15 +1052,14 @@ def broadcast_tensors(*tensors: Tensor) -> Tuple[Tensor, ...]:
     """
     Broadcast tensors to a common shape.
 
+    Pure MLX implementation.
+
     Args:
         *tensors: Input tensors
 
     Returns:
         Tuple of broadcast tensors
     """
-    import numpy as np
-    from itertools import zip_longest
-
     if not tensors:
         return ()
 
@@ -1085,6 +1157,8 @@ def combinations(input: Tensor, r: int = 2, with_replacement: bool = False) -> T
     """
     Compute r-combinations of input tensor elements.
 
+    Pure MLX implementation (using itertools for index generation only).
+
     Args:
         input: 1-D input tensor
         r: Number of elements in each combination
@@ -1093,18 +1167,28 @@ def combinations(input: Tensor, r: int = 2, with_replacement: bool = False) -> T
     Returns:
         Tensor of combinations
     """
-    import numpy as np
     from itertools import combinations as iter_combinations, combinations_with_replacement
 
-    input_np = np.array(input._mlx_array)
+    arr = input._mlx_array
+    n = arr.shape[0]
 
     if with_replacement:
-        combs = list(combinations_with_replacement(range(len(input_np)), r))
+        combs = list(combinations_with_replacement(range(n), r))
     else:
-        combs = list(iter_combinations(range(len(input_np)), r))
+        combs = list(iter_combinations(range(n), r))
 
-    result_np = np.array([[input_np[i] for i in c] for c in combs])
-    return Tensor._from_mlx_array(mx.array(result_np))
+    if not combs:
+        # Return empty tensor with correct shape
+        return Tensor._from_mlx_array(mx.zeros((0, r), dtype=arr.dtype))
+
+    # Convert combination indices to MLX array and gather
+    indices = mx.array(combs, dtype=mx.int32)  # Shape: (num_combs, r)
+
+    # Gather values from input array using the indices
+    result = mx.take(arr, indices.reshape(-1), axis=0)
+    result = mx.reshape(result, (len(combs), r))
+
+    return Tensor._from_mlx_array(result)
 
 
 def split_with_sizes(tensor: Tensor, split_sizes: List[int], dim: int = 0) -> Tuple[Tensor, ...]:

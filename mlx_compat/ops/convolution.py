@@ -52,7 +52,8 @@ def conv2d(
     nhwc_native = is_nhwc_mode()
 
     # Get input in NHWC format (required by MLX)
-    if nhwc_native and input._layout == Layout.NHWC:
+    # Only skip conversion if input is explicitly marked as NHWC
+    if nhwc_native and hasattr(input, '_layout') and input._layout == Layout.NHWC:
         # Input is already in NHWC - no conversion needed
         input_nhwc = input._mlx_array
     else:

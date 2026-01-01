@@ -126,14 +126,15 @@ class SGD(Optimizer):
                     param_state = self.state[id(p)]
 
                     if 'momentum_buffer' not in param_state:
-                        # Initialize momentum buffer as raw MLX array
-                        param_state['momentum_buffer'] = mx.zeros_like(grad)
-
-                    buf = param_state['momentum_buffer']
-
-                    # Update momentum buffer: v = momentum * v + (1 - dampening) * grad
-                    buf = momentum * buf + (1 - dampening) * grad
-                    param_state['momentum_buffer'] = buf
+                        # First step: initialize momentum buffer to gradient (no dampening)
+                        # This matches PyTorch behavior
+                        buf = mx.array(grad)  # Clone the gradient
+                        param_state['momentum_buffer'] = buf
+                    else:
+                        buf = param_state['momentum_buffer']
+                        # Update momentum buffer: v = momentum * v + (1 - dampening) * grad
+                        buf = momentum * buf + (1 - dampening) * grad
+                        param_state['momentum_buffer'] = buf
 
                     if nesterov:
                         # Nesterov momentum: grad = grad + momentum * buf

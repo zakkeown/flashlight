@@ -138,31 +138,33 @@ class AdamW(Optimizer):
                 exp_avg_sq = Tensor._from_mlx_array(exp_avg_sq_mlx)
                 param_state['exp_avg_sq'] = exp_avg_sq
 
+                # Bias correction
+                bias_correction1 = 1 - beta1 ** step
+                bias_correction2 = 1 - beta2 ** step
+                bias_correction2_sqrt = bias_correction2 ** 0.5
+
+                # Compute step size with bias correction
+                step_size = lr / bias_correction1
+
                 if amsgrad:
                     max_exp_avg_sq = param_state['max_exp_avg_sq']
                     # max_v_t = max(max_v_{t-1}, v_t)
                     max_exp_avg_sq_mlx = mx.maximum(max_exp_avg_sq._mlx_array, exp_avg_sq._mlx_array)
                     max_exp_avg_sq = Tensor._from_mlx_array(max_exp_avg_sq_mlx)
                     param_state['max_exp_avg_sq'] = max_exp_avg_sq
-                    denom_mlx = mx.sqrt(max_exp_avg_sq._mlx_array) + eps
+                    # denom = sqrt(max_v_t) / sqrt(bias_correction2) + eps
+                    denom_mlx = mx.sqrt(max_exp_avg_sq._mlx_array) / bias_correction2_sqrt + eps
                 else:
-                    denom_mlx = mx.sqrt(exp_avg_sq._mlx_array) + eps
-
-                # Bias correction
-                bias_correction1 = 1 - beta1 ** step
-                bias_correction2 = 1 - beta2 ** step
-
-                # Compute step size with bias correction
-                step_size = lr / bias_correction1
+                    # denom = sqrt(v_t) / sqrt(bias_correction2) + eps
+                    denom_mlx = mx.sqrt(exp_avg_sq._mlx_array) / bias_correction2_sqrt + eps
 
                 # AdamW: Decoupled weight decay
                 # First apply weight decay: θ = θ - lr * λ * θ
                 if weight_decay != 0:
                     p._mlx_array = p._mlx_array - lr * weight_decay * p._mlx_array
 
-                # Then apply Adam update: θ = θ - step_size * m_t / (sqrt(v_t) + eps)
-                update_mlx = step_size * exp_avg._mlx_array / (mx.sqrt(denom_mlx ** 2 / bias_correction2) + eps)
-                p._mlx_array = p._mlx_array - update_mlx
+                # Then apply Adam update: θ = θ - step_size * m_t / denom
+                p._mlx_array = p._mlx_array - step_size * exp_avg._mlx_array / denom_mlx
 
         return loss
 

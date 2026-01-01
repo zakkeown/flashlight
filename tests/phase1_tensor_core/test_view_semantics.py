@@ -251,6 +251,233 @@ class TestViewTracking(TestCase):
         self.assertTrue(y.requires_grad)
 
 
+@skipIfNoMLX
+class TestBroadcastTo(TestCase):
+    """Test broadcast_to operation (available via mlx_compat.broadcast_to)."""
+
+    def test_broadcast_to_basic(self):
+        """Test basic broadcast_to operation."""
+        x = mlx_compat.tensor([[1], [2], [3]])
+        y = mlx_compat.broadcast_to(x, (3, 4))
+        self.assert_shape_equal(y.shape, (3, 4))
+        # Each row should be broadcast
+        self.assertEqual(y[0, 0].item(), 1)
+        self.assertEqual(y[0, 3].item(), 1)
+        self.assertEqual(y[2, 0].item(), 3)
+
+    def test_broadcast_to_add_dims(self):
+        """Test broadcast_to adding new dimensions."""
+        x = mlx_compat.tensor([1, 2, 3])
+        y = mlx_compat.broadcast_to(x, (2, 3))
+        self.assert_shape_equal(y.shape, (2, 3))
+
+
+@skipIfNoMLX
+class TestTile(TestCase):
+    """Test tile operations (numpy-style repeat)."""
+
+    def test_tile_basic(self):
+        """Test basic tile operation."""
+        x = mlx_compat.tensor([1, 2])
+        y = mlx_compat.tile(x, (3,))
+        self.assert_shape_equal(y.shape, (6,))
+        expected = np.array([1, 2, 1, 2, 1, 2])
+        np.testing.assert_array_equal(y.numpy(), expected)
+
+    def test_tile_2d(self):
+        """Test tile on 2D tensor."""
+        x = mlx_compat.tensor([[1, 2], [3, 4]])
+        y = mlx_compat.tile(x, (2, 3))
+        self.assert_shape_equal(y.shape, (4, 6))
+
+
+@skipIfNoMLX
+class TestStack(TestCase):
+    """Test stack operations."""
+
+    def test_stack_default_dim(self):
+        """Test stack along default dimension."""
+        a = mlx_compat.tensor([1, 2, 3])
+        b = mlx_compat.tensor([4, 5, 6])
+        result = mlx_compat.stack([a, b])
+        self.assert_shape_equal(result.shape, (2, 3))
+
+    def test_stack_dim1(self):
+        """Test stack along dimension 1."""
+        a = mlx_compat.tensor([1, 2, 3])
+        b = mlx_compat.tensor([4, 5, 6])
+        result = mlx_compat.stack([a, b], dim=1)
+        self.assert_shape_equal(result.shape, (3, 2))
+
+    def test_stack_3d(self):
+        """Test stack 2D tensors into 3D."""
+        a = mlx_compat.randn(3, 4)
+        b = mlx_compat.randn(3, 4)
+        c = mlx_compat.randn(3, 4)
+        result = mlx_compat.stack([a, b, c], dim=0)
+        self.assert_shape_equal(result.shape, (3, 3, 4))
+
+
+@skipIfNoMLX
+class TestCat(TestCase):
+    """Test concatenate operations."""
+
+    def test_cat_1d(self):
+        """Test cat on 1D tensors."""
+        a = mlx_compat.tensor([1, 2])
+        b = mlx_compat.tensor([3, 4, 5])
+        result = mlx_compat.cat([a, b])
+        self.assert_shape_equal(result.shape, (5,))
+        np.testing.assert_array_equal(result.numpy(), [1, 2, 3, 4, 5])
+
+    def test_cat_2d_dim0(self):
+        """Test cat on 2D tensors along dim 0."""
+        a = mlx_compat.randn(2, 3)
+        b = mlx_compat.randn(4, 3)
+        result = mlx_compat.cat([a, b], dim=0)
+        self.assert_shape_equal(result.shape, (6, 3))
+
+    def test_cat_2d_dim1(self):
+        """Test cat on 2D tensors along dim 1."""
+        a = mlx_compat.randn(3, 2)
+        b = mlx_compat.randn(3, 4)
+        result = mlx_compat.cat([a, b], dim=1)
+        self.assert_shape_equal(result.shape, (3, 6))
+
+
+@skipIfNoMLX
+class TestSplit(TestCase):
+    """Test split operations."""
+
+    def test_split_equal(self):
+        """Test split into equal parts."""
+        x = mlx_compat.arange(12).reshape(4, 3)
+        parts = mlx_compat.split(x, 2, dim=0)
+        self.assertEqual(len(parts), 2)
+        self.assert_shape_equal(parts[0].shape, (2, 3))
+        self.assert_shape_equal(parts[1].shape, (2, 3))
+
+    def test_split_sizes(self):
+        """Test split with specific sizes."""
+        x = mlx_compat.arange(10)
+        parts = mlx_compat.split(x, [2, 3, 5])
+        self.assertEqual(len(parts), 3)
+        self.assert_shape_equal(parts[0].shape, (2,))
+        self.assert_shape_equal(parts[1].shape, (3,))
+        self.assert_shape_equal(parts[2].shape, (5,))
+
+
+@skipIfNoMLX
+class TestChunk(TestCase):
+    """Test chunk operations."""
+
+    def test_chunk_equal(self):
+        """Test chunk into equal parts."""
+        x = mlx_compat.arange(12)
+        chunks = mlx_compat.chunk(x, 4)
+        self.assertEqual(len(chunks), 4)
+        for chunk in chunks:
+            self.assert_shape_equal(chunk.shape, (3,))
+
+    def test_chunk_unequal(self):
+        """Test chunk when size doesn't divide evenly."""
+        x = mlx_compat.arange(10)
+        chunks = mlx_compat.chunk(x, 3)
+        # Should be [4, 4, 2] or similar
+        self.assertEqual(len(chunks), 3)
+
+
+@skipIfNoMLX
+class TestNarrow(TestCase):
+    """Test narrow operation."""
+
+    def test_narrow_basic(self):
+        """Test basic narrow operation."""
+        x = mlx_compat.arange(10)
+        y = mlx_compat.narrow(x, 0, 2, 5)
+        self.assert_shape_equal(y.shape, (5,))
+        np.testing.assert_array_equal(y.numpy(), [2, 3, 4, 5, 6])
+
+    def test_narrow_2d(self):
+        """Test narrow on 2D tensor."""
+        x = mlx_compat.arange(20).reshape(4, 5)
+        y = mlx_compat.narrow(x, 0, 1, 2)
+        self.assert_shape_equal(y.shape, (2, 5))
+
+
+@skipIfNoMLX
+class TestMoveaxis(TestCase):
+    """Test moveaxis/swapaxes operations."""
+
+    def test_moveaxis_single(self):
+        """Test moveaxis single dimension."""
+        x = mlx_compat.arange(24).reshape(2, 3, 4)
+        y = mlx_compat.moveaxis(x, 0, -1)
+        self.assert_shape_equal(y.shape, (3, 4, 2))
+
+    def test_swapaxes(self):
+        """Test swapaxes operation."""
+        x = mlx_compat.arange(12).reshape(3, 4)
+        y = mlx_compat.swapaxes(x, 0, 1)
+        self.assert_shape_equal(y.shape, (4, 3))
+
+
+@skipIfNoMLX
+class TestFlip(TestCase):
+    """Test flip operations."""
+
+    def test_flip_1d(self):
+        """Test flip on 1D tensor."""
+        x = mlx_compat.tensor([1, 2, 3, 4, 5])
+        y = mlx_compat.flip(x, [0])
+        np.testing.assert_array_equal(y.numpy(), [5, 4, 3, 2, 1])
+
+    def test_flip_2d_both(self):
+        """Test flip on both dimensions."""
+        x = mlx_compat.arange(6).reshape(2, 3)
+        y = mlx_compat.flip(x, [0, 1])
+        expected = np.array([[5, 4, 3], [2, 1, 0]])
+        np.testing.assert_array_equal(y.numpy(), expected)
+
+    def test_fliplr(self):
+        """Test fliplr (horizontal flip)."""
+        x = mlx_compat.tensor([[1, 2, 3], [4, 5, 6]])
+        y = mlx_compat.fliplr(x)
+        expected = np.array([[3, 2, 1], [6, 5, 4]])
+        np.testing.assert_array_equal(y.numpy(), expected)
+
+    def test_flipud(self):
+        """Test flipud (vertical flip)."""
+        x = mlx_compat.tensor([[1, 2], [3, 4], [5, 6]])
+        y = mlx_compat.flipud(x)
+        expected = np.array([[5, 6], [3, 4], [1, 2]])
+        np.testing.assert_array_equal(y.numpy(), expected)
+
+
+@skipIfNoMLX
+class TestRollRot90(TestCase):
+    """Test roll and rotation operations."""
+
+    def test_roll_1d(self):
+        """Test roll on 1D tensor."""
+        x = mlx_compat.tensor([1, 2, 3, 4, 5])
+        y = mlx_compat.roll(x, 2)
+        np.testing.assert_array_equal(y.numpy(), [4, 5, 1, 2, 3])
+
+    def test_roll_negative(self):
+        """Test roll with negative shift."""
+        x = mlx_compat.tensor([1, 2, 3, 4, 5])
+        y = mlx_compat.roll(x, -2)
+        np.testing.assert_array_equal(y.numpy(), [3, 4, 5, 1, 2])
+
+    def test_rot90_basic(self):
+        """Test 90 degree rotation."""
+        x = mlx_compat.tensor([[1, 2], [3, 4]])
+        y = mlx_compat.rot90(x, 1)
+        expected = np.array([[2, 4], [1, 3]])
+        np.testing.assert_array_equal(y.numpy(), expected)
+
+
 if __name__ == '__main__':
     from tests.common_utils import run_tests
     run_tests()

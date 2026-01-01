@@ -963,8 +963,9 @@ class MaxPool2dBackward(GradientFunction):
     """
     Gradient for max_pool2d.
 
-    Gradient flows only through the maximum elements.
-    We need to track which input positions contributed to each output.
+    Uses MLX's native gradient computation via vjp for maximum performance.
+    MLX's pooling layers are differentiable, so we leverage that instead of
+    implementing a manual backward pass.
     """
 
     def __init__(self, input_tensor, kernel_size, stride, padding, nhwc_native, input_nhwc, output_nhwc):
@@ -973,14 +974,14 @@ class MaxPool2dBackward(GradientFunction):
         self.stride = stride
         self.padding = padding
         self.nhwc_native = nhwc_native
-        # Store the input and output for computing max positions
+        # Store the input in NHWC format for backward pass
         self.input_nhwc = input_nhwc
-        self.output_nhwc = output_nhwc
         self.input_shape = input_tensor.shape
 
     def apply(self, grad_output):
         from ..tensor import Tensor
         from ..layout import Layout
+        import mlx.nn as mxnn
 
         if not self.inputs[0].requires_grad:
             return (None,)
@@ -991,84 +992,23 @@ class MaxPool2dBackward(GradientFunction):
         else:
             grad_nhwc = mx.transpose(grad_output._mlx_array, [0, 2, 3, 1])
 
-        N, H_out, W_out, C = grad_nhwc.shape
-        kH, kW = self.kernel_size
-        sH, sW = self.stride
-        pH, pW = self.padding
+        # Create the MLX pooling layer with same parameters
+        pool = mxnn.MaxPool2d(
+            kernel_size=self.kernel_size,
+            stride=self.stride,
+            padding=self.padding
+        )
 
-        # Get original input dimensions
-        if self.nhwc_native:
-            N, H_in, W_in, C = self.input_shape
-        else:
-            N, C, H_in, W_in = self.input_shape
-
-        # Pad input if necessary for gradient computation
-        input_padded = self.input_nhwc
-        if pH > 0 or pW > 0:
-            input_padded = mx.pad(
-                self.input_nhwc,
-                [(0, 0), (pH, pH), (pW, pW), (0, 0)],
-                constant_values=float('-inf')
-            )
-
-        # Initialize gradient for input
-        grad_input_padded = mx.zeros_like(input_padded)
-
-        # For each output position, find the argmax in the corresponding window
-        # and scatter the gradient to that position
-        # This is done using a loop since MLX doesn't have scatter_nd
-
-        # Compute indices of max values for each pooling window
-        # Use a more efficient vectorized approach where possible
-
-        # Create output gradient array matching padded input size
-        H_padded = H_in + 2 * pH
-        W_padded = W_in + 2 * pW
-        grad_input_arr = mx.zeros((N, H_padded, W_padded, C), dtype=grad_nhwc.dtype)
-
-        # For each output position, find which input position was the max
-        for i in range(H_out):
-            for j in range(W_out):
-                h_start = i * sH
-                w_start = j * sW
-
-                # Extract the window
-                window = input_padded[:, h_start:h_start+kH, w_start:w_start+kW, :]  # [N, kH, kW, C]
-
-                # Find argmax within window (flatten spatial dims)
-                window_flat = window.reshape(N, kH * kW, C)  # [N, kH*kW, C]
-                argmax_flat = mx.argmax(window_flat, axis=1)  # [N, C]
-
-                # Convert flat index to h, w offsets
-                argmax_h = argmax_flat // kW  # [N, C]
-                argmax_w = argmax_flat % kW   # [N, C]
-
-                # Get the gradient value for this output position
-                grad_val = grad_nhwc[:, i:i+1, j:j+1, :]  # [N, 1, 1, C]
-
-                # Scatter gradient to the max positions
-                # Since MLX doesn't support scatter, we'll use a mask-based approach
-                for kh in range(kH):
-                    for kw in range(kW):
-                        mask = ((argmax_h == kh) & (argmax_w == kw)).astype(grad_nhwc.dtype)  # [N, C]
-                        mask = mask.reshape(N, 1, 1, C)
-                        h_pos = h_start + kh
-                        w_pos = w_start + kw
-                        # Add gradient at this position where mask is 1
-                        # This is inefficient but correct
-                        contrib = grad_val * mask  # [N, 1, 1, C]
-                        # We accumulate by creating a sparse update
-                        grad_input_arr = grad_input_arr.at[:, h_pos:h_pos+1, w_pos:w_pos+1, :].add(contrib)
-
-        # Remove padding from gradient
-        if pH > 0 or pW > 0:
-            grad_input_arr = grad_input_arr[:, pH:H_padded-pH, pW:W_padded-pW, :]
+        # Use MLX's native vjp (vector-Jacobian product) to compute gradients
+        # This is much faster than our manual Python loop implementation
+        _, vjp_fn = mx.vjp(pool, [self.input_nhwc], [grad_nhwc])
+        grad_input_nhwc = vjp_fn[0]
 
         # Convert back to NCHW if needed
         if self.nhwc_native:
-            grad_input = Tensor._from_mlx_array(grad_input_arr, layout=Layout.NHWC)
+            grad_input = Tensor._from_mlx_array(grad_input_nhwc, layout=Layout.NHWC)
         else:
-            grad_input_nchw = mx.transpose(grad_input_arr, [0, 3, 1, 2])
+            grad_input_nchw = mx.transpose(grad_input_nhwc, [0, 3, 1, 2])
             grad_input = Tensor._from_mlx_array(grad_input_nchw)
 
         return (grad_input,)
@@ -1078,22 +1018,27 @@ class AvgPool2dBackward(GradientFunction):
     """
     Gradient for avg_pool2d.
 
-    Each input element contributes to multiple output elements.
-    Gradient is distributed evenly among all input elements in each window.
+    Uses MLX's native gradient computation via vjp for maximum performance.
+    MLX's pooling layers are differentiable, so we leverage that instead of
+    implementing a manual backward pass.
     """
 
-    def __init__(self, input_tensor, kernel_size, stride, padding, nhwc_native, divisor_override=None):
+    def __init__(self, input_tensor, kernel_size, stride, padding, nhwc_native, divisor_override=None, count_include_pad=True, input_nhwc=None):
         super().__init__(input_tensor)
         self.kernel_size = kernel_size
         self.stride = stride
         self.padding = padding
         self.nhwc_native = nhwc_native
         self.divisor_override = divisor_override
+        self.count_include_pad = count_include_pad
         self.input_shape = input_tensor.shape
+        # Store the input in NHWC format for backward pass
+        self.input_nhwc = input_nhwc
 
     def apply(self, grad_output):
         from ..tensor import Tensor
         from ..layout import Layout
+        import mlx.nn as mxnn
 
         if not self.inputs[0].requires_grad:
             return (None,)
@@ -1104,60 +1049,31 @@ class AvgPool2dBackward(GradientFunction):
         else:
             grad_nhwc = mx.transpose(grad_output._mlx_array, [0, 2, 3, 1])
 
-        N, H_out, W_out, C = grad_nhwc.shape
         kH, kW = self.kernel_size
-        sH, sW = self.stride
-        pH, pW = self.padding
 
-        # Get original input dimensions
-        if self.nhwc_native:
-            N, H_in, W_in, C = self.input_shape
-        else:
-            N, C, H_in, W_in = self.input_shape
-
-        # Compute divisor
+        # Handle divisor_override by scaling gradient
         if self.divisor_override is not None:
-            divisor = self.divisor_override
-        else:
-            divisor = kH * kW
+            # MLX AvgPool2d divides by kernel area, so adjust for custom divisor
+            kernel_area = kH * kW
+            grad_nhwc = grad_nhwc * (kernel_area / self.divisor_override)
 
-        # Scale gradient by 1/divisor
-        grad_scaled = grad_nhwc / divisor
+        # Create the MLX pooling layer with same parameters
+        pool = mxnn.AvgPool2d(
+            kernel_size=self.kernel_size,
+            stride=self.stride,
+            padding=self.padding
+        )
 
-        # For average pooling backward, we need to distribute each output gradient
-        # to all input positions that contributed to it.
-        # This is essentially a "reverse" pooling operation.
-
-        # Initialize gradient for padded input
-        H_padded = H_in + 2 * pH
-        W_padded = W_in + 2 * pW
-        grad_input_arr = mx.zeros((N, H_padded, W_padded, C), dtype=grad_nhwc.dtype)
-
-        # For each output position, distribute gradient to all input positions in window
-        for i in range(H_out):
-            for j in range(W_out):
-                h_start = i * sH
-                w_start = j * sW
-                h_end = min(h_start + kH, H_padded)
-                w_end = min(w_start + kW, W_padded)
-
-                # Get the gradient for this output position
-                grad_val = grad_scaled[:, i:i+1, j:j+1, :]  # [N, 1, 1, C]
-
-                # Broadcast and add to the window
-                grad_input_arr = grad_input_arr.at[:, h_start:h_end, w_start:w_end, :].add(
-                    mx.broadcast_to(grad_val, (N, h_end - h_start, w_end - w_start, C))
-                )
-
-        # Remove padding from gradient
-        if pH > 0 or pW > 0:
-            grad_input_arr = grad_input_arr[:, pH:H_padded-pH, pW:W_padded-pW, :]
+        # Use MLX's native vjp (vector-Jacobian product) to compute gradients
+        # This is much faster than our manual Python loop implementation
+        _, vjp_fn = mx.vjp(pool, [self.input_nhwc], [grad_nhwc])
+        grad_input_nhwc = vjp_fn[0]
 
         # Convert back to NCHW if needed
         if self.nhwc_native:
-            grad_input = Tensor._from_mlx_array(grad_input_arr, layout=Layout.NHWC)
+            grad_input = Tensor._from_mlx_array(grad_input_nhwc, layout=Layout.NHWC)
         else:
-            grad_input_nchw = mx.transpose(grad_input_arr, [0, 3, 1, 2])
+            grad_input_nchw = mx.transpose(grad_input_nhwc, [0, 3, 1, 2])
             grad_input = Tensor._from_mlx_array(grad_input_nchw)
 
         return (grad_input,)
@@ -1201,22 +1117,14 @@ class EmbeddingBackward(GradientFunction):
         grad_flat = grad_out_arr.reshape((num_lookups, self.embedding_dim))
         indices_flat = indices_arr.flatten()
 
-        # Initialize gradient as zeros
-        grad_weight = mx.zeros((self.num_embeddings, self.embedding_dim), dtype=grad_out_arr.dtype)
-
-        # Scatter-add the gradients using one-hot encoding and matrix multiply
-        # This is more efficient than looping in Python
-        # Create one-hot matrix: (num_lookups, num_embeddings)
-        # Then grad_weight = one_hot.T @ grad_flat
-
-        # one_hot[i, indices_flat[i]] = 1
-        one_hot = mx.zeros((num_lookups, self.num_embeddings), dtype=grad_out_arr.dtype)
-        for i in range(num_lookups):
-            idx = int(indices_flat[i])
-            one_hot = one_hot.at[i, idx].add(1.0)
+        # Use vectorized one-hot matrix approach for efficient gradient accumulation
+        # This is much faster than Python loops
+        # Create one-hot via identity matrix indexing: one_hot[i] = eye[indices[i]]
+        eye = mx.eye(self.num_embeddings, dtype=grad_out_arr.dtype)
+        one_hot = eye[indices_flat.astype(mx.int32)]  # (num_lookups, num_embeddings)
 
         # grad_weight = one_hot.T @ grad_flat
-        # This accumulates gradients for duplicate indices automatically
+        # This accumulates gradients for duplicate indices automatically via matrix multiply
         grad_weight = mx.matmul(mx.transpose(one_hot), grad_flat)
 
         # Zero out gradient for padding_idx if specified

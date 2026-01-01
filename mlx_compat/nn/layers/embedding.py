@@ -193,18 +193,9 @@ class Embedding(Module):
         if self.max_norm is not None:
             weight = self._apply_max_norm(weight)
 
-        # Perform embedding lookup using advanced indexing
-        # MLX supports this via take operation
-        # Flatten indices, lookup, then reshape
-        original_shape = indices.shape
-        flat_indices = indices.flatten()
-
-        # Lookup embeddings
-        embeddings = mx.take(weight, flat_indices, axis=0)
-
-        # Reshape to original shape + embedding_dim
-        output_shape = original_shape + (self.embedding_dim,)
-        embeddings = embeddings.reshape(output_shape)
+        # Perform embedding lookup using direct indexing
+        # MLX supports advanced indexing: weight[indices] works for any shape indices
+        embeddings = weight[indices]
 
         # Wrap in Tensor
         result = Tensor._from_mlx_array(embeddings)

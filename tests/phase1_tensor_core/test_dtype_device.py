@@ -150,6 +150,47 @@ class TestDevice(TestCase):
 
 
 @skipIfNoMLX
+class TestDtypeFunctions(TestCase):
+    """Test dtype utility functions."""
+
+    def test_get_default_dtype(self):
+        """Test get_default_dtype function."""
+        dtype = mlx_compat.get_default_dtype()
+        self.assertEqual(dtype, mlx_compat.float32)
+
+    def test_set_default_dtype(self):
+        """Test set_default_dtype function."""
+        original = mlx_compat.get_default_dtype()
+        try:
+            mlx_compat.set_default_dtype(mlx_compat.float16)
+            self.assertEqual(mlx_compat.get_default_dtype(), mlx_compat.float16)
+        finally:
+            mlx_compat.set_default_dtype(original)
+
+    def test_is_floating_point(self):
+        """Test is_floating_point function."""
+        float_t = mlx_compat.tensor([1.0, 2.0])
+        int_t = mlx_compat.tensor([1, 2], dtype=mlx_compat.int32)
+        self.assertTrue(mlx_compat.is_floating_point(float_t))
+        self.assertFalse(mlx_compat.is_floating_point(int_t))
+
+    def test_is_complex(self):
+        """Test is_complex function."""
+        real_t = mlx_compat.tensor([1.0, 2.0])
+        self.assertFalse(mlx_compat.is_complex(real_t))
+
+    def test_default_float_dtype(self):
+        """Test that default float dtype is float32."""
+        t = mlx_compat.randn(3, 4)
+        self.assertEqual(t.dtype, mlx_compat.float32)
+
+    def test_dtype_string_conversion(self):
+        """Test dtype from string."""
+        t = mlx_compat.tensor([1.0], dtype='float32')
+        self.assertEqual(t.dtype, mlx_compat.float32)
+
+
+@skipIfNoMLX
 class TestTensorConversions(TestCase):
     """Test tensor type conversions."""
 

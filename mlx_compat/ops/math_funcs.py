@@ -22,12 +22,17 @@ def clamp(input: Tensor, min: Optional[float] = None, max: Optional[float] = Non
     Returns:
         Clamped tensor
     """
-    result_array = input._mlx_array
+    arr = input._mlx_array
 
-    if min is not None:
-        result_array = mx.maximum(result_array, min)
-    if max is not None:
-        result_array = mx.minimum(result_array, max)
+    # Use mx.clip when both bounds are provided (single fused operation)
+    if min is not None and max is not None:
+        result_array = mx.clip(arr, min, max)
+    elif min is not None:
+        result_array = mx.maximum(arr, min)
+    elif max is not None:
+        result_array = mx.minimum(arr, max)
+    else:
+        result_array = arr
 
     result = Tensor._from_mlx_array(result_array)
 
@@ -197,6 +202,26 @@ def round(input: Tensor, decimals: int = 0) -> Tensor:
     return result
 
 
+_trunc_kernel = None
+_TRUNC_METAL_THRESHOLD = 1_000_000  # Use Metal kernel for tensors > 1M elements
+
+def _get_trunc_kernel():
+    """Get or create cached Metal kernel for trunc operation."""
+    global _trunc_kernel
+    if _trunc_kernel is None:
+        _trunc_kernel = mx.fast.metal_kernel(
+            name="trunc_kernel",
+            input_names=["inp"],
+            output_names=["out"],
+            source='''
+                uint idx = thread_position_in_grid.x;
+                if (idx >= inp_shape[0]) return;
+                out[idx] = metal::trunc(inp[idx]);
+            '''
+        )
+    return _trunc_kernel
+
+
 def trunc(input: Tensor) -> Tensor:
     """
     Truncate input elements towards zero.
@@ -207,12 +232,29 @@ def trunc(input: Tensor) -> Tensor:
     Returns:
         Truncated tensor
     """
-    # trunc(x) = floor(x) for x >= 0, ceil(x) for x < 0
-    result_array = mx.where(
-        input._mlx_array >= 0,
-        mx.floor(input._mlx_array),
-        mx.ceil(input._mlx_array)
-    )
+    arr = input._mlx_array
+    original_dtype = arr.dtype
+    original_shape = arr.shape
+
+    # For large tensors, use custom Metal kernel with metal::trunc
+    # (faster than int32 cast for large data)
+    if arr.size > _TRUNC_METAL_THRESHOLD:
+        kernel = _get_trunc_kernel()
+        flat = mx.reshape(arr, (-1,))
+        outputs = kernel(
+            inputs=[flat],
+            template=[("T", arr.dtype)],
+            grid=(flat.size, 1, 1),
+            threadgroup=(256, 1, 1),
+            output_shapes=[flat.shape],
+            output_dtypes=[arr.dtype],
+        )
+        result_array = mx.reshape(outputs[0], original_shape)
+    else:
+        # For smaller tensors, int32 cast has lower overhead
+        # Cast to int32 and back - naturally truncates towards zero
+        result_array = arr.astype(mx.int32).astype(original_dtype)
+
     result = Tensor._from_mlx_array(result_array)
 
     if is_grad_enabled() and input.requires_grad:
@@ -669,25 +711,26 @@ def nan_to_num(input: Tensor, nan: float = 0.0, posinf: Optional[float] = None, 
 
     Returns:
         Tensor with replaced values
+
+    Pure MLX implementation.
     """
-    import numpy as np
     result_array = input._mlx_array
 
     # Replace NaN
     result_array = mx.where(mx.isnan(result_array), nan, result_array)
 
-    # Replace positive infinity
+    # Replace positive infinity (float32 max ~= 3.4e38)
     if posinf is None:
-        posinf = float(np.finfo(np.float32).max)
+        posinf = 3.4028235e+38
     result_array = mx.where(
         mx.logical_and(mx.isinf(result_array), result_array > 0),
         posinf,
         result_array
     )
 
-    # Replace negative infinity
+    # Replace negative infinity (float32 min ~= -3.4e38)
     if neginf is None:
-        neginf = float(np.finfo(np.float32).min)
+        neginf = -3.4028235e+38
     result_array = mx.where(
         mx.logical_and(mx.isinf(result_array), result_array < 0),
         neginf,
@@ -797,18 +840,17 @@ def rad2deg_(input: Tensor) -> Tensor:
 
 
 def nan_to_num_(input: Tensor, nan: float = 0.0, posinf: Optional[float] = None, neginf: Optional[float] = None) -> Tensor:
-    """In-place version of nan_to_num."""
-    import numpy as np
+    """In-place version of nan_to_num. Pure MLX implementation."""
     result_array = input._mlx_array
     result_array = mx.where(mx.isnan(result_array), nan, result_array)
     if posinf is None:
-        posinf = float(np.finfo(np.float32).max)
+        posinf = 3.4028235e+38  # float32 max
     result_array = mx.where(
         mx.logical_and(mx.isinf(result_array), result_array > 0),
         posinf, result_array
     )
     if neginf is None:
-        neginf = float(np.finfo(np.float32).min)
+        neginf = -3.4028235e+38  # float32 min
     result_array = mx.where(
         mx.logical_and(mx.isinf(result_array), result_array < 0),
         neginf, result_array

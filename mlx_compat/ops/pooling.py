@@ -93,7 +93,8 @@ def max_pool2d(
     padding = _pair(padding)
 
     # Get input in NHWC format (required by MLX)
-    if nhwc_native and input._layout == Layout.NHWC:
+    # Use getattr for faster attribute access with default
+    if nhwc_native and getattr(input, '_layout', None) == Layout.NHWC:
         # Input is already in NHWC - no conversion needed
         input_nhwc = input._mlx_array
     else:
@@ -172,17 +173,45 @@ def avg_pool2d(
     padding = _pair(padding)
 
     # Get input in NHWC format (required by MLX)
-    if nhwc_native and input._layout == Layout.NHWC:
+    if nhwc_native and hasattr(input, '_layout') and input._layout == Layout.NHWC:
         # Input is already in NHWC - no conversion needed
         input_nhwc = input._mlx_array
+        N, H, W, C = input_nhwc.shape
     else:
         # Convert input from NCHW to NHWC
         # input: [N, C, H, W] -> [N, H, W, C]
         input_nhwc = mx.transpose(input._mlx_array, [0, 2, 3, 1])
+        N, H, W, C = input_nhwc.shape
 
-    # Get cached MLX pooling layer and apply
-    pool = _get_avg_pool2d(kernel_size, stride, padding)
-    output_nhwc = pool(input_nhwc)
+    # Handle count_include_pad=False with padding
+    # When count_include_pad=False, we need to divide each output element by the
+    # actual number of non-padded input elements that contributed to it
+    if not count_include_pad and (padding[0] > 0 or padding[1] > 0):
+        # Use sum pooling approach: compute sum, then divide by actual counts
+        # First, pad the input with zeros
+        padded_input = mx.pad(
+            input_nhwc,
+            [(0, 0), (padding[0], padding[0]), (padding[1], padding[1]), (0, 0)]
+        )
+
+        # Create a mask of 1s for original input, 0s for padding
+        ones_mask = mx.ones((N, H, W, C))
+        padded_mask = mx.pad(
+            ones_mask,
+            [(0, 0), (padding[0], padding[0]), (padding[1], padding[1]), (0, 0)]
+        )
+
+        # Compute sum pooling (use avg pool and multiply by kernel area)
+        pool_no_pad = _get_avg_pool2d(kernel_size, stride, (0, 0))
+        sum_output = pool_no_pad(padded_input) * (kernel_size[0] * kernel_size[1])
+        count_output = pool_no_pad(padded_mask) * (kernel_size[0] * kernel_size[1])
+
+        # Divide sum by count to get average (avoiding division by zero)
+        output_nhwc = sum_output / mx.maximum(count_output, 1e-8)
+    else:
+        # Standard case: count_include_pad=True or no padding
+        pool = _get_avg_pool2d(kernel_size, stride, padding)
+        output_nhwc = pool(input_nhwc)
 
     if divisor_override is not None:
         # When divisor_override is set, adjust for custom divisor
@@ -207,7 +236,8 @@ def avg_pool2d(
         result.requires_grad = True
         grad_fn = AvgPool2dBackward(
             input, kernel_size=kernel_size, stride=stride, padding=padding,
-            nhwc_native=nhwc_native, divisor_override=divisor_override
+            nhwc_native=nhwc_native, divisor_override=divisor_override,
+            count_include_pad=count_include_pad, input_nhwc=input_nhwc
         )
         grad_fn.output_tensor = result
         result._grad_fn = grad_fn

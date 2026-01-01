@@ -74,8 +74,8 @@ class BatchNorm2d(Module):
         # Use a dict to store cache to avoid Module's __setattr__ intercepting Tensor values
         self._affine_cache = {}
 
-    def _get_affine_params(self, is_nhwc: bool):
-        """Get cached reshaped weight and bias for given layout."""
+    def _get_affine_params_raw(self, is_nhwc: bool):
+        """Get cached reshaped weight and bias as raw MLX arrays for given layout."""
         if not self.affine:
             return None, None
 
@@ -85,11 +85,13 @@ class BatchNorm2d(Module):
         cache = self._affine_cache
         # Check if cache is valid
         if cache.get('weight_id') != weight_id or cache.get('bias_id') != bias_id:
-            # Cache invalidated - recompute both layouts
-            cache['weight_nchw'] = self.weight.reshape(1, -1, 1, 1)
-            cache['weight_nhwc'] = self.weight.reshape(1, 1, 1, -1)
-            cache['bias_nchw'] = self.bias.reshape(1, -1, 1, 1)
-            cache['bias_nhwc'] = self.bias.reshape(1, 1, 1, -1)
+            # Cache invalidated - recompute both layouts using raw MLX arrays
+            w = self.weight._mlx_array
+            b = self.bias._mlx_array
+            cache['weight_nchw'] = mx.reshape(w, (1, -1, 1, 1))
+            cache['weight_nhwc'] = mx.reshape(w, (1, 1, 1, -1))
+            cache['bias_nchw'] = mx.reshape(b, (1, -1, 1, 1))
+            cache['bias_nhwc'] = mx.reshape(b, (1, 1, 1, -1))
             cache['weight_id'] = weight_id
             cache['bias_id'] = bias_id
 
@@ -97,6 +99,13 @@ class BatchNorm2d(Module):
             return cache['weight_nhwc'], cache['bias_nhwc']
         else:
             return cache['weight_nchw'], cache['bias_nchw']
+
+    def _get_affine_params(self, is_nhwc: bool):
+        """Get cached reshaped weight and bias as Tensors for given layout."""
+        weight_raw, bias_raw = self._get_affine_params_raw(is_nhwc)
+        if weight_raw is None:
+            return None, None
+        return Tensor._from_mlx_array(weight_raw), Tensor._from_mlx_array(bias_raw)
 
     def forward(self, input: Tensor) -> Tensor:
         """
@@ -244,9 +253,28 @@ class LayerNorm(Module):
         Returns:
             Normalized tensor
         """
-        # Compute mean and variance over the last dimension
-        mean = input.mean(dim=-1, keepdim=True)
-        var = input.var(dim=-1, keepdim=True, unbiased=False)
+        # Use MLX's fused layer_norm for single-axis normalization (common case)
+        # This is significantly faster than separate mean/var/normalize operations
+        if len(self.normalized_shape) == 1:
+            weight = self.weight._mlx_array if self.weight is not None else None
+            bias = self.bias._mlx_array if self.bias is not None else None
+            result_arr = mx.fast.layer_norm(input._mlx_array, weight, bias, self.eps)
+            result = Tensor._from_mlx_array(result_arr)
+
+            # Handle autograd
+            from ...autograd.context import is_grad_enabled
+            if is_grad_enabled() and input.requires_grad:
+                result.requires_grad = True
+            return result
+
+        # Multi-axis normalization: fall back to manual implementation
+        # This handles cases like normalized_shape=(10, 64) normalizing over last 2 dims
+        num_dims = len(self.normalized_shape)
+        axes = tuple(range(-num_dims, 0))
+
+        # Compute mean and variance over the normalized dimensions
+        mean = input.mean(dim=axes, keepdim=True)
+        var = input.var(dim=axes, keepdim=True, unbiased=False)
 
         # Normalize
         normalized = (input - mean) / Tensor._from_mlx_array(

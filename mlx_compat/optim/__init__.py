@@ -11,7 +11,6 @@ from .adamw import AdamW
 from .rmsprop import RMSprop
 from .adagrad import Adagrad
 from .adadelta import Adadelta
-from .adafactor import Adafactor
 from .additional import Adamax, RAdam, NAdam, ASGD, Rprop
 from .lr_scheduler import (
     StepLR,
@@ -30,7 +29,6 @@ __all__ = [
     'RMSprop',
     'Adagrad',
     'Adadelta',
-    'Adafactor',
     'Adamax',
     'RAdam',
     'NAdam',

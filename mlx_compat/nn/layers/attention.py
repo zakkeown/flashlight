@@ -196,10 +196,11 @@ class MultiheadAttention(Module):
         # PyTorch combines them when kdim == vdim == embed_dim
         self._qkv_same_embed_dim = self.kdim == embed_dim and self.vdim == embed_dim
 
+        import mlx.core as mx
+
         if self._qkv_same_embed_dim:
             # Combined projection weight: [3*embed_dim, embed_dim]
             # This matches PyTorch's in_proj_weight layout
-            import mlx.core as mx
             self.in_proj_weight = Parameter(
                 Tensor._from_mlx_array(mx.zeros((3 * embed_dim, embed_dim)))
             )

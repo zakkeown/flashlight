@@ -156,27 +156,27 @@ class Adam(Optimizer):
                 exp_avg_sq = beta2 * exp_avg_sq + (1 - beta2) * (grad ** 2)
                 param_state['exp_avg_sq'] = exp_avg_sq
 
+                # Bias correction
+                bias_correction1 = 1 - beta1 ** step
+                bias_correction2 = 1 - beta2 ** step
+                bias_correction2_sqrt = bias_correction2 ** 0.5
+
+                # Compute step size with bias correction
+                step_size = lr / bias_correction1
+
                 if amsgrad:
                     max_exp_avg_sq = param_state['max_exp_avg_sq']
                     # max_v_t = max(max_v_{t-1}, v_t)
                     max_exp_avg_sq = mx.maximum(max_exp_avg_sq, exp_avg_sq)
                     param_state['max_exp_avg_sq'] = max_exp_avg_sq
-                    denom = mx.sqrt(max_exp_avg_sq) + eps
+                    # denom = sqrt(max_v_t) / sqrt(bias_correction2) + eps
+                    denom = mx.sqrt(max_exp_avg_sq) / bias_correction2_sqrt + eps
                 else:
-                    denom = mx.sqrt(exp_avg_sq) + eps
+                    # denom = sqrt(v_t) / sqrt(bias_correction2) + eps
+                    denom = mx.sqrt(exp_avg_sq) / bias_correction2_sqrt + eps
 
-                # Bias correction
-                bias_correction1 = 1 - beta1 ** step
-                bias_correction2 = 1 - beta2 ** step
-
-                # Compute step size with bias correction
-                step_size = lr / bias_correction1
-
-                # Update parameters: θ = θ - step_size * m_t / (sqrt(v_t) + eps)
-                # With bias correction: θ = θ - lr * m_hat_t / (sqrt(v_hat_t) + eps)
-                # where m_hat_t = m_t / (1 - beta1^t), v_hat_t = v_t / (1 - beta2^t)
-                update = step_size * exp_avg / (mx.sqrt(denom ** 2 / bias_correction2) + eps)
-                p._mlx_array = param - update
+                # Update parameters: θ = θ - step_size * m_t / denom
+                p._mlx_array = param - step_size * exp_avg / denom
 
         return loss
 

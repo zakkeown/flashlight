@@ -19,7 +19,7 @@ def _to_mlx_dtype(dtype):
     if dtype is None:
         return mx.float32
     dt = get_dtype(dtype)
-    return dt.mlx_dtype if dt else mx.float32
+    return dt._mlx_dtype if dt else mx.float32
 
 
 def bartlett(
@@ -188,7 +188,8 @@ def exponential(
     n = M if sym else M + 1
 
     if center is None:
-        center = (n - 1) / 2.0 if sym else n / 2.0
+        # PyTorch uses (M-1)/2 for symmetric and M/2 for periodic
+        center = (M - 1) / 2.0 if sym else M / 2.0
 
     indices = mx.arange(n, dtype=mx.float32)
     window = mx.exp(-mx.abs(indices - center) / tau)
@@ -409,14 +410,19 @@ def kaiser(
     """
     Compute the Kaiser window.
 
+    The Kaiser window is a taper formed by using a Bessel function.
+
     Args:
         M: Number of points in the window
-        beta: Shape parameter for the window
-        sym: If True, generates a symmetric window
+        beta: Shape parameter for the window. Determines the trade-off between
+              main-lobe width and side-lobe level. Higher beta means narrower
+              main lobe but higher side lobes.
+        sym: If True, generates a symmetric window for filter design.
+             If False, generates a periodic window for spectral analysis.
         dtype: The desired data type
-        layout: Ignored
-        device: Ignored
-        requires_grad: If True, requires gradient
+        layout: Ignored (for PyTorch compatibility)
+        device: Ignored (for PyTorch compatibility)
+        requires_grad: If True, the resulting tensor requires gradient
 
     Returns:
         A 1-D tensor of size M containing the window
@@ -428,35 +434,20 @@ def kaiser(
 
     n = M if sym else M + 1
 
-    # Use scipy for the Bessel function I0
-    try:
-        from scipy.special import i0
-        import numpy as np
+    # Pure MLX implementation using Bessel I0 approximation
+    indices = mx.arange(n, dtype=mx.float32)
+    alpha = (n - 1) / 2.0
+    ratio = (indices - alpha) / alpha
+    # Clamp to avoid sqrt of negative due to numerical precision
+    arg = beta * mx.sqrt(mx.maximum(1 - ratio ** 2, mx.array(0.0)))
 
-        indices = np.arange(n)
-        alpha = (n - 1) / 2.0
-        ratio = (indices - alpha) / alpha
-        window = i0(beta * np.sqrt(1 - ratio ** 2)) / i0(beta)
+    # I0 approximation via series expansion
+    window = _i0_approx(arg) / _i0_approx(mx.array(beta))
 
-        if not sym:
-            window = window[:-1]
+    if not sym:
+        window = window[:-1]
 
-        result = Tensor(mx.array(window, dtype=_to_mlx_dtype(dtype)))
-    except ImportError:
-        # Fallback: approximate I0 using series expansion
-        indices = mx.arange(n, dtype=mx.float32)
-        alpha = (n - 1) / 2.0
-        ratio = (indices - alpha) / alpha
-        arg = beta * mx.sqrt(mx.maximum(1 - ratio ** 2, mx.array(0.0)))
-
-        # I0 approximation via series
-        window = _i0_approx(arg) / _i0_approx(mx.array(beta))
-
-        if not sym:
-            window = window[:-1]
-
-        result = Tensor(window.astype(_to_mlx_dtype(dtype)))
-
+    result = Tensor(window.astype(_to_mlx_dtype(dtype)))
     result.requires_grad = requires_grad
     return result
 

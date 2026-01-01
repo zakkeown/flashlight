@@ -242,6 +242,18 @@ from .nn.functional import (
 # torch.linalg namespace
 from . import linalg
 
+# torch.special namespace
+from . import special
+
+# torch.fft namespace
+from . import fft
+
+# torch.amp namespace (automatic mixed precision)
+from . import amp
+
+# torch.random namespace
+from . import random
+
 # Expose linalg functions at torch.* level
 from .linalg import (
     det, pinv, cross, svd, qr, cholesky, slogdet,
@@ -1778,6 +1790,10 @@ __all__ = [
     "bartlett_window", "blackman_window", "hamming_window", "hann_window", "kaiser_window",
     # Namespaces
     "linalg",
+    "special",
+    "fft",
+    "amp",
+    "random",
     # Neural networks (Phase 4)
     "nn",
     # Optimizers (Phase 5)

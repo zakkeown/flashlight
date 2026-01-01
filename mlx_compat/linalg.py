@@ -378,30 +378,40 @@ def pinv(input: Tensor, rcond: float = 1e-15) -> Tensor:
     Returns:
         Pseudoinverse tensor of shape (..., n, m)
     """
-    import numpy as np
+    # Pure MLX implementation using SVD
+    arr = input._mlx_array
+    m, n = arr.shape[-2], arr.shape[-1]
+    k = min(m, n)
 
-    # Use numpy for proper reduced SVD since MLX returns full Vh
-    arr = np.array(input._mlx_array)
+    # Compute SVD on CPU (MLX SVD is CPU-only currently)
+    # MLX returns full matrices, so we need to slice to get reduced form
+    U_full, S, Vt_full = mx.linalg.svd(arr, stream=mx.cpu)
+    mx.eval(U_full, S, Vt_full)
 
-    # Compute reduced SVD using numpy
-    U, S, Vh = np.linalg.svd(arr, full_matrices=False)
-    # For (m, n) input: U is (m, k), S is (k,), Vh is (k, n) where k = min(m, n)
+    # Extract reduced matrices: U is (..., m, k), Vt is (..., k, n)
+    U = U_full[..., :k]  # (..., m, k)
+    Vt = Vt_full[..., :k, :]  # (..., k, n)
 
     # Invert singular values above threshold
-    max_s = np.max(S)
+    max_s = mx.max(S, axis=-1, keepdims=True)
     threshold = rcond * max_s
-    S_inv = np.where(S > threshold, 1.0 / S, 0.0)
+    # S_inv: invert values above threshold, zero out small values
+    S_inv = mx.where(S > threshold, 1.0 / S, mx.zeros_like(S))
 
-    # Construct pseudoinverse: V @ diag(S_inv) @ U^T = Vh^T @ diag(S_inv) @ U^T
-    # Using broadcasting: V @ S_inv can be done as Vh.T * S_inv
-    # V is (n, k), S_inv is (k,), so V * S_inv gives (n, k)
-    V = np.swapaxes(Vh, -2, -1)  # (n, k)
-    VS_inv = V * S_inv  # (n, k) * (k,) broadcasts to (n, k)
+    # Construct pseudoinverse: V @ diag(S_inv) @ U^T = Vt^T @ diag(S_inv) @ U^T
+    # V is Vt transposed: (..., n, k)
+    V = mx.swapaxes(Vt, -2, -1)  # (..., n, k)
 
-    # Result: (n, k) @ (k, m) = (n, m)
-    result_array = np.matmul(VS_inv, np.swapaxes(U, -2, -1))
+    # Multiply V by S_inv: (..., n, k) * (..., k) -> (..., n, k)
+    VS_inv = V * mx.expand_dims(S_inv, axis=-2)
 
-    result = Tensor._from_mlx_array(mx.array(result_array.astype(np.float32)))
+    # U transposed: (..., k, m)
+    Ut = mx.swapaxes(U, -2, -1)
+
+    # Result: (..., n, k) @ (..., k, m) = (..., n, m)
+    result_array = mx.matmul(VS_inv, Ut)
+
+    result = Tensor._from_mlx_array(result_array)
 
     if is_grad_enabled() and input.requires_grad:
         result.requires_grad = True

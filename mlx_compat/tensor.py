@@ -24,6 +24,43 @@ import numpy as np
 from .dtype import DType, get_dtype, get_default_dtype
 from .device import Device, get_default_device
 
+# Module-level cached dtype map for fast inference (computed once on first use)
+_CACHED_DTYPE_MAP = None
+_CACHED_DEFAULT_DEVICE = None
+
+
+def _get_dtype_map():
+    """Get cached dtype mapping from MLX dtype to mlx_compat dtype."""
+    global _CACHED_DTYPE_MAP
+    if _CACHED_DTYPE_MAP is None:
+        from . import dtype as dtype_module
+        _CACHED_DTYPE_MAP = {
+            mx.float32: dtype_module.float32,
+            mx.float16: dtype_module.float16,
+            mx.bfloat16: dtype_module.bfloat16,
+            mx.int8: dtype_module.int8,
+            mx.int16: dtype_module.int16,
+            mx.int32: dtype_module.int32,
+            mx.int64: dtype_module.int64,
+            mx.uint8: dtype_module.uint8,
+            mx.uint16: dtype_module.uint16,
+            mx.uint32: dtype_module.uint32,
+            mx.uint64: dtype_module.uint64,
+            mx.bool_: dtype_module.bool,
+        }
+        # Add complex64 if available
+        if hasattr(mx, 'complex64') and dtype_module.complex64 is not None:
+            _CACHED_DTYPE_MAP[mx.complex64] = dtype_module.complex64
+    return _CACHED_DTYPE_MAP
+
+
+def _get_cached_default_device():
+    """Get cached default device to avoid repeated construction."""
+    global _CACHED_DEFAULT_DEVICE
+    if _CACHED_DEFAULT_DEVICE is None:
+        _CACHED_DEFAULT_DEVICE = get_default_device()
+    return _CACHED_DEFAULT_DEVICE
+
 
 class Tensor:
     """
@@ -150,8 +187,10 @@ class Tensor:
         """
         tensor = cls.__new__(cls)
         tensor._mlx_array = mlx_array
-        tensor._dtype = tensor._infer_dtype(mlx_array)
-        tensor._device = get_default_device()
+        # Use lazy dtype - set to None, computed on first access
+        tensor._dtype = None
+        # Use cached default device
+        tensor._device = _get_cached_default_device()
         tensor.requires_grad = requires_grad
         tensor._grad = None
         tensor._grad_fn = grad_fn
@@ -164,26 +203,9 @@ class Tensor:
         """Infer mlx_compat dtype from MLX array dtype."""
         from . import dtype as dtype_module
 
-        # Map MLX dtype to our dtype
+        # Use cached dtype map for fast lookup
+        dtype_map = _get_dtype_map()
         mlx_dtype = mlx_array.dtype
-        dtype_map = {
-            mx.float32: dtype_module.float32,
-            mx.float16: dtype_module.float16,
-            mx.bfloat16: dtype_module.bfloat16,
-            mx.int8: dtype_module.int8,
-            mx.int16: dtype_module.int16,
-            mx.int32: dtype_module.int32,
-            mx.int64: dtype_module.int64,
-            mx.uint8: dtype_module.uint8,
-            mx.uint16: dtype_module.uint16,
-            mx.uint32: dtype_module.uint32,
-            mx.uint64: dtype_module.uint64,
-            mx.bool_: dtype_module.bool,
-        }
-
-        # Add complex64 if available
-        if hasattr(mx, 'complex64') and dtype_module.complex64 is not None:
-            dtype_map[mx.complex64] = dtype_module.complex64
 
         result = dtype_map.get(mlx_dtype)
         if result is None:
@@ -212,6 +234,8 @@ class Tensor:
     @property
     def dtype(self) -> DType:
         """Data type of the tensor."""
+        if self._dtype is None:
+            self._dtype = self._infer_dtype(self._mlx_array)
         return self._dtype
 
     @property

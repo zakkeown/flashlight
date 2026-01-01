@@ -302,6 +302,110 @@ class TestLinalgEigh(TestCase):
 
 
 @skipIfNoMLX
+class TestLinalgDet(TestCase):
+    """Test linalg.det operations."""
+
+    def test_det_basic(self):
+        """Test basic determinant."""
+        m = mlx_compat.tensor([[1., 2.], [3., 4.]])
+        d = mlx_compat.linalg.det(m)
+        # det = 1*4 - 2*3 = -2
+        self.assertAlmostEqual(d.numpy().item(), -2.0, places=4)
+
+    def test_det_identity(self):
+        """Test determinant of identity matrix."""
+        m = mlx_compat.eye(4)
+        d = mlx_compat.linalg.det(m)
+        self.assertAlmostEqual(d.numpy().item(), 1.0, places=4)
+
+    def test_det_singular(self):
+        """Test determinant of singular matrix."""
+        m = mlx_compat.tensor([[1., 2.], [2., 4.]])  # Rows are multiples
+        d = mlx_compat.linalg.det(m)
+        self.assertAlmostEqual(d.numpy().item(), 0.0, places=4)
+
+
+@skipIfNoMLX
+class TestLinalgSlogdet(TestCase):
+    """Test linalg.slogdet operations."""
+
+    def test_slogdet_basic(self):
+        """Test sign and log determinant."""
+        m = mlx_compat.tensor([[1., 2.], [3., 4.]])
+        sign, logabsdet = mlx_compat.linalg.slogdet(m)
+        # det = -2, so sign = -1, log|det| = log(2)
+        self.assertAlmostEqual(sign.numpy().item(), -1.0, places=4)
+        self.assertAlmostEqual(logabsdet.numpy().item(), np.log(2), places=4)
+
+    def test_slogdet_positive(self):
+        """Test slogdet with positive determinant."""
+        # Create positive definite matrix
+        m = mlx_compat.tensor([[4., 2.], [2., 5.]])
+        sign, logabsdet = mlx_compat.linalg.slogdet(m)
+        # det = 4*5 - 2*2 = 16, so sign = 1, log|det| = log(16)
+        self.assertAlmostEqual(sign.numpy().item(), 1.0, places=4)
+        self.assertAlmostEqual(logabsdet.numpy().item(), np.log(16), places=3)
+
+
+@skipIfNoMLX
+class TestLinalgPinv(TestCase):
+    """Test linalg.pinv operations."""
+
+    def test_pinv_square(self):
+        """Test pseudoinverse of square matrix."""
+        m = mlx_compat.tensor([[1., 2.], [3., 4.]])
+        m_pinv = mlx_compat.linalg.pinv(m)
+
+        # For invertible matrix, pinv = inv
+        # M @ M_pinv should be close to identity
+        product = mlx_compat.matmul(m, m_pinv)
+        expected = np.eye(2, dtype=np.float32)
+        np.testing.assert_allclose(
+            product.numpy(), expected, rtol=1e-3, atol=1e-3
+        )
+
+    def test_pinv_tall(self):
+        """Test pseudoinverse of tall matrix (more rows than cols)."""
+        np.random.seed(42)
+        data = np.random.randn(6, 3).astype(np.float32)
+        m = mlx_compat.tensor(data)
+        m_pinv = mlx_compat.linalg.pinv(m)
+
+        # For tall matrix: pinv(M) @ M should be close to identity (3x3)
+        product = mlx_compat.matmul(m_pinv, m)
+        expected = np.eye(3, dtype=np.float32)
+        np.testing.assert_allclose(
+            product.numpy(), expected, rtol=1e-3, atol=1e-3
+        )
+
+    def test_pinv_wide(self):
+        """Test pseudoinverse of wide matrix (more cols than rows)."""
+        np.random.seed(42)
+        data = np.random.randn(3, 6).astype(np.float32)
+        m = mlx_compat.tensor(data)
+        m_pinv = mlx_compat.linalg.pinv(m)
+
+        # For wide matrix: M @ pinv(M) should be close to identity (3x3)
+        product = mlx_compat.matmul(m, m_pinv)
+        expected = np.eye(3, dtype=np.float32)
+        np.testing.assert_allclose(
+            product.numpy(), expected, rtol=1e-3, atol=1e-3
+        )
+
+    def test_pinv_reconstruction(self):
+        """Test that M @ pinv(M) @ M = M."""
+        np.random.seed(42)
+        data = np.random.randn(4, 3).astype(np.float32)
+        m = mlx_compat.tensor(data)
+        m_pinv = mlx_compat.linalg.pinv(m)
+
+        reconstructed = mlx_compat.matmul(mlx_compat.matmul(m, m_pinv), m)
+        np.testing.assert_allclose(
+            reconstructed.numpy(), data, rtol=1e-3, atol=1e-3
+        )
+
+
+@skipIfNoMLX
 class TestLinalgCross(TestCase):
     """Test linalg.cross operations."""
 

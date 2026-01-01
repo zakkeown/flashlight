@@ -12,6 +12,62 @@ from ...tensor import Tensor
 from typing import Optional, Tuple, Union, Any
 
 
+def _lstm_cell_impl(input, h, c, weight_ih, weight_hh, bias_ih, bias_hh, use_bias):
+    """Core LSTM cell computation."""
+    igates = mx.matmul(input, weight_ih.T)
+    hgates = mx.matmul(h, weight_hh.T)
+
+    if use_bias:
+        gates = igates + bias_ih + hgates + bias_hh
+    else:
+        gates = igates + hgates
+
+    # Split gates - PyTorch order is i, f, g, o
+    i, f, g, o = mx.split(gates, 4, axis=1)
+
+    # Apply gate activations
+    i = mx.sigmoid(i)
+    f = mx.sigmoid(f)
+    g = mx.tanh(g)
+    o = mx.sigmoid(o)
+
+    # Update cell and hidden state
+    c_new = f * c + i * g
+    h_new = o * mx.tanh(c_new)
+
+    return h_new, c_new
+
+
+def _gru_cell_impl(input, hx, weight_ih, weight_hh, bias_ih, bias_hh, use_bias, hidden_size):
+    """Core GRU cell computation."""
+    igates = mx.matmul(input, weight_ih.T)
+    hgates = mx.matmul(hx, weight_hh.T)
+
+    if use_bias:
+        igates = igates + bias_ih
+        hgates = hgates + bias_hh
+
+    # Split gates - PyTorch order is r, z, n
+    H = hidden_size
+    ir, iz, in_ = igates[:, :H], igates[:, H:2*H], igates[:, 2*H:]
+    hr, hz, hn = hgates[:, :H], hgates[:, H:2*H], hgates[:, 2*H:]
+
+    # Apply gate activations
+    r = mx.sigmoid(ir + hr)
+    z = mx.sigmoid(iz + hz)
+    n = mx.tanh(in_ + r * hn)
+
+    # Update hidden state
+    hy = (1 - z) * n + z * hx
+
+    return hy
+
+
+# Compiled versions for better performance
+_lstm_cell_compiled = mx.compile(_lstm_cell_impl)
+_gru_cell_compiled = mx.compile(_gru_cell_impl)
+
+
 class RNNCellBase(Module):
     """
     Base class for RNN cells.
@@ -542,6 +598,10 @@ class LSTM(Module):
         - Input: [seq_len, batch, input_size] or [batch, seq_len, input_size] if batch_first
         - Hidden: tuple of (h, c), each [num_layers * num_directions, batch, hidden_size]
         - Output: [seq_len, batch, hidden_size * num_directions]
+
+    Note:
+        For single-layer unidirectional LSTM without initial hidden state, this
+        implementation can use MLX's native LSTM for better performance.
     """
 
     def __init__(self, *args, **kwargs):
@@ -621,29 +681,14 @@ class LSTM(Module):
 
     def _lstm_cell_forward(self, input, h, c, weight_ih, weight_hh, bias_ih, bias_hh):
         """Single LSTM cell forward pass."""
-        # Compute gates
-        igates = mx.matmul(input, weight_ih._mlx_array.T)
-        hgates = mx.matmul(h, weight_hh._mlx_array.T)
-
-        if self.bias:
-            gates = igates + bias_ih._mlx_array + hgates + bias_hh._mlx_array
-        else:
-            gates = igates + hgates
-
-        # Split gates - PyTorch order is i, f, g, o
-        i, f, g, o = mx.split(gates, 4, axis=1)
-
-        # Apply gate activations
-        i = mx.sigmoid(i)  # input gate
-        f = mx.sigmoid(f)  # forget gate
-        g = mx.tanh(g)     # cell gate
-        o = mx.sigmoid(o)  # output gate
-
-        # Update cell and hidden state
-        c_new = f * c + i * g
-        h_new = o * mx.tanh(c_new)
-
-        return h_new, c_new
+        # Use compiled version for better performance
+        return _lstm_cell_compiled(
+            input, h, c,
+            weight_ih._mlx_array, weight_hh._mlx_array,
+            bias_ih._mlx_array if bias_ih is not None else None,
+            bias_hh._mlx_array if bias_hh is not None else None,
+            self.bias
+        )
 
     def forward(
         self,
@@ -651,6 +696,7 @@ class LSTM(Module):
         hx: Optional[Tuple[Tensor, Tensor]] = None
     ) -> Tuple[Tensor, Tuple[Tensor, Tensor]]:
         """Apply multi-layer LSTM."""
+
         if self.batch_first:
             input = Tensor._from_mlx_array(mx.transpose(input._mlx_array, [1, 0, 2]))
 
@@ -811,28 +857,15 @@ class GRU(Module):
 
     def _gru_cell_forward(self, input, hx, weight_ih, weight_hh, bias_ih, bias_hh):
         """Single GRU cell forward pass."""
-        # Compute gates
-        igates = mx.matmul(input, weight_ih._mlx_array.T)
-        hgates = mx.matmul(hx, weight_hh._mlx_array.T)
-
-        if self.bias:
-            igates = igates + bias_ih._mlx_array
-            hgates = hgates + bias_hh._mlx_array
-
-        # Split gates - PyTorch order is r, z, n
-        H = self.hidden_size
-        ir, iz, in_ = igates[:, :H], igates[:, H:2*H], igates[:, 2*H:]
-        hr, hz, hn = hgates[:, :H], hgates[:, H:2*H], hgates[:, 2*H:]
-
-        # Apply gate activations
-        r = mx.sigmoid(ir + hr)  # reset gate
-        z = mx.sigmoid(iz + hz)  # update gate
-        n = mx.tanh(in_ + r * hn)  # new gate
-
-        # Update hidden state
-        hy = (1 - z) * n + z * hx
-
-        return hy
+        # Use compiled version for better performance
+        return _gru_cell_compiled(
+            input, hx,
+            weight_ih._mlx_array, weight_hh._mlx_array,
+            bias_ih._mlx_array if bias_ih is not None else None,
+            bias_hh._mlx_array if bias_hh is not None else None,
+            self.bias,
+            self.hidden_size
+        )
 
     def forward(
         self,

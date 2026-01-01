@@ -498,6 +498,8 @@ def frobenius_norm(input: Tensor, dim: Union[int, Tuple[int, ...]] = None, keepd
 def frombuffer(buffer, dtype=None, count: int = -1, offset: int = 0) -> Tensor:
     """Create a tensor from a buffer object.
 
+    Pure Python/MLX implementation using struct module.
+
     Args:
         buffer: Buffer object (bytes, bytearray, etc.)
         dtype: Data type of the resulting tensor
@@ -507,18 +509,57 @@ def frombuffer(buffer, dtype=None, count: int = -1, offset: int = 0) -> Tensor:
     Returns:
         1D tensor with data from buffer
     """
-    import numpy as np
-    from ..dtype import torch_dtype_to_numpy, numpy_to_mlx_dtype
+    import struct
 
-    if dtype is None:
-        np_dtype = np.float32
+    # Map dtype to struct format and MLX dtype
+    dtype_map = {
+        None: ('f', mx.float32, 4),  # default float32
+        'float32': ('f', mx.float32, 4),
+        'float16': ('e', mx.float16, 2),
+        'int32': ('i', mx.int32, 4),
+        'int64': ('q', mx.int64, 8),
+        'int16': ('h', mx.int16, 2),
+        'int8': ('b', mx.int8, 1),
+        'uint8': ('B', mx.uint8, 1),
+        'uint16': ('H', mx.uint16, 2),
+        'uint32': ('I', mx.uint32, 4),
+        'uint64': ('Q', mx.uint64, 8),
+        'bool': ('?', mx.bool_, 1),
+    }
+
+    # Handle torch dtype objects
+    if dtype is not None and hasattr(dtype, '__name__'):
+        dtype_key = dtype.__name__
+    elif dtype is not None:
+        dtype_key = str(dtype).replace('torch.', '')
     else:
-        np_dtype = torch_dtype_to_numpy(dtype)
+        dtype_key = None
 
-    # Read from buffer
-    arr = np.frombuffer(buffer, dtype=np_dtype, count=count, offset=offset)
-    mlx_dtype = numpy_to_mlx_dtype(np_dtype)
-    result = Tensor._from_mlx_array(mx.array(arr, dtype=mlx_dtype))
+    if dtype_key not in dtype_map:
+        dtype_key = 'float32'  # fallback
+
+    fmt_char, mlx_dtype, elem_size = dtype_map[dtype_key]
+
+    # Get buffer bytes
+    if isinstance(buffer, (bytes, bytearray)):
+        data = bytes(buffer)
+    else:
+        data = bytes(buffer)
+
+    # Apply offset
+    data = data[offset:]
+
+    # Calculate count
+    if count == -1:
+        count = len(data) // elem_size
+    else:
+        count = min(count, len(data) // elem_size)
+
+    # Unpack using struct
+    fmt = f'<{count}{fmt_char}'  # Little-endian
+    values = struct.unpack(fmt, data[:count * elem_size])
+
+    result = Tensor._from_mlx_array(mx.array(list(values), dtype=mlx_dtype))
     return result
 
 
@@ -2134,49 +2175,133 @@ def index_reduce(input: Tensor, dim: int, index: Tensor, source: Tensor,
 
     Returns:
         Result tensor
+
+    Pure MLX implementation.
     """
-    import numpy as np
+    arr = input._mlx_array
+    idx = index._mlx_array.astype(mx.int32)
+    src = source._mlx_array
 
-    arr = np.array(input._mlx_array).copy()
-    idx = np.array(index._mlx_array)
-    src = np.array(source._mlx_array)
+    # Convert to lists for manipulation
+    arr_list = arr.tolist()
+    src_list = src.tolist()
+    idx_list = idx.tolist()
 
-    if reduce == 'prod':
-        if include_self:
-            np.multiply.at(arr, (slice(None),) * dim + (idx,), src)
-        else:
-            # Set to 1 first then multiply
-            arr[(slice(None),) * dim + (idx,)] = 1
-            np.multiply.at(arr, (slice(None),) * dim + (idx,), src)
-    elif reduce == 'mean':
-        # Count and sum
-        counts = np.zeros_like(arr)
-        np.add.at(counts, (slice(None),) * dim + (idx,), 1)
-        np.add.at(arr, (slice(None),) * dim + (idx,), src)
-        if include_self:
-            counts += 1
-        arr = np.divide(arr, np.maximum(counts, 1))
-    elif reduce == 'amax':
-        np.maximum.at(arr, (slice(None),) * dim + (idx,), src)
-    elif reduce == 'amin':
-        np.minimum.at(arr, (slice(None),) * dim + (idx,), src)
+    # Handle 1D case
+    if arr.ndim == 1 and isinstance(idx_list, list):
+        result = list(arr_list)
+        counts = [1 if include_self else 0] * len(result)
 
-    return Tensor._from_mlx_array(mx.array(arr, dtype=input._mlx_array.dtype))
+        for i, ix in enumerate(idx_list):
+            s = src_list[i] if isinstance(src_list, list) else src_list
+
+            if reduce == 'prod':
+                if not include_self and counts[ix] == 0:
+                    result[ix] = s
+                else:
+                    result[ix] *= s
+            elif reduce == 'mean':
+                result[ix] += s
+                counts[ix] += 1
+            elif reduce == 'amax':
+                result[ix] = max(result[ix], s)
+            elif reduce == 'amin':
+                result[ix] = min(result[ix], s)
+
+        if reduce == 'mean':
+            result = [r / max(c, 1) for r, c in zip(result, counts)]
+
+        return Tensor._from_mlx_array(mx.array(result, dtype=arr.dtype))
+
+    # For higher dimensions, use a simplified approach
+    # Move dim to last axis, process, move back
+    ndim = arr.ndim
+    dim = dim if dim >= 0 else ndim + dim
+
+    # Transpose to bring dim to end
+    perm = list(range(ndim))
+    perm.pop(dim)
+    perm.append(dim)
+    arr_t = mx.transpose(arr, perm)
+    src_t = mx.transpose(src, perm) if src.ndim > 1 else src
+
+    shape = arr_t.shape
+    result = arr_t.tolist()
+
+    # Flatten all but last dimension for iteration
+    import itertools
+    other_dims = shape[:-1]
+    n = shape[-1]
+
+    for coords in itertools.product(*[range(d) for d in other_dims]):
+        row = result
+        for c in coords:
+            row = row[c]
+
+        src_row = src_t.tolist() if src.ndim == 1 else src_t
+        for c in coords:
+            if isinstance(src_row, list) and len(src_row) > 0:
+                src_row = src_row[c] if c < len(src_row) else src_row
+
+        idx_flat = idx.flatten().tolist() if idx.ndim > 0 else [idx.item()]
+        src_flat = src_row if isinstance(src_row, list) else [src_row]
+
+        counts = [1 if include_self else 0] * n
+        for i, ix in enumerate(idx_flat):
+            s = src_flat[i] if i < len(src_flat) else src_flat[0]
+            if reduce == 'prod':
+                if not include_self and counts[ix] == 0:
+                    row[ix] = s
+                else:
+                    row[ix] *= s
+            elif reduce == 'mean':
+                row[ix] += s
+                counts[ix] += 1
+            elif reduce == 'amax':
+                row[ix] = max(row[ix], s)
+            elif reduce == 'amin':
+                row[ix] = min(row[ix], s)
+
+        if reduce == 'mean':
+            for j in range(n):
+                row[j] = row[j] / max(counts[j], 1)
+
+    # Convert back and transpose
+    result_arr = mx.array(result, dtype=arr.dtype)
+    inv_perm = [0] * ndim
+    for i, p in enumerate(perm):
+        inv_perm[p] = i
+    result_arr = mx.transpose(result_arr, inv_perm)
+
+    return Tensor._from_mlx_array(result_arr)
 
 
 def masked_scatter(input: Tensor, mask: Tensor, source: Tensor) -> Tensor:
-    """Scatter source values into input where mask is True."""
-    import numpy as np
+    """Scatter source values into input where mask is True.
 
-    arr = np.array(input._mlx_array).copy()
-    m = np.array(mask._mlx_array).astype(bool)
-    src = np.array(source._mlx_array).flatten()
+    Pure MLX implementation.
+    """
+    arr = input._mlx_array
+    m = mask._mlx_array.astype(mx.bool_)
+    src = mx.reshape(source._mlx_array, (-1,))
 
-    # Get number of True values in mask
-    num_true = m.sum()
-    arr[m] = src[:num_true]
+    # Flatten input and mask for processing
+    flat = mx.reshape(arr, (-1,)).tolist()
+    mask_flat = mx.reshape(m, (-1,))
 
-    return Tensor._from_mlx_array(mx.array(arr, dtype=input._mlx_array.dtype))
+    # Scatter source values where mask is True
+    src_list = src.tolist()
+    src_idx = 0
+    for i in range(len(flat)):
+        if mask_flat[i].item():
+            if src_idx < len(src_list):
+                flat[i] = src_list[src_idx]
+                src_idx += 1
+
+    result = mx.array(flat, dtype=arr.dtype)
+    result = mx.reshape(result, arr.shape)
+
+    return Tensor._from_mlx_array(result)
 
 
 # ============================================================================
@@ -2309,44 +2434,43 @@ def lu_unpack(LU_data: Tensor, LU_pivots: Tensor, unpack_data: bool = True,
 
     Returns:
         Tuple of (P, L, U) if both unpack options are True
-    """
-    import numpy as np
 
-    lu_arr = np.array(LU_data._mlx_array)
-    piv_arr = np.array(LU_pivots._mlx_array).astype(np.int64)
+    Pure MLX implementation.
+    """
+    lu_arr = LU_data._mlx_array.astype(mx.float32)
+    piv_arr = LU_pivots._mlx_array.astype(mx.int32)
 
     m, n = lu_arr.shape[-2], lu_arr.shape[-1]
     k = min(m, n)
 
-    # Extract L and U
+    # Extract L and U using MLX operations
     # L is lower triangular part with 1s on diagonal, shape (m, k)
-    L = np.tril(lu_arr[:, :k], -1)
-    np.fill_diagonal(L, 1)
+    L = mx.tril(lu_arr[:, :k], k=-1) + mx.eye(m, k, dtype=mx.float32)
 
     # U is upper triangular part, shape (k, n)
-    U = np.triu(lu_arr[:k, :])
+    U = mx.triu(lu_arr[:k, :])
 
     # Create permutation from pivots
     # PyTorch pivots are 1-indexed, so we need to subtract 1
     # Apply swaps in REVERSE order to get the correct permutation matrix
     perm = list(range(m))
-    for i in reversed(range(len(piv_arr))):
-        p = int(piv_arr[i]) - 1  # Convert to 0-indexed
+    piv_list = piv_arr.tolist()
+    for i in reversed(range(len(piv_list))):
+        p = int(piv_list[i]) - 1  # Convert to 0-indexed
         if 0 <= p < m:
             perm[i], perm[p] = perm[p], perm[i]
 
     # Build permutation matrix from perm array
     # P[i, perm[i]] = 1 means row i of output corresponds to row perm[i] of input
-    P = np.zeros((m, m), dtype=np.float64)
-    for i in range(m):
-        P[i, perm[i]] = 1
+    P_data = [[1.0 if j == perm[i] else 0.0 for j in range(m)] for i in range(m)]
+    P = mx.array(P_data, dtype=mx.float32)
 
     results = []
     if unpack_pivots:
-        results.append(Tensor._from_mlx_array(mx.array(P, dtype=LU_data._mlx_array.dtype)))
+        results.append(Tensor._from_mlx_array(P.astype(LU_data._mlx_array.dtype)))
     if unpack_data:
-        results.append(Tensor._from_mlx_array(mx.array(L, dtype=LU_data._mlx_array.dtype)))
-        results.append(Tensor._from_mlx_array(mx.array(U, dtype=LU_data._mlx_array.dtype)))
+        results.append(Tensor._from_mlx_array(L.astype(LU_data._mlx_array.dtype)))
+        results.append(Tensor._from_mlx_array(U.astype(LU_data._mlx_array.dtype)))
 
     return tuple(results)
 
@@ -2365,22 +2489,66 @@ def geqrf(input: Tensor) -> Tuple[Tensor, Tensor]:
         - qr: Matrix containing the Householder vectors below the diagonal
               and R on and above the diagonal
         - tau: Householder reflector coefficients
+
+    Pure MLX implementation using Householder reflections.
     """
-    import numpy as np
-    from scipy.linalg import lapack
+    arr = input._mlx_array.astype(mx.float32)
+    m, n = arr.shape[-2], arr.shape[-1]
+    k = min(m, n)
 
-    arr = np.array(input._mlx_array).astype(np.float64)
+    # Work with a copy
+    qr = arr.tolist()
+    tau = []
 
-    # Use LAPACK dgeqrf to compute QR in Householder form
-    # dgeqrf(a, lwork=None, overwrite_a=False)
-    # Returns: (qr, tau, work, info)
-    qr, tau, work, info = lapack.dgeqrf(arr)
+    for j in range(k):
+        # Extract column j from row j to m
+        col = [qr[i][j] for i in range(j, m)]
 
-    if info != 0:
-        raise RuntimeError(f"LAPACK dgeqrf failed with info={info}")
+        # Compute Householder vector
+        norm_x = sum(x * x for x in col) ** 0.5
+        if norm_x == 0:
+            tau.append(0.0)
+            continue
 
-    return (Tensor._from_mlx_array(mx.array(qr.astype(np.float32), dtype=input._mlx_array.dtype)),
-            Tensor._from_mlx_array(mx.array(tau.astype(np.float32), dtype=input._mlx_array.dtype)))
+        # Make the reflection
+        if col[0] >= 0:
+            col[0] += norm_x
+        else:
+            col[0] -= norm_x
+
+        # Compute tau = 2 / (v'v)
+        v_norm_sq = sum(x * x for x in col)
+        if v_norm_sq > 0:
+            tau_val = 2.0 / v_norm_sq
+        else:
+            tau_val = 0.0
+        tau.append(tau_val)
+
+        # Normalize Householder vector (store below diagonal)
+        if col[0] != 0:
+            scale = 1.0 / col[0]
+            for i in range(1, len(col)):
+                qr[j + i][j] = col[i] * scale
+
+        # Apply Householder reflection to remaining columns
+        v = [1.0] + [qr[j + i][j] for i in range(1, m - j)]
+        for jj in range(j + 1, n):
+            # Compute v' * A[:, jj]
+            dot = sum(v[i] * qr[j + i][jj] for i in range(m - j))
+            # A[:, jj] -= tau * v * dot
+            for i in range(m - j):
+                qr[j + i][jj] -= tau_val * v[i] * dot
+
+        # Store R value
+        if col[0] >= 0:
+            qr[j][j] = -norm_x
+        else:
+            qr[j][j] = norm_x
+
+    qr_arr = mx.array(qr, dtype=input._mlx_array.dtype)
+    tau_arr = mx.array(tau, dtype=input._mlx_array.dtype)
+
+    return (Tensor._from_mlx_array(qr_arr), Tensor._from_mlx_array(tau_arr))
 
 
 # ============================================================================
@@ -2438,16 +2606,30 @@ def embedding_renorm_(weight: Tensor, input: Tensor, max_norm: float,
         input: Tensor of indices to renormalize
         max_norm: Max norm for embeddings
         norm_type: Norm type (default: 2.0)
+
+    Pure MLX implementation.
     """
-    import numpy as np
+    w = weight._mlx_array.tolist()
+    idx_arr = input._mlx_array.astype(mx.int32).flatten()
 
-    w = np.array(weight._mlx_array)
-    idx = np.unique(np.array(input._mlx_array).astype(int))
+    # Get unique indices
+    idx_set = set(int(i) for i in idx_arr.tolist())
 
-    for i in idx:
-        norm = np.linalg.norm(w[i], ord=norm_type)
+    for i in idx_set:
+        row = w[i]
+        # Compute norm
+        if norm_type == 2.0:
+            norm = sum(x * x for x in row) ** 0.5
+        elif norm_type == 1.0:
+            norm = sum(abs(x) for x in row)
+        elif norm_type == float('inf'):
+            norm = max(abs(x) for x in row)
+        else:
+            norm = sum(abs(x) ** norm_type for x in row) ** (1.0 / norm_type)
+
         if norm > max_norm:
-            w[i] = w[i] * (max_norm / norm)
+            scale = max_norm / norm
+            w[i] = [x * scale for x in row]
 
     weight._mlx_array = mx.array(w, dtype=weight._mlx_array.dtype)
     return weight
@@ -2465,59 +2647,92 @@ def from_file(filename: str, shared: bool = False, size: int = 0,
     """Create tensor from file.
 
     Note: MLX doesn't support memory-mapped files, so this loads the entire file.
+
+    Pure Python implementation.
     """
-    import numpy as np
+    import struct
 
     if dtype is None:
         dtype = mx.float32
     elif hasattr(dtype, '_mlx_dtype'):
         dtype = dtype._mlx_dtype
 
-    # Read binary file
-    np_dtype = {
-        mx.float32: np.float32,
-        mx.float16: np.float16,
-        mx.int32: np.int32,
-        mx.int64: np.int64,
-    }.get(dtype, np.float32)
+    # Map MLX dtype to struct format
+    dtype_info = {
+        mx.float32: ('f', 4),
+        mx.float16: ('e', 2),
+        mx.int32: ('i', 4),
+        mx.int64: ('q', 8),
+    }
+    fmt, itemsize = dtype_info.get(dtype, ('f', 4))
 
-    data = np.fromfile(filename, dtype=np_dtype, count=size if size > 0 else -1)
-    return Tensor._from_mlx_array(mx.array(data, dtype=dtype))
+    # Read binary file
+    with open(filename, 'rb') as f:
+        data = f.read()
+
+    # Calculate number of elements
+    if size > 0:
+        count = min(size, len(data) // itemsize)
+    else:
+        count = len(data) // itemsize
+
+    # Unpack binary data
+    values = struct.unpack(f'<{count}{fmt}', data[:count * itemsize])
+    return Tensor._from_mlx_array(mx.array(list(values), dtype=dtype))
 
 
 def max_pool1d_with_indices(input: Tensor, kernel_size: int, stride: int = None,
                             padding: int = 0, dilation: int = 1,
                             ceil_mode: bool = False) -> Tuple[Tensor, Tensor]:
-    """Max pool 1D returning both values and indices."""
-    import numpy as np
+    """Max pool 1D returning both values and indices.
+
+    Pure MLX implementation.
+    """
+    import math
 
     if stride is None:
         stride = kernel_size
 
-    arr = np.array(input._mlx_array)
+    arr = input._mlx_array
 
-    # Simple implementation
+    # Shape: (N, C, L)
     N, C, L = arr.shape
+
+    # Calculate output size
     L_out = (L + 2 * padding - dilation * (kernel_size - 1) - 1) // stride + 1
     if ceil_mode:
-        L_out = int(np.ceil((L + 2 * padding - dilation * (kernel_size - 1) - 1) / stride)) + 1
+        L_out = math.ceil((L + 2 * padding - dilation * (kernel_size - 1) - 1) / stride) + 1
 
-    output = np.zeros((N, C, L_out), dtype=arr.dtype)
-    indices = np.zeros((N, C, L_out), dtype=np.int64)
-
+    # Pad if needed
     if padding > 0:
-        arr = np.pad(arr, ((0, 0), (0, 0), (padding, padding)), mode='constant',
-                     constant_values=-np.inf)
+        # Pad with -inf for max pooling
+        neg_inf = mx.array(float('-inf'), dtype=arr.dtype)
+        pad_left = mx.full((N, C, padding), neg_inf)
+        pad_right = mx.full((N, C, padding), neg_inf)
+        arr = mx.concatenate([pad_left, arr, pad_right], axis=2)
+
+    output_list = []
+    indices_list = []
 
     for i in range(L_out):
         start = i * stride
-        end = start + kernel_size * dilation
-        window = arr[:, :, start:end:dilation]
-        output[:, :, i] = window.max(axis=-1)
-        indices[:, :, i] = window.argmax(axis=-1) * dilation + start - padding
+        # Gather window elements with dilation
+        window_indices = [start + j * dilation for j in range(kernel_size)]
+        window = mx.stack([arr[:, :, idx] for idx in window_indices], axis=-1)  # (N, C, kernel_size)
 
-    return (Tensor._from_mlx_array(mx.array(output, dtype=input._mlx_array.dtype)),
-            Tensor._from_mlx_array(mx.array(indices)))
+        # Max and argmax
+        max_vals = mx.max(window, axis=-1)
+        max_idx = mx.argmax(window, axis=-1)
+
+        output_list.append(max_vals)
+        # Convert local index to global index
+        global_idx = max_idx * dilation + start - padding
+        indices_list.append(global_idx)
+
+    output = mx.stack(output_list, axis=-1)  # (N, C, L_out)
+    indices = mx.stack(indices_list, axis=-1).astype(mx.int64)
+
+    return (Tensor._from_mlx_array(output), Tensor._from_mlx_array(indices))
 
 
 def ctc_loss(log_probs: Tensor, targets: Tensor, input_lengths: Tensor,
@@ -2525,70 +2740,90 @@ def ctc_loss(log_probs: Tensor, targets: Tensor, input_lengths: Tensor,
              zero_infinity: bool = False) -> Tensor:
     """Connectionist Temporal Classification loss.
 
-    This uses a NumPy-based implementation for correctness.
+    Pure MLX implementation of CTC forward algorithm.
     """
-    import numpy as np
-
-    # Convert inputs
-    probs = np.array(log_probs._mlx_array)  # (T, N, C)
-    tgts = np.array(targets._mlx_array).astype(int)
-    in_lens = np.array(input_lengths._mlx_array).astype(int)
-    tgt_lens = np.array(target_lengths._mlx_array).astype(int)
+    # Convert inputs to MLX arrays
+    probs = log_probs._mlx_array  # (T, N, C)
+    tgts = targets._mlx_array.astype(mx.int32)
+    in_lens = input_lengths._mlx_array.astype(mx.int32)
+    tgt_lens = target_lengths._mlx_array.astype(mx.int32)
 
     T, N, C = probs.shape
 
     losses = []
     for b in range(N):
         # Get this sample's data
-        log_prob = probs[:in_lens[b], b, :]
-        target = tgts[b, :tgt_lens[b]] if tgts.ndim > 1 else tgts[:tgt_lens[b]]
+        T_curr = int(in_lens[b].item())
+        L = int(tgt_lens[b].item())
 
-        # Build extended labels with blanks
-        L = len(target)
-        extended = np.zeros(2 * L + 1, dtype=int)
-        extended[::2] = blank
-        extended[1::2] = target
+        log_prob = probs[:T_curr, b, :]
 
-        S = len(extended)
-        T_curr = len(log_prob)
+        if tgts.ndim > 1:
+            target = [int(tgts[b, i].item()) for i in range(L)]
+        else:
+            target = [int(tgts[i].item()) for i in range(L)]
 
-        # Forward algorithm
-        alpha = np.full((T_curr, S), -np.inf)
-        alpha[0, 0] = log_prob[0, extended[0]]
+        # Build extended labels with blanks: [blank, label0, blank, label1, ..., blank]
+        S = 2 * L + 1
+        extended = [blank] * S
+        for i, t in enumerate(target):
+            extended[2 * i + 1] = t
+
+        # Forward algorithm using MLX
+        neg_inf = float('-inf')
+        alpha = mx.full((T_curr, S), neg_inf, dtype=mx.float32)
+
+        # Initialize
+        alpha = alpha.at[0, 0].add(log_prob[0, extended[0]] - neg_inf)
         if S > 1:
-            alpha[0, 1] = log_prob[0, extended[1]]
+            alpha = alpha.at[0, 1].add(log_prob[0, extended[1]] - neg_inf)
+
+        # Since MLX doesn't have efficient in-place updates, we'll use Python lists
+        # and convert at the end
+        alpha_list = [[neg_inf] * S for _ in range(T_curr)]
+        alpha_list[0][0] = float(log_prob[0, extended[0]].item())
+        if S > 1:
+            alpha_list[0][1] = float(log_prob[0, extended[1]].item())
+
+        def logaddexp(a, b):
+            """Log-add-exp for numerical stability."""
+            if a == neg_inf:
+                return b
+            if b == neg_inf:
+                return a
+            if a > b:
+                return a + float(mx.log1p(mx.exp(mx.array(b - a))).item())
+            else:
+                return b + float(mx.log1p(mx.exp(mx.array(a - b))).item())
 
         for t in range(1, T_curr):
             for s in range(S):
-                alpha[t, s] = alpha[t-1, s]
+                val = alpha_list[t-1][s]
                 if s > 0:
-                    alpha[t, s] = np.logaddexp(alpha[t, s], alpha[t-1, s-1])
-                # Can skip from s-2 to s if:
-                # - s > 1 (need at least 2 positions back)
-                # - s is at an odd position (label position, not blank separator)
-                # - the label at s differs from the label at s-2
-                # Note: s % 2 == 1 means s is a label position in extended sequence
+                    val = logaddexp(val, alpha_list[t-1][s-1])
+                # Can skip from s-2 to s if different labels
                 if s > 1 and s % 2 == 1 and extended[s] != extended[s-2]:
-                    alpha[t, s] = np.logaddexp(alpha[t, s], alpha[t-1, s-2])
-                alpha[t, s] += log_prob[t, extended[s]]
+                    val = logaddexp(val, alpha_list[t-1][s-2])
+                alpha_list[t][s] = val + float(log_prob[t, extended[s]].item())
 
-        loss = -np.logaddexp(alpha[-1, -1], alpha[-1, -2])
-        if zero_infinity and np.isinf(loss):
+        # Final loss
+        loss = -logaddexp(alpha_list[-1][-1], alpha_list[-1][-2])
+        if zero_infinity and loss == float('inf'):
             loss = 0.0
         losses.append(loss)
 
-    losses = np.array(losses)
-    if reduction == 'mean':
-        # PyTorch normalizes each loss by its target length first, then averages
-        # This is: mean(loss_i / target_length_i)
-        normalized_losses = losses / tgt_lens.astype(np.float32)
-        result = np.mean(normalized_losses)
-    elif reduction == 'sum':
-        result = np.sum(losses)
-    else:
-        result = losses
+    losses_arr = mx.array(losses, dtype=mx.float32)
+    tgt_lens_float = tgt_lens.astype(mx.float32)
 
-    return Tensor._from_mlx_array(mx.array(result, dtype=mx.float32))
+    if reduction == 'mean':
+        normalized_losses = losses_arr / tgt_lens_float
+        result = mx.mean(normalized_losses)
+    elif reduction == 'sum':
+        result = mx.sum(losses_arr)
+    else:
+        result = losses_arr
+
+    return Tensor._from_mlx_array(result)
 
 
 # ============================================================================
@@ -2602,25 +2837,38 @@ def relu_(input: Tensor) -> Tensor:
 
 
 def sinc_(input: Tensor) -> Tensor:
-    """In-place sinc function: sin(pi*x)/(pi*x)."""
-    import numpy as np
-    arr = np.array(input._mlx_array)
-    # Fix: numpy's sinc is sin(pi*x)/(pi*x) which is what we want, not sin(x)/x
-    # BUT numpy divides by pi internally, so np.sinc(x) = sin(pi*x)/(pi*x)
-    # This is already correct! The issue was we were dividing by pi again.
-    result = np.sinc(arr)
-    input._mlx_array = mx.array(result, dtype=input._mlx_array.dtype)
+    """In-place sinc function: sin(pi*x)/(pi*x).
+
+    Pure MLX implementation.
+    """
+    import math
+    pi = math.pi
+    arr = input._mlx_array.astype(mx.float32)
+
+    # sinc(x) = sin(pi*x) / (pi*x), with sinc(0) = 1
+    pi_x = pi * arr
+    is_zero = mx.abs(arr) < 1e-10
+    # Avoid division by zero
+    safe_pi_x = mx.where(is_zero, mx.array(1.0, dtype=mx.float32), pi_x)
+    result = mx.where(is_zero, mx.array(1.0, dtype=mx.float32), mx.sin(safe_pi_x) / safe_pi_x)
+
+    input._mlx_array = result.astype(input._mlx_array.dtype)
     return input
 
 
 def xlogy_(input: Tensor, other: Tensor) -> Tensor:
-    """In-place xlogy."""
-    import numpy as np
-    from scipy import special
-    x = np.array(input._mlx_array)
-    y = np.array(other._mlx_array)
-    result = special.xlogy(x, y)
-    input._mlx_array = mx.array(result, dtype=input._mlx_array.dtype)
+    """In-place xlogy: x * log(y), with xlogy(0, y) = 0.
+
+    Pure MLX implementation.
+    """
+    x = input._mlx_array.astype(mx.float32)
+    y = other._mlx_array.astype(mx.float32)
+
+    # xlogy(x, y) = x * log(y), but xlogy(0, y) = 0 for any y
+    is_zero_x = mx.abs(x) < 1e-30
+    result = mx.where(is_zero_x, mx.zeros_like(x), x * mx.log(y))
+
+    input._mlx_array = result.astype(input._mlx_array.dtype)
     return input
 
 
@@ -2694,19 +2942,55 @@ def triangular_solve(b: Tensor, A: Tensor, upper: bool = True,
 
 
 def nuclear_norm(input: Tensor, dim: Tuple[int, int] = None, keepdim: bool = False) -> Tensor:
-    """Compute nuclear norm (sum of singular values)."""
-    import numpy as np
+    """Compute nuclear norm (sum of singular values).
 
-    arr = np.array(input._mlx_array)
+    Pure MLX implementation using SVD.
+    """
+    arr = input._mlx_array.astype(mx.float32)
+
     if dim is None:
-        result = np.linalg.norm(arr, ord='nuc')
-    else:
-        # Move dims to last two positions and compute
-        result = np.linalg.norm(arr, ord='nuc', axis=dim, keepdims=keepdim)
+        # Reshape to 2D if needed
+        if arr.ndim > 2:
+            arr = mx.reshape(arr, (-1, arr.shape[-1]))
 
-    if isinstance(result, np.ndarray):
-        return Tensor._from_mlx_array(mx.array(result, dtype=input._mlx_array.dtype))
-    return Tensor._from_mlx_array(mx.array(result, dtype=input._mlx_array.dtype))
+        # Compute SVD and sum singular values
+        _, S, _ = mx.linalg.svd(arr, stream=mx.cpu)
+        mx.eval(S)
+        result = mx.sum(S)
+    else:
+        # Move specified dims to last two positions
+        ndim = arr.ndim
+        dim0, dim1 = dim
+        if dim0 < 0:
+            dim0 += ndim
+        if dim1 < 0:
+            dim1 += ndim
+
+        # Create permutation
+        perm = [i for i in range(ndim) if i not in (dim0, dim1)]
+        perm.extend([dim0, dim1])
+        arr = mx.transpose(arr, perm)
+
+        # Process each 2D slice
+        orig_shape = arr.shape[:-2]
+        m, n = arr.shape[-2], arr.shape[-1]
+        flat = mx.reshape(arr, (-1, m, n))
+
+        results = []
+        for i in range(flat.shape[0]):
+            _, S, _ = mx.linalg.svd(flat[i], stream=mx.cpu)
+            mx.eval(S)
+            results.append(mx.sum(S).item())
+
+        result = mx.array(results, dtype=mx.float32)
+        result = mx.reshape(result, orig_shape)
+
+        if keepdim:
+            # Insert dims back
+            for d in sorted([dim0, dim1]):
+                result = mx.expand_dims(result, axis=d)
+
+    return Tensor._from_mlx_array(result.astype(input._mlx_array.dtype))
 
 
 def renorm(input: Tensor, p: float, dim: int, maxnorm: float) -> Tensor:
@@ -2723,42 +3007,63 @@ def renorm(input: Tensor, p: float, dim: int, maxnorm: float) -> Tensor:
 
     Returns:
         Renormalized tensor
-    """
-    import numpy as np
 
-    arr = np.array(input._mlx_array)
+    Pure MLX implementation.
+    """
+    arr = input._mlx_array.astype(mx.float32)
+    ndim = arr.ndim
 
     # Handle negative dimension
     if dim < 0:
-        dim = arr.ndim + dim
+        dim = ndim + dim
 
     # Compute norms over all axes except dim
     # For a 2D tensor with dim=0, this computes norm of each x[i, :]
-    axes = tuple(i for i in range(arr.ndim) if i != dim)
+    axes = tuple(i for i in range(ndim) if i != dim)
 
     if len(axes) == 0:
         # If there are no other axes, the norm is just the absolute value
-        norms = np.abs(arr)
+        norms = mx.abs(arr)
     else:
-        norms = np.linalg.norm(arr, ord=p, axis=axes, keepdims=True)
+        # Compute p-norm
+        if p == 2:
+            norms = mx.sqrt(mx.sum(arr * arr, axis=axes, keepdims=True))
+        elif p == 1:
+            norms = mx.sum(mx.abs(arr), axis=axes, keepdims=True)
+        elif p == float('inf'):
+            norms = mx.max(mx.abs(arr), axis=axes, keepdims=True)
+        else:
+            norms = mx.power(mx.sum(mx.power(mx.abs(arr), p), axis=axes, keepdims=True), 1.0 / p)
 
     # Compute scale factor: min(1, maxnorm / norm)
     # Add small epsilon to avoid division by zero
-    scale = np.minimum(1.0, maxnorm / (norms + 1e-7))
+    scale = mx.minimum(mx.array(1.0, dtype=mx.float32), maxnorm / (norms + 1e-7))
 
     result = arr * scale
-    return Tensor._from_mlx_array(mx.array(result, dtype=input._mlx_array.dtype))
+    return Tensor._from_mlx_array(result.astype(input._mlx_array.dtype))
 
 
 def norm_except_dim(v: Tensor, pow: int = 2, dim: int = 0) -> Tensor:
-    """Compute norm over all dimensions except one."""
-    import numpy as np
+    """Compute norm over all dimensions except one.
 
-    arr = np.array(v._mlx_array)
+    Pure MLX implementation.
+    """
+    arr = v._mlx_array.astype(mx.float32)
+    ndim = arr.ndim
+
     # Get all axes except dim
-    axes = tuple(i for i in range(arr.ndim) if i != dim)
-    result = np.linalg.norm(arr, ord=pow, axis=axes, keepdims=True)
-    return Tensor._from_mlx_array(mx.array(result, dtype=v._mlx_array.dtype))
+    axes = tuple(i for i in range(ndim) if i != dim)
+
+    if len(axes) == 0:
+        result = mx.abs(arr)
+    elif pow == 2:
+        result = mx.sqrt(mx.sum(arr * arr, axis=axes, keepdims=True))
+    elif pow == 1:
+        result = mx.sum(mx.abs(arr), axis=axes, keepdims=True)
+    else:
+        result = mx.power(mx.sum(mx.power(mx.abs(arr), pow), axis=axes, keepdims=True), 1.0 / pow)
+
+    return Tensor._from_mlx_array(result.astype(v._mlx_array.dtype))
 
 
 # ============================================================================
@@ -2782,22 +3087,35 @@ def range_func(start: float, end: float = None, step: float = 1,
 
 
 def view_as_complex(input: Tensor) -> Tensor:
-    """View real tensor as complex."""
-    import numpy as np
+    """View real tensor as complex.
 
-    arr = np.array(input._mlx_array)
+    Note: MLX has limited complex support. This returns a Tensor that
+    stores complex values but may have limited operations.
+    """
+    arr = input._mlx_array
     # Input should have shape (..., 2) where last dim is [real, imag]
-    result = arr[..., 0] + 1j * arr[..., 1]
-    return Tensor._from_mlx_array(mx.array(result))
+    real_part = arr[..., 0]
+    imag_part = arr[..., 1]
+
+    # MLX supports complex64 type
+    result = real_part.astype(mx.complex64) + mx.array(1j, dtype=mx.complex64) * imag_part.astype(mx.complex64)
+    return Tensor._from_mlx_array(result)
 
 
 def view_as_real(input: Tensor) -> Tensor:
-    """View complex tensor as real."""
-    import numpy as np
+    """View complex tensor as real.
 
-    arr = np.array(input._mlx_array)
-    result = np.stack([arr.real, arr.imag], axis=-1)
-    return Tensor._from_mlx_array(mx.array(result))
+    Note: Converts complex tensor to real with last dim of size 2.
+    """
+    arr = input._mlx_array
+
+    # Extract real and imaginary parts
+    real_part = mx.real(arr)
+    imag_part = mx.imag(arr)
+
+    # Stack along last dimension
+    result = mx.stack([real_part, imag_part], axis=-1)
+    return Tensor._from_mlx_array(result)
 
 
 def rms_norm(input: Tensor, normalized_shape, weight: Tensor = None,
@@ -3028,17 +3346,18 @@ def slice_inverse(input: Tensor, src: Tensor, dim: int = 0,
     Note: In PyTorch, this relates to storage-view mechanics, but for
     mlx_compat we implement the functional behavior: extract slice from
     input with shape determined by src.
+
+    Pure MLX implementation.
     """
-    import numpy as np
+    arr = input._mlx_array
 
-    arr = np.array(input._mlx_array)
-
-    # Create slice object to extract from input
-    slices = [slice(None)] * arr.ndim
+    # Use MLX slicing - need to build indices
+    ndim = arr.ndim
+    slices = [slice(None)] * ndim
     slices[dim] = slice(start, end, step)
 
     result = arr[tuple(slices)]
-    return Tensor._from_mlx_array(mx.array(result, dtype=input._mlx_array.dtype))
+    return Tensor._from_mlx_array(result)
 
 
 def orgqr(input: Tensor, tau: Tensor = None, *, input2: Tensor = None) -> Tensor:
@@ -3055,10 +3374,9 @@ def orgqr(input: Tensor, tau: Tensor = None, *, input2: Tensor = None) -> Tensor
 
     Returns:
         The orthogonal matrix Q (m x n)
-    """
-    import numpy as np
-    from scipy.linalg import lapack
 
+    Pure MLX implementation.
+    """
     # Handle input2 alias for tau
     if input2 is not None:
         if tau is not None:
@@ -3068,18 +3386,39 @@ def orgqr(input: Tensor, tau: Tensor = None, *, input2: Tensor = None) -> Tensor
     if tau is None:
         raise ValueError("Must specify 'tau' (or 'input2') argument")
 
-    arr = np.array(input._mlx_array).astype(np.float64)
-    tau_arr = np.array(tau._mlx_array).astype(np.float64)
+    arr = input._mlx_array.astype(mx.float32)
+    tau_arr = tau._mlx_array.astype(mx.float32).tolist()
 
-    # Use LAPACK dorgqr to reconstruct Q from Householder form
-    # dorgqr(a, tau, lwork=None, overwrite_a=False)
-    # Returns: (q, work, info)
-    q, work, info = lapack.dorgqr(arr, tau_arr)
+    m, n = arr.shape[-2], arr.shape[-1]
+    k = min(m, n)
 
-    if info != 0:
-        raise RuntimeError(f"LAPACK dorgqr failed with info={info}")
+    # Start with identity matrix
+    Q = [[1.0 if i == j else 0.0 for j in range(m)] for i in range(m)]
 
-    return Tensor._from_mlx_array(mx.array(q.astype(np.float32), dtype=input._mlx_array.dtype))
+    # Apply Householder reflections in reverse order
+    qr = arr.tolist()
+    for j in range(k - 1, -1, -1):
+        # Construct Householder vector
+        v = [0.0] * m
+        v[j] = 1.0
+        for i in range(j + 1, m):
+            v[i] = qr[i][j]
+
+        tau_val = tau_arr[j]
+
+        # Apply H = I - tau * v * v^T to Q from the left
+        # Q = H @ Q = Q - tau * v @ (v^T @ Q)
+        for col in range(m):
+            # Compute v^T @ Q[:, col]
+            dot = sum(v[i] * Q[i][col] for i in range(m))
+            # Q[:, col] -= tau * v * dot
+            for i in range(m):
+                Q[i][col] -= tau_val * v[i] * dot
+
+    # Take first n columns
+    Q_arr = mx.array([[Q[i][j] for j in range(n)] for i in range(m)], dtype=input._mlx_array.dtype)
+
+    return Tensor._from_mlx_array(Q_arr)
 
 
 def ormqr(input: Tensor, tau: Tensor = None, other: Tensor = None,
@@ -3103,10 +3442,9 @@ def ormqr(input: Tensor, tau: Tensor = None, other: Tensor = None,
 
     Returns:
         The result of Q @ other (or other @ Q, or with Q^T)
-    """
-    import numpy as np
-    from scipy.linalg import lapack
 
+    Pure MLX implementation.
+    """
     # Handle input2 alias for tau
     if input2 is not None:
         if tau is not None:
@@ -3124,27 +3462,75 @@ def ormqr(input: Tensor, tau: Tensor = None, other: Tensor = None,
     if other is None:
         raise ValueError("Must specify 'other' (or 'input3') argument")
 
-    arr = np.array(input._mlx_array).astype(np.float64)
-    tau_arr = np.array(tau._mlx_array).astype(np.float64)
-    other_arr = np.array(other._mlx_array).astype(np.float64)
+    arr = input._mlx_array.astype(mx.float32)
+    tau_arr = tau._mlx_array.astype(mx.float32).tolist()
+    other_arr = other._mlx_array.astype(mx.float32)
 
-    # Use LAPACK dormqr to apply Q without forming it explicitly
-    # dormqr(side, trans, a, tau, c, lwork)
-    # side: 'L' for left, 'R' for right
-    # trans: 'N' for Q, 'T' for Q^T
-    side = 'L' if left else 'R'
-    trans = 'T' if transpose else 'N'
+    m, n = arr.shape[-2], arr.shape[-1]
+    k = min(m, n)
+    qr = arr.tolist()
 
-    # lwork needs to be at least max(1, n) for side='R' or max(1, m) for side='L'
-    m, n = other_arr.shape[-2:]
-    lwork = max(1, n) if not left else max(1, m)
+    # Convert other to list for manipulation
+    C = other_arr.tolist()
+    c_m, c_n = other_arr.shape[-2], other_arr.shape[-1]
 
-    result, work, info = lapack.dormqr(side, trans, arr, tau_arr, other_arr, lwork)
+    # Apply Householder reflections
+    # For Q @ C (left=True, transpose=False): apply H_0, H_1, ..., H_{k-1}
+    # For Q^T @ C (left=True, transpose=True): apply H_{k-1}, ..., H_1, H_0
+    # For C @ Q (left=False, transpose=False): apply H_{k-1}, ..., H_1, H_0 to rows
+    # For C @ Q^T (left=False, transpose=True): apply H_0, H_1, ..., H_{k-1} to rows
 
-    if info != 0:
-        raise RuntimeError(f"LAPACK dormqr failed with info={info}")
+    if left:
+        # Apply to columns
+        if transpose:
+            indices = range(k)
+        else:
+            indices = range(k - 1, -1, -1)
 
-    return Tensor._from_mlx_array(mx.array(result.astype(np.float32), dtype=input._mlx_array.dtype))
+        for j in indices:
+            # Construct Householder vector
+            v = [0.0] * m
+            v[j] = 1.0
+            for i in range(j + 1, m):
+                v[i] = qr[i][j]
+
+            tau_val = tau_arr[j]
+
+            # Apply H = I - tau * v * v^T to C from the left
+            # C = H @ C = C - tau * v @ (v^T @ C)
+            for col in range(c_n):
+                # Compute v^T @ C[:, col]
+                dot = sum(v[i] * C[i][col] for i in range(m))
+                # C[:, col] -= tau * v * dot
+                for i in range(m):
+                    C[i][col] -= tau_val * v[i] * dot
+    else:
+        # Apply to rows (C @ Q or C @ Q^T)
+        if transpose:
+            indices = range(k - 1, -1, -1)
+        else:
+            indices = range(k)
+
+        for j in indices:
+            # Construct Householder vector
+            v = [0.0] * m
+            v[j] = 1.0
+            for i in range(j + 1, m):
+                v[i] = qr[i][j]
+
+            tau_val = tau_arr[j]
+
+            # Apply H = I - tau * v * v^T to C from the right
+            # C = C @ H = C - tau * (C @ v) @ v^T
+            for row in range(c_m):
+                # Compute C[row, :] @ v
+                dot = sum(C[row][i] * v[i] for i in range(m))
+                # C[row, :] -= tau * dot * v
+                for i in range(m):
+                    C[row][i] -= tau_val * dot * v[i]
+
+    result = mx.array(C, dtype=other._mlx_array.dtype)
+    return Tensor._from_mlx_array(result)
 
 
 def lobpcg(A: Tensor, k: int = None, B: Tensor = None, X: Tensor = None,
@@ -3177,8 +3563,6 @@ def lobpcg(A: Tensor, k: int = None, B: Tensor = None, X: Tensor = None,
         Tuple of (eigenvalues, eigenvectors) where eigenvalues has shape (k,)
         and eigenvectors has shape (n, k)
     """
-    import numpy as np
-
     # Get dimensions
     A_arr = A._mlx_array
     matrix_n = A_arr.shape[0]

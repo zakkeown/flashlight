@@ -35,10 +35,17 @@ def get_all_benchmarks(config: BenchmarkConfig) -> List[BaseBenchmark]:
     from benchmarks.operators.convolution import CONVOLUTION_BENCHMARKS
     from benchmarks.operators.pooling import POOLING_BENCHMARKS
     from benchmarks.operators.linalg import LINALG_BENCHMARKS
+    from benchmarks.operators.comparison import COMPARISON_BENCHMARKS
+    from benchmarks.operators.math_funcs import MATH_FUNCS_BENCHMARKS
     from benchmarks.layers.linear import LINEAR_BENCHMARKS
     from benchmarks.layers.conv import CONV_BENCHMARKS
     from benchmarks.layers.normalization import NORMALIZATION_BENCHMARKS
     from benchmarks.layers.attention import ATTENTION_BENCHMARKS
+    from benchmarks.layers.pooling import POOLING_BENCHMARKS as LAYER_POOLING_BENCHMARKS
+    from benchmarks.layers.activation import ACTIVATION_BENCHMARKS as LAYER_ACTIVATION_BENCHMARKS
+    from benchmarks.layers.embedding import EMBEDDING_BENCHMARKS
+    from benchmarks.layers.rnn import RNN_BENCHMARKS
+    from benchmarks.layers.losses import LOSS_BENCHMARKS
     from benchmarks.models.mlp import MLP_BENCHMARKS
     from benchmarks.models.cnn import CNN_BENCHMARKS
     from benchmarks.models.resnet import RESNET_BENCHMARKS
@@ -51,10 +58,17 @@ def get_all_benchmarks(config: BenchmarkConfig) -> List[BaseBenchmark]:
         CONVOLUTION_BENCHMARKS +
         POOLING_BENCHMARKS +
         LINALG_BENCHMARKS +
+        COMPARISON_BENCHMARKS +
+        MATH_FUNCS_BENCHMARKS +
         LINEAR_BENCHMARKS +
         CONV_BENCHMARKS +
         NORMALIZATION_BENCHMARKS +
         ATTENTION_BENCHMARKS +
+        LAYER_POOLING_BENCHMARKS +
+        LAYER_ACTIVATION_BENCHMARKS +
+        EMBEDDING_BENCHMARKS +
+        RNN_BENCHMARKS +
+        LOSS_BENCHMARKS +
         MLP_BENCHMARKS +
         CNN_BENCHMARKS +
         RESNET_BENCHMARKS +
