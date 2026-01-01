@@ -8,6 +8,7 @@ import mlx.core as mx
 from ..ops.special import digamma, gammainc, lgamma
 from ..tensor import Tensor
 from . import constraints
+from ._gamma_sampler import random_gamma
 from .exp_family import ExponentialFamily
 
 
@@ -56,10 +57,11 @@ class Gamma(ExponentialFamily):
         return Tensor(self.concentration / self.rate**2)
 
     def sample(self, sample_shape: Tuple[int, ...] = ()) -> Tensor:
-        """Sample from Gamma distribution using MLX's native gamma sampler.
+        """Sample from Gamma distribution.
 
-        MLX's mx.random.gamma uses shape parameterization (scale=1), so we need
-        to divide by rate to get proper Gamma(concentration, rate) samples.
+        Uses custom gamma sampler since mx.random.gamma doesn't exist yet.
+        The sampler uses Marsaglia-Tsang method for alpha >= 1 and
+        boost method for alpha < 1.
 
         Gamma(shape, rate) = Gamma(shape, scale=1) / rate
         """
@@ -69,9 +71,8 @@ class Gamma(ExponentialFamily):
         concentration = mx.broadcast_to(self.concentration, shape)
         rate = mx.broadcast_to(self.rate, shape)
 
-        # Use MLX's native gamma sampling (which uses shape parameterization with scale=1)
-        # mx.random.gamma(shape_param, sample_shape) samples from Gamma(shape_param, scale=1)
-        samples = mx.random.gamma(concentration, shape)
+        # Use custom gamma sampling (samples from Gamma(alpha, scale=1))
+        samples = random_gamma(concentration, shape)
 
         # Convert from scale=1 parameterization to rate parameterization
         # Gamma(alpha, rate=beta) = Gamma(alpha, scale=1) / beta

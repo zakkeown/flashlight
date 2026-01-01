@@ -7,6 +7,7 @@ import mlx.core as mx
 from ..ops.special import betaln
 from ..tensor import Tensor
 from . import constraints
+from ._gamma_sampler import random_gamma
 from .distribution import Distribution
 
 
@@ -69,9 +70,9 @@ class FisherSnedecor(Distribution):
         df2 = mx.broadcast_to(self.df2, shape)
 
         # Sample X1 ~ Chi2(df1) = Gamma(df1/2, scale=2) = 2 * Gamma(df1/2, scale=1)
-        x1 = mx.random.gamma(df1 / 2, shape) * 2
+        x1 = random_gamma(df1 / 2, shape) * 2
         # Sample X2 ~ Chi2(df2) = Gamma(df2/2, scale=2) = 2 * Gamma(df2/2, scale=1)
-        x2 = mx.random.gamma(df2 / 2, shape) * 2
+        x2 = random_gamma(df2 / 2, shape) * 2
 
         # F = (X1/df1) / (X2/df2)
         return Tensor((x1 / df1) / (x2 / df2))

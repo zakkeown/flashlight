@@ -7,6 +7,7 @@ import mlx.core as mx
 from ..ops.special import lgamma
 from ..tensor import Tensor
 from . import constraints
+from ._gamma_sampler import random_gamma
 from .distribution import Distribution
 
 
@@ -59,7 +60,8 @@ class InverseGamma(Distribution):
         # Sample from Gamma(concentration, 1), then compute rate / gamma_sample
         # InverseGamma(alpha, beta) = 1 / Gamma(alpha, beta)
         # where Gamma(alpha, beta) has mean alpha/beta
-        gamma_sample = mx.random.gamma(self.concentration, shape)
+        concentration = mx.broadcast_to(self.concentration, shape)
+        gamma_sample = random_gamma(concentration, shape)
         return Tensor(self.rate / gamma_sample)
 
     def rsample(self, sample_shape: Tuple[int, ...] = ()) -> Tensor:

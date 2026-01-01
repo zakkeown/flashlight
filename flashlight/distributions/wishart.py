@@ -8,6 +8,7 @@ import mlx.core as mx
 from ..ops.special import lgamma, multigammaln
 from ..tensor import Tensor
 from . import constraints
+from ._gamma_sampler import random_gamma
 from .distribution import Distribution
 
 
@@ -136,7 +137,7 @@ class Wishart(Distribution):
             # Sample chi-squared with df - i degrees of freedom
             # Chi2(k) = Gamma(k/2, scale=2) = 2 * Gamma(k/2, scale=1)
             chi2_df = df_broadcast - float(i)
-            chi2_samples = mx.random.gamma(chi2_df / 2, shape) * 2
+            chi2_samples = random_gamma(chi2_df / 2, shape) * 2
             sqrt_chi2 = mx.sqrt(chi2_samples)
 
             # Set diagonal element A[..., i, i]

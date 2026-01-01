@@ -7,6 +7,7 @@ import mlx.core as mx
 from ..ops.special import lgamma
 from ..tensor import Tensor
 from . import constraints
+from ._gamma_sampler import random_gamma
 from .distribution import Distribution
 
 
@@ -78,8 +79,8 @@ class NegativeBinomial(Distribution):
         # Gamma(shape=r, scale=p/(1-p)) = Gamma(shape=r, scale=1) * p/(1-p)
         scale = p / (1 - p)
 
-        # Sample from Gamma(r, scale=1) using MLX's native gamma
-        gamma_samples = mx.random.gamma(r, shape)
+        # Sample from Gamma(r, scale=1) using custom gamma sampler
+        gamma_samples = random_gamma(r, shape)
 
         # Scale by p/(1-p) to get Gamma(r, scale=p/(1-p))
         lambda_samples = gamma_samples * scale

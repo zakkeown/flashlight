@@ -8,6 +8,7 @@ import mlx.core as mx
 from ..ops.special import digamma, lgamma
 from ..tensor import Tensor
 from . import constraints
+from ._gamma_sampler import random_gamma
 from .distribution import Distribution
 
 
@@ -60,7 +61,8 @@ class StudentT(Distribution):
         # t = Z / sqrt(V/df) where Z ~ N(0,1), V ~ Chi2(df)
         # Chi2(df) = Gamma(shape=df/2, scale=2) = Gamma(shape=df/2) * 2
         z = mx.random.normal(shape)
-        chi2 = mx.random.gamma(self.df / 2, shape) * 2
+        df_half = mx.broadcast_to(self.df / 2, shape)
+        chi2 = random_gamma(df_half, shape) * 2
         return Tensor(self.loc + self.scale * z / mx.sqrt(chi2 / self.df))
 
     def rsample(self, sample_shape: Tuple[int, ...] = ()) -> Tensor:
