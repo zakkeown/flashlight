@@ -1,18 +1,19 @@
 """Geometric Distribution"""
 
 from typing import Optional, Tuple, Union
+
 import mlx.core as mx
 
 from ..tensor import Tensor
-from .distribution import Distribution
 from . import constraints
-from ._constants import xlogy, safe_log
+from ._constants import safe_log, xlogy
+from .distribution import Distribution
 
 
 class Geometric(Distribution):
     """Geometric distribution."""
 
-    arg_constraints = {'probs': constraints.unit_interval, 'logits': constraints.real}
+    arg_constraints = {"probs": constraints.unit_interval, "logits": constraints.real}
     support = constraints.nonnegative_integer
 
     def __init__(
@@ -43,7 +44,7 @@ class Geometric(Distribution):
 
     @property
     def variance(self) -> Tensor:
-        return Tensor((1 - self.probs) / self.probs ** 2)
+        return Tensor((1 - self.probs) / self.probs**2)
 
     def sample(self, sample_shape: Tuple[int, ...] = ()) -> Tensor:
         shape = sample_shape + self._batch_shape
@@ -57,9 +58,9 @@ class Geometric(Distribution):
     def entropy(self) -> Tensor:
         # Use xlogy and safe_log for numerical stability
         q = 1 - self.probs  # probability of failure
-        p = self.probs       # probability of success
+        p = self.probs  # probability of success
         # Entropy = -q * log(q) / p - log(p)
         return Tensor(-xlogy(q, q) / p - safe_log(p))
 
 
-__all__ = ['Geometric']
+__all__ = ["Geometric"]

@@ -1,18 +1,19 @@
 """Fisher-Snedecor (F) Distribution"""
 
 from typing import Optional, Tuple, Union
+
 import mlx.core as mx
 
-from ..tensor import Tensor
-from .distribution import Distribution
-from . import constraints
 from ..ops.special import betaln
+from ..tensor import Tensor
+from . import constraints
+from .distribution import Distribution
 
 
 class FisherSnedecor(Distribution):
     """Fisher-Snedecor (F) distribution."""
 
-    arg_constraints = {'df1': constraints.positive, 'df2': constraints.positive}
+    arg_constraints = {"df1": constraints.positive, "df2": constraints.positive}
     support = constraints.positive
     has_rsample = True
 
@@ -29,20 +30,28 @@ class FisherSnedecor(Distribution):
 
     @property
     def mean(self) -> Tensor:
-        return Tensor(mx.where(self.df2 > 2, self.df2 / (self.df2 - 2), mx.array(float('inf'))))
+        return Tensor(mx.where(self.df2 > 2, self.df2 / (self.df2 - 2), mx.array(float("inf"))))
 
     @property
     def mode(self) -> Tensor:
-        return Tensor(mx.where(self.df1 > 2,
-                              (self.df1 - 2) / self.df1 * self.df2 / (self.df2 + 2),
-                              mx.array(0.0)))
+        return Tensor(
+            mx.where(
+                self.df1 > 2, (self.df1 - 2) / self.df1 * self.df2 / (self.df2 + 2), mx.array(0.0)
+            )
+        )
 
     @property
     def variance(self) -> Tensor:
-        return Tensor(mx.where(self.df2 > 4,
-                              2 * self.df2 ** 2 * (self.df1 + self.df2 - 2) /
-                              (self.df1 * (self.df2 - 2) ** 2 * (self.df2 - 4)),
-                              mx.array(float('inf'))))
+        return Tensor(
+            mx.where(
+                self.df2 > 4,
+                2
+                * self.df2**2
+                * (self.df1 + self.df2 - 2)
+                / (self.df1 * (self.df2 - 2) ** 2 * (self.df2 - 4)),
+                mx.array(float("inf")),
+            )
+        )
 
     def sample(self, sample_shape: Tuple[int, ...] = ()) -> Tensor:
         """Sample using the relationship to Gamma/Chi-squared distributions.
@@ -77,9 +86,13 @@ class FisherSnedecor(Distribution):
         # Use pure MLX betaln
         log_beta = betaln(d1 / 2, d2 / 2)
 
-        log_prob = (d1/2 * mx.log(d1/d2) + (d1/2 - 1) * mx.log(data) -
-                   (d1 + d2)/2 * mx.log(1 + d1/d2 * data) - log_beta)
+        log_prob = (
+            d1 / 2 * mx.log(d1 / d2)
+            + (d1 / 2 - 1) * mx.log(data)
+            - (d1 + d2) / 2 * mx.log(1 + d1 / d2 * data)
+            - log_beta
+        )
         return Tensor(log_prob)
 
 
-__all__ = ['FisherSnedecor']
+__all__ = ["FisherSnedecor"]

@@ -12,18 +12,23 @@ Implements PyTorch-compatible loss functions:
 
 import warnings
 from typing import Optional
-from .module import Module
-from ..tensor import Tensor
+
 from .. import ops
+from ..tensor import Tensor
+from .module import Module
 
 
-def _verify_reduction_params(size_average: Optional[bool], reduce: Optional[bool], reduction: str) -> str:
+def _verify_reduction_params(
+    size_average: Optional[bool], reduce: Optional[bool], reduction: str
+) -> str:
     """Verify and handle deprecated size_average and reduce parameters."""
     if size_average is not None or reduce is not None:
         warnings.warn(
-            "size_average and reduce args will be deprecated, please use reduction='{}' instead.".format(reduction),
+            "size_average and reduce args will be deprecated, please use reduction='{}' instead.".format(
+                reduction
+            ),
             DeprecationWarning,
-            stacklevel=3
+            stacklevel=3,
         )
         # Handle legacy params
         if size_average is None:
@@ -32,9 +37,9 @@ def _verify_reduction_params(size_average: Optional[bool], reduce: Optional[bool
             reduce = True
 
         if reduce:
-            reduction = 'mean' if size_average else 'sum'
+            reduction = "mean" if size_average else "sum"
         else:
-            reduction = 'none'
+            reduction = "none"
     return reduction
 
 
@@ -72,11 +77,11 @@ class MSELoss(Module):
         self,
         size_average: Optional[bool] = None,
         reduce: Optional[bool] = None,
-        reduction: str = 'mean'
+        reduction: str = "mean",
     ):
         super().__init__()
         reduction = _verify_reduction_params(size_average, reduce, reduction)
-        if reduction not in ('none', 'mean', 'sum'):
+        if reduction not in ("none", "mean", "sum"):
             raise ValueError(f"reduction must be 'none', 'mean', or 'sum', got '{reduction}'")
         self.reduction = reduction
 
@@ -86,9 +91,9 @@ class MSELoss(Module):
         squared_error = diff * diff
 
         # Apply reduction
-        if self.reduction == 'none':
+        if self.reduction == "none":
             return squared_error
-        elif self.reduction == 'mean':
+        elif self.reduction == "mean":
             return ops.mean(squared_error)
         else:  # sum
             return ops.sum(squared_error)
@@ -130,11 +135,11 @@ class L1Loss(Module):
         self,
         size_average: Optional[bool] = None,
         reduce: Optional[bool] = None,
-        reduction: str = 'mean'
+        reduction: str = "mean",
     ):
         super().__init__()
         reduction = _verify_reduction_params(size_average, reduce, reduction)
-        if reduction not in ('none', 'mean', 'sum'):
+        if reduction not in ("none", "mean", "sum"):
             raise ValueError(f"reduction must be 'none', 'mean', or 'sum', got '{reduction}'")
         self.reduction = reduction
 
@@ -143,9 +148,9 @@ class L1Loss(Module):
         absolute_error = ops.abs(input - target)
 
         # Apply reduction
-        if self.reduction == 'none':
+        if self.reduction == "none":
             return absolute_error
-        elif self.reduction == 'mean':
+        elif self.reduction == "mean":
             return ops.mean(absolute_error)
         else:  # sum
             return ops.sum(absolute_error)
@@ -189,11 +194,11 @@ class NLLLoss(Module):
         size_average: Optional[bool] = None,
         ignore_index: int = -100,
         reduce: Optional[bool] = None,
-        reduction: str = 'mean'
+        reduction: str = "mean",
     ):
         super().__init__()
         reduction = _verify_reduction_params(size_average, reduce, reduction)
-        if reduction not in ('none', 'mean', 'sum'):
+        if reduction not in ("none", "mean", "sum"):
             raise ValueError(f"reduction must be 'none', 'mean', or 'sum', got '{reduction}'")
         self.reduction = reduction
         self.ignore_index = ignore_index
@@ -203,25 +208,20 @@ class NLLLoss(Module):
 
         # input: (N, C) log probabilities
         # target: (N,) class indices
-
         # Gather the log probabilities at target indices
         # For each sample i, we want input[i, target[i]]
-
         # Convert target to one-hot
         target_mlx = target._mlx_array
         input_mlx = input._mlx_array
 
         # Gather using MLX's take_along_axis equivalent
         # Actually, MLX supports basic indexing, let's use that
-        gathered_mlx = mx.take_along_axis(
-            input_mlx,
-            mx.expand_dims(target_mlx, axis=1),
-            axis=1
-        )
+        gathered_mlx = mx.take_along_axis(input_mlx, mx.expand_dims(target_mlx, axis=1), axis=1)
         gathered = Tensor._from_mlx_array(mx.squeeze(gathered_mlx, axis=1))
 
         # Preserve gradient tracking
         from ..autograd.context import is_grad_enabled
+
         if is_grad_enabled() and input.requires_grad:
             gathered.requires_grad = True
 
@@ -234,9 +234,9 @@ class NLLLoss(Module):
             loss = loss * mask
 
         # Apply reduction
-        if self.reduction == 'none':
+        if self.reduction == "none":
             return loss
-        elif self.reduction == 'mean':
+        elif self.reduction == "mean":
             if self.ignore_index >= 0:
                 # Only count non-ignored samples
                 mask = target != self.ignore_index
@@ -285,12 +285,12 @@ class CrossEntropyLoss(Module):
         size_average: Optional[bool] = None,
         ignore_index: int = -100,
         reduce: Optional[bool] = None,
-        reduction: str = 'mean',
-        label_smoothing: float = 0.0
+        reduction: str = "mean",
+        label_smoothing: float = 0.0,
     ):
         super().__init__()
         reduction = _verify_reduction_params(size_average, reduce, reduction)
-        if reduction not in ('none', 'mean', 'sum'):
+        if reduction not in ("none", "mean", "sum"):
             raise ValueError(f"reduction must be 'none', 'mean', or 'sum', got '{reduction}'")
         self.reduction = reduction
         self.ignore_index = ignore_index
@@ -344,11 +344,11 @@ class BCELoss(Module):
         weight: Optional[Tensor] = None,
         size_average: Optional[bool] = None,
         reduce: Optional[bool] = None,
-        reduction: str = 'mean'
+        reduction: str = "mean",
     ):
         super().__init__()
         reduction = _verify_reduction_params(size_average, reduce, reduction)
-        if reduction not in ('none', 'mean', 'sum'):
+        if reduction not in ("none", "mean", "sum"):
             raise ValueError(f"reduction must be 'none', 'mean', or 'sum', got '{reduction}'")
         self.reduction = reduction
 
@@ -356,6 +356,7 @@ class BCELoss(Module):
         # BCE = -[y * log(x) + (1 - y) * log(1 - x)]
         # Clamp input to avoid log(0)
         import mlx.core as mx
+
         eps = 1e-7
         input_clamped_mlx = mx.clip(input._mlx_array, eps, 1 - eps)
         input_clamped = Tensor._from_mlx_array(input_clamped_mlx)
@@ -367,9 +368,9 @@ class BCELoss(Module):
         loss = -(target * ops.log(input_clamped) + (1 - target) * ops.log(1 - input_clamped))
 
         # Apply reduction
-        if self.reduction == 'none':
+        if self.reduction == "none":
             return loss
-        elif self.reduction == 'mean':
+        elif self.reduction == "mean":
             return ops.mean(loss)
         else:  # sum
             return ops.sum(loss)
@@ -412,12 +413,12 @@ class BCEWithLogitsLoss(Module):
         weight: Optional[Tensor] = None,
         size_average: Optional[bool] = None,
         reduce: Optional[bool] = None,
-        reduction: str = 'mean',
-        pos_weight: Optional[Tensor] = None
+        reduction: str = "mean",
+        pos_weight: Optional[Tensor] = None,
     ):
         super().__init__()
         reduction = _verify_reduction_params(size_average, reduce, reduction)
-        if reduction not in ('none', 'mean', 'sum'):
+        if reduction not in ("none", "mean", "sum"):
             raise ValueError(f"reduction must be 'none', 'mean', or 'sum', got '{reduction}'")
         self.reduction = reduction
 
@@ -428,9 +429,9 @@ class BCEWithLogitsLoss(Module):
         loss = max_val - input * target + ops.log(1 + ops.exp(-ops.abs(input)))
 
         # Apply reduction
-        if self.reduction == 'none':
+        if self.reduction == "none":
             return loss
-        elif self.reduction == 'mean':
+        elif self.reduction == "mean":
             return ops.mean(loss)
         else:  # sum
             return ops.sum(loss)
@@ -461,30 +462,27 @@ class SmoothL1Loss(Module):
         self,
         size_average: Optional[bool] = None,
         reduce: Optional[bool] = None,
-        reduction: str = 'mean',
-        beta: float = 1.0
+        reduction: str = "mean",
+        beta: float = 1.0,
     ):
         super().__init__()
         reduction = _verify_reduction_params(size_average, reduce, reduction)
-        if reduction not in ('none', 'mean', 'sum'):
+        if reduction not in ("none", "mean", "sum"):
             raise ValueError(f"reduction must be 'none', 'mean', or 'sum', got '{reduction}'")
         self.reduction = reduction
         self.beta = beta
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
         import mlx.core as mx
+
         diff = (input - target)._mlx_array
         abs_diff = mx.abs(diff)
-        loss = mx.where(
-            abs_diff < self.beta,
-            0.5 * diff ** 2 / self.beta,
-            abs_diff - 0.5 * self.beta
-        )
+        loss = mx.where(abs_diff < self.beta, 0.5 * diff**2 / self.beta, abs_diff - 0.5 * self.beta)
         result = Tensor._from_mlx_array(loss)
 
-        if self.reduction == 'none':
+        if self.reduction == "none":
             return result
-        elif self.reduction == 'mean':
+        elif self.reduction == "mean":
             return ops.mean(result)
         else:
             return ops.sum(result)
@@ -509,27 +507,26 @@ class HuberLoss(Module):
         - Target: (*) same shape as input
     """
 
-    def __init__(self, reduction: str = 'mean', delta: float = 1.0):
+    def __init__(self, reduction: str = "mean", delta: float = 1.0):
         super().__init__()
-        if reduction not in ('none', 'mean', 'sum'):
+        if reduction not in ("none", "mean", "sum"):
             raise ValueError(f"reduction must be 'none', 'mean', or 'sum', got '{reduction}'")
         self.reduction = reduction
         self.delta = delta
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
         import mlx.core as mx
+
         diff = (input - target)._mlx_array
         abs_diff = mx.abs(diff)
         loss = mx.where(
-            abs_diff <= self.delta,
-            0.5 * diff ** 2,
-            self.delta * (abs_diff - 0.5 * self.delta)
+            abs_diff <= self.delta, 0.5 * diff**2, self.delta * (abs_diff - 0.5 * self.delta)
         )
         result = Tensor._from_mlx_array(loss)
 
-        if self.reduction == 'none':
+        if self.reduction == "none":
             return result
-        elif self.reduction == 'mean':
+        elif self.reduction == "mean":
             return ops.mean(result)
         else:
             return ops.sum(result)
@@ -557,18 +554,21 @@ class KLDivLoss(Module):
         self,
         size_average: Optional[bool] = None,
         reduce: Optional[bool] = None,
-        reduction: str = 'mean',
-        log_target: bool = False
+        reduction: str = "mean",
+        log_target: bool = False,
     ):
         super().__init__()
         reduction = _verify_reduction_params(size_average, reduce, reduction)
-        if reduction not in ('none', 'mean', 'sum', 'batchmean'):
-            raise ValueError(f"reduction must be 'none', 'mean', 'sum', or 'batchmean', got '{reduction}'")
+        if reduction not in ("none", "mean", "sum", "batchmean"):
+            raise ValueError(
+                f"reduction must be 'none', 'mean', 'sum', or 'batchmean', got '{reduction}'"
+            )
         self.reduction = reduction
         self.log_target = log_target
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
         import mlx.core as mx
+
         # KL(P||Q) = sum(P * (log(P) - log(Q)))
         # input is log(Q), target is P (or log(P) if log_target=True)
         if self.log_target:
@@ -580,11 +580,11 @@ class KLDivLoss(Module):
             loss = xlogy_term - target._mlx_array * input._mlx_array
         result = Tensor._from_mlx_array(loss)
 
-        if self.reduction == 'none':
+        if self.reduction == "none":
             return result
-        elif self.reduction == 'mean':
+        elif self.reduction == "mean":
             return ops.mean(result)
-        elif self.reduction == 'batchmean':
+        elif self.reduction == "batchmean":
             return ops.sum(result) / input.shape[0]
         else:
             return ops.sum(result)
@@ -615,7 +615,7 @@ class MarginRankingLoss(Module):
         margin: float = 0.0,
         size_average: Optional[bool] = None,
         reduce: Optional[bool] = None,
-        reduction: str = 'mean'
+        reduction: str = "mean",
     ):
         super().__init__()
         reduction = _verify_reduction_params(size_average, reduce, reduction)
@@ -624,15 +624,15 @@ class MarginRankingLoss(Module):
 
     def forward(self, input1: Tensor, input2: Tensor, target: Tensor) -> Tensor:
         import mlx.core as mx
+
         loss = mx.maximum(
-            0,
-            -target._mlx_array * (input1._mlx_array - input2._mlx_array) + self.margin
+            0, -target._mlx_array * (input1._mlx_array - input2._mlx_array) + self.margin
         )
         result = Tensor._from_mlx_array(loss)
 
-        if self.reduction == 'none':
+        if self.reduction == "none":
             return result
-        elif self.reduction == 'mean':
+        elif self.reduction == "mean":
             return ops.mean(result)
         else:
             return ops.sum(result)
@@ -663,7 +663,7 @@ class HingeEmbeddingLoss(Module):
         margin: float = 1.0,
         size_average: Optional[bool] = None,
         reduce: Optional[bool] = None,
-        reduction: str = 'mean'
+        reduction: str = "mean",
     ):
         super().__init__()
         reduction = _verify_reduction_params(size_average, reduce, reduction)
@@ -672,14 +672,15 @@ class HingeEmbeddingLoss(Module):
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
         import mlx.core as mx
+
         x = input._mlx_array
         y = target._mlx_array
         loss = mx.where(y == 1, x, mx.maximum(0, self.margin - x))
         result = Tensor._from_mlx_array(loss)
 
-        if self.reduction == 'none':
+        if self.reduction == "none":
             return result
-        elif self.reduction == 'mean':
+        elif self.reduction == "mean":
             return ops.mean(result)
         else:
             return ops.sum(result)
@@ -709,7 +710,7 @@ class CosineEmbeddingLoss(Module):
         margin: float = 0.0,
         size_average: Optional[bool] = None,
         reduce: Optional[bool] = None,
-        reduction: str = 'mean'
+        reduction: str = "mean",
     ):
         super().__init__()
         reduction = _verify_reduction_params(size_average, reduce, reduction)
@@ -718,21 +719,22 @@ class CosineEmbeddingLoss(Module):
 
     def forward(self, input1: Tensor, input2: Tensor, target: Tensor) -> Tensor:
         import mlx.core as mx
+
         x1 = input1._mlx_array
         x2 = input2._mlx_array
         y = target._mlx_array
 
         # Compute cosine similarity
         cos_sim = mx.sum(x1 * x2, axis=-1) / (
-            mx.sqrt(mx.sum(x1 ** 2, axis=-1)) * mx.sqrt(mx.sum(x2 ** 2, axis=-1)) + 1e-8
+            mx.sqrt(mx.sum(x1**2, axis=-1)) * mx.sqrt(mx.sum(x2**2, axis=-1)) + 1e-8
         )
 
         loss = mx.where(y == 1, 1 - cos_sim, mx.maximum(0, cos_sim - self.margin))
         result = Tensor._from_mlx_array(loss)
 
-        if self.reduction == 'none':
+        if self.reduction == "none":
             return result
-        elif self.reduction == 'mean':
+        elif self.reduction == "mean":
             return ops.mean(result)
         else:
             return ops.sum(result)
@@ -761,7 +763,7 @@ class SoftMarginLoss(Module):
         self,
         size_average: Optional[bool] = None,
         reduce: Optional[bool] = None,
-        reduction: str = 'mean'
+        reduction: str = "mean",
     ):
         super().__init__()
         reduction = _verify_reduction_params(size_average, reduce, reduction)
@@ -769,6 +771,7 @@ class SoftMarginLoss(Module):
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
         import mlx.core as mx
+
         # Numerically stable implementation of log(1 + exp(-y*x))
         # For large positive y*x: use exp(-y*x) directly (avoiding overflow in exp)
         # For large negative y*x: use -y*x + log(1 + exp(y*x)) ~ -y*x
@@ -778,9 +781,9 @@ class SoftMarginLoss(Module):
         loss = mx.log1p(mx.exp(-mx.abs(yx))) + mx.maximum(-yx, 0)
         result = Tensor._from_mlx_array(loss)
 
-        if self.reduction == 'none':
+        if self.reduction == "none":
             return result
-        elif self.reduction == 'mean':
+        elif self.reduction == "mean":
             return ops.mean(result)
         else:
             return ops.sum(result)
@@ -816,7 +819,7 @@ class TripletMarginLoss(Module):
         swap: bool = False,
         size_average: Optional[bool] = None,
         reduce: Optional[bool] = None,
-        reduction: str = 'mean'
+        reduction: str = "mean",
     ):
         super().__init__()
         reduction = _verify_reduction_params(size_average, reduce, reduction)
@@ -828,6 +831,7 @@ class TripletMarginLoss(Module):
 
     def forward(self, anchor: Tensor, positive: Tensor, negative: Tensor) -> Tensor:
         import mlx.core as mx
+
         a = anchor._mlx_array
         p = positive._mlx_array
         n = negative._mlx_array
@@ -843,9 +847,9 @@ class TripletMarginLoss(Module):
         loss = mx.maximum(d_ap - d_an + self.margin, 0)
         result = Tensor._from_mlx_array(loss)
 
-        if self.reduction == 'none':
+        if self.reduction == "none":
             return result
-        elif self.reduction == 'mean':
+        elif self.reduction == "mean":
             return ops.mean(result)
         else:
             return ops.sum(result)
@@ -876,7 +880,7 @@ class PoissonNLLLoss(Module):
         size_average: Optional[bool] = None,
         eps: float = 1e-8,
         reduce: Optional[bool] = None,
-        reduction: str = 'mean'
+        reduction: str = "mean",
     ):
         super().__init__()
         reduction = _verify_reduction_params(size_average, reduce, reduction)
@@ -887,6 +891,7 @@ class PoissonNLLLoss(Module):
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
         import mlx.core as mx
+
         x = input._mlx_array
         t = target._mlx_array
 
@@ -903,9 +908,9 @@ class PoissonNLLLoss(Module):
 
         result = Tensor._from_mlx_array(loss)
 
-        if self.reduction == 'none':
+        if self.reduction == "none":
             return result
-        elif self.reduction == 'mean':
+        elif self.reduction == "mean":
             return ops.mean(result)
         else:
             return ops.sum(result)
@@ -929,12 +934,7 @@ class GaussianNLLLoss(Module):
         reduction: Specifies the reduction to apply (default: 'mean')
     """
 
-    def __init__(
-        self,
-        full: bool = False,
-        eps: float = 1e-6,
-        reduction: str = 'mean'
-    ):
+    def __init__(self, full: bool = False, eps: float = 1e-6, reduction: str = "mean"):
         super().__init__()
         self.full = full
         self.eps = eps
@@ -954,9 +954,9 @@ class GaussianNLLLoss(Module):
 
         result = Tensor._from_mlx_array(loss)
 
-        if self.reduction == 'none':
+        if self.reduction == "none":
             return result
-        elif self.reduction == 'mean':
+        elif self.reduction == "mean":
             return ops.mean(result)
         else:
             return ops.sum(result)
@@ -981,7 +981,7 @@ class MultiLabelMarginLoss(Module):
         self,
         size_average: Optional[bool] = None,
         reduce: Optional[bool] = None,
-        reduction: str = 'mean'
+        reduction: str = "mean",
     ):
         super().__init__()
         reduction = _verify_reduction_params(size_average, reduce, reduction)
@@ -989,6 +989,7 @@ class MultiLabelMarginLoss(Module):
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
         from .functional import multilabel_margin_loss
+
         return multilabel_margin_loss(input, target, reduction=self.reduction)
 
     def extra_repr(self) -> str:
@@ -1018,7 +1019,7 @@ class MultiMarginLoss(Module):
         weight: Tensor = None,
         size_average: Optional[bool] = None,
         reduce: Optional[bool] = None,
-        reduction: str = 'mean'
+        reduction: str = "mean",
     ):
         super().__init__()
         reduction = _verify_reduction_params(size_average, reduce, reduction)
@@ -1029,6 +1030,7 @@ class MultiMarginLoss(Module):
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
         import mlx.core as mx
+
         x = input._mlx_array
         y = target._mlx_array.astype(mx.int32)
         N, C = x.shape
@@ -1068,9 +1070,9 @@ class MultiMarginLoss(Module):
 
         result = Tensor._from_mlx_array(sample_losses)
 
-        if self.reduction == 'none':
+        if self.reduction == "none":
             return result
-        elif self.reduction == 'mean':
+        elif self.reduction == "mean":
             return ops.mean(result)
         else:
             return ops.sum(result)
@@ -1098,7 +1100,7 @@ class MultiLabelSoftMarginLoss(Module):
         weight: Tensor = None,
         size_average: Optional[bool] = None,
         reduce: Optional[bool] = None,
-        reduction: str = 'mean'
+        reduction: str = "mean",
     ):
         super().__init__()
         reduction = _verify_reduction_params(size_average, reduce, reduction)
@@ -1107,6 +1109,7 @@ class MultiLabelSoftMarginLoss(Module):
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
         import mlx.core as mx
+
         x = input._mlx_array
         y = target._mlx_array
 
@@ -1123,9 +1126,9 @@ class MultiLabelSoftMarginLoss(Module):
 
         # Apply reduction - for 'none', return per-element losses
         # For 'mean'/'sum', reduce over ALL elements (batch and classes)
-        if self.reduction == 'none':
+        if self.reduction == "none":
             return result
-        elif self.reduction == 'mean':
+        elif self.reduction == "mean":
             return ops.mean(result)
         else:
             return ops.sum(result)
@@ -1152,7 +1155,7 @@ class TripletMarginWithDistanceLoss(Module):
         distance_function: callable = None,
         margin: float = 1.0,
         swap: bool = False,
-        reduction: str = 'mean'
+        reduction: str = "mean",
     ):
         super().__init__()
         self.distance_function = distance_function
@@ -1162,12 +1165,15 @@ class TripletMarginWithDistanceLoss(Module):
 
     def forward(self, anchor: Tensor, positive: Tensor, negative: Tensor) -> Tensor:
         from .functional import triplet_margin_with_distance_loss
+
         return triplet_margin_with_distance_loss(
-            anchor, positive, negative,
+            anchor,
+            positive,
+            negative,
             distance_function=self.distance_function,
             margin=self.margin,
             swap=self.swap,
-            reduction=self.reduction
+            reduction=self.reduction,
         )
 
     def extra_repr(self) -> str:
@@ -1186,28 +1192,31 @@ class CTCLoss(Module):
         zero_infinity: Whether to zero infinite losses and gradients (default: False)
     """
 
-    def __init__(
-        self,
-        blank: int = 0,
-        reduction: str = 'mean',
-        zero_infinity: bool = False
-    ):
+    def __init__(self, blank: int = 0, reduction: str = "mean", zero_infinity: bool = False):
         super().__init__()
         self.blank = blank
         self.reduction = reduction
         self.zero_infinity = zero_infinity
 
-    def forward(self, log_probs: Tensor, targets: Tensor,
-                input_lengths: Tensor, target_lengths: Tensor) -> Tensor:
+    def forward(
+        self, log_probs: Tensor, targets: Tensor, input_lengths: Tensor, target_lengths: Tensor
+    ) -> Tensor:
         from ..ops.quick_ops import ctc_loss
+
         return ctc_loss(
-            log_probs, targets, input_lengths, target_lengths,
-            blank=self.blank, reduction=self.reduction,
-            zero_infinity=self.zero_infinity
+            log_probs,
+            targets,
+            input_lengths,
+            target_lengths,
+            blank=self.blank,
+            reduction=self.reduction,
+            zero_infinity=self.zero_infinity,
         )
 
     def extra_repr(self) -> str:
-        return f"blank={self.blank}, reduction='{self.reduction}', zero_infinity={self.zero_infinity}"
+        return (
+            f"blank={self.blank}, reduction='{self.reduction}', zero_infinity={self.zero_infinity}"
+        )
 
 
 class NLLLoss2d(Module):
@@ -1230,7 +1239,7 @@ class NLLLoss2d(Module):
         size_average: Optional[bool] = None,
         ignore_index: int = -100,
         reduce: Optional[bool] = None,
-        reduction: str = 'mean'
+        reduction: str = "mean",
     ):
         super().__init__()
         reduction = _verify_reduction_params(size_average, reduce, reduction)
@@ -1263,9 +1272,9 @@ class NLLLoss2d(Module):
 
         result = Tensor._from_mlx_array(loss.reshape(N, H, W))
 
-        if self.reduction == 'none':
+        if self.reduction == "none":
             return result
-        elif self.reduction == 'mean':
+        elif self.reduction == "mean":
             return ops.mean(result)
         else:
             return ops.sum(result)
@@ -1309,7 +1318,7 @@ class AdaptiveLogSoftmaxWithLoss(Module):
         div_value: float = 4.0,
         head_bias: bool = False,
         device=None,
-        dtype=None
+        dtype=None,
     ):
         super().__init__()
         # device and dtype accepted for PyTorch compatibility (MLX uses unified memory)
@@ -1317,8 +1326,15 @@ class AdaptiveLogSoftmaxWithLoss(Module):
         from .parameter import Parameter
 
         cutoffs = list(cutoffs)
-        if not cutoffs or cutoffs != sorted(cutoffs) or min(cutoffs) <= 0 or max(cutoffs) >= n_classes - 1:
-            raise ValueError("cutoffs should be a sorted list of unique positive integers with max < n_classes - 1")
+        if (
+            not cutoffs
+            or cutoffs != sorted(cutoffs)
+            or min(cutoffs) <= 0
+            or max(cutoffs) >= n_classes - 1
+        ):
+            raise ValueError(
+                "cutoffs should be a sorted list of unique positive integers with max < n_classes - 1"
+            )
 
         self.in_features = in_features
         self.n_classes = n_classes
@@ -1334,7 +1350,9 @@ class AdaptiveLogSoftmaxWithLoss(Module):
 
         # Create tail layers (one per remaining cluster)
         self.tail = []
-        for i, (low, high) in enumerate(zip([self.cutoffs[0]] + self.cutoffs[:-1], self.cutoffs[1:])):
+        for i, (low, high) in enumerate(
+            zip([self.cutoffs[0]] + self.cutoffs[:-1], self.cutoffs[1:])
+        ):
             cluster_size = high - low
             # Reduce dimensionality for tail clusters
             reduced_dim = int(in_features / (div_value ** (i + 1)))
@@ -1343,16 +1361,17 @@ class AdaptiveLogSoftmaxWithLoss(Module):
             proj = Linear(in_features, reduced_dim, bias=False)
             out = Linear(reduced_dim, cluster_size, bias=False)
 
-            setattr(self, f'tail_{i}_proj', proj)
-            setattr(self, f'tail_{i}_out', out)
+            setattr(self, f"tail_{i}_proj", proj)
+            setattr(self, f"tail_{i}_out", out)
             self.tail.append((proj, out))
 
     def forward(self, input: Tensor, target: Tensor):
         """Compute adaptive log softmax with loss."""
-        import mlx.core as mx
         from collections import namedtuple
 
-        ASMOutput = namedtuple('ASMOutput', ['output', 'loss'])
+        import mlx.core as mx
+
+        ASMOutput = namedtuple("ASMOutput", ["output", "loss"])
 
         x = input._mlx_array
         t = target._mlx_array.astype(mx.int32)
@@ -1419,7 +1438,9 @@ class AdaptiveLogSoftmaxWithLoss(Module):
 
                 # Compute log softmax within this cluster
                 cluster_max = mx.max(cluster_logits, axis=1, keepdims=True)
-                cluster_log_sum_exp = mx.log(mx.sum(mx.exp(cluster_logits - cluster_max), axis=1, keepdims=True))
+                cluster_log_sum_exp = mx.log(
+                    mx.sum(mx.exp(cluster_logits - cluster_max), axis=1, keepdims=True)
+                )
                 within_cluster_log_probs = cluster_logits - cluster_max - cluster_log_sum_exp
 
                 # Local targets within cluster
@@ -1429,7 +1450,9 @@ class AdaptiveLogSoftmaxWithLoss(Module):
                 local_targets_expanded = mx.expand_dims(local_targets_clamped, axis=1)
 
                 # Gather log probs at local target positions
-                gathered_within = mx.take_along_axis(within_cluster_log_probs, local_targets_expanded, axis=1)
+                gathered_within = mx.take_along_axis(
+                    within_cluster_log_probs, local_targets_expanded, axis=1
+                )
                 gathered_within = mx.squeeze(gathered_within, axis=1)  # (N,)
 
                 # Total log prob = log P(cluster) + log P(class | cluster)
@@ -1457,36 +1480,37 @@ class AdaptiveLogSoftmaxWithLoss(Module):
     def predict(self, input: Tensor) -> Tensor:
         """Predict the most likely class."""
         import mlx.core as mx
+
         log_probs = self.log_prob(input)
         predictions = mx.argmax(log_probs._mlx_array, axis=1)
         return Tensor._from_mlx_array(predictions)
 
     def extra_repr(self) -> str:
-        return f'in_features={self.in_features}, n_classes={self.n_classes}, cutoffs={self.cutoffs[:-1]}'
+        return f"in_features={self.in_features}, n_classes={self.n_classes}, cutoffs={self.cutoffs[:-1]}"
 
 
 __all__ = [
-    'MSELoss',
-    'L1Loss',
-    'NLLLoss',
-    'NLLLoss2d',
-    'CrossEntropyLoss',
-    'BCELoss',
-    'BCEWithLogitsLoss',
-    'SmoothL1Loss',
-    'HuberLoss',
-    'KLDivLoss',
-    'MarginRankingLoss',
-    'HingeEmbeddingLoss',
-    'CosineEmbeddingLoss',
-    'SoftMarginLoss',
-    'TripletMarginLoss',
-    'PoissonNLLLoss',
-    'GaussianNLLLoss',
-    'MultiLabelMarginLoss',
-    'MultiMarginLoss',
-    'MultiLabelSoftMarginLoss',
-    'TripletMarginWithDistanceLoss',
-    'CTCLoss',
-    'AdaptiveLogSoftmaxWithLoss',
+    "MSELoss",
+    "L1Loss",
+    "NLLLoss",
+    "NLLLoss2d",
+    "CrossEntropyLoss",
+    "BCELoss",
+    "BCEWithLogitsLoss",
+    "SmoothL1Loss",
+    "HuberLoss",
+    "KLDivLoss",
+    "MarginRankingLoss",
+    "HingeEmbeddingLoss",
+    "CosineEmbeddingLoss",
+    "SoftMarginLoss",
+    "TripletMarginLoss",
+    "PoissonNLLLoss",
+    "GaussianNLLLoss",
+    "MultiLabelMarginLoss",
+    "MultiMarginLoss",
+    "MultiLabelSoftMarginLoss",
+    "TripletMarginWithDistanceLoss",
+    "CTCLoss",
+    "AdaptiveLogSoftmaxWithLoss",
 ]

@@ -4,11 +4,13 @@ Adadelta Optimizer
 Implements Adadelta algorithm (Adaptive Learning Rate Method).
 """
 
-from typing import Iterable, Dict, Any, Union, Optional
+from typing import Any, Dict, Iterable, Optional, Union
+
 import mlx.core as mx
-from .optimizer import Optimizer
+
 from ..nn.parameter import Parameter
 from ..tensor import Tensor
+from .optimizer import Optimizer
 
 
 class Adadelta(Optimizer):
@@ -46,7 +48,7 @@ class Adadelta(Optimizer):
         *,
         capturable: bool = False,
         maximize: bool = False,
-        differentiable: bool = False
+        differentiable: bool = False,
     ):
         if lr < 0.0:
             raise ValueError(f"Invalid learning rate: {lr}")
@@ -64,7 +66,7 @@ class Adadelta(Optimizer):
             weight_decay=weight_decay,
             foreach=foreach,
             maximize=maximize,
-            differentiable=differentiable
+            differentiable=differentiable,
         )
 
         super().__init__(params, defaults)
@@ -84,13 +86,13 @@ class Adadelta(Optimizer):
             loss = closure()
 
         for group in self.param_groups:
-            lr = group['lr']
-            rho = group['rho']
-            eps = group['eps']
-            weight_decay = group['weight_decay']
-            maximize = group['maximize']
+            lr = group["lr"]
+            rho = group["rho"]
+            eps = group["eps"]
+            weight_decay = group["weight_decay"]
+            maximize = group["maximize"]
 
-            for p in group['params']:
+            for p in group["params"]:
                 if p.grad is None:
                     continue
 
@@ -103,33 +105,33 @@ class Adadelta(Optimizer):
                 param_state = self.state[id(p)]
 
                 # Initialize state
-                if 'step' not in param_state:
-                    param_state['step'] = 0
+                if "step" not in param_state:
+                    param_state["step"] = 0
                     # Running average of squared gradients
-                    param_state['square_avg'] = mx.zeros_like(p._mlx_array)
+                    param_state["square_avg"] = mx.zeros_like(p._mlx_array)
                     # Running average of squared parameter updates
-                    param_state['acc_delta'] = mx.zeros_like(p._mlx_array)
+                    param_state["acc_delta"] = mx.zeros_like(p._mlx_array)
 
-                param_state['step'] += 1
+                param_state["step"] += 1
 
-                square_avg = param_state['square_avg']
-                acc_delta = param_state['acc_delta']
+                square_avg = param_state["square_avg"]
+                acc_delta = param_state["acc_delta"]
 
                 # Apply weight decay
                 if weight_decay != 0:
                     grad = grad + weight_decay * p._mlx_array
 
                 # Update running average of squared gradients
-                square_avg = rho * square_avg + (1 - rho) * (grad ** 2)
-                param_state['square_avg'] = square_avg
+                square_avg = rho * square_avg + (1 - rho) * (grad**2)
+                param_state["square_avg"] = square_avg
 
                 # Compute update
                 std = mx.sqrt(square_avg + eps)
                 delta = mx.sqrt(acc_delta + eps) / std * grad
 
                 # Update running average of squared deltas
-                acc_delta = rho * acc_delta + (1 - rho) * (delta ** 2)
-                param_state['acc_delta'] = acc_delta
+                acc_delta = rho * acc_delta + (1 - rho) * (delta**2)
+                param_state["acc_delta"] = acc_delta
 
                 # Apply update
                 p._mlx_array = p._mlx_array - lr * delta
@@ -138,8 +140,10 @@ class Adadelta(Optimizer):
 
     def __repr__(self) -> str:
         """String representation of the optimizer."""
-        return f"Adadelta (lr={self.defaults['lr']}, rho={self.defaults['rho']}, " \
-               f"eps={self.defaults['eps']}, weight_decay={self.defaults['weight_decay']})"
+        return (
+            f"Adadelta (lr={self.defaults['lr']}, rho={self.defaults['rho']}, "
+            f"eps={self.defaults['eps']}, weight_decay={self.defaults['weight_decay']})"
+        )
 
 
-__all__ = ['Adadelta']
+__all__ = ["Adadelta"]

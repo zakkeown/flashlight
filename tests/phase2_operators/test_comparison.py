@@ -4,9 +4,10 @@ Tests for comparison operations (flashlight.ops.comparison).
 Tests element-wise comparisons, allclose, isclose, maximum, minimum.
 """
 
-import pytest
 import numpy as np
+import pytest
 import torch
+
 import flashlight
 from flashlight import Tensor
 
@@ -237,7 +238,9 @@ class TestMaximum:
         x = flashlight.tensor([1.0, 5.0, 3.0, 7.0])
         y = flashlight.tensor([2.0, 4.0, 6.0, 1.0])
         result = flashlight.maximum(x, y)
-        expected = torch.maximum(torch.tensor([1.0, 5.0, 3.0, 7.0]), torch.tensor([2.0, 4.0, 6.0, 1.0]))
+        expected = torch.maximum(
+            torch.tensor([1.0, 5.0, 3.0, 7.0]), torch.tensor([2.0, 4.0, 6.0, 1.0])
+        )
         np.testing.assert_allclose(np.array(result.tolist()), expected.numpy(), rtol=1e-5)
 
     def test_maximum_tensor_scalar(self):
@@ -263,7 +266,9 @@ class TestMinimum:
         x = flashlight.tensor([1.0, 5.0, 3.0, 7.0])
         y = flashlight.tensor([2.0, 4.0, 6.0, 1.0])
         result = flashlight.minimum(x, y)
-        expected = torch.minimum(torch.tensor([1.0, 5.0, 3.0, 7.0]), torch.tensor([2.0, 4.0, 6.0, 1.0]))
+        expected = torch.minimum(
+            torch.tensor([1.0, 5.0, 3.0, 7.0]), torch.tensor([2.0, 4.0, 6.0, 1.0])
+        )
         np.testing.assert_allclose(np.array(result.tolist()), expected.numpy(), rtol=1e-5)
 
     def test_minimum_tensor_scalar(self):
@@ -346,11 +351,7 @@ class TestComparisonParity:
         result_mlx = flashlight.maximum(x_mlx, y_mlx)
         result_torch = torch.maximum(x_torch, y_torch)
 
-        np.testing.assert_allclose(
-            np.array(result_mlx.tolist()),
-            result_torch.numpy(),
-            rtol=1e-5
-        )
+        np.testing.assert_allclose(np.array(result_mlx.tolist()), result_torch.numpy(), rtol=1e-5)
 
     def test_minimum_parity(self):
         """Test minimum parity with PyTorch."""
@@ -365,8 +366,4 @@ class TestComparisonParity:
         result_mlx = flashlight.minimum(x_mlx, y_mlx)
         result_torch = torch.minimum(x_torch, y_torch)
 
-        np.testing.assert_allclose(
-            np.array(result_mlx.tolist()),
-            result_torch.numpy(),
-            rtol=1e-5
-        )
+        np.testing.assert_allclose(np.array(result_mlx.tolist()), result_torch.numpy(), rtol=1e-5)

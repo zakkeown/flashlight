@@ -4,8 +4,9 @@ Optimizer Base Class
 Implements the base class for all optimizers, following PyTorch's design.
 """
 
-from typing import Iterable, Dict, Any, Optional, Union, List
 from collections import defaultdict
+from typing import Any, Dict, Iterable, List, Optional, Union
+
 from ..nn.parameter import Parameter
 
 
@@ -22,7 +23,9 @@ class Optimizer:
         state: Dict containing optimizer state (momentum buffers, etc.)
     """
 
-    def __init__(self, params: Union[Iterable[Parameter], Iterable[Dict[str, Any]]], defaults: Dict[str, Any]):
+    def __init__(
+        self, params: Union[Iterable[Parameter], Iterable[Dict[str, Any]]], defaults: Dict[str, Any]
+    ):
         self.defaults = defaults
         self.state: Dict[int, Dict[str, Any]] = defaultdict(dict)
         self.param_groups: List[Dict[str, Any]] = []
@@ -35,7 +38,7 @@ class Optimizer:
         # Check if first element is a dict (param group) or Parameter
         if not isinstance(param_groups[0], dict):
             # Simple case: just a list of parameters
-            param_groups = [{'params': param_groups}]
+            param_groups = [{"params": param_groups}]
 
         # Process each param group
         for param_group in param_groups:
@@ -51,24 +54,24 @@ class Optimizer:
         if not isinstance(param_group, dict):
             raise TypeError("param_group must be a dict")
 
-        params = param_group['params']
+        params = param_group["params"]
         if isinstance(params, Parameter):
-            param_group['params'] = [params]
+            param_group["params"] = [params]
         else:
-            param_group['params'] = list(params)
+            param_group["params"] = list(params)
 
         # Check for duplicate parameters
         param_set = set()
         for group in self.param_groups:
-            param_set.update(id(p) for p in group['params'])
+            param_set.update(id(p) for p in group["params"])
 
-        for param in param_group['params']:
+        for param in param_group["params"]:
             if id(param) in param_set:
                 raise ValueError("some parameters appear in more than one parameter group")
 
         # Apply defaults
         for name, default in self.defaults.items():
-            if name != 'params':
+            if name != "params":
                 param_group.setdefault(name, default)
 
         self.param_groups.append(param_group)
@@ -82,7 +85,7 @@ class Optimizer:
                         (more memory efficient, default True)
         """
         for group in self.param_groups:
-            for p in group['params']:
+            for p in group["params"]:
                 if p.grad is not None:
                     if set_to_none:
                         p.grad = None
@@ -113,7 +116,7 @@ class Optimizer:
         # Map parameter ids to indices
         param_to_idx = {}
         for group_idx, group in enumerate(self.param_groups):
-            for param_idx, param in enumerate(group['params']):
+            for param_idx, param in enumerate(group["params"]):
                 param_to_idx[id(param)] = (group_idx, param_idx)
 
         # Pack state using parameter indices instead of ids
@@ -125,14 +128,11 @@ class Optimizer:
         # Pack param_groups (excluding actual parameter tensors)
         param_groups = []
         for group in self.param_groups:
-            packed_group = {k: v for k, v in group.items() if k != 'params'}
-            packed_group['params'] = [param_to_idx[id(p)] for p in group['params']]
+            packed_group = {k: v for k, v in group.items() if k != "params"}
+            packed_group["params"] = [param_to_idx[id(p)] for p in group["params"]]
             param_groups.append(packed_group)
 
-        return {
-            'state': packed_state,
-            'param_groups': param_groups
-        }
+        return {"state": packed_state, "param_groups": param_groups}
 
     def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
         """
@@ -144,33 +144,33 @@ class Optimizer:
         # Create mapping from indices to parameters
         idx_to_param = {}
         for group_idx, group in enumerate(self.param_groups):
-            for param_idx, param in enumerate(group['params']):
+            for param_idx, param in enumerate(group["params"]):
                 idx_to_param[(group_idx, param_idx)] = param
 
         # Unpack state
         self.state = defaultdict(dict)
-        for idx, state in state_dict['state'].items():
+        for idx, state in state_dict["state"].items():
             if idx in idx_to_param:
                 param = idx_to_param[idx]
                 self.state[id(param)] = state
 
         # Unpack param_groups (hyperparameters only, not params)
-        for group, saved_group in zip(self.param_groups, state_dict['param_groups']):
+        for group, saved_group in zip(self.param_groups, state_dict["param_groups"]):
             for k, v in saved_group.items():
-                if k != 'params':
+                if k != "params":
                     group[k] = v
 
     def __repr__(self) -> str:
         """String representation of the optimizer."""
-        format_string = self.__class__.__name__ + ' ('
+        format_string = self.__class__.__name__ + " ("
         for i, group in enumerate(self.param_groups):
-            format_string += '\n'
-            format_string += f'Parameter Group {i}\n'
+            format_string += "\n"
+            format_string += f"Parameter Group {i}\n"
             for key in sorted(group.keys()):
-                if key != 'params':
-                    format_string += f'    {key}: {group[key]}\n'
-        format_string += ')'
+                if key != "params":
+                    format_string += f"    {key}: {group[key]}\n"
+        format_string += ")"
         return format_string
 
 
-__all__ = ['Optimizer']
+__all__ = ["Optimizer"]

@@ -4,13 +4,14 @@ Tests for conv_transpose3d (3D transposed convolution).
 Tests the functional API and nn.ConvTranspose3d layer against PyTorch for parity.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 # Check if PyTorch is available
 try:
     import torch
     import torch.nn.functional as F_torch
+
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
@@ -136,12 +137,7 @@ class TestConvTranspose3dLayer:
 
     def test_layer_tuple_params(self):
         """Test layer with tuple parameters."""
-        layer = nn.ConvTranspose3d(
-            3, 6,
-            kernel_size=(3, 4, 5),
-            stride=(1, 2, 2),
-            padding=(1, 1, 2)
-        )
+        layer = nn.ConvTranspose3d(3, 6, kernel_size=(3, 4, 5), stride=(1, 2, 2), padding=(1, 1, 2))
 
         assert layer.kernel_size == (3, 4, 5)
         assert layer.stride == (1, 2, 2)
@@ -155,7 +151,9 @@ class TestConvTranspose3dLayer:
         output = layer(x)
 
         # Verify output padding was applied
-        layer_no_opad = nn.ConvTranspose3d(3, 6, kernel_size=3, stride=2, padding=1, output_padding=0)
+        layer_no_opad = nn.ConvTranspose3d(
+            3, 6, kernel_size=3, stride=2, padding=1, output_padding=0
+        )
         layer_no_opad.weight = layer.weight
         layer_no_opad.bias = layer.bias
         output_no_opad = layer_no_opad(x)
@@ -169,9 +167,9 @@ class TestConvTranspose3dLayer:
         layer = nn.ConvTranspose3d(3, 6, kernel_size=3, stride=2, padding=1)
         repr_str = layer.extra_repr()
 
-        assert 'in_channels=3' in repr_str
-        assert 'out_channels=6' in repr_str
-        assert 'kernel_size=(3, 3, 3)' in repr_str
+        assert "in_channels=3" in repr_str
+        assert "out_channels=6" in repr_str
+        assert "kernel_size=(3, 3, 3)" in repr_str
 
 
 @pytest.mark.skipif(not TORCH_AVAILABLE, reason="PyTorch required for parity tests")
@@ -199,8 +197,9 @@ class TestConvTranspose3dParity:
         np.testing.assert_allclose(
             out_torch.numpy(),
             out_mlx.numpy(),
-            rtol=1e-4, atol=1e-5,
-            err_msg="Basic conv_transpose3d parity failed"
+            rtol=1e-4,
+            atol=1e-5,
+            err_msg="Basic conv_transpose3d parity failed",
         )
 
     def test_stride_parity(self):
@@ -223,8 +222,9 @@ class TestConvTranspose3dParity:
             np.testing.assert_allclose(
                 out_torch.numpy(),
                 out_mlx.numpy(),
-                rtol=1e-4, atol=1e-5,
-                err_msg=f"Stride={stride} parity failed"
+                rtol=1e-4,
+                atol=1e-5,
+                err_msg=f"Stride={stride} parity failed",
             )
 
     def test_padding_parity(self):
@@ -247,8 +247,9 @@ class TestConvTranspose3dParity:
             np.testing.assert_allclose(
                 out_torch.numpy(),
                 out_mlx.numpy(),
-                rtol=1e-4, atol=1e-5,
-                err_msg=f"Padding={padding} parity failed"
+                rtol=1e-4,
+                atol=1e-5,
+                err_msg=f"Padding={padding} parity failed",
             )
 
     def test_output_padding_parity(self):
@@ -268,15 +269,14 @@ class TestConvTranspose3dParity:
         out_torch = F_torch.conv_transpose3d(
             x_torch, weight_torch, stride=2, padding=1, output_padding=1
         )
-        out_mlx = conv_transpose3d(
-            x_mlx, weight_mlx, stride=2, padding=1, output_padding=1
-        )
+        out_mlx = conv_transpose3d(x_mlx, weight_mlx, stride=2, padding=1, output_padding=1)
 
         np.testing.assert_allclose(
             out_torch.numpy(),
             out_mlx.numpy(),
-            rtol=1e-4, atol=1e-5,
-            err_msg="Output padding parity failed"
+            rtol=1e-4,
+            atol=1e-5,
+            err_msg="Output padding parity failed",
         )
 
     def test_bias_parity(self):
@@ -299,10 +299,7 @@ class TestConvTranspose3dParity:
         out_mlx = conv_transpose3d(x_mlx, weight_mlx, bias_mlx)
 
         np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-4, atol=1e-5,
-            err_msg="Bias parity failed"
+            out_torch.numpy(), out_mlx.numpy(), rtol=1e-4, atol=1e-5, err_msg="Bias parity failed"
         )
 
     def test_dilation_parity(self):
@@ -325,8 +322,9 @@ class TestConvTranspose3dParity:
             np.testing.assert_allclose(
                 out_torch.numpy(),
                 out_mlx.numpy(),
-                rtol=1e-4, atol=1e-5,
-                err_msg=f"Dilation={dilation} parity failed"
+                rtol=1e-4,
+                atol=1e-5,
+                err_msg=f"Dilation={dilation} parity failed",
             )
 
     def test_layer_parity(self):
@@ -357,8 +355,9 @@ class TestConvTranspose3dParity:
         np.testing.assert_allclose(
             out_torch.detach().numpy(),
             out_mlx.numpy(),
-            rtol=1e-4, atol=1e-5,
-            err_msg="Layer parity failed"
+            rtol=1e-4,
+            atol=1e-5,
+            err_msg="Layer parity failed",
         )
 
     def test_asymmetric_kernel_parity(self):
@@ -375,14 +374,17 @@ class TestConvTranspose3dParity:
         x_mlx = flashlight.tensor(x_np)
         weight_mlx = flashlight.tensor(weight_np)
 
-        out_torch = F_torch.conv_transpose3d(x_torch, weight_torch, stride=(1, 2, 2), padding=(0, 1, 1))
+        out_torch = F_torch.conv_transpose3d(
+            x_torch, weight_torch, stride=(1, 2, 2), padding=(0, 1, 1)
+        )
         out_mlx = conv_transpose3d(x_mlx, weight_mlx, stride=(1, 2, 2), padding=(0, 1, 1))
 
         np.testing.assert_allclose(
             out_torch.numpy(),
             out_mlx.numpy(),
-            rtol=1e-4, atol=1e-5,
-            err_msg="Asymmetric kernel parity failed"
+            rtol=1e-4,
+            atol=1e-5,
+            err_msg="Asymmetric kernel parity failed",
         )
 
     def test_batch_size_1_parity(self):
@@ -404,8 +406,9 @@ class TestConvTranspose3dParity:
         np.testing.assert_allclose(
             out_torch.numpy(),
             out_mlx.numpy(),
-            rtol=1e-4, atol=1e-5,
-            err_msg="Batch size 1 parity failed"
+            rtol=1e-4,
+            atol=1e-5,
+            err_msg="Batch size 1 parity failed",
         )
 
     def test_single_channel_parity(self):
@@ -427,8 +430,9 @@ class TestConvTranspose3dParity:
         np.testing.assert_allclose(
             out_torch.numpy(),
             out_mlx.numpy(),
-            rtol=1e-4, atol=1e-5,
-            err_msg="Single channel parity failed"
+            rtol=1e-4,
+            atol=1e-5,
+            err_msg="Single channel parity failed",
         )
 
     def test_combined_params_parity(self):
@@ -448,27 +452,32 @@ class TestConvTranspose3dParity:
         bias_mlx = flashlight.tensor(bias_np)
 
         out_torch = F_torch.conv_transpose3d(
-            x_torch, weight_torch, bias_torch,
+            x_torch,
+            weight_torch,
+            bias_torch,
             stride=(2, 2, 2),
             padding=(1, 1, 1),
             output_padding=(1, 1, 1),
-            dilation=1
+            dilation=1,
         )
         out_mlx = conv_transpose3d(
-            x_mlx, weight_mlx, bias_mlx,
+            x_mlx,
+            weight_mlx,
+            bias_mlx,
             stride=(2, 2, 2),
             padding=(1, 1, 1),
             output_padding=(1, 1, 1),
-            dilation=1
+            dilation=1,
         )
 
         np.testing.assert_allclose(
             out_torch.numpy(),
             out_mlx.numpy(),
-            rtol=1e-4, atol=1e-5,
-            err_msg="Combined params parity failed"
+            rtol=1e-4,
+            atol=1e-5,
+            err_msg="Combined params parity failed",
         )
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

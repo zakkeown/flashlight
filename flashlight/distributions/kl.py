@@ -1,13 +1,13 @@
 """KL Divergence"""
 
-from typing import Callable, Dict, Tuple, Type
-import mlx.core as mx
 import math
+from typing import Callable, Dict, Tuple, Type
+
+import mlx.core as mx
 
 from ..tensor import Tensor
-from .distribution import Distribution
 from ._constants import xlogy
-
+from .distribution import Distribution
 
 # Registry for KL divergence implementations
 _KL_REGISTRY: Dict[Tuple[Type, Type], Callable] = {}
@@ -22,9 +22,11 @@ def register_kl(type_p: Type, type_q: Type):
         def kl_normal_normal(p, q):
             ...
     """
+
     def decorator(fn: Callable):
         _KL_REGISTRY[(type_p, type_q)] = fn
         return fn
+
     return decorator
 
 
@@ -49,10 +51,13 @@ def kl_divergence(p: Distribution, q: Distribution) -> Tensor:
         if isinstance(p, type_p) and isinstance(q, type_q):
             return fn(p, q)
 
-    raise NotImplementedError(f"KL divergence not implemented for {type(p).__name__} and {type(q).__name__}")
+    raise NotImplementedError(
+        f"KL divergence not implemented for {type(p).__name__} and {type(q).__name__}"
+    )
 
 
 # Register common KL divergences
+
 
 @register_kl(Distribution, Distribution)
 def _kl_generic(p, q):
@@ -123,8 +128,8 @@ def _register_exponential_kl():
 
 def _register_gamma_kl():
     """Register Gamma-Gamma KL."""
+    from ..ops.special import digamma, lgamma
     from .gamma import Gamma
-    from ..ops.special import lgamma, digamma
 
     @register_kl(Gamma, Gamma)
     def _kl_gamma_gamma(p: Gamma, q: Gamma) -> Tensor:
@@ -132,17 +137,18 @@ def _register_gamma_kl():
         log_gamma_p = lgamma(p.concentration)
         log_gamma_q = lgamma(q.concentration)
         return Tensor(
-            (p.concentration - q.concentration) * psi_p -
-            log_gamma_p + log_gamma_q +
-            q.concentration * (mx.log(p.rate) - mx.log(q.rate)) +
-            p.concentration * (q.rate / p.rate - 1)
+            (p.concentration - q.concentration) * psi_p
+            - log_gamma_p
+            + log_gamma_q
+            + q.concentration * (mx.log(p.rate) - mx.log(q.rate))
+            + p.concentration * (q.rate / p.rate - 1)
         )
 
 
 def _register_beta_kl():
     """Register Beta-Beta KL."""
-    from .beta import Beta
     from ..ops.special import betaln, digamma
+    from .beta import Beta
 
     @register_kl(Beta, Beta)
     def _kl_beta_beta(p: Beta, q: Beta) -> Tensor:
@@ -154,10 +160,11 @@ def _register_beta_kl():
         psi_a_p = digamma(a_p)
         psi_b_p = digamma(b_p)
         return Tensor(
-            log_beta_q - log_beta_p +
-            (a_p - a_q) * psi_a_p +
-            (b_p - b_q) * psi_b_p +
-            (a_q + b_q - a_p - b_p) * psi_sum_p
+            log_beta_q
+            - log_beta_p
+            + (a_p - a_q) * psi_a_p
+            + (b_p - b_q) * psi_b_p
+            + (a_q + b_q - a_p - b_p) * psi_sum_p
         )
 
 
@@ -198,4 +205,4 @@ except ImportError:
     pass
 
 
-__all__ = ['kl_divergence', 'register_kl']
+__all__ = ["kl_divergence", "register_kl"]

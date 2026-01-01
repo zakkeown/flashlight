@@ -10,8 +10,8 @@ from typing import Optional, Tuple
 from ...tensor import Tensor
 from ..module import Module
 from ..parameter import Parameter
-from .linear import Linear
 from .dropout import Dropout
+from .linear import Linear
 
 
 def scaled_dot_product_attention(
@@ -76,10 +76,7 @@ def scaled_dot_product_attention(
     if is_causal:
         seq_len = q_data.shape[-2]
         # Create lower triangular mask
-        causal_mask = mx.triu(
-            mx.full((seq_len, seq_len), float('-inf')),
-            k=1
-        )
+        causal_mask = mx.triu(mx.full((seq_len, seq_len), float("-inf")), k=1)
         attn_scores = attn_scores + causal_mask
 
     # Apply attention mask if provided
@@ -89,7 +86,7 @@ def scaled_dot_product_attention(
         # Handle boolean masks
         if mask_data.dtype == mx.bool_:
             # True positions should be masked (set to -inf)
-            mask_data = mx.where(mask_data, float('-inf'), 0.0)
+            mask_data = mx.where(mask_data, float("-inf"), 0.0)
 
         attn_scores = attn_scores + mask_data
 
@@ -190,7 +187,7 @@ class MultiheadAttention(Module):
         self.vdim = vdim if vdim is not None else embed_dim
 
         # Scaling factor
-        self.scale = self.head_dim ** -0.5
+        self.scale = self.head_dim**-0.5
 
         # Check if Q, K, V projections can be combined
         # PyTorch combines them when kdim == vdim == embed_dim
@@ -205,37 +202,23 @@ class MultiheadAttention(Module):
                 Tensor._from_mlx_array(mx.zeros((3 * embed_dim, embed_dim)))
             )
             if bias:
-                self.in_proj_bias = Parameter(
-                    Tensor._from_mlx_array(mx.zeros((3 * embed_dim,)))
-                )
+                self.in_proj_bias = Parameter(Tensor._from_mlx_array(mx.zeros((3 * embed_dim,))))
             else:
-                self.register_parameter('in_proj_bias', None)
+                self.register_parameter("in_proj_bias", None)
         else:
             # Separate projections when dimensions differ
             self.in_proj_weight = None
-            self.q_proj_weight = Parameter(
-                Tensor._from_mlx_array(mx.zeros((embed_dim, embed_dim)))
-            )
-            self.k_proj_weight = Parameter(
-                Tensor._from_mlx_array(mx.zeros((embed_dim, self.kdim)))
-            )
-            self.v_proj_weight = Parameter(
-                Tensor._from_mlx_array(mx.zeros((embed_dim, self.vdim)))
-            )
+            self.q_proj_weight = Parameter(Tensor._from_mlx_array(mx.zeros((embed_dim, embed_dim))))
+            self.k_proj_weight = Parameter(Tensor._from_mlx_array(mx.zeros((embed_dim, self.kdim))))
+            self.v_proj_weight = Parameter(Tensor._from_mlx_array(mx.zeros((embed_dim, self.vdim))))
             if bias:
-                self.q_proj_bias = Parameter(
-                    Tensor._from_mlx_array(mx.zeros((embed_dim,)))
-                )
-                self.k_proj_bias = Parameter(
-                    Tensor._from_mlx_array(mx.zeros((embed_dim,)))
-                )
-                self.v_proj_bias = Parameter(
-                    Tensor._from_mlx_array(mx.zeros((embed_dim,)))
-                )
+                self.q_proj_bias = Parameter(Tensor._from_mlx_array(mx.zeros((embed_dim,))))
+                self.k_proj_bias = Parameter(Tensor._from_mlx_array(mx.zeros((embed_dim,))))
+                self.v_proj_bias = Parameter(Tensor._from_mlx_array(mx.zeros((embed_dim,))))
             else:
-                self.register_parameter('q_proj_bias', None)
-                self.register_parameter('k_proj_bias', None)
-                self.register_parameter('v_proj_bias', None)
+                self.register_parameter("q_proj_bias", None)
+                self.register_parameter("k_proj_bias", None)
+                self.register_parameter("v_proj_bias", None)
 
         # Output projection
         self.out_proj = Linear(embed_dim, embed_dim, bias=bias)
@@ -243,6 +226,7 @@ class MultiheadAttention(Module):
         # Optional bias for key/value
         if add_bias_kv:
             from ... import zeros
+
             self.bias_k = Parameter(zeros(1, 1, embed_dim))
             self.bias_v = Parameter(zeros(1, 1, embed_dim))
         else:
@@ -267,38 +251,28 @@ class MultiheadAttention(Module):
             # Xavier uniform for combined in_proj_weight
             std = math.sqrt(2.0 / (self.embed_dim + self.embed_dim))
             weight_data = mx.random.uniform(
-                low=-std * math.sqrt(3),
-                high=std * math.sqrt(3),
-                shape=self.in_proj_weight.shape
+                low=-std * math.sqrt(3), high=std * math.sqrt(3), shape=self.in_proj_weight.shape
             )
             self.in_proj_weight.data = Tensor._from_mlx_array(weight_data)
             if self.in_proj_bias is not None:
-                self.in_proj_bias.data = Tensor._from_mlx_array(
-                    mx.zeros(self.in_proj_bias.shape)
-                )
+                self.in_proj_bias.data = Tensor._from_mlx_array(mx.zeros(self.in_proj_bias.shape))
         else:
             # Initialize separate projections
             for weight in [self.q_proj_weight, self.k_proj_weight, self.v_proj_weight]:
                 std = math.sqrt(2.0 / (weight.shape[0] + weight.shape[1]))
                 weight_data = mx.random.uniform(
-                    low=-std * math.sqrt(3),
-                    high=std * math.sqrt(3),
-                    shape=weight.shape
+                    low=-std * math.sqrt(3), high=std * math.sqrt(3), shape=weight.shape
                 )
                 weight.data = Tensor._from_mlx_array(weight_data)
 
         # Initialize output projection
         std = math.sqrt(2.0 / (self.out_proj.in_features + self.out_proj.out_features))
         weight_data = mx.random.uniform(
-            low=-std * math.sqrt(3),
-            high=std * math.sqrt(3),
-            shape=self.out_proj.weight.shape
+            low=-std * math.sqrt(3), high=std * math.sqrt(3), shape=self.out_proj.weight.shape
         )
         self.out_proj.weight.data = Tensor._from_mlx_array(weight_data)
         if self.out_proj.bias is not None:
-            self.out_proj.bias.data = Tensor._from_mlx_array(
-                mx.zeros(self.out_proj.bias.shape)
-            )
+            self.out_proj.bias.data = Tensor._from_mlx_array(mx.zeros(self.out_proj.bias.shape))
 
     def forward(
         self,
@@ -347,15 +321,15 @@ class MultiheadAttention(Module):
             # Use combined in_proj_weight: [3*embed_dim, embed_dim]
             # Split into q, k, v weights
             w = self.in_proj_weight._mlx_array
-            w_q = w[:self.embed_dim, :]
-            w_k = w[self.embed_dim:2*self.embed_dim, :]
-            w_v = w[2*self.embed_dim:, :]
+            w_q = w[: self.embed_dim, :]
+            w_k = w[self.embed_dim : 2 * self.embed_dim, :]
+            w_v = w[2 * self.embed_dim :, :]
 
             if self.in_proj_bias is not None:
                 b = self.in_proj_bias._mlx_array
-                b_q = b[:self.embed_dim]
-                b_k = b[self.embed_dim:2*self.embed_dim]
-                b_v = b[2*self.embed_dim:]
+                b_q = b[: self.embed_dim]
+                b_k = b[self.embed_dim : 2 * self.embed_dim]
+                b_v = b[2 * self.embed_dim :]
             else:
                 b_q = b_k = b_v = None
 
@@ -378,7 +352,7 @@ class MultiheadAttention(Module):
             k_data = mx.matmul(key._mlx_array, mx.swapaxes(self.k_proj_weight._mlx_array, 0, 1))
             v_data = mx.matmul(value._mlx_array, mx.swapaxes(self.v_proj_weight._mlx_array, 0, 1))
 
-            if hasattr(self, 'q_proj_bias') and self.q_proj_bias is not None:
+            if hasattr(self, "q_proj_bias") and self.q_proj_bias is not None:
                 q_data = q_data + self.q_proj_bias._mlx_array
                 k_data = k_data + self.k_proj_bias._mlx_array
                 v_data = v_data + self.v_proj_bias._mlx_array
@@ -396,6 +370,7 @@ class MultiheadAttention(Module):
         # Add zero attention if requested
         if self.add_zero_attn:
             from ... import zeros
+
             zero_attn = zeros(batch_size, 1, self.embed_dim)
             k = k.cat([k, zero_attn], dim=1)
             v = v.cat([v, zero_attn], dim=1)
@@ -431,16 +406,13 @@ class MultiheadAttention(Module):
 
             # Handle boolean masks
             if mask_data.dtype == mx.bool_:
-                mask_data = mx.where(mask_data, float('-inf'), 0.0)
+                mask_data = mx.where(mask_data, float("-inf"), 0.0)
 
             attn_scores = attn_scores + mask_data
 
         # Apply causal mask
         if is_causal:
-            causal_mask = mx.triu(
-                mx.full((tgt_len, src_len), float('-inf')),
-                k=1
-            )
+            causal_mask = mx.triu(mx.full((tgt_len, src_len), float("-inf")), k=1)
             attn_scores = attn_scores + causal_mask
 
         # Apply key padding mask
@@ -448,7 +420,7 @@ class MultiheadAttention(Module):
             # key_padding_mask: (batch, src_len) -> (batch, 1, 1, src_len)
             kpm_data = key_padding_mask._mlx_array
             if kpm_data.dtype == mx.bool_:
-                kpm_data = mx.where(kpm_data, float('-inf'), 0.0)
+                kpm_data = mx.where(kpm_data, float("-inf"), 0.0)
             kpm_data = kpm_data.reshape(batch_size, 1, 1, src_len)
             attn_scores = attn_scores + kpm_data
 
@@ -489,12 +461,12 @@ class MultiheadAttention(Module):
     def extra_repr(self) -> str:
         """Extra representation string."""
         return (
-            f'embed_dim={self.embed_dim}, num_heads={self.num_heads}, '
-            f'dropout={self.dropout}, batch_first={self.batch_first}'
+            f"embed_dim={self.embed_dim}, num_heads={self.num_heads}, "
+            f"dropout={self.dropout}, batch_first={self.batch_first}"
         )
 
 
 __all__ = [
-    'MultiheadAttention',
-    'scaled_dot_product_attention',
+    "MultiheadAttention",
+    "scaled_dot_product_attention",
 ]

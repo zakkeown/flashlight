@@ -11,7 +11,7 @@ Reference:
 """
 
 import warnings
-from typing import Union, Optional
+from typing import Optional, Union
 
 
 class Device:
@@ -27,7 +27,7 @@ class Device:
         >>> device = Device('mps')   # Metal Performance Shaders
     """
 
-    def __init__(self, device: Union[str, 'Device', int]):
+    def __init__(self, device: Union[str, "Device", int]):
         """
         Create a device object.
 
@@ -44,7 +44,7 @@ class Device:
 
         if isinstance(device, int):
             # CUDA device index
-            self.type = 'cuda'
+            self.type = "cuda"
             self.index = device
             self._warn_unified_memory()
             return
@@ -52,9 +52,9 @@ class Device:
         # Parse string
         device_str = str(device).lower()
 
-        if ':' in device_str:
+        if ":" in device_str:
             # e.g., 'cuda:0', 'cpu:0'
-            parts = device_str.split(':')
+            parts = device_str.split(":")
             self.type = parts[0]
             try:
                 self.index = int(parts[1])
@@ -65,28 +65,27 @@ class Device:
             self.index = None
 
         # Normalize device types
-        if self.type in ('cuda', 'gpu'):
-            self.type = 'cuda'
+        if self.type in ("cuda", "gpu"):
+            self.type = "cuda"
             self._warn_unified_memory()
-        elif self.type in ('mps', 'metal'):
-            self.type = 'mps'  # Metal Performance Shaders
-        elif self.type == 'cpu':
-            self.type = 'cpu'
+        elif self.type in ("mps", "metal"):
+            self.type = "mps"  # Metal Performance Shaders
+        elif self.type == "cpu":
+            self.type = "cpu"
         else:
             raise ValueError(
-                f"Invalid device type: {device}. "
-                f"Supported: 'cpu', 'cuda', 'mps', 'metal'"
+                f"Invalid device type: {device}. " f"Supported: 'cpu', 'cuda', 'mps', 'metal'"
             )
 
     def _warn_unified_memory(self):
         """Warn about MLX unified memory (one-time warning)."""
-        if not hasattr(Device, '_warned_unified'):
+        if not hasattr(Device, "_warned_unified"):
             warnings.warn(
                 "MLX uses unified memory. Device specification ('cpu', 'cuda', 'mps') "
                 "is for API compatibility only. All tensors are accessible from both "
                 "CPU and Metal GPU without explicit transfers.",
                 UserWarning,
-                stacklevel=4
+                stacklevel=4,
             )
             Device._warned_unified = True
 
@@ -112,7 +111,7 @@ class Device:
 
 
 # Default devices
-_default_device = Device('cpu')
+_default_device = Device("cpu")
 
 
 def get_default_device() -> Device:
@@ -149,6 +148,7 @@ def device_count() -> int:
     """
     try:
         import mlx.core as mx
+
         # If MLX imports successfully, Metal is available
         return 1
     except ImportError:
@@ -164,6 +164,7 @@ def is_available() -> bool:
     """
     try:
         import mlx.core as mx
+
         return True
     except ImportError:
         return False
@@ -185,11 +186,11 @@ def synchronize(device: Optional[Union[str, Device]] = None):
 
 
 __all__ = [
-    'Device',
-    'get_default_device',
-    'set_default_device',
-    'current_device',
-    'device_count',
-    'is_available',
-    'synchronize',
+    "Device",
+    "get_default_device",
+    "set_default_device",
+    "current_device",
+    "device_count",
+    "is_available",
+    "synchronize",
 ]

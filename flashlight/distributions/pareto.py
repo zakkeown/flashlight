@@ -1,20 +1,26 @@
 """Pareto Distribution"""
 
 from typing import Optional, Tuple, Union
+
 import mlx.core as mx
 
 from ..tensor import Tensor
-from .distribution import Distribution
 from . import constraints
+from .distribution import Distribution
 
 
 class Pareto(Distribution):
     """Pareto distribution (Type I)."""
 
-    arg_constraints = {'scale': constraints.positive, 'alpha': constraints.positive}
+    arg_constraints = {"scale": constraints.positive, "alpha": constraints.positive}
     has_rsample = True
 
-    def __init__(self, scale: Union[Tensor, float], alpha: Union[Tensor, float], validate_args: Optional[bool] = None):
+    def __init__(
+        self,
+        scale: Union[Tensor, float],
+        alpha: Union[Tensor, float],
+        validate_args: Optional[bool] = None,
+    ):
         self.scale = scale._mlx_array if isinstance(scale, Tensor) else mx.array(scale)
         self.alpha = alpha._mlx_array if isinstance(alpha, Tensor) else mx.array(alpha)
         batch_shape = mx.broadcast_shapes(self.scale.shape, self.alpha.shape)
@@ -26,7 +32,11 @@ class Pareto(Distribution):
 
     @property
     def mean(self) -> Tensor:
-        return Tensor(mx.where(self.alpha > 1, self.alpha * self.scale / (self.alpha - 1), mx.array(float('inf'))))
+        return Tensor(
+            mx.where(
+                self.alpha > 1, self.alpha * self.scale / (self.alpha - 1), mx.array(float("inf"))
+            )
+        )
 
     @property
     def mode(self) -> Tensor:
@@ -34,9 +44,13 @@ class Pareto(Distribution):
 
     @property
     def variance(self) -> Tensor:
-        return Tensor(mx.where(self.alpha > 2,
-                              self.scale ** 2 * self.alpha / ((self.alpha - 1) ** 2 * (self.alpha - 2)),
-                              mx.array(float('inf'))))
+        return Tensor(
+            mx.where(
+                self.alpha > 2,
+                self.scale**2 * self.alpha / ((self.alpha - 1) ** 2 * (self.alpha - 2)),
+                mx.array(float("inf")),
+            )
+        )
 
     def sample(self, sample_shape: Tuple[int, ...] = ()) -> Tensor:
         shape = sample_shape + self._batch_shape
@@ -48,7 +62,9 @@ class Pareto(Distribution):
 
     def log_prob(self, value: Tensor) -> Tensor:
         data = value._mlx_array if isinstance(value, Tensor) else value
-        return Tensor(mx.log(self.alpha) + self.alpha * mx.log(self.scale) - (self.alpha + 1) * mx.log(data))
+        return Tensor(
+            mx.log(self.alpha) + self.alpha * mx.log(self.scale) - (self.alpha + 1) * mx.log(data)
+        )
 
     def cdf(self, value: Tensor) -> Tensor:
         data = value._mlx_array if isinstance(value, Tensor) else value
@@ -62,4 +78,4 @@ class Pareto(Distribution):
         return Tensor(mx.log(self.scale / self.alpha) + 1 + 1 / self.alpha)
 
 
-__all__ = ['Pareto']
+__all__ = ["Pareto"]

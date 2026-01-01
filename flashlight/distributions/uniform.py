@@ -1,11 +1,12 @@
 """Uniform Distribution"""
 
 from typing import Optional, Tuple, Union
+
 import mlx.core as mx
 
 from ..tensor import Tensor
-from .distribution import Distribution
 from . import constraints
+from .distribution import Distribution
 
 
 class Uniform(Distribution):
@@ -18,7 +19,7 @@ class Uniform(Distribution):
         validate_args: Whether to validate arguments
     """
 
-    arg_constraints = {'low': constraints.dependent, 'high': constraints.dependent}
+    arg_constraints = {"low": constraints.dependent, "high": constraints.dependent}
     has_rsample = True
 
     def __init__(
@@ -65,7 +66,7 @@ class Uniform(Distribution):
         data = value._mlx_array if isinstance(value, Tensor) else value
         lb = data >= self.low
         ub = data < self.high
-        log_prob = mx.where(lb & ub, -mx.log(self.high - self.low), mx.array(float('-inf')))
+        log_prob = mx.where(lb & ub, -mx.log(self.high - self.low), mx.array(float("-inf")))
         return Tensor(log_prob)
 
     def cdf(self, value: Tensor) -> Tensor:
@@ -82,4 +83,4 @@ class Uniform(Distribution):
         return Tensor(mx.log(self.high - self.low))
 
 
-__all__ = ['Uniform']
+__all__ = ["Uniform"]

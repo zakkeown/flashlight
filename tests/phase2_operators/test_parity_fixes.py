@@ -8,22 +8,27 @@ These tests verify that the fixes for the following issues work correctly:
 """
 
 import sys
-sys.path.insert(0, '../..')
+
+sys.path.insert(0, "../..")
 
 import unittest
+
 import numpy as np
 
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
     import torch
+
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
 
 try:
-    import flashlight
     import mlx.core as mx
+
+    import flashlight
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -77,7 +82,7 @@ class TestAngleParity(TestCase):
     @skipIfNoTorch
     def test_angle_real_inf(self):
         """Test angle with infinity values."""
-        values = [float('inf'), float('-inf')]
+        values = [float("inf"), float("-inf")]
         pt_tensor = torch.tensor(values)
         mlx_tensor = flashlight.tensor(values)
 
@@ -89,7 +94,7 @@ class TestAngleParity(TestCase):
     @skipIfNoTorch
     def test_angle_real_nan(self):
         """Test angle with NaN values (should return NaN)."""
-        values = [float('nan')]
+        values = [float("nan")]
         pt_tensor = torch.tensor(values)
         mlx_tensor = flashlight.tensor(values)
 
@@ -137,10 +142,14 @@ class TestModeParity(TestCase):
 
             # Should return last index
             expected_idx = len(data) - 1
-            self.assertEqual(pt_idx.item(), expected_idx,
-                           f"PyTorch should return last index for len={len(data)}")
-            self.assertEqual(int(mlx_idx._mlx_array.item()), expected_idx,
-                           f"MLX should return last index for len={len(data)}")
+            self.assertEqual(
+                pt_idx.item(), expected_idx, f"PyTorch should return last index for len={len(data)}"
+            )
+            self.assertEqual(
+                int(mlx_idx._mlx_array.item()),
+                expected_idx,
+                f"MLX should return last index for len={len(data)}",
+            )
 
     @skipIfNoTorch
     def test_mode_large_array_first_index(self):
@@ -156,10 +165,16 @@ class TestModeParity(TestCase):
 
             # Should return first index
             expected_idx = 0
-            self.assertEqual(pt_idx.item(), expected_idx,
-                           f"PyTorch should return first index for len={len(data)}")
-            self.assertEqual(int(mlx_idx._mlx_array.item()), expected_idx,
-                           f"MLX should return first index for len={len(data)}")
+            self.assertEqual(
+                pt_idx.item(),
+                expected_idx,
+                f"PyTorch should return first index for len={len(data)}",
+            )
+            self.assertEqual(
+                int(mlx_idx._mlx_array.item()),
+                expected_idx,
+                f"MLX should return first index for len={len(data)}",
+            )
 
     @skipIfNoTorch
     def test_mode_threshold_boundary(self):
@@ -204,16 +219,18 @@ class TestModeParity(TestCase):
             pt_vals, _ = torch.mode(pt_tensor, dim=1)
             mlx_vals, _ = flashlight.mode(mlx_tensor, dim=1)
 
-            self.assertEqual(pt_vals.item(), int(mlx_vals._mlx_array.item()),
-                           f"Mode values should match for {data}")
+            self.assertEqual(
+                pt_vals.item(),
+                int(mlx_vals._mlx_array.item()),
+                f"Mode values should match for {data}",
+            )
 
     @skipIfNoTorch
     def test_mode_multidimensional(self):
         """Test mode with multi-dimensional arrays."""
-        data = np.array([
-            [[1, 2, 2, 3], [4, 4, 5, 5], [6, 6, 6, 7]],
-            [[8, 8, 8, 9], [1, 1, 2, 2], [3, 4, 4, 4]]
-        ])
+        data = np.array(
+            [[[1, 2, 2, 3], [4, 4, 5, 5], [6, 6, 6, 7]], [[8, 8, 8, 9], [1, 1, 2, 2], [3, 4, 4, 4]]]
+        )
         pt_tensor = torch.tensor(data)
         mlx_tensor = flashlight.tensor(data.tolist())
 
@@ -226,10 +243,12 @@ class TestModeParity(TestCase):
             mlx_vals_np = np.array(mlx_vals._mlx_array)
             mlx_idx_np = np.array(mlx_idx._mlx_array)
 
-            np.testing.assert_array_equal(pt_vals_np, mlx_vals_np,
-                                         f"Values should match for dim={dim}")
-            np.testing.assert_array_equal(pt_idx_np, mlx_idx_np,
-                                         f"Indices should match for dim={dim}")
+            np.testing.assert_array_equal(
+                pt_vals_np, mlx_vals_np, f"Values should match for dim={dim}"
+            )
+            np.testing.assert_array_equal(
+                pt_idx_np, mlx_idx_np, f"Indices should match for dim={dim}"
+            )
 
 
 @skipIfNoMLX
@@ -288,8 +307,9 @@ class TestLobpcgParity(TestCase):
             flipped_diff = np.abs(pt_vecs_np[:, i] + mlx_vecs_np[:, i]).max()
             best_diff = min(direct_diff, flipped_diff)
 
-            self.assertLess(best_diff, 1e-3,
-                          f"Eigenvector {i} should match up to sign (diff={best_diff})")
+            self.assertLess(
+                best_diff, 1e-3, f"Eigenvector {i} should match up to sign (diff={best_diff})"
+            )
 
     @skipIfNoTorch
     def test_lobpcg_eigenvectors_are_unit(self):
@@ -310,8 +330,9 @@ class TestLobpcgParity(TestCase):
 
         for i in range(k):
             norm = np.linalg.norm(mlx_vecs_np[:, i])
-            self.assertAlmostEqual(norm, 1.0, places=5,
-                                 msg=f"Eigenvector {i} should have unit norm")
+            self.assertAlmostEqual(
+                norm, 1.0, places=5, msg=f"Eigenvector {i} should have unit norm"
+            )
 
     @skipIfNoTorch
     def test_lobpcg_eigenvectors_satisfy_eigenequation(self):
@@ -340,8 +361,9 @@ class TestLobpcgParity(TestCase):
             lam_v = lam * v
 
             residual = np.abs(Av - lam_v).max()
-            self.assertLess(residual, 1e-4,
-                          f"Eigenpair {i} should satisfy eigenequation (residual={residual})")
+            self.assertLess(
+                residual, 1e-4, f"Eigenpair {i} should satisfy eigenequation (residual={residual})"
+            )
 
     @skipIfNoTorch
     def test_lobpcg_largest_eigenvalues(self):
@@ -367,5 +389,5 @@ class TestLobpcgParity(TestCase):
         np.testing.assert_allclose(mlx_vals_np, largest_k, rtol=1e-4, atol=1e-5)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -4,9 +4,10 @@ Tests for math functions (flashlight.ops.math_funcs).
 Tests clamp, floor, ceil, round, trunc, logical ops, cumsum, cumprod, etc.
 """
 
-import pytest
 import numpy as np
+import pytest
 import torch
+
 import flashlight
 from flashlight import Tensor
 
@@ -113,31 +114,35 @@ class TestNaNInf:
 
     def test_isnan(self):
         """Test isnan function."""
-        x = flashlight.tensor([1.0, float('nan'), 2.0, float('nan')])
+        x = flashlight.tensor([1.0, float("nan"), 2.0, float("nan")])
         result = flashlight.isnan(x)
-        expected = torch.isnan(torch.tensor([1.0, float('nan'), 2.0, float('nan')]))
+        expected = torch.isnan(torch.tensor([1.0, float("nan"), 2.0, float("nan")]))
         assert list(result.tolist()) == expected.tolist()
 
     def test_isinf(self):
         """Test isinf function."""
-        x = flashlight.tensor([1.0, float('inf'), -float('inf'), 2.0])
+        x = flashlight.tensor([1.0, float("inf"), -float("inf"), 2.0])
         result = flashlight.isinf(x)
-        expected = torch.isinf(torch.tensor([1.0, float('inf'), -float('inf'), 2.0]))
+        expected = torch.isinf(torch.tensor([1.0, float("inf"), -float("inf"), 2.0]))
         assert list(result.tolist()) == expected.tolist()
 
     def test_isfinite(self):
         """Test isfinite function."""
-        x = flashlight.tensor([1.0, float('inf'), float('nan'), 2.0])
+        x = flashlight.tensor([1.0, float("inf"), float("nan"), 2.0])
         result = flashlight.isfinite(x)
-        expected = torch.isfinite(torch.tensor([1.0, float('inf'), float('nan'), 2.0]))
+        expected = torch.isfinite(torch.tensor([1.0, float("inf"), float("nan"), 2.0]))
         assert list(result.tolist()) == expected.tolist()
 
     def test_nan_to_num(self):
         """Test nan_to_num function."""
-        x = flashlight.tensor([1.0, float('nan'), float('inf'), -float('inf')])
+        x = flashlight.tensor([1.0, float("nan"), float("inf"), -float("inf")])
         result = flashlight.nan_to_num(x, nan=0.0, posinf=100.0, neginf=-100.0)
-        expected = torch.nan_to_num(torch.tensor([1.0, float('nan'), float('inf'), -float('inf')]),
-                                     nan=0.0, posinf=100.0, neginf=-100.0)
+        expected = torch.nan_to_num(
+            torch.tensor([1.0, float("nan"), float("inf"), -float("inf")]),
+            nan=0.0,
+            posinf=100.0,
+            neginf=-100.0,
+        )
         np.testing.assert_allclose(np.array(result.tolist()), expected.numpy(), rtol=1e-5)
 
 
@@ -149,8 +154,9 @@ class TestLogicalOps:
         x = flashlight.tensor([True, True, False, False])
         y = flashlight.tensor([True, False, True, False])
         result = flashlight.logical_and(x, y)
-        expected = torch.logical_and(torch.tensor([True, True, False, False]),
-                                      torch.tensor([True, False, True, False]))
+        expected = torch.logical_and(
+            torch.tensor([True, True, False, False]), torch.tensor([True, False, True, False])
+        )
         assert list(result.tolist()) == expected.tolist()
 
     def test_logical_or(self):
@@ -158,8 +164,9 @@ class TestLogicalOps:
         x = flashlight.tensor([True, True, False, False])
         y = flashlight.tensor([True, False, True, False])
         result = flashlight.logical_or(x, y)
-        expected = torch.logical_or(torch.tensor([True, True, False, False]),
-                                     torch.tensor([True, False, True, False]))
+        expected = torch.logical_or(
+            torch.tensor([True, True, False, False]), torch.tensor([True, False, True, False])
+        )
         assert list(result.tolist()) == expected.tolist()
 
     def test_logical_not(self):
@@ -174,8 +181,9 @@ class TestLogicalOps:
         x = flashlight.tensor([True, True, False, False])
         y = flashlight.tensor([True, False, True, False])
         result = flashlight.logical_xor(x, y)
-        expected = torch.logical_xor(torch.tensor([True, True, False, False]),
-                                      torch.tensor([True, False, True, False]))
+        expected = torch.logical_xor(
+            torch.tensor([True, True, False, False]), torch.tensor([True, False, True, False])
+        )
         assert list(result.tolist()) == expected.tolist()
 
 
@@ -217,9 +225,12 @@ class TestMathOps:
         t1 = flashlight.tensor([1.0, 2.0, 3.0])
         t2 = flashlight.tensor([1.0, 2.0, 3.0])
         result = flashlight.addcmul(t, t1, t2, value=0.5)
-        expected = torch.addcmul(torch.tensor([1.0, 2.0, 3.0]),
-                                  torch.tensor([1.0, 2.0, 3.0]),
-                                  torch.tensor([1.0, 2.0, 3.0]), value=0.5)
+        expected = torch.addcmul(
+            torch.tensor([1.0, 2.0, 3.0]),
+            torch.tensor([1.0, 2.0, 3.0]),
+            torch.tensor([1.0, 2.0, 3.0]),
+            value=0.5,
+        )
         np.testing.assert_allclose(np.array(result.tolist()), expected.numpy(), rtol=1e-5)
 
     def test_addcdiv(self):
@@ -228,9 +239,12 @@ class TestMathOps:
         t1 = flashlight.tensor([1.0, 2.0, 3.0])
         t2 = flashlight.tensor([2.0, 2.0, 2.0])
         result = flashlight.addcdiv(t, t1, t2, value=0.5)
-        expected = torch.addcdiv(torch.tensor([1.0, 2.0, 3.0]),
-                                  torch.tensor([1.0, 2.0, 3.0]),
-                                  torch.tensor([2.0, 2.0, 2.0]), value=0.5)
+        expected = torch.addcdiv(
+            torch.tensor([1.0, 2.0, 3.0]),
+            torch.tensor([1.0, 2.0, 3.0]),
+            torch.tensor([2.0, 2.0, 2.0]),
+            value=0.5,
+        )
         np.testing.assert_allclose(np.array(result.tolist()), expected.numpy(), rtol=1e-5)
 
 
@@ -242,8 +256,9 @@ class TestModularOps:
         x = flashlight.tensor([5.0, -5.0, 5.0, -5.0])
         y = flashlight.tensor([3.0, 3.0, -3.0, -3.0])
         result = flashlight.fmod(x, y)
-        expected = torch.fmod(torch.tensor([5.0, -5.0, 5.0, -5.0]),
-                               torch.tensor([3.0, 3.0, -3.0, -3.0]))
+        expected = torch.fmod(
+            torch.tensor([5.0, -5.0, 5.0, -5.0]), torch.tensor([3.0, 3.0, -3.0, -3.0])
+        )
         np.testing.assert_allclose(np.array(result.tolist()), expected.numpy(), rtol=1e-5)
 
     def test_remainder(self):
@@ -251,8 +266,9 @@ class TestModularOps:
         x = flashlight.tensor([5.0, -5.0, 5.0, -5.0])
         y = flashlight.tensor([3.0, 3.0, -3.0, -3.0])
         result = flashlight.remainder(x, y)
-        expected = torch.remainder(torch.tensor([5.0, -5.0, 5.0, -5.0]),
-                                    torch.tensor([3.0, 3.0, -3.0, -3.0]))
+        expected = torch.remainder(
+            torch.tensor([5.0, -5.0, 5.0, -5.0]), torch.tensor([3.0, 3.0, -3.0, -3.0])
+        )
         np.testing.assert_allclose(np.array(result.tolist()), expected.numpy(), rtol=1e-5)
 
     def test_floor_divide(self):
@@ -309,9 +325,9 @@ class TestAngleConversion:
 
     def test_rad2deg(self):
         """Test rad2deg function."""
-        x = flashlight.tensor([0.0, np.pi/2, np.pi, 3*np.pi/2, 2*np.pi])
+        x = flashlight.tensor([0.0, np.pi / 2, np.pi, 3 * np.pi / 2, 2 * np.pi])
         result = flashlight.rad2deg(x)
-        expected = torch.rad2deg(torch.tensor([0.0, np.pi/2, np.pi, 3*np.pi/2, 2*np.pi]))
+        expected = torch.rad2deg(torch.tensor([0.0, np.pi / 2, np.pi, 3 * np.pi / 2, 2 * np.pi]))
         np.testing.assert_allclose(np.array(result.tolist()), expected.numpy(), rtol=1e-5)
 
 
@@ -492,11 +508,7 @@ class TestMathFuncsParity:
         result_mlx = flashlight.clamp(x_mlx, min=-0.5, max=0.5)
         result_torch = torch.clamp(x_torch, min=-0.5, max=0.5)
 
-        np.testing.assert_allclose(
-            np.array(result_mlx.tolist()),
-            result_torch.numpy(),
-            rtol=1e-5
-        )
+        np.testing.assert_allclose(np.array(result_mlx.tolist()), result_torch.numpy(), rtol=1e-5)
 
     def test_cumsum_parity_multidim(self):
         """Test cumsum parity with multi-dimensional tensors."""
@@ -508,9 +520,7 @@ class TestMathFuncsParity:
             result_mlx = flashlight.cumsum(x_mlx, dim=dim)
             result_torch = torch.cumsum(x_torch, dim=dim)
             np.testing.assert_allclose(
-                np.array(result_mlx.tolist()),
-                result_torch.numpy(),
-                rtol=1e-5
+                np.array(result_mlx.tolist()), result_torch.numpy(), rtol=1e-5
             )
 
     def test_diff_parity_multidim(self):
@@ -523,7 +533,5 @@ class TestMathFuncsParity:
             result_mlx = flashlight.diff(x_mlx, dim=dim)
             result_torch = torch.diff(x_torch, dim=dim)
             np.testing.assert_allclose(
-                np.array(result_mlx.tolist()),
-                result_torch.numpy(),
-                rtol=1e-5
+                np.array(result_mlx.tolist()), result_torch.numpy(), rtol=1e-5
             )

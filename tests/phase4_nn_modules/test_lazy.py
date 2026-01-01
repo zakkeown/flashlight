@@ -10,9 +10,11 @@ Tests the lazy initialization modules:
 """
 
 import sys
-sys.path.insert(0, '../..')
+
+sys.path.insert(0, "../..")
 
 import unittest
+
 import numpy as np
 import pytest
 
@@ -20,12 +22,14 @@ from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
     import flashlight
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
 
 try:
     import torch
+
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
@@ -345,5 +349,5 @@ class TestLazyModuleReuse(TestCase):
         self.assertEqual(out2.shape, (2, 32, 16, 16))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

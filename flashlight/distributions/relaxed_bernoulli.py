@@ -1,19 +1,22 @@
 """Relaxed Bernoulli Distribution"""
 
 from typing import Optional, Tuple, Union
+
 import mlx.core as mx
 
 from ..tensor import Tensor
-from .distribution import Distribution
 from . import constraints
+from .distribution import Distribution
 
 
 class RelaxedBernoulli(Distribution):
     """Relaxed Bernoulli distribution (Binary Concrete)."""
 
-    arg_constraints = {'temperature': constraints.positive,
-                      'probs': constraints.unit_interval,
-                      'logits': constraints.real}
+    arg_constraints = {
+        "temperature": constraints.positive,
+        "probs": constraints.unit_interval,
+        "logits": constraints.real,
+    }
     support = constraints.unit_interval
     has_rsample = True
 
@@ -27,7 +30,9 @@ class RelaxedBernoulli(Distribution):
         if (probs is None) == (logits is None):
             raise ValueError("Exactly one of probs or logits must be specified")
 
-        self.temperature = temperature._mlx_array if isinstance(temperature, Tensor) else mx.array(temperature)
+        self.temperature = (
+            temperature._mlx_array if isinstance(temperature, Tensor) else mx.array(temperature)
+        )
         if probs is not None:
             self.probs = probs._mlx_array if isinstance(probs, Tensor) else mx.array(probs)
             self.logits = mx.log(self.probs) - mx.log(1 - self.probs)
@@ -60,4 +65,4 @@ class RelaxedBernoulli(Distribution):
         return Tensor(base_log_prob - log_abs_det_jacobian)
 
 
-__all__ = ['RelaxedBernoulli']
+__all__ = ["RelaxedBernoulli"]

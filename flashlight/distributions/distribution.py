@@ -5,6 +5,7 @@ PyTorch-compatible base distribution class.
 """
 
 from typing import Dict, Optional, Tuple
+
 import mlx.core as mx
 
 from ..tensor import Tensor
@@ -119,10 +120,8 @@ class Distribution:
 
     def __repr__(self):
         param_names = [k for k in self.arg_constraints.keys() if hasattr(self, k)]
-        args_string = ", ".join(
-            [f"{p}: {getattr(self, p)}" for p in param_names[:2]]
-        )
+        args_string = ", ".join([f"{p}: {getattr(self, p)}" for p in param_names[:2]])
         return f"{self.__class__.__name__}({args_string})"
 
 
-__all__ = ['Distribution']
+__all__ = ["Distribution"]

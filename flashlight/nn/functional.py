@@ -7,21 +7,24 @@ This module provides functional versions of neural network operations,
 re-exporting from flashlight.ops and adding new functional implementations.
 """
 
-from typing import Optional, Union, Tuple, List
 import warnings
+from typing import List, Optional, Tuple, Union
+
 import mlx.core as mx
 import mlx.nn as mxnn
 
-from ..tensor import Tensor
 from ..autograd.context import is_grad_enabled
 from ..distributions._constants import PROB_EPSILON
-
+from ..tensor import Tensor
 
 # =============================================================================
 # Internal Utilities
 # =============================================================================
 
-def _get_legacy_reduction(size_average: Optional[bool], reduce: Optional[bool], reduction: str) -> str:
+
+def _get_legacy_reduction(
+    size_average: Optional[bool], reduce: Optional[bool], reduction: str
+) -> str:
     """
     Convert deprecated size_average/reduce arguments to reduction string.
 
@@ -40,49 +43,49 @@ def _get_legacy_reduction(size_average: Optional[bool], reduce: Optional[bool], 
         warnings.warn(
             "size_average and reduce args will be deprecated, please use reduction instead.",
             DeprecationWarning,
-            stacklevel=3
+            stacklevel=3,
         )
         if size_average is None:
             size_average = True
         if reduce is None:
             reduce = True
         if reduce:
-            return 'mean' if size_average else 'sum'
-        return 'none'
+            return "mean" if size_average else "sum"
+        return "none"
     return reduction
+
 
 # =============================================================================
 # Activation Functions (re-exported from ops.activations)
 # =============================================================================
 
-from ..ops.activations import (
-    relu,
-    gelu,
-    sigmoid,
-    tanh,
-    softmax,
-    log_softmax,
-    silu,
-    leaky_relu,
-    elu,
-    # New activations
+from ..ops.activations import (  # New activations
     celu,
     celu_,
-    selu,
-    selu_,
+    elu,
+    gelu,
+    glu,
+    hardshrink,
     hardtanh,
     hardtanh_,
-    hardshrink,
+    leaky_relu,
+    log_softmax,
+    logsigmoid,
+    prelu,
+    relu,
+    rrelu,
+    rrelu_,
+    selu,
+    selu_,
+    sigmoid,
+    silu,
+    softmax,
+    softmin,
     softshrink,
+    tanh,
     tanhshrink,
     threshold,
     threshold_,
-    glu,
-    logsigmoid,
-    prelu,
-    softmin,
-    rrelu,
-    rrelu_,
 )
 
 
@@ -160,11 +163,7 @@ def softplus(input: Tensor, beta: float = 1.0, threshold: float = 20.0) -> Tenso
     """
     scaled = input._mlx_array * beta
     # Use linear function for large values to avoid overflow
-    result_array = mx.where(
-        scaled > threshold,
-        input._mlx_array,
-        mx.log(1 + mx.exp(scaled)) / beta
-    )
+    result_array = mx.where(scaled > threshold, input._mlx_array, mx.log(1 + mx.exp(scaled)) / beta)
     result = Tensor._from_mlx_array(result_array)
 
     if is_grad_enabled() and input.requires_grad:
@@ -221,14 +220,14 @@ swish = silu
 # Convolution Operations (re-exported from ops.convolution)
 # =============================================================================
 
-from ..ops.convolution import conv2d
 from ..ops.conv1d import conv1d
 from ..ops.conv3d import conv3d
-
+from ..ops.convolution import conv2d
 
 # =============================================================================
 # Transposed Convolution Operations
 # =============================================================================
+
 
 def conv_transpose1d(
     input: Tensor,
@@ -238,7 +237,7 @@ def conv_transpose1d(
     padding: int = 0,
     output_padding: int = 0,
     groups: int = 1,
-    dilation: int = 1
+    dilation: int = 1,
 ) -> Tensor:
     """
     Apply 1D transposed convolution (deconvolution).
@@ -278,7 +277,7 @@ def conv_transpose1d(
         stride=(1, stride),
         padding=(0, padding),
         dilation=(1, dilation),
-        groups=groups
+        groups=groups,
     )
 
     # Handle output padding
@@ -310,7 +309,7 @@ def conv_transpose2d(
     padding: Union[int, Tuple[int, int]] = 0,
     output_padding: Union[int, Tuple[int, int]] = 0,
     groups: int = 1,
-    dilation: Union[int, Tuple[int, int]] = 1
+    dilation: Union[int, Tuple[int, int]] = 1,
 ) -> Tensor:
     """
     Apply 2D transposed convolution (deconvolution).
@@ -353,7 +352,7 @@ def conv_transpose2d(
         padding=padding,
         dilation=dilation,
         output_padding=output_padding,
-        groups=groups
+        groups=groups,
     )
 
     # Add bias if provided
@@ -379,7 +378,7 @@ def conv_transpose3d(
     padding: Union[int, Tuple[int, int, int]] = 0,
     output_padding: Union[int, Tuple[int, int, int]] = 0,
     groups: int = 1,
-    dilation: Union[int, Tuple[int, int, int]] = 1
+    dilation: Union[int, Tuple[int, int, int]] = 1,
 ) -> Tensor:
     """
     Apply 3D transposed convolution (deconvolution).
@@ -398,9 +397,8 @@ def conv_transpose3d(
         Output tensor of shape [N, C_out, D_out, H_out, W_out]
     """
     from ..ops.conv3d import conv_transpose3d as _conv_transpose3d
-    return _conv_transpose3d(
-        input, weight, bias, stride, padding, output_padding, groups, dilation
-    )
+
+    return _conv_transpose3d(input, weight, bias, stride, padding, output_padding, groups, dilation)
 
 
 # =============================================================================
@@ -408,20 +406,22 @@ def conv_transpose3d(
 # =============================================================================
 
 from ..ops.pooling import (
-    max_pool2d, avg_pool2d,
-    max_pool1d, avg_pool1d,
-    max_pool3d, avg_pool3d,
     adaptive_avg_pool1d,
     adaptive_avg_pool3d,
 )
 from ..ops.pooling import adaptive_max_pool1d as _adaptive_max_pool1d_with_indices
 from ..ops.pooling import adaptive_max_pool3d as _adaptive_max_pool3d_with_indices
+from ..ops.pooling import (
+    avg_pool1d,
+    avg_pool2d,
+    avg_pool3d,
+    max_pool1d,
+    max_pool2d,
+    max_pool3d,
+)
 
 
-def adaptive_avg_pool2d(
-    input: Tensor,
-    output_size: Union[int, Tuple[int, int]]
-) -> Tensor:
+def adaptive_avg_pool2d(input: Tensor, output_size: Union[int, Tuple[int, int]]) -> Tensor:
     """
     Apply 2D adaptive average pooling.
 
@@ -463,9 +463,7 @@ def adaptive_avg_pool2d(
 
 
 def adaptive_max_pool2d(
-    input: Tensor,
-    output_size: Union[int, Tuple[int, int]],
-    return_indices: bool = False
+    input: Tensor, output_size: Union[int, Tuple[int, int]], return_indices: bool = False
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
     """
     Apply 2D adaptive max pooling.
@@ -512,9 +510,7 @@ def adaptive_max_pool2d(
 
 
 def adaptive_max_pool1d(
-    input: Tensor,
-    output_size: int,
-    return_indices: bool = False
+    input: Tensor, output_size: int, return_indices: bool = False
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
     """
     Apply 1D adaptive max pooling.
@@ -535,9 +531,7 @@ def adaptive_max_pool1d(
 
 
 def adaptive_max_pool3d(
-    input: Tensor,
-    output_size: Union[int, Tuple[int, int, int]],
-    return_indices: bool = False
+    input: Tensor, output_size: Union[int, Tuple[int, int, int]], return_indices: bool = False
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
     """
     Apply 3D adaptive max pooling.
@@ -563,12 +557,13 @@ def adaptive_max_pool3d(
 # LP Pooling Operations
 # =============================================================================
 
+
 def lp_pool1d(
     input: Tensor,
     norm_type: float,
     kernel_size: int,
     stride: Optional[int] = None,
-    ceil_mode: bool = False
+    ceil_mode: bool = False,
 ) -> Tensor:
     """
     Apply 1D power-average pooling.
@@ -624,7 +619,7 @@ def lp_pool2d(
     norm_type: float,
     kernel_size: Union[int, Tuple[int, int]],
     stride: Optional[Union[int, Tuple[int, int]]] = None,
-    ceil_mode: bool = False
+    ceil_mode: bool = False,
 ) -> Tensor:
     """
     Apply 2D power-average pooling.
@@ -690,11 +685,8 @@ def lp_pool2d(
 # Linear Operations
 # =============================================================================
 
-def linear(
-    input: Tensor,
-    weight: Tensor,
-    bias: Optional[Tensor] = None
-) -> Tensor:
+
+def linear(input: Tensor, weight: Tensor, bias: Optional[Tensor] = None) -> Tensor:
     """
     Apply linear transformation: y = xW^T + b.
 
@@ -714,8 +706,9 @@ def linear(
 
     result = Tensor._from_mlx_array(result_array)
 
-    if is_grad_enabled() and (input.requires_grad or weight.requires_grad or
-                               (bias is not None and bias.requires_grad)):
+    if is_grad_enabled() and (
+        input.requires_grad or weight.requires_grad or (bias is not None and bias.requires_grad)
+    ):
         result.requires_grad = True
 
     return result
@@ -725,12 +718,8 @@ def linear(
 # Dropout Operations
 # =============================================================================
 
-def dropout(
-    input: Tensor,
-    p: float = 0.5,
-    training: bool = True,
-    inplace: bool = False
-) -> Tensor:
+
+def dropout(input: Tensor, p: float = 0.5, training: bool = True, inplace: bool = False) -> Tensor:
     """
     Apply dropout during training.
 
@@ -765,10 +754,7 @@ def dropout(
 
 
 def dropout2d(
-    input: Tensor,
-    p: float = 0.5,
-    training: bool = True,
-    inplace: bool = False
+    input: Tensor, p: float = 0.5, training: bool = True, inplace: bool = False
 ) -> Tensor:
     """
     Apply 2D dropout (drops entire channels).
@@ -804,10 +790,7 @@ def dropout2d(
 
 
 def dropout1d(
-    input: Tensor,
-    p: float = 0.5,
-    training: bool = True,
-    inplace: bool = False
+    input: Tensor, p: float = 0.5, training: bool = True, inplace: bool = False
 ) -> Tensor:
     """
     Apply 1D dropout (drops entire channels).
@@ -843,10 +826,7 @@ def dropout1d(
 
 
 def dropout3d(
-    input: Tensor,
-    p: float = 0.5,
-    training: bool = True,
-    inplace: bool = False
+    input: Tensor, p: float = 0.5, training: bool = True, inplace: bool = False
 ) -> Tensor:
     """
     Apply 3D dropout (drops entire channels).
@@ -882,10 +862,7 @@ def dropout3d(
 
 
 def alpha_dropout(
-    input: Tensor,
-    p: float = 0.5,
-    training: bool = False,
-    inplace: bool = False
+    input: Tensor, p: float = 0.5, training: bool = False, inplace: bool = False
 ) -> Tensor:
     """
     Apply alpha dropout for SELU networks.
@@ -915,7 +892,7 @@ def alpha_dropout(
     keep_prob = 1.0 - p
 
     # Compute scaling factors to maintain variance
-    a = ((1.0 - p) * (1.0 + p * alpha_p ** 2)) ** (-0.5)
+    a = ((1.0 - p) * (1.0 + p * alpha_p**2)) ** (-0.5)
     b = -a * alpha_p * p
 
     # Generate mask
@@ -934,10 +911,7 @@ def alpha_dropout(
 
 
 def feature_alpha_dropout(
-    input: Tensor,
-    p: float = 0.5,
-    training: bool = False,
-    inplace: bool = False
+    input: Tensor, p: float = 0.5, training: bool = False, inplace: bool = False
 ) -> Tensor:
     """
     Apply feature-wise alpha dropout for SELU networks.
@@ -964,7 +938,7 @@ def feature_alpha_dropout(
     keep_prob = 1.0 - p
 
     # Compute scaling factors
-    a = ((1.0 - p) * (1.0 + p * alpha_p ** 2)) ** (-0.5)
+    a = ((1.0 - p) * (1.0 + p * alpha_p**2)) ** (-0.5)
     b = -a * alpha_p * p
 
     # Generate per-channel mask
@@ -989,6 +963,7 @@ def feature_alpha_dropout(
 # Normalization Operations
 # =============================================================================
 
+
 def batch_norm(
     input: Tensor,
     running_mean: Optional[Tensor],
@@ -997,7 +972,7 @@ def batch_norm(
     bias: Optional[Tensor] = None,
     training: bool = False,
     momentum: float = 0.1,
-    eps: float = 1e-5
+    eps: float = 1e-5,
 ) -> Tensor:
     """
     Apply batch normalization.
@@ -1073,7 +1048,7 @@ def layer_norm(
     normalized_shape: Union[int, List[int], Tuple[int, ...]],
     weight: Optional[Tensor] = None,
     bias: Optional[Tensor] = None,
-    eps: float = 1e-5
+    eps: float = 1e-5,
 ) -> Tensor:
     """
     Apply layer normalization.
@@ -1119,7 +1094,7 @@ def group_norm(
     num_groups: int,
     weight: Optional[Tensor] = None,
     bias: Optional[Tensor] = None,
-    eps: float = 1e-5
+    eps: float = 1e-5,
 ) -> Tensor:
     """
     Apply group normalization.
@@ -1175,7 +1150,7 @@ def instance_norm(
     bias: Optional[Tensor] = None,
     use_input_stats: bool = True,
     momentum: float = 0.1,
-    eps: float = 1e-5
+    eps: float = 1e-5,
 ) -> Tensor:
     """
     Apply instance normalization.
@@ -1227,13 +1202,14 @@ def instance_norm(
 # Loss Functions
 # =============================================================================
 
+
 def mse_loss(
     input: Tensor,
     target: Tensor,
     size_average: Optional[bool] = None,
     reduce: Optional[bool] = None,
-    reduction: str = 'mean',
-    weight: Optional[Tensor] = None
+    reduction: str = "mean",
+    weight: Optional[Tensor] = None,
 ) -> Tensor:
     """
     Mean squared error loss.
@@ -1257,11 +1233,11 @@ def mse_loss(
     if weight is not None:
         loss = loss * weight._mlx_array
 
-    if reduction == 'mean':
+    if reduction == "mean":
         loss = mx.mean(loss)
-    elif reduction == 'sum':
+    elif reduction == "sum":
         loss = mx.sum(loss)
-    elif reduction != 'none':
+    elif reduction != "none":
         raise ValueError(f"Invalid reduction: {reduction}")
 
     result = Tensor._from_mlx_array(loss)
@@ -1277,8 +1253,8 @@ def l1_loss(
     target: Tensor,
     size_average: Optional[bool] = None,
     reduce: Optional[bool] = None,
-    reduction: str = 'mean',
-    weight: Optional[Tensor] = None
+    reduction: str = "mean",
+    weight: Optional[Tensor] = None,
 ) -> Tensor:
     """
     Mean absolute error loss.
@@ -1301,11 +1277,11 @@ def l1_loss(
     if weight is not None:
         loss = loss * weight._mlx_array
 
-    if reduction == 'mean':
+    if reduction == "mean":
         loss = mx.mean(loss)
-    elif reduction == 'sum':
+    elif reduction == "sum":
         loss = mx.sum(loss)
-    elif reduction != 'none':
+    elif reduction != "none":
         raise ValueError(f"Invalid reduction: {reduction}")
 
     result = Tensor._from_mlx_array(loss)
@@ -1323,8 +1299,8 @@ def cross_entropy(
     size_average: Optional[bool] = None,
     ignore_index: int = -100,
     reduce: Optional[bool] = None,
-    reduction: str = 'mean',
-    label_smoothing: float = 0.0
+    reduction: str = "mean",
+    label_smoothing: float = 0.0,
 ) -> Tensor:
     """
     Cross entropy loss with logits.
@@ -1357,7 +1333,9 @@ def cross_entropy(
         # where uniform_loss = -mean(log_probs)
 
         # Compute standard NLL loss component
-        nll = nll_loss(log_probs, target, weight=weight, ignore_index=ignore_index, reduction='none')
+        nll = nll_loss(
+            log_probs, target, weight=weight, ignore_index=ignore_index, reduction="none"
+        )
 
         # Compute smooth loss: -mean of all log probs (KL div to uniform)
         # This is equivalent to: -sum(log_probs) / n_classes for each sample
@@ -1372,19 +1350,23 @@ def cross_entropy(
         combined_loss = (1.0 - label_smoothing) * nll._mlx_array + label_smoothing * smooth_loss
 
         # Apply reduction
-        if reduction == 'none':
+        if reduction == "none":
             return Tensor._from_mlx_array(combined_loss)
-        elif reduction == 'sum':
+        elif reduction == "sum":
             return Tensor._from_mlx_array(mx.sum(combined_loss))
         else:  # mean
             if ignore_index >= 0:
                 mask = target._mlx_array != ignore_index
-                return Tensor._from_mlx_array(mx.sum(combined_loss) / mx.sum(mask.astype(combined_loss.dtype)))
+                return Tensor._from_mlx_array(
+                    mx.sum(combined_loss) / mx.sum(mask.astype(combined_loss.dtype))
+                )
             else:
                 return Tensor._from_mlx_array(mx.mean(combined_loss))
 
     # Use nll_loss on log_softmax output (no label smoothing)
-    return nll_loss(log_probs, target, weight=weight, ignore_index=ignore_index, reduction=reduction)
+    return nll_loss(
+        log_probs, target, weight=weight, ignore_index=ignore_index, reduction=reduction
+    )
 
 
 def nll_loss(
@@ -1394,7 +1376,7 @@ def nll_loss(
     size_average: Optional[bool] = None,
     ignore_index: int = -100,
     reduce: Optional[bool] = None,
-    reduction: str = 'mean'
+    reduction: str = "mean",
 ) -> Tensor:
     """
     Negative log likelihood loss.
@@ -1440,15 +1422,15 @@ def nll_loss(
         nll = nll * class_weights
 
     # Reduction
-    if reduction == 'mean':
+    if reduction == "mean":
         if ignore_index >= 0:
             n_valid = mx.sum(mask.astype(mx.float32))
             loss = mx.sum(nll) / mx.maximum(n_valid, mx.array(1.0))
         else:
             loss = mx.mean(nll)
-    elif reduction == 'sum':
+    elif reduction == "sum":
         loss = mx.sum(nll)
-    elif reduction == 'none':
+    elif reduction == "none":
         loss = nll
     else:
         raise ValueError(f"Invalid reduction: {reduction}")
@@ -1467,7 +1449,7 @@ def binary_cross_entropy(
     weight: Optional[Tensor] = None,
     size_average: Optional[bool] = None,
     reduce: Optional[bool] = None,
-    reduction: str = 'mean'
+    reduction: str = "mean",
 ) -> Tensor:
     """
     Binary cross entropy loss.
@@ -1486,16 +1468,18 @@ def binary_cross_entropy(
     reduction = _get_legacy_reduction(size_average, reduce, reduction)
     input_clamped = mx.clip(input._mlx_array, PROB_EPSILON, 1.0 - PROB_EPSILON)
 
-    loss = -target._mlx_array * mx.log(input_clamped) - (1 - target._mlx_array) * mx.log(1 - input_clamped)
+    loss = -target._mlx_array * mx.log(input_clamped) - (1 - target._mlx_array) * mx.log(
+        1 - input_clamped
+    )
 
     if weight is not None:
         loss = loss * weight._mlx_array
 
-    if reduction == 'mean':
+    if reduction == "mean":
         loss = mx.mean(loss)
-    elif reduction == 'sum':
+    elif reduction == "sum":
         loss = mx.sum(loss)
-    elif reduction != 'none':
+    elif reduction != "none":
         raise ValueError(f"Invalid reduction: {reduction}")
 
     result = Tensor._from_mlx_array(loss)
@@ -1512,8 +1496,8 @@ def binary_cross_entropy_with_logits(
     weight: Optional[Tensor] = None,
     size_average: Optional[bool] = None,
     reduce: Optional[bool] = None,
-    reduction: str = 'mean',
-    pos_weight: Optional[Tensor] = None
+    reduction: str = "mean",
+    pos_weight: Optional[Tensor] = None,
 ) -> Tensor:
     """
     Binary cross entropy with logits (more numerically stable).
@@ -1538,18 +1522,20 @@ def binary_cross_entropy_with_logits(
 
     if pos_weight is not None:
         pw = pos_weight._mlx_array
-        loss = (1 - z) * x + (1 + (pw - 1) * z) * (mx.maximum(-x, mx.array(0.0)) + mx.log(1 + mx.exp(-mx.abs(x))))
+        loss = (1 - z) * x + (1 + (pw - 1) * z) * (
+            mx.maximum(-x, mx.array(0.0)) + mx.log(1 + mx.exp(-mx.abs(x)))
+        )
     else:
         loss = mx.maximum(x, mx.array(0.0)) - x * z + mx.log(1 + mx.exp(-mx.abs(x)))
 
     if weight is not None:
         loss = loss * weight._mlx_array
 
-    if reduction == 'mean':
+    if reduction == "mean":
         loss = mx.mean(loss)
-    elif reduction == 'sum':
+    elif reduction == "sum":
         loss = mx.sum(loss)
-    elif reduction != 'none':
+    elif reduction != "none":
         raise ValueError(f"Invalid reduction: {reduction}")
 
     result = Tensor._from_mlx_array(loss)
@@ -1565,8 +1551,8 @@ def smooth_l1_loss(
     target: Tensor,
     size_average: Optional[bool] = None,
     reduce: Optional[bool] = None,
-    reduction: str = 'mean',
-    beta: float = 1.0
+    reduction: str = "mean",
+    beta: float = 1.0,
 ) -> Tensor:
     """
     Smooth L1 loss (Huber loss).
@@ -1584,17 +1570,13 @@ def smooth_l1_loss(
     """
     reduction = _get_legacy_reduction(size_average, reduce, reduction)
     diff = mx.abs(input._mlx_array - target._mlx_array)
-    loss = mx.where(
-        diff < beta,
-        0.5 * diff * diff / beta,
-        diff - 0.5 * beta
-    )
+    loss = mx.where(diff < beta, 0.5 * diff * diff / beta, diff - 0.5 * beta)
 
-    if reduction == 'mean':
+    if reduction == "mean":
         loss = mx.mean(loss)
-    elif reduction == 'sum':
+    elif reduction == "sum":
         loss = mx.sum(loss)
-    elif reduction != 'none':
+    elif reduction != "none":
         raise ValueError(f"Invalid reduction: {reduction}")
 
     result = Tensor._from_mlx_array(loss)
@@ -1609,13 +1591,14 @@ def smooth_l1_loss(
 # RNN Functional Operations
 # =============================================================================
 
+
 def rnn_tanh_cell(
     input: Tensor,
     hx: Tensor,
     w_ih: Tensor,
     w_hh: Tensor,
     b_ih: Optional[Tensor] = None,
-    b_hh: Optional[Tensor] = None
+    b_hh: Optional[Tensor] = None,
 ) -> Tensor:
     """
     Apply an Elman RNN cell with tanh non-linearity.
@@ -1653,7 +1636,7 @@ def rnn_relu_cell(
     w_ih: Tensor,
     w_hh: Tensor,
     b_ih: Optional[Tensor] = None,
-    b_hh: Optional[Tensor] = None
+    b_hh: Optional[Tensor] = None,
 ) -> Tensor:
     """
     Apply an Elman RNN cell with ReLU non-linearity.
@@ -1691,7 +1674,7 @@ def lstm_cell(
     w_ih: Tensor,
     w_hh: Tensor,
     b_ih: Optional[Tensor] = None,
-    b_hh: Optional[Tensor] = None
+    b_hh: Optional[Tensor] = None,
 ) -> Tuple[Tensor, Tensor]:
     """
     Apply an LSTM cell.
@@ -1745,7 +1728,7 @@ def gru_cell(
     w_ih: Tensor,
     w_hh: Tensor,
     b_ih: Optional[Tensor] = None,
-    b_hh: Optional[Tensor] = None
+    b_hh: Optional[Tensor] = None,
 ) -> Tensor:
     """
     Apply a GRU cell.
@@ -1789,6 +1772,7 @@ def gru_cell(
 # Embedding Operations
 # =============================================================================
 
+
 def embedding(
     input: Tensor,
     weight: Tensor,
@@ -1796,7 +1780,7 @@ def embedding(
     max_norm: Optional[float] = None,
     norm_type: float = 2.0,
     scale_grad_by_freq: bool = False,
-    sparse: bool = False
+    sparse: bool = False,
 ) -> Tensor:
     """
     Embedding lookup.
@@ -1821,13 +1805,11 @@ def embedding(
 
     if is_grad_enabled() and weight.requires_grad:
         from ..autograd.function import EmbeddingBackward
+
         num_embeddings, embedding_dim = weight.shape
         result.requires_grad = True
         grad_fn = EmbeddingBackward(
-            weight, indices,
-            num_embeddings, embedding_dim,
-            padding_idx=padding_idx,
-            sparse=sparse
+            weight, indices, num_embeddings, embedding_dim, padding_idx=padding_idx, sparse=sparse
         )
         grad_fn.output_tensor = result
         result._grad_fn = grad_fn
@@ -1842,11 +1824,11 @@ def embedding_bag(
     max_norm: Optional[float] = None,
     norm_type: float = 2,
     scale_grad_by_freq: bool = False,
-    mode: str = 'mean',
+    mode: str = "mean",
     sparse: bool = False,
     per_sample_weights: Optional[Tensor] = None,
     include_last_offset: bool = False,
-    padding_idx: Optional[int] = None
+    padding_idx: Optional[int] = None,
 ) -> Tensor:
     """
     Compute sums or means of 'bags' of embeddings.
@@ -1879,7 +1861,7 @@ def embedding_bag(
     """
     if scale_grad_by_freq:
         warnings.warn("scale_grad_by_freq is not supported in MLX")
-    if mode not in ['sum', 'mean', 'max']:
+    if mode not in ["sum", "mean", "max"]:
         raise ValueError(f"mode must be 'sum', 'mean', or 'max', got '{mode}'")
 
     weight_data = weight._mlx_array
@@ -1887,7 +1869,9 @@ def embedding_bag(
 
     # Validate weight shape
     if weight_data.ndim != 2:
-        raise ValueError(f"weight must be a 2D tensor (num_embeddings, embedding_dim), got {weight_data.ndim}D")
+        raise ValueError(
+            f"weight must be a 2D tensor (num_embeddings, embedding_dim), got {weight_data.ndim}D"
+        )
 
     # Apply max_norm if specified
     if max_norm is not None:
@@ -1918,9 +1902,9 @@ def embedding_bag(
             embeddings = embeddings * mx.expand_dims(psw, axis=-1)
 
         # Aggregate
-        if mode == 'sum':
+        if mode == "sum":
             result_data = mx.sum(embeddings, axis=1)
-        elif mode == 'mean':
+        elif mode == "mean":
             if padding_idx is not None:
                 # Mean over non-padding elements
                 count = mx.sum(mask, axis=1)
@@ -1949,10 +1933,7 @@ def embedding_bag(
             num_bags = len(offsets_data) - 1
         else:
             # Add length of input as final boundary
-            bag_boundaries = mx.concatenate([
-                offsets_data,
-                mx.array([len(indices)])
-            ])
+            bag_boundaries = mx.concatenate([offsets_data, mx.array([len(indices)])])
             num_bags = len(offsets_data)
 
         # Process each bag
@@ -1980,9 +1961,9 @@ def embedding_bag(
                     bag_embeddings = bag_embeddings * mx.expand_dims(psw, axis=-1)
 
                 # Aggregate
-                if mode == 'sum':
+                if mode == "sum":
                     results.append(mx.sum(bag_embeddings, axis=0))
-                elif mode == 'mean':
+                elif mode == "mean":
                     if padding_idx is not None:
                         count = mx.sum(mask)
                         count = mx.maximum(count, 1.0)
@@ -2000,6 +1981,7 @@ def embedding_bag(
 
     if is_grad_enabled() and weight.requires_grad:
         from ..autograd.function import EmbeddingBagBackward
+
         num_embeddings, embedding_dim = weight.shape
         result.requires_grad = True
 
@@ -2009,12 +1991,18 @@ def embedding_bag(
         psw_for_backward = per_sample_weights._mlx_array if per_sample_weights is not None else None
 
         grad_fn = EmbeddingBagBackward(
-            weight, indices_for_backward, offsets_for_backward,
-            num_embeddings, embedding_dim,
-            mode=mode, padding_idx=padding_idx, sparse=sparse,
+            weight,
+            indices_for_backward,
+            offsets_for_backward,
+            num_embeddings,
+            embedding_dim,
+            mode=mode,
+            padding_idx=padding_idx,
+            sparse=sparse,
             per_sample_weights=psw_for_backward,
             include_last_offset=include_last_offset,
-            is_2d_input=is_2d_input, bag_size=bag_size
+            is_2d_input=is_2d_input,
+            bag_size=bag_size,
         )
         grad_fn.output_tensor = result
         result._grad_fn = grad_fn
@@ -2025,6 +2013,7 @@ def embedding_bag(
 # =============================================================================
 # Padding Operations
 # =============================================================================
+
 
 def _pad_reflect(x: "mx.array", pad_pairs: list) -> "mx.array":
     """
@@ -2175,10 +2164,7 @@ def _pad_circular(x: "mx.array", pad_pairs: list) -> "mx.array":
 
 
 def pad(
-    input: Tensor,
-    pad: Tuple[int, ...],
-    mode: str = 'constant',
-    value: Optional[float] = None
+    input: Tensor, pad: Tuple[int, ...], mode: str = "constant", value: Optional[float] = None
 ) -> Tensor:
     """
     Pad a tensor.
@@ -2208,13 +2194,13 @@ def pad(
         if dim_idx >= 0:
             pad_pairs[dim_idx] = (pad[i], pad[i + 1])
 
-    if mode == 'constant':
+    if mode == "constant":
         result_array = mx.pad(input._mlx_array, pad_pairs, constant_values=value)
-    elif mode == 'reflect':
+    elif mode == "reflect":
         result_array = _pad_reflect(input._mlx_array, pad_pairs)
-    elif mode == 'replicate':
+    elif mode == "replicate":
         result_array = _pad_replicate(input._mlx_array, pad_pairs)
-    elif mode == 'circular':
+    elif mode == "circular":
         result_array = _pad_circular(input._mlx_array, pad_pairs)
     else:
         raise ValueError(f"Invalid padding mode: {mode}")
@@ -2327,9 +2313,7 @@ def channel_shuffle(input: Tensor, groups: int) -> Tensor:
     N, C = input.shape[0], input.shape[1]
 
     if C % groups != 0:
-        raise ValueError(
-            f"Number of channels ({C}) must be divisible by groups ({groups})"
-        )
+        raise ValueError(f"Number of channels ({C}) must be divisible by groups ({groups})")
 
     channels_per_group = C // groups
     x = input._mlx_array
@@ -2362,14 +2346,15 @@ def channel_shuffle(input: Tensor, groups: int) -> Tensor:
 # Interpolation Operations
 # =============================================================================
 
+
 def interpolate(
     input: Tensor,
     size: Optional[Union[int, Tuple[int, ...]]] = None,
     scale_factor: Optional[Union[float, Tuple[float, ...]]] = None,
-    mode: str = 'nearest',
+    mode: str = "nearest",
     align_corners: Optional[bool] = None,
     recompute_scale_factor: Optional[bool] = None,
-    antialias: bool = False
+    antialias: bool = False,
 ) -> Tensor:
     """
     Upsample/downsample input tensor.
@@ -2408,40 +2393,40 @@ def interpolate(
             scale_factor = (scale_factor,) * len(spatial_dims)
         target_size = tuple(int(s * f) for s, f in zip(spatial_dims, scale_factor))
 
-    if mode == 'nearest':
+    if mode == "nearest":
         # Simple nearest neighbor interpolation
         result_array = _nearest_interpolate(input._mlx_array, target_size)
-    elif mode == 'bilinear':
+    elif mode == "bilinear":
         # Bilinear interpolation for 4D tensors
         # Default align_corners to False if not specified
         if align_corners is None:
             align_corners = False
         result_array = _bilinear_interpolate(input._mlx_array, target_size, align_corners)
-    elif mode == 'linear':
+    elif mode == "linear":
         # Linear is 1D interpolation - need 3D input
         if len(input.shape) != 3:
             raise ValueError("Linear interpolation requires 3D input (N, C, L)")
         if align_corners is None:
             align_corners = False
         result_array = _linear_interpolate(input._mlx_array, target_size, align_corners)
-    elif mode == 'bicubic':
+    elif mode == "bicubic":
         # Bicubic interpolation for 4D tensors
         if len(input.shape) != 4:
             raise ValueError("Bicubic interpolation requires 4D input (N, C, H, W)")
         if align_corners is None:
             align_corners = False
         result_array = _bicubic_interpolate(input._mlx_array, target_size, align_corners)
-    elif mode == 'trilinear':
+    elif mode == "trilinear":
         # Trilinear interpolation for 5D tensors
         if len(input.shape) != 5:
             raise ValueError("Trilinear interpolation requires 5D input (N, C, D, H, W)")
         if align_corners is None:
             align_corners = False
         result_array = _trilinear_interpolate(input._mlx_array, target_size, align_corners)
-    elif mode == 'area':
+    elif mode == "area":
         # Area-based interpolation (adaptive average pooling approach)
         result_array = _area_interpolate(input._mlx_array, target_size)
-    elif mode == 'nearest-exact':
+    elif mode == "nearest-exact":
         # Nearest-exact uses more mathematically consistent indexing
         result_array = _nearest_exact_interpolate(input._mlx_array, target_size)
     else:
@@ -2630,10 +2615,7 @@ def _bilinear_interpolate(x, target_size, align_corners=False):
     v11 = x[:, :, y1, :][:, :, :, x1]  # bottom-right
 
     # Bilinear interpolation
-    result = (v00 * (1 - fy) * (1 - fx) +
-              v01 * (1 - fy) * fx +
-              v10 * fy * (1 - fx) +
-              v11 * fy * fx)
+    result = v00 * (1 - fy) * (1 - fx) + v01 * (1 - fy) * fx + v10 * fy * (1 - fx) + v11 * fy * fx
 
     return result
 
@@ -2731,7 +2713,7 @@ def _bicubic_interpolate(x, target_size, align_corners=False):
     x_frac = x_src - x_base.astype(mx.float32)
 
     # Pad input for boundary handling
-    x_padded = mx.pad(x, [(0, 0), (0, 0), (1, 2), (1, 2)], mode='edge')
+    x_padded = mx.pad(x, [(0, 0), (0, 0), (1, 2), (1, 2)], mode="edge")
 
     # Adjust base indices for padding
     y_base = y_base + 1
@@ -2828,14 +2810,16 @@ def _trilinear_interpolate(x, target_size, align_corners=False):
     v111 = x[:, :, d1, :, :][:, :, :, h1, :][:, :, :, :, w1]
 
     # Trilinear interpolation
-    result = (v000 * (1 - fd) * (1 - fh) * (1 - fw) +
-              v001 * (1 - fd) * (1 - fh) * fw +
-              v010 * (1 - fd) * fh * (1 - fw) +
-              v011 * (1 - fd) * fh * fw +
-              v100 * fd * (1 - fh) * (1 - fw) +
-              v101 * fd * (1 - fh) * fw +
-              v110 * fd * fh * (1 - fw) +
-              v111 * fd * fh * fw)
+    result = (
+        v000 * (1 - fd) * (1 - fh) * (1 - fw)
+        + v001 * (1 - fd) * (1 - fh) * fw
+        + v010 * (1 - fd) * fh * (1 - fw)
+        + v011 * (1 - fd) * fh * fw
+        + v100 * fd * (1 - fh) * (1 - fw)
+        + v101 * fd * (1 - fh) * fw
+        + v110 * fd * fh * (1 - fw)
+        + v111 * fd * fh * fw
+    )
 
     return result
 
@@ -2934,8 +2918,8 @@ def upsample(
     input: Tensor,
     size: Optional[Union[int, Tuple[int, ...]]] = None,
     scale_factor: Optional[Union[float, Tuple[float, ...]]] = None,
-    mode: str = 'nearest',
-    align_corners: Optional[bool] = None
+    mode: str = "nearest",
+    align_corners: Optional[bool] = None,
 ) -> Tensor:
     """
     Upsample input tensor (deprecated, use interpolate instead).
@@ -2955,15 +2939,17 @@ def upsample(
     warnings.warn(
         "nn.functional.upsample is deprecated. Use nn.functional.interpolate instead.",
         DeprecationWarning,
-        stacklevel=2
+        stacklevel=2,
     )
-    return interpolate(input, size=size, scale_factor=scale_factor, mode=mode, align_corners=align_corners)
+    return interpolate(
+        input, size=size, scale_factor=scale_factor, mode=mode, align_corners=align_corners
+    )
 
 
 def upsample_nearest(
     input: Tensor,
     size: Optional[Union[int, Tuple[int, ...]]] = None,
-    scale_factor: Optional[Union[float, Tuple[float, ...]]] = None
+    scale_factor: Optional[Union[float, Tuple[float, ...]]] = None,
 ) -> Tensor:
     """
     Upsample input using nearest neighbor interpolation (deprecated).
@@ -2981,15 +2967,15 @@ def upsample_nearest(
     warnings.warn(
         "nn.functional.upsample_nearest is deprecated. Use nn.functional.interpolate instead.",
         DeprecationWarning,
-        stacklevel=2
+        stacklevel=2,
     )
-    return interpolate(input, size=size, scale_factor=scale_factor, mode='nearest')
+    return interpolate(input, size=size, scale_factor=scale_factor, mode="nearest")
 
 
 def upsample_bilinear(
     input: Tensor,
     size: Optional[Union[int, Tuple[int, ...]]] = None,
-    scale_factor: Optional[Union[float, Tuple[float, ...]]] = None
+    scale_factor: Optional[Union[float, Tuple[float, ...]]] = None,
 ) -> Tensor:
     """
     Upsample input using bilinear interpolation (deprecated).
@@ -3007,26 +2993,24 @@ def upsample_bilinear(
     warnings.warn(
         "nn.functional.upsample_bilinear is deprecated. Use nn.functional.interpolate instead.",
         DeprecationWarning,
-        stacklevel=2
+        stacklevel=2,
     )
     # PyTorch's upsample_bilinear uses align_corners=True by default
-    return interpolate(input, size=size, scale_factor=scale_factor, mode='bilinear', align_corners=True)
+    return interpolate(
+        input, size=size, scale_factor=scale_factor, mode="bilinear", align_corners=True
+    )
 
 
 # Re-export scaled_dot_product_attention from attention layers
 from .layers.attention import scaled_dot_product_attention
 
-
 # =============================================================================
 # Other Utility Functions
 # =============================================================================
 
+
 def normalize(
-    input: Tensor,
-    p: float = 2.0,
-    dim: int = 1,
-    eps: float = 1e-12,
-    out: Optional[Tensor] = None
+    input: Tensor, p: float = 2.0, dim: int = 1, eps: float = 1e-12, out: Optional[Tensor] = None
 ) -> Tensor:
     """
     Normalize input along a dimension.
@@ -3044,14 +3028,16 @@ def normalize(
     if out is not None:
         raise NotImplementedError("out parameter is not supported")
     if p == 2.0:
-        norm = mx.sqrt(mx.sum(input._mlx_array ** 2, axis=dim, keepdims=True) + eps)
+        norm = mx.sqrt(mx.sum(input._mlx_array**2, axis=dim, keepdims=True) + eps)
     elif p == 1.0:
         norm = mx.sum(mx.abs(input._mlx_array), axis=dim, keepdims=True) + eps
     else:
-        norm = mx.power(
-            mx.sum(mx.power(mx.abs(input._mlx_array), p), axis=dim, keepdims=True),
-            1.0 / p
-        ) + eps
+        norm = (
+            mx.power(
+                mx.sum(mx.power(mx.abs(input._mlx_array), p), axis=dim, keepdims=True), 1.0 / p
+            )
+            + eps
+        )
 
     result_array = input._mlx_array / norm
     result = Tensor._from_mlx_array(result_array)
@@ -3062,10 +3048,7 @@ def normalize(
     return result
 
 
-def one_hot(
-    input: Tensor,
-    num_classes: int = -1
-) -> Tensor:
+def one_hot(input: Tensor, num_classes: int = -1) -> Tensor:
     """
     Create one-hot encoding.
 
@@ -3087,12 +3070,8 @@ def one_hot(
 # Distance Functions
 # =============================================================================
 
-def cosine_similarity(
-    x1: Tensor,
-    x2: Tensor,
-    dim: int = 1,
-    eps: float = 1e-8
-) -> Tensor:
+
+def cosine_similarity(x1: Tensor, x2: Tensor, dim: int = 1, eps: float = 1e-8) -> Tensor:
     """
     Compute cosine similarity between x1 and x2 along a dimension.
 
@@ -3116,8 +3095,8 @@ def cosine_similarity(
     dot = mx.sum(x1._mlx_array * x2._mlx_array, axis=dim)
 
     # Compute norms
-    norm1 = mx.sqrt(mx.sum(x1._mlx_array ** 2, axis=dim) + eps)
-    norm2 = mx.sqrt(mx.sum(x2._mlx_array ** 2, axis=dim) + eps)
+    norm1 = mx.sqrt(mx.sum(x1._mlx_array**2, axis=dim) + eps)
+    norm2 = mx.sqrt(mx.sum(x2._mlx_array**2, axis=dim) + eps)
 
     # Cosine similarity
     result_array = dot / (norm1 * norm2)
@@ -3130,11 +3109,7 @@ def cosine_similarity(
 
 
 def pairwise_distance(
-    x1: Tensor,
-    x2: Tensor,
-    p: float = 2.0,
-    eps: float = 1e-6,
-    keepdim: bool = False
+    x1: Tensor, x2: Tensor, p: float = 2.0, eps: float = 1e-6, keepdim: bool = False
 ) -> Tensor:
     """
     Compute pairwise distance between x1 and x2.
@@ -3158,7 +3133,7 @@ def pairwise_distance(
 
     if p == 2.0:
         # Euclidean distance
-        dist = mx.sqrt(mx.sum(diff ** 2, axis=-1) + eps)
+        dist = mx.sqrt(mx.sum(diff**2, axis=-1) + eps)
     elif p == 1.0:
         # Manhattan distance
         dist = mx.sum(mx.abs(diff), axis=-1)
@@ -3199,7 +3174,7 @@ def pdist(input: Tensor, p: float = 2.0) -> Tensor:
     diff = mx.expand_dims(x, axis=1) - mx.expand_dims(x, axis=0)
 
     if p == 2.0:
-        distances = mx.sqrt(mx.sum(diff ** 2, axis=-1))
+        distances = mx.sqrt(mx.sum(diff**2, axis=-1))
     elif p == 1.0:
         distances = mx.sum(mx.abs(diff), axis=-1)
     else:
@@ -3234,7 +3209,7 @@ def cdist(
     x1: Tensor,
     x2: Tensor,
     p: float = 2.0,
-    compute_mode: str = 'use_mm_for_euclid_dist_if_necessary'
+    compute_mode: str = "use_mm_for_euclid_dist_if_necessary",
 ) -> Tensor:
     """
     Compute pairwise distances between two sets of vectors.
@@ -3267,7 +3242,7 @@ def cdist(
         diff = x1_arr - x2_arr  # (P, R, M)
 
         if p == 2.0:
-            distances = mx.sqrt(mx.sum(diff ** 2, axis=-1))
+            distances = mx.sqrt(mx.sum(diff**2, axis=-1))
         elif p == 1.0:
             distances = mx.sum(mx.abs(diff), axis=-1)
         else:
@@ -3280,7 +3255,7 @@ def cdist(
         diff = x1_arr - x2_arr  # (B, P, R, M)
 
         if p == 2.0:
-            distances = mx.sqrt(mx.sum(diff ** 2, axis=-1))
+            distances = mx.sqrt(mx.sum(diff**2, axis=-1))
         elif p == 1.0:
             distances = mx.sum(mx.abs(diff), axis=-1)
         else:
@@ -3304,7 +3279,7 @@ def triplet_margin_loss(
     swap: bool = False,
     size_average: Optional[bool] = None,
     reduce: Optional[bool] = None,
-    reduction: str = 'mean'
+    reduction: str = "mean",
 ) -> Tensor:
     """
     Triplet margin loss for metric learning.
@@ -3345,16 +3320,18 @@ def triplet_margin_loss(
     # Triplet loss
     loss = mx.maximum(d_ap._mlx_array - d_an._mlx_array + margin, 0.0)
 
-    if reduction == 'mean':
+    if reduction == "mean":
         loss = mx.mean(loss)
-    elif reduction == 'sum':
+    elif reduction == "sum":
         loss = mx.sum(loss)
-    elif reduction != 'none':
+    elif reduction != "none":
         raise ValueError(f"Invalid reduction: {reduction}")
 
     result = Tensor._from_mlx_array(loss)
 
-    if is_grad_enabled() and (anchor.requires_grad or positive.requires_grad or negative.requires_grad):
+    if is_grad_enabled() and (
+        anchor.requires_grad or positive.requires_grad or negative.requires_grad
+    ):
         result.requires_grad = True
 
     return result
@@ -3367,7 +3344,7 @@ def margin_ranking_loss(
     margin: float = 0,
     size_average: Optional[bool] = None,
     reduce: Optional[bool] = None,
-    reduction: str = 'mean'
+    reduction: str = "mean",
 ) -> Tensor:
     """
     Margin ranking loss.
@@ -3387,16 +3364,13 @@ def margin_ranking_loss(
         Loss tensor
     """
     reduction = _get_legacy_reduction(size_average, reduce, reduction)
-    loss = mx.maximum(
-        0.0,
-        -target._mlx_array * (input1._mlx_array - input2._mlx_array) + margin
-    )
+    loss = mx.maximum(0.0, -target._mlx_array * (input1._mlx_array - input2._mlx_array) + margin)
 
-    if reduction == 'mean':
+    if reduction == "mean":
         loss = mx.mean(loss)
-    elif reduction == 'sum':
+    elif reduction == "sum":
         loss = mx.sum(loss)
-    elif reduction != 'none':
+    elif reduction != "none":
         raise ValueError(f"Invalid reduction: {reduction}")
 
     result = Tensor._from_mlx_array(loss)
@@ -3413,7 +3387,7 @@ def hinge_embedding_loss(
     margin: float = 1.0,
     size_average: Optional[bool] = None,
     reduce: Optional[bool] = None,
-    reduction: str = 'mean'
+    reduction: str = "mean",
 ) -> Tensor:
     """
     Hinge embedding loss.
@@ -3436,16 +3410,14 @@ def hinge_embedding_loss(
     # For y == 1: loss = x
     # For y == -1: loss = max(0, margin - x)
     loss = mx.where(
-        target._mlx_array == 1,
-        input._mlx_array,
-        mx.maximum(0.0, margin - input._mlx_array)
+        target._mlx_array == 1, input._mlx_array, mx.maximum(0.0, margin - input._mlx_array)
     )
 
-    if reduction == 'mean':
+    if reduction == "mean":
         loss = mx.mean(loss)
-    elif reduction == 'sum':
+    elif reduction == "sum":
         loss = mx.sum(loss)
-    elif reduction != 'none':
+    elif reduction != "none":
         raise ValueError(f"Invalid reduction: {reduction}")
 
     result = Tensor._from_mlx_array(loss)
@@ -3459,9 +3431,9 @@ def hinge_embedding_loss(
 def huber_loss(
     input: Tensor,
     target: Tensor,
-    reduction: str = 'mean',
+    reduction: str = "mean",
     delta: float = 1.0,
-    weight: Optional[Tensor] = None
+    weight: Optional[Tensor] = None,
 ) -> Tensor:
     """
     Huber loss (smooth L1 loss variant).
@@ -3480,20 +3452,16 @@ def huber_loss(
         Loss tensor
     """
     diff = mx.abs(input._mlx_array - target._mlx_array)
-    loss = mx.where(
-        diff < delta,
-        0.5 * diff * diff,
-        delta * (diff - 0.5 * delta)
-    )
+    loss = mx.where(diff < delta, 0.5 * diff * diff, delta * (diff - 0.5 * delta))
 
     if weight is not None:
         loss = loss * weight._mlx_array
 
-    if reduction == 'mean':
+    if reduction == "mean":
         loss = mx.mean(loss)
-    elif reduction == 'sum':
+    elif reduction == "sum":
         loss = mx.sum(loss)
-    elif reduction != 'none':
+    elif reduction != "none":
         raise ValueError(f"Invalid reduction: {reduction}")
 
     result = Tensor._from_mlx_array(loss)
@@ -3509,8 +3477,8 @@ def kl_div(
     target: Tensor,
     size_average: Optional[bool] = None,
     reduce: Optional[bool] = None,
-    reduction: str = 'mean',
-    log_target: bool = False
+    reduction: str = "mean",
+    log_target: bool = False,
 ) -> Tensor:
     """
     Kullback-Leibler divergence loss.
@@ -3541,17 +3509,19 @@ def kl_div(
         # target is probabilities
         # Use xlogy pattern: x * log(x) returns 0 when x=0, avoiding log(0) issues
         target_arr = target._mlx_array
-        xlogy_term = mx.where(target_arr == 0, mx.zeros_like(target_arr), target_arr * mx.log(target_arr))
+        xlogy_term = mx.where(
+            target_arr == 0, mx.zeros_like(target_arr), target_arr * mx.log(target_arr)
+        )
         loss = xlogy_term - target_arr * input._mlx_array
 
-    if reduction == 'mean':
+    if reduction == "mean":
         loss = mx.mean(loss)
-    elif reduction == 'batchmean':
+    elif reduction == "batchmean":
         # Divide by batch size only
         loss = mx.sum(loss) / input.shape[0]
-    elif reduction == 'sum':
+    elif reduction == "sum":
         loss = mx.sum(loss)
-    elif reduction != 'none':
+    elif reduction != "none":
         raise ValueError(f"Invalid reduction: {reduction}")
 
     result = Tensor._from_mlx_array(loss)
@@ -3567,7 +3537,7 @@ def soft_margin_loss(
     target: Tensor,
     size_average: Optional[bool] = None,
     reduce: Optional[bool] = None,
-    reduction: str = 'mean'
+    reduction: str = "mean",
 ) -> Tensor:
     """
     Soft margin loss (logistic loss).
@@ -3588,13 +3558,14 @@ def soft_margin_loss(
 
     # log(1 + exp(-y * x)) = softplus(-y * x)
     import mlx.nn as nn
+
     loss = nn.softplus(-target._mlx_array * input._mlx_array)
 
-    if reduction == 'mean':
+    if reduction == "mean":
         loss = mx.mean(loss)
-    elif reduction == 'sum':
+    elif reduction == "sum":
         loss = mx.sum(loss)
-    elif reduction != 'none':
+    elif reduction != "none":
         raise ValueError(f"Invalid reduction: {reduction}")
 
     result = Tensor._from_mlx_array(loss)
@@ -3612,7 +3583,7 @@ def cosine_embedding_loss(
     margin: int = 0,
     size_average: Optional[bool] = None,
     reduce: Optional[bool] = None,
-    reduction: str = 'mean'
+    reduction: str = "mean",
 ) -> Tensor:
     """
     Cosine embedding loss.
@@ -3639,16 +3610,14 @@ def cosine_embedding_loss(
 
     # Compute loss based on target
     loss = mx.where(
-        target._mlx_array == 1,
-        1 - cos_sim,
-        mx.maximum(mx.array(0.0), cos_sim - margin)
+        target._mlx_array == 1, 1 - cos_sim, mx.maximum(mx.array(0.0), cos_sim - margin)
     )
 
-    if reduction == 'mean':
+    if reduction == "mean":
         loss = mx.mean(loss)
-    elif reduction == 'sum':
+    elif reduction == "sum":
         loss = mx.sum(loss)
-    elif reduction != 'none':
+    elif reduction != "none":
         raise ValueError(f"Invalid reduction: {reduction}")
 
     result = Tensor._from_mlx_array(loss)
@@ -3665,7 +3634,7 @@ def gaussian_nll_loss(
     var: Tensor,
     full: bool = False,
     eps: float = 1e-6,
-    reduction: str = 'mean'
+    reduction: str = "mean",
 ) -> Tensor:
     """
     Gaussian negative log-likelihood loss.
@@ -3693,13 +3662,14 @@ def gaussian_nll_loss(
 
     if full:
         import math
+
         loss = loss + 0.5 * math.log(2 * math.pi)
 
-    if reduction == 'mean':
+    if reduction == "mean":
         loss = mx.mean(loss)
-    elif reduction == 'sum':
+    elif reduction == "sum":
         loss = mx.sum(loss)
-    elif reduction != 'none':
+    elif reduction != "none":
         raise ValueError(f"Invalid reduction: {reduction}")
 
     result = Tensor._from_mlx_array(loss)
@@ -3718,7 +3688,7 @@ def poisson_nll_loss(
     size_average: Optional[bool] = None,
     eps: float = 1e-8,
     reduce: Optional[bool] = None,
-    reduction: str = 'mean'
+    reduction: str = "mean",
 ) -> Tensor:
     """
     Poisson negative log-likelihood loss.
@@ -3751,16 +3721,20 @@ def poisson_nll_loss(
     if full:
         # Stirling approximation: log(n!) ≈ n*log(n) - n + 0.5*log(2*pi*n)
         import math
+
         target_arr = target._mlx_array
-        approx = target_arr * mx.log(mx.maximum(target_arr, 1)) - target_arr + \
-                 0.5 * mx.log(2 * math.pi * mx.maximum(target_arr, 1))
+        approx = (
+            target_arr * mx.log(mx.maximum(target_arr, 1))
+            - target_arr
+            + 0.5 * mx.log(2 * math.pi * mx.maximum(target_arr, 1))
+        )
         loss = loss + approx
 
-    if reduction == 'mean':
+    if reduction == "mean":
         loss = mx.mean(loss)
-    elif reduction == 'sum':
+    elif reduction == "sum":
         loss = mx.sum(loss)
-    elif reduction != 'none':
+    elif reduction != "none":
         raise ValueError(f"Invalid reduction: {reduction}")
 
     result = Tensor._from_mlx_array(loss)
@@ -3779,7 +3753,7 @@ def multi_margin_loss(
     weight: Optional[Tensor] = None,
     size_average: Optional[bool] = None,
     reduce: Optional[bool] = None,
-    reduction: str = 'mean'
+    reduction: str = "mean",
 ) -> Tensor:
     """
     Multi-class hinge loss (SVM loss).
@@ -3816,11 +3790,7 @@ def multi_margin_loss(
 
     # Zero out the correct class
     one_hot_target = mx.zeros((N, C))
-    one_hot_target = mx.where(
-        mx.arange(C) == mx.expand_dims(y, axis=1),
-        mx.array(0.0),
-        margins
-    )
+    one_hot_target = mx.where(mx.arange(C) == mx.expand_dims(y, axis=1), mx.array(0.0), margins)
 
     # Apply exponent
     if p == 2:
@@ -3833,11 +3803,11 @@ def multi_margin_loss(
     # Sum over classes and divide by total number of classes
     loss = mx.sum(one_hot_target, axis=1) / C
 
-    if reduction == 'mean':
+    if reduction == "mean":
         loss = mx.mean(loss)
-    elif reduction == 'sum':
+    elif reduction == "sum":
         loss = mx.sum(loss)
-    elif reduction != 'none':
+    elif reduction != "none":
         raise ValueError(f"Invalid reduction: {reduction}")
 
     result = Tensor._from_mlx_array(loss)
@@ -3854,7 +3824,7 @@ def multilabel_soft_margin_loss(
     weight: Optional[Tensor] = None,
     size_average: Optional[bool] = None,
     reduce: Optional[bool] = None,
-    reduction: str = 'mean'
+    reduction: str = "mean",
 ) -> Tensor:
     """
     Multi-label one-versus-all loss using soft margin.
@@ -3878,6 +3848,7 @@ def multilabel_soft_margin_loss(
     reduction = _get_legacy_reduction(size_average, reduce, reduction)
 
     import mlx.nn as nn
+
     x = input._mlx_array
     y = target._mlx_array
 
@@ -3890,11 +3861,11 @@ def multilabel_soft_margin_loss(
         loss = loss * weight._mlx_array
 
     # Apply reduction - mean/sum over ALL elements (not just classes)
-    if reduction == 'mean':
+    if reduction == "mean":
         loss = mx.mean(loss)
-    elif reduction == 'sum':
+    elif reduction == "sum":
         loss = mx.sum(loss)
-    elif reduction != 'none':
+    elif reduction != "none":
         raise ValueError(f"Invalid reduction: {reduction}")
 
     result = Tensor._from_mlx_array(loss)
@@ -3909,12 +3880,9 @@ def multilabel_soft_margin_loss(
 # Additional Functional APIs
 # =============================================================================
 
+
 def gumbel_softmax(
-    logits: Tensor,
-    tau: float = 1,
-    hard: bool = False,
-    eps: float = 1e-10,
-    dim: int = -1
+    logits: Tensor, tau: float = 1, hard: bool = False, eps: float = 1e-10, dim: int = -1
 ) -> Tensor:
     """
     Sample from the Gumbel-Softmax distribution and optionally discretize.
@@ -3966,10 +3934,7 @@ def gumbel_softmax(
 
 
 def bilinear(
-    input1: Tensor,
-    input2: Tensor,
-    weight: Tensor,
-    bias: Optional[Tensor] = None
+    input1: Tensor, input2: Tensor, weight: Tensor, bias: Optional[Tensor] = None
 ) -> Tensor:
     """
     Apply a bilinear transformation to the input tensors.
@@ -4030,11 +3995,7 @@ def bilinear(
     return output
 
 
-def affine_grid(
-    theta: Tensor,
-    size: List[int],
-    align_corners: Optional[bool] = None
-) -> Tensor:
+def affine_grid(theta: Tensor, size: List[int], align_corners: Optional[bool] = None) -> Tensor:
     """
     Generate a 2D or 3D affine transformation grid for grid_sample.
 
@@ -4059,11 +4020,11 @@ def affine_grid(
             y_range = mx.linspace(-1, 1, H)
             x_range = mx.linspace(-1, 1, W)
         else:
-            y_range = mx.linspace(-1 + 1/H, 1 - 1/H, H)
-            x_range = mx.linspace(-1 + 1/W, 1 - 1/W, W)
+            y_range = mx.linspace(-1 + 1 / H, 1 - 1 / H, H)
+            x_range = mx.linspace(-1 + 1 / W, 1 - 1 / W, W)
 
         # Create meshgrid
-        grid_y, grid_x = mx.meshgrid(y_range, x_range, indexing='ij')
+        grid_y, grid_x = mx.meshgrid(y_range, x_range, indexing="ij")
         grid = mx.stack([grid_x, grid_y, mx.ones_like(grid_x)], axis=-1)  # [H, W, 3]
         grid = mx.reshape(grid, (H * W, 3))  # [H*W, 3]
 
@@ -4084,11 +4045,11 @@ def affine_grid(
             y_range = mx.linspace(-1, 1, H)
             x_range = mx.linspace(-1, 1, W)
         else:
-            z_range = mx.linspace(-1 + 1/D, 1 - 1/D, D)
-            y_range = mx.linspace(-1 + 1/H, 1 - 1/H, H)
-            x_range = mx.linspace(-1 + 1/W, 1 - 1/W, W)
+            z_range = mx.linspace(-1 + 1 / D, 1 - 1 / D, D)
+            y_range = mx.linspace(-1 + 1 / H, 1 - 1 / H, H)
+            x_range = mx.linspace(-1 + 1 / W, 1 - 1 / W, W)
 
-        grid_z, grid_y, grid_x = mx.meshgrid(z_range, y_range, x_range, indexing='ij')
+        grid_z, grid_y, grid_x = mx.meshgrid(z_range, y_range, x_range, indexing="ij")
         grid = mx.stack([grid_x, grid_y, grid_z, mx.ones_like(grid_x)], axis=-1)
         grid = mx.reshape(grid, (D * H * W, 4))
 
@@ -4108,11 +4069,7 @@ def affine_grid(
 
 
 def local_response_norm(
-    input: Tensor,
-    size: int,
-    alpha: float = 1e-4,
-    beta: float = 0.75,
-    k: float = 1.0
+    input: Tensor, size: int, alpha: float = 1e-4, beta: float = 0.75, k: float = 1.0
 ) -> Tensor:
     """
     Apply local response normalization over an input signal.
@@ -4181,12 +4138,13 @@ def local_response_norm(
 # Fold/Unfold Operations
 # =============================================================================
 
+
 def unfold(
     input: Tensor,
     kernel_size: Union[int, Tuple[int, int]],
     dilation: Union[int, Tuple[int, int]] = 1,
     padding: Union[int, Tuple[int, int]] = 0,
-    stride: Union[int, Tuple[int, int]] = 1
+    stride: Union[int, Tuple[int, int]] = 1,
 ) -> Tensor:
     """
     Extract sliding local blocks from a batched input tensor.
@@ -4258,7 +4216,12 @@ def unfold(
                 w_start = j * dW
                 # Extract all valid positions for this kernel element and channel
                 # x is [N, C, H, W]
-                patch = x[:, c:c+1, h_start:h_start + H_out * sH:sH, w_start:w_start + W_out * sW:sW]
+                patch = x[
+                    :,
+                    c : c + 1,
+                    h_start : h_start + H_out * sH : sH,
+                    w_start : w_start + W_out * sW : sW,
+                ]
                 # Reshape to [N, L]
                 patch = mx.reshape(patch, (N, H_out * W_out))
                 patches.append(patch)
@@ -4280,7 +4243,7 @@ def fold(
     kernel_size: Union[int, Tuple[int, int]],
     dilation: Union[int, Tuple[int, int]] = 1,
     padding: Union[int, Tuple[int, int]] = 0,
-    stride: Union[int, Tuple[int, int]] = 1
+    stride: Union[int, Tuple[int, int]] = 1,
 ) -> Tensor:
     """
     Combine an array of sliding local blocks into a large containing tensor.
@@ -4368,12 +4331,15 @@ def fold(
                 h_end = h_start + L_H
                 w_end = w_start + L_W
                 # Create a mask-like operation by padding the contribution
-                padded = mx.pad(contrib, [
-                    (0, 0),  # N
-                    (0, 0),  # C
-                    (h_start, H_padded - h_end),  # H
-                    (w_start, W_padded - w_end),  # W
-                ])
+                padded = mx.pad(
+                    contrib,
+                    [
+                        (0, 0),  # N
+                        (0, 0),  # C
+                        (h_start, H_padded - h_end),  # H
+                        (w_start, W_padded - w_end),  # W
+                    ],
+                )
                 output = output + padded
             else:
                 # For stride > 1, we need to expand with zeros between elements
@@ -4388,21 +4354,24 @@ def fold(
                 # Simpler approach: iterate (acceptable for small kernels)
                 for li in range(L_H):
                     for lj in range(L_W):
-                        val = contrib[:, :, li:li+1, lj:lj+1]  # [N, C, 1, 1]
+                        val = contrib[:, :, li : li + 1, lj : lj + 1]  # [N, C, 1, 1]
                         h_pos = li * sH
                         w_pos = lj * sW
                         # Create padded single-element array
-                        single_padded = mx.pad(val, [
-                            (0, 0),  # N
-                            (0, 0),  # C
-                            (h_start + h_pos, H_padded - h_start - h_pos - 1),  # H
-                            (w_start + w_pos, W_padded - w_start - w_pos - 1),  # W
-                        ])
+                        single_padded = mx.pad(
+                            val,
+                            [
+                                (0, 0),  # N
+                                (0, 0),  # C
+                                (h_start + h_pos, H_padded - h_start - h_pos - 1),  # H
+                                (w_start + w_pos, W_padded - w_start - w_pos - 1),  # W
+                            ],
+                        )
                         output = output + single_padded
 
     # Remove padding
     if padH > 0 or padW > 0:
-        output = output[:, :, padH:H_padded - padH, padW:W_padded - padW]
+        output = output[:, :, padH : H_padded - padH, padW : W_padded - padW]
 
     output_tensor = Tensor._from_mlx_array(output)
 
@@ -4418,92 +4387,198 @@ def fold(
 
 __all__ = [
     # Activations
-    'relu', 'relu6', 'gelu', 'sigmoid', 'tanh',
-    'softmax', 'log_softmax', 'silu', 'swish',
-    'leaky_relu', 'elu', 'softplus', 'softsign',
-    'hardswish', 'hardsigmoid', 'mish',
-    'celu', 'celu_', 'selu', 'selu_',
-    'hardtanh', 'hardtanh_', 'hardshrink', 'softshrink', 'tanhshrink',
-    'threshold', 'threshold_', 'glu', 'logsigmoid', 'prelu',
-    'softmin', 'rrelu', 'rrelu_',
+    "relu",
+    "relu6",
+    "gelu",
+    "sigmoid",
+    "tanh",
+    "softmax",
+    "log_softmax",
+    "silu",
+    "swish",
+    "leaky_relu",
+    "elu",
+    "softplus",
+    "softsign",
+    "hardswish",
+    "hardsigmoid",
+    "mish",
+    "celu",
+    "celu_",
+    "selu",
+    "selu_",
+    "hardtanh",
+    "hardtanh_",
+    "hardshrink",
+    "softshrink",
+    "tanhshrink",
+    "threshold",
+    "threshold_",
+    "glu",
+    "logsigmoid",
+    "prelu",
+    "softmin",
+    "rrelu",
+    "rrelu_",
     # Convolution
-    'conv2d', 'conv1d', 'conv3d',
-    'conv_transpose1d', 'conv_transpose2d', 'conv_transpose3d',
-    'conv_tbc',
+    "conv2d",
+    "conv1d",
+    "conv3d",
+    "conv_transpose1d",
+    "conv_transpose2d",
+    "conv_transpose3d",
+    "conv_tbc",
     # Pooling
-    'max_pool1d', 'max_pool2d', 'max_pool3d',
-    'avg_pool1d', 'avg_pool2d', 'avg_pool3d',
-    'adaptive_avg_pool1d', 'adaptive_avg_pool2d', 'adaptive_avg_pool3d',
-    'adaptive_max_pool1d', 'adaptive_max_pool2d', 'adaptive_max_pool3d',
-    'lp_pool1d', 'lp_pool2d', 'lp_pool3d',
+    "max_pool1d",
+    "max_pool2d",
+    "max_pool3d",
+    "avg_pool1d",
+    "avg_pool2d",
+    "avg_pool3d",
+    "adaptive_avg_pool1d",
+    "adaptive_avg_pool2d",
+    "adaptive_avg_pool3d",
+    "adaptive_max_pool1d",
+    "adaptive_max_pool2d",
+    "adaptive_max_pool3d",
+    "lp_pool1d",
+    "lp_pool2d",
+    "lp_pool3d",
     # Pooling with indices
-    'max_pool1d_with_indices', 'max_pool2d_with_indices', 'max_pool3d_with_indices',
-    'adaptive_max_pool1d_with_indices', 'adaptive_max_pool2d_with_indices', 'adaptive_max_pool3d_with_indices',
-    'fractional_max_pool2d', 'fractional_max_pool2d_with_indices',
-    'fractional_max_pool3d', 'fractional_max_pool3d_with_indices',
-    'max_unpool1d', 'max_unpool2d', 'max_unpool3d',
+    "max_pool1d_with_indices",
+    "max_pool2d_with_indices",
+    "max_pool3d_with_indices",
+    "adaptive_max_pool1d_with_indices",
+    "adaptive_max_pool2d_with_indices",
+    "adaptive_max_pool3d_with_indices",
+    "fractional_max_pool2d",
+    "fractional_max_pool2d_with_indices",
+    "fractional_max_pool3d",
+    "fractional_max_pool3d_with_indices",
+    "max_unpool1d",
+    "max_unpool2d",
+    "max_unpool3d",
     # Linear
-    'linear',
+    "linear",
     # RNN cells
-    'rnn_tanh_cell', 'rnn_relu_cell', 'lstm_cell', 'gru_cell',
+    "rnn_tanh_cell",
+    "rnn_relu_cell",
+    "lstm_cell",
+    "gru_cell",
     # Dropout
-    'dropout', 'dropout1d', 'dropout2d', 'dropout3d',
-    'alpha_dropout', 'feature_alpha_dropout',
+    "dropout",
+    "dropout1d",
+    "dropout2d",
+    "dropout3d",
+    "alpha_dropout",
+    "feature_alpha_dropout",
     # Normalization
-    'batch_norm', 'layer_norm', 'group_norm', 'instance_norm',
+    "batch_norm",
+    "layer_norm",
+    "group_norm",
+    "instance_norm",
     # Loss functions
-    'mse_loss', 'l1_loss', 'cross_entropy', 'nll_loss',
-    'binary_cross_entropy', 'binary_cross_entropy_with_logits',
-    'smooth_l1_loss', 'triplet_margin_loss', 'margin_ranking_loss',
-    'hinge_embedding_loss', 'huber_loss', 'kl_div', 'soft_margin_loss',
-    'cosine_embedding_loss', 'gaussian_nll_loss', 'poisson_nll_loss',
-    'multi_margin_loss', 'multilabel_soft_margin_loss',
-    'ctc_loss',
+    "mse_loss",
+    "l1_loss",
+    "cross_entropy",
+    "nll_loss",
+    "binary_cross_entropy",
+    "binary_cross_entropy_with_logits",
+    "smooth_l1_loss",
+    "triplet_margin_loss",
+    "margin_ranking_loss",
+    "hinge_embedding_loss",
+    "huber_loss",
+    "kl_div",
+    "soft_margin_loss",
+    "cosine_embedding_loss",
+    "gaussian_nll_loss",
+    "poisson_nll_loss",
+    "multi_margin_loss",
+    "multilabel_soft_margin_loss",
+    "ctc_loss",
     # Embedding
-    'embedding', 'embedding_bag',
+    "embedding",
+    "embedding_bag",
     # Padding
-    'pad',
+    "pad",
     # Fold/Unfold
-    'fold', 'unfold',
+    "fold",
+    "unfold",
     # Pixel operations
-    'pixel_shuffle', 'pixel_unshuffle', 'channel_shuffle', 'native_channel_shuffle',
+    "pixel_shuffle",
+    "pixel_unshuffle",
+    "channel_shuffle",
+    "native_channel_shuffle",
     # Interpolation
-    'interpolate', 'upsample', 'upsample_nearest', 'upsample_bilinear',
+    "interpolate",
+    "upsample",
+    "upsample_nearest",
+    "upsample_bilinear",
     # Attention
-    'scaled_dot_product_attention',
+    "scaled_dot_product_attention",
     # Utilities
-    'normalize', 'one_hot',
+    "normalize",
+    "one_hot",
     # Distance functions
-    'cosine_similarity', 'pairwise_distance', 'pdist', 'cdist',
+    "cosine_similarity",
+    "pairwise_distance",
+    "pdist",
+    "cdist",
     # Additional functional APIs
-    'gumbel_softmax', 'bilinear', 'affine_grid', 'local_response_norm',
+    "gumbel_softmax",
+    "bilinear",
+    "affine_grid",
+    "local_response_norm",
     # In-place activations
-    'relu_', 'leaky_relu_', 'elu_',
+    "relu_",
+    "leaky_relu_",
+    "elu_",
     # Grid sampling
-    'grid_sample',
+    "grid_sample",
     # RMS normalization
-    'rms_norm',
+    "rms_norm",
     # Additional losses
-    'triplet_margin_with_distance_loss', 'multilabel_margin_loss',
+    "triplet_margin_with_distance_loss",
+    "multilabel_margin_loss",
     # Multi-head attention forward
-    'multi_head_attention_forward',
+    "multi_head_attention_forward",
     # Type re-exports for compatibility
-    'Callable', 'Optional', 'Union', 'Tensor', 'DType',
-    'TYPE_CHECKING',
-    'BroadcastingList1', 'BroadcastingList2', 'BroadcastingList3',
-    'GRID_SAMPLE_INTERPOLATION_MODES', 'GRID_SAMPLE_PADDING_MODES',
-    'reproducibility_notes', 'sparse_support_notes', 'tf32_notes',
+    "Callable",
+    "Optional",
+    "Union",
+    "Tensor",
+    "DType",
+    "TYPE_CHECKING",
+    "BroadcastingList1",
+    "BroadcastingList2",
+    "BroadcastingList3",
+    "GRID_SAMPLE_INTERPOLATION_MODES",
+    "GRID_SAMPLE_PADDING_MODES",
+    "reproducibility_notes",
+    "sparse_support_notes",
+    "tf32_notes",
     # Torch function dispatch stubs
-    'has_torch_function', 'has_torch_function_unary', 'has_torch_function_variadic',
-    'handle_torch_function', 'boolean_dispatch', 'assert_int_or_pair',
+    "has_torch_function",
+    "has_torch_function_unary",
+    "has_torch_function_variadic",
+    "handle_torch_function",
+    "boolean_dispatch",
+    "assert_int_or_pair",
     # Module re-exports
-    'grad', 'importlib', 'math', 'np', 'warnings', 'torch',
+    "grad",
+    "importlib",
+    "math",
+    "np",
+    "warnings",
+    "torch",
 ]
 
 
 # =============================================================================
 # In-place Activation Functions
 # =============================================================================
+
 
 def relu_(input: Tensor) -> Tensor:
     """In-place ReLU activation."""
@@ -4514,9 +4589,7 @@ def relu_(input: Tensor) -> Tensor:
 def leaky_relu_(input: Tensor, negative_slope: float = 0.01) -> Tensor:
     """In-place Leaky ReLU activation."""
     input._mlx_array = mx.where(
-        input._mlx_array > 0,
-        input._mlx_array,
-        input._mlx_array * negative_slope
+        input._mlx_array > 0, input._mlx_array, input._mlx_array * negative_slope
     )
     return input
 
@@ -4524,9 +4597,7 @@ def leaky_relu_(input: Tensor, negative_slope: float = 0.01) -> Tensor:
 def elu_(input: Tensor, alpha: float = 1.0) -> Tensor:
     """In-place ELU activation."""
     input._mlx_array = mx.where(
-        input._mlx_array > 0,
-        input._mlx_array,
-        alpha * (mx.exp(input._mlx_array) - 1)
+        input._mlx_array > 0, input._mlx_array, alpha * (mx.exp(input._mlx_array) - 1)
     )
     return input
 
@@ -4534,6 +4605,7 @@ def elu_(input: Tensor, alpha: float = 1.0) -> Tensor:
 # =============================================================================
 # Grid Sampling
 # =============================================================================
+
 
 def _reflect_coord(coord, dim_size, align_corners):
     """Reflect floating-point coordinate into valid range using periodic reflection.
@@ -4662,10 +4734,12 @@ def _sample_with_indices(x, iy, ix, valid_mask, padding_mode):
     output = mx.reshape(output, (N, C, H_out, W_out))
 
     # Apply valid mask for 'zeros' padding mode
-    if padding_mode == 'zeros':
+    if padding_mode == "zeros":
         # valid_mask is (N, H_out, W_out), broadcast to (N, C, H_out, W_out)
         valid_mask_expanded = mx.expand_dims(valid_mask, axis=1)  # (N, 1, H_out, W_out)
-        valid_mask_expanded = mx.broadcast_to(valid_mask_expanded.astype(x.dtype), (N, C, H_out, W_out))
+        valid_mask_expanded = mx.broadcast_to(
+            valid_mask_expanded.astype(x.dtype), (N, C, H_out, W_out)
+        )
         output = output * valid_mask_expanded
 
     return output
@@ -4689,7 +4763,7 @@ def _trilinear_sample(x, grid_x, grid_y, grid_z, padding_mode, align_corners=Fal
     D_out, H_out, W_out = grid_x.shape[1], grid_x.shape[2], grid_x.shape[3]
 
     # For reflection mode, reflect the floating-point coordinates first
-    if padding_mode == 'reflection':
+    if padding_mode == "reflection":
         grid_x = _reflect_coord(grid_x, W_in, align_corners)
         grid_y = _reflect_coord(grid_y, H_in, align_corners)
         grid_z = _reflect_coord(grid_z, D_in, align_corners)
@@ -4710,7 +4784,7 @@ def _trilinear_sample(x, grid_x, grid_y, grid_z, padding_mode, align_corners=Fal
 
     # Handle boundary conditions for zeros and border modes
     def get_valid_and_clipped(idx, dim_size):
-        if padding_mode == 'zeros':
+        if padding_mode == "zeros":
             valid = (idx >= 0) & (idx < dim_size)
             clipped = mx.clip(idx, 0, dim_size - 1)
             return valid.astype(mx.float32), clipped
@@ -4826,14 +4900,16 @@ def _trilinear_sample(x, grid_x, grid_y, grid_z, padding_mode, align_corners=Fal
     m_bse = mx.expand_dims(m_bse, axis=1)
 
     # Compute trilinear interpolation
-    output = (val_tnw * w_tnw * m_tnw +
-              val_tne * w_tne * m_tne +
-              val_tsw * w_tsw * m_tsw +
-              val_tse * w_tse * m_tse +
-              val_bnw * w_bnw * m_bnw +
-              val_bne * w_bne * m_bne +
-              val_bsw * w_bsw * m_bsw +
-              val_bse * w_bse * m_bse)
+    output = (
+        val_tnw * w_tnw * m_tnw
+        + val_tne * w_tne * m_tne
+        + val_tsw * w_tsw * m_tsw
+        + val_tse * w_tse * m_tse
+        + val_bnw * w_bnw * m_bnw
+        + val_bne * w_bne * m_bne
+        + val_bsw * w_bsw * m_bsw
+        + val_bse * w_bse * m_bse
+    )
 
     return output
 
@@ -4880,10 +4956,12 @@ def _sample_with_indices_3d(x, iz, iy, ix, valid_mask, padding_mode):
     output = mx.reshape(output, (N, C, D_out, H_out, W_out))
 
     # Apply valid mask for 'zeros' padding mode
-    if padding_mode == 'zeros':
+    if padding_mode == "zeros":
         # valid_mask is (N, D_out, H_out, W_out), broadcast to (N, C, D_out, H_out, W_out)
         valid_mask_expanded = mx.expand_dims(valid_mask, axis=1)  # (N, 1, D_out, H_out, W_out)
-        valid_mask_expanded = mx.broadcast_to(valid_mask_expanded.astype(x.dtype), (N, C, D_out, H_out, W_out))
+        valid_mask_expanded = mx.broadcast_to(
+            valid_mask_expanded.astype(x.dtype), (N, C, D_out, H_out, W_out)
+        )
         output = output * valid_mask_expanded
 
     return output
@@ -4906,7 +4984,7 @@ def _bilinear_sample(x, grid_x, grid_y, padding_mode, align_corners=False):
     H_out, W_out = grid_x.shape[1], grid_x.shape[2]
 
     # For reflection mode, reflect the floating-point coordinates first
-    if padding_mode == 'reflection':
+    if padding_mode == "reflection":
         grid_x = _reflect_coord(grid_x, W_in, align_corners)
         grid_y = _reflect_coord(grid_y, H_in, align_corners)
 
@@ -4922,7 +5000,7 @@ def _bilinear_sample(x, grid_x, grid_y, padding_mode, align_corners=False):
 
     # Handle boundary conditions for zeros and border modes
     def get_valid_and_clipped(idx, dim_size):
-        if padding_mode == 'zeros':
+        if padding_mode == "zeros":
             valid = (idx >= 0) & (idx < dim_size)
             clipped = mx.clip(idx, 0, dim_size - 1)
             return valid.astype(mx.float32), clipped
@@ -4997,10 +5075,9 @@ def _bilinear_sample(x, grid_x, grid_y, padding_mode, align_corners=False):
     m_11 = mx.expand_dims(m_11, axis=1)
 
     # Compute bilinear interpolation
-    output = (val_00 * w_00 * m_00 +
-              val_01 * w_01 * m_01 +
-              val_10 * w_10 * m_10 +
-              val_11 * w_11 * m_11)
+    output = (
+        val_00 * w_00 * m_00 + val_01 * w_01 * m_01 + val_10 * w_10 * m_10 + val_11 * w_11 * m_11
+    )
 
     return output
 
@@ -5025,7 +5102,7 @@ def _bicubic_sample(x, grid_x, grid_y, padding_mode, align_corners=False):
     H_out, W_out = grid_x.shape[1], grid_x.shape[2]
 
     # For reflection mode, reflect the floating-point coordinates first
-    if padding_mode == 'reflection':
+    if padding_mode == "reflection":
         grid_x = _reflect_coord(grid_x, W_in, align_corners)
         grid_y = _reflect_coord(grid_y, H_in, align_corners)
 
@@ -5050,7 +5127,7 @@ def _bicubic_sample(x, grid_x, grid_y, padding_mode, align_corners=False):
 
     # Helper for handling boundary conditions
     def get_valid_and_clipped(idx, dim_size):
-        if padding_mode == 'zeros':
+        if padding_mode == "zeros":
             valid = (idx >= 0) & (idx < dim_size)
             clipped = mx.clip(idx, 0, dim_size - 1)
             return valid.astype(mx.float32), clipped
@@ -5101,9 +5178,9 @@ def _bicubic_sample(x, grid_x, grid_y, padding_mode, align_corners=False):
 def grid_sample(
     input: Tensor,
     grid: Tensor,
-    mode: str = 'bilinear',
-    padding_mode: str = 'zeros',
-    align_corners: Optional[bool] = None
+    mode: str = "bilinear",
+    padding_mode: str = "zeros",
+    align_corners: Optional[bool] = None,
 ) -> Tensor:
     """Sample input using grid coordinates.
 
@@ -5139,9 +5216,9 @@ def grid_sample(
             grid_x = ((g[..., 0] + 1) * W_in - 1) / 2
             grid_y = ((g[..., 1] + 1) * H_in - 1) / 2
 
-        if mode == 'nearest':
+        if mode == "nearest":
             # For reflection mode, reflect coordinates first, then round
-            if padding_mode == 'reflection':
+            if padding_mode == "reflection":
                 grid_x = _reflect_coord(grid_x, W_in, align_corners)
                 grid_y = _reflect_coord(grid_y, H_in, align_corners)
 
@@ -5150,7 +5227,7 @@ def grid_sample(
             iy = mx.round(grid_y).astype(mx.int32)
 
             # Handle padding mode
-            if padding_mode == 'zeros':
+            if padding_mode == "zeros":
                 valid = (ix >= 0) & (ix < W_in) & (iy >= 0) & (iy < H_in)
                 ix = mx.clip(ix, 0, W_in - 1)
                 iy = mx.clip(iy, 0, H_in - 1)
@@ -5162,7 +5239,7 @@ def grid_sample(
             # Use functional sampling instead of in-place assignment
             output = _sample_with_indices(x, iy, ix, valid, padding_mode)
 
-        elif mode == 'bilinear':
+        elif mode == "bilinear":
             # Use vectorized bilinear sampling
             output = _bilinear_sample(x, grid_x, grid_y, padding_mode, align_corners)
 
@@ -5187,9 +5264,9 @@ def grid_sample(
             grid_y = ((g[..., 1] + 1) * H_in - 1) / 2
             grid_z = ((g[..., 2] + 1) * D_in - 1) / 2
 
-        if mode == 'nearest':
+        if mode == "nearest":
             # For reflection mode, reflect coordinates first, then round
-            if padding_mode == 'reflection':
+            if padding_mode == "reflection":
                 grid_x = _reflect_coord(grid_x, W_in, align_corners)
                 grid_y = _reflect_coord(grid_y, H_in, align_corners)
                 grid_z = _reflect_coord(grid_z, D_in, align_corners)
@@ -5200,10 +5277,8 @@ def grid_sample(
             iz = mx.round(grid_z).astype(mx.int32)
 
             # Handle padding mode
-            if padding_mode == 'zeros':
-                valid = ((ix >= 0) & (ix < W_in) &
-                         (iy >= 0) & (iy < H_in) &
-                         (iz >= 0) & (iz < D_in))
+            if padding_mode == "zeros":
+                valid = (ix >= 0) & (ix < W_in) & (iy >= 0) & (iy < H_in) & (iz >= 0) & (iz < D_in)
                 ix = mx.clip(ix, 0, W_in - 1)
                 iy = mx.clip(iy, 0, H_in - 1)
                 iz = mx.clip(iz, 0, D_in - 1)
@@ -5216,7 +5291,7 @@ def grid_sample(
             # Use functional 3D sampling
             output = _sample_with_indices_3d(x, iz, iy, ix, valid, padding_mode)
 
-        elif mode == 'bilinear':
+        elif mode == "bilinear":
             # Use trilinear sampling (called 'bilinear' in PyTorch for consistency)
             output = _trilinear_sample(x, grid_x, grid_y, grid_z, padding_mode, align_corners)
 
@@ -5233,11 +5308,12 @@ def grid_sample(
 # RMS Normalization
 # =============================================================================
 
+
 def rms_norm(
     input: Tensor,
     normalized_shape: Union[int, List[int]],
     weight: Optional[Tensor] = None,
-    eps: Optional[float] = None
+    eps: Optional[float] = None,
 ) -> Tensor:
     """Apply Root Mean Square Layer Normalization.
 
@@ -5277,6 +5353,7 @@ def rms_norm(
 # Additional Loss Functions
 # =============================================================================
 
+
 def triplet_margin_with_distance_loss(
     anchor: Tensor,
     positive: Tensor,
@@ -5284,7 +5361,7 @@ def triplet_margin_with_distance_loss(
     distance_function: callable = None,
     margin: float = 1.0,
     swap: bool = False,
-    reduction: str = 'mean'
+    reduction: str = "mean",
 ) -> Tensor:
     """Triplet margin loss with custom distance function.
 
@@ -5301,6 +5378,7 @@ def triplet_margin_with_distance_loss(
         Loss value
     """
     if distance_function is None:
+
         def distance_function(x, y):
             return pairwise_distance(x, y)
 
@@ -5314,9 +5392,9 @@ def triplet_margin_with_distance_loss(
 
     loss = mx.maximum(d_ap._mlx_array - d_an._mlx_array + margin, 0)
 
-    if reduction == 'mean':
+    if reduction == "mean":
         loss = mx.mean(loss)
-    elif reduction == 'sum':
+    elif reduction == "sum":
         loss = mx.sum(loss)
 
     result = Tensor._from_mlx_array(loss)
@@ -5330,7 +5408,7 @@ def multilabel_margin_loss(
     target: Tensor,
     size_average: Optional[bool] = None,
     reduce: Optional[bool] = None,
-    reduction: str = 'mean'
+    reduction: str = "mean",
 ) -> Tensor:
     """Multi-label margin loss.
 
@@ -5348,15 +5426,18 @@ def multilabel_margin_loss(
     # Handle deprecated arguments
     if size_average is not None or reduce is not None:
         import warnings
-        warnings.warn("size_average and reduce args will be deprecated, please use reduction instead")
+
+        warnings.warn(
+            "size_average and reduce args will be deprecated, please use reduction instead"
+        )
         if size_average is None:
             size_average = True
         if reduce is None:
             reduce = True
         if reduce:
-            reduction = 'mean' if size_average else 'sum'
+            reduction = "mean" if size_average else "sum"
         else:
-            reduction = 'none'
+            reduction = "none"
 
     x = input._mlx_array
     y = target._mlx_array.astype(mx.int32)
@@ -5381,7 +5462,7 @@ def multilabel_margin_loss(
     # Expand for broadcasting: y (N, C, 1), class_indices (C,)
     y_expanded = mx.expand_dims(y, axis=2)  # (N, C, 1)
     # Check which classes match any of the target entries
-    matches = (y_expanded == class_indices)  # (N, C, C)
+    matches = y_expanded == class_indices  # (N, C, C)
     # A class is positive if it matches any valid target entry
     # Also need to mask out invalid entries (y < 0)
     valid_entries = mx.expand_dims(y >= 0, axis=2)  # (N, C, 1)
@@ -5438,9 +5519,9 @@ def multilabel_margin_loss(
     # Sum over all pairs for each sample, then divide by C
     sample_losses = mx.sum(weighted_margins, axis=(1, 2)) / C  # (N,)
 
-    if reduction == 'mean':
+    if reduction == "mean":
         loss = mx.mean(sample_losses)
-    elif reduction == 'sum':
+    elif reduction == "sum":
         loss = mx.sum(sample_losses)
     else:
         loss = sample_losses
@@ -5454,6 +5535,7 @@ def multilabel_margin_loss(
 # =============================================================================
 # Multi-head Attention Forward
 # =============================================================================
+
 
 def multi_head_attention_forward(
     query: Tensor,
@@ -5492,9 +5574,19 @@ def multi_head_attention_forward(
 
     # Project queries, keys, values
     if use_separate_proj_weight:
-        q = linear(query, q_proj_weight, in_proj_bias[:embed_dim] if in_proj_bias is not None else None)
-        k = linear(key, k_proj_weight, in_proj_bias[embed_dim:2*embed_dim] if in_proj_bias is not None else None)
-        v = linear(value, v_proj_weight, in_proj_bias[2*embed_dim:] if in_proj_bias is not None else None)
+        q = linear(
+            query, q_proj_weight, in_proj_bias[:embed_dim] if in_proj_bias is not None else None
+        )
+        k = linear(
+            key,
+            k_proj_weight,
+            in_proj_bias[embed_dim : 2 * embed_dim] if in_proj_bias is not None else None,
+        )
+        v = linear(
+            value,
+            v_proj_weight,
+            in_proj_bias[2 * embed_dim :] if in_proj_bias is not None else None,
+        )
     else:
         # Combined projection
         qkv_same = query is key and key is value
@@ -5507,12 +5599,33 @@ def multi_head_attention_forward(
             v = qkv[:, :, 2, :, :].reshape(src_len, bsz, embed_dim)
         else:
             # Encoder-decoder attention
-            q = linear(query, Tensor._from_mlx_array(in_proj_weight._mlx_array[:embed_dim]),
-                       Tensor._from_mlx_array(in_proj_bias._mlx_array[:embed_dim]) if in_proj_bias else None)
-            k = linear(key, Tensor._from_mlx_array(in_proj_weight._mlx_array[embed_dim:2*embed_dim]),
-                       Tensor._from_mlx_array(in_proj_bias._mlx_array[embed_dim:2*embed_dim]) if in_proj_bias else None)
-            v = linear(value, Tensor._from_mlx_array(in_proj_weight._mlx_array[2*embed_dim:]),
-                       Tensor._from_mlx_array(in_proj_bias._mlx_array[2*embed_dim:]) if in_proj_bias else None)
+            q = linear(
+                query,
+                Tensor._from_mlx_array(in_proj_weight._mlx_array[:embed_dim]),
+                (
+                    Tensor._from_mlx_array(in_proj_bias._mlx_array[:embed_dim])
+                    if in_proj_bias
+                    else None
+                ),
+            )
+            k = linear(
+                key,
+                Tensor._from_mlx_array(in_proj_weight._mlx_array[embed_dim : 2 * embed_dim]),
+                (
+                    Tensor._from_mlx_array(in_proj_bias._mlx_array[embed_dim : 2 * embed_dim])
+                    if in_proj_bias
+                    else None
+                ),
+            )
+            v = linear(
+                value,
+                Tensor._from_mlx_array(in_proj_weight._mlx_array[2 * embed_dim :]),
+                (
+                    Tensor._from_mlx_array(in_proj_bias._mlx_array[2 * embed_dim :])
+                    if in_proj_bias
+                    else None
+                ),
+            )
 
     # Reshape for multi-head attention: (L, N, E) -> (N, num_heads, L, head_dim)
     q = q.reshape(tgt_len, bsz, num_heads, head_dim).permute(1, 2, 0, 3)
@@ -5521,8 +5634,9 @@ def multi_head_attention_forward(
 
     # Use scaled dot product attention
     dropout_p_val = dropout_p if training else 0.0
-    attn_output = scaled_dot_product_attention(q, k, v, attn_mask=attn_mask,
-                                                dropout_p=dropout_p_val, is_causal=is_causal)
+    attn_output = scaled_dot_product_attention(
+        q, k, v, attn_mask=attn_mask, dropout_p=dropout_p_val, is_causal=is_causal
+    )
 
     # Reshape back: (N, num_heads, L, head_dim) -> (L, N, E)
     attn_output = attn_output.permute(2, 0, 1, 3).reshape(tgt_len, bsz, embed_dim)
@@ -5533,7 +5647,7 @@ def multi_head_attention_forward(
     attn_weights = None
     if need_weights:
         # Compute attention weights for return
-        scale = 1.0 / (head_dim ** 0.5)
+        scale = 1.0 / (head_dim**0.5)
         attn_weights = mx.matmul(q._mlx_array, mx.transpose(k._mlx_array, (0, 1, 3, 2))) * scale
         attn_weights = mx.softmax(attn_weights, axis=-1)
         if average_attn_weights:
@@ -5542,15 +5656,17 @@ def multi_head_attention_forward(
 
     return attn_output, attn_weights
 
+
 # =============================================================================
 # Type Re-exports for Compatibility
 # =============================================================================
 
-# These are re-exported from typing for PyTorch API compatibility
-from typing import Callable, Optional, Union
 import importlib
 import math
 import warnings
+
+# These are re-exported from typing for PyTorch API compatibility
+from typing import Callable, Optional, Union
 
 # Re-export for compatibility
 TYPE_CHECKING = False  # We don't use type checking at runtime
@@ -5566,22 +5682,17 @@ BroadcastingList1 = list
 BroadcastingList2 = list
 BroadcastingList3 = list
 
-GRID_SAMPLE_INTERPOLATION_MODES = {'bilinear': 0, 'nearest': 1, 'bicubic': 2}
-GRID_SAMPLE_PADDING_MODES = {'zeros': 0, 'border': 1, 'reflection': 2}
+GRID_SAMPLE_INTERPOLATION_MODES = {"bilinear": 0, "nearest": 1, "bicubic": 2}
+GRID_SAMPLE_PADDING_MODES = {"zeros": 0, "border": 1, "reflection": 2}
 
 # Documentation notes (used for docstrings)
-reproducibility_notes = {
-    "note": "Operations are generally deterministic in MLX"
-}
-sparse_support_notes = {
-    "note": "Sparse tensor support is limited in MLX"
-}
-tf32_notes = {
-    "note": "TF32 is not applicable to MLX (Apple Silicon)"
-}
+reproducibility_notes = {"note": "Operations are generally deterministic in MLX"}
+sparse_support_notes = {"note": "Sparse tensor support is limited in MLX"}
+tf32_notes = {"note": "TF32 is not applicable to MLX (Apple Silicon)"}
 
 # Module re-exports
 from . import grad
+
 torch = None  # Placeholder - user should import flashlight instead
 
 
@@ -5589,9 +5700,10 @@ torch = None  # Placeholder - user should import flashlight instead
 # Torch Function Dispatch (Compatibility Stubs)
 # =============================================================================
 
+
 def has_torch_function(*args) -> bool:
     """Check if any argument has a __torch_function__ method.
-    
+
     In flashlight, we don't use torch function dispatch, so this always returns False.
     """
     return False
@@ -5599,7 +5711,7 @@ def has_torch_function(*args) -> bool:
 
 def has_torch_function_unary(arg) -> bool:
     """Check if argument has a __torch_function__ method (unary version).
-    
+
     In flashlight, we don't use torch function dispatch, so this always returns False.
     """
     return False
@@ -5607,7 +5719,7 @@ def has_torch_function_unary(arg) -> bool:
 
 def has_torch_function_variadic(*args) -> bool:
     """Check if any argument has a __torch_function__ method (variadic version).
-    
+
     In flashlight, we don't use torch function dispatch, so this always returns False.
     """
     return False
@@ -5615,20 +5727,29 @@ def has_torch_function_variadic(*args) -> bool:
 
 def handle_torch_function(public_api, relevant_args, *args, **kwargs):
     """Handle torch function dispatch.
-    
+
     In flashlight, this just calls the public API directly since we don't
     support __torch_function__ dispatch.
     """
     return public_api(*args, **kwargs)
 
 
-def boolean_dispatch(arg=None, arg_name=None, arg_index=None, default=None,
-                     if_true=None, if_false=None, module_name=None, func_name=None):
+def boolean_dispatch(
+    arg=None,
+    arg_name=None,
+    arg_index=None,
+    default=None,
+    if_true=None,
+    if_false=None,
+    module_name=None,
+    func_name=None,
+):
     """Boolean dispatch helper.
-    
+
     This is used internally in PyTorch for legacy API compatibility.
     We return a simple dispatcher.
     """
+
     def dispatcher(*args, **kwargs):
         # Get the boolean argument
         if arg_name is not None and arg_name in kwargs:
@@ -5637,18 +5758,18 @@ def boolean_dispatch(arg=None, arg_name=None, arg_index=None, default=None,
             cond = args[arg_index]
         else:
             cond = default
-            
+
         if cond:
             return if_true(*args, **kwargs)
         else:
             return if_false(*args, **kwargs)
-    
+
     return dispatcher
 
 
 def assert_int_or_pair(arg, arg_name, message):
     """Assert that argument is an int or pair of ints.
-    
+
     Args:
         arg: The argument to check
         arg_name: Name of the argument for error messages
@@ -5667,6 +5788,7 @@ def assert_int_or_pair(arg, arg_name, message):
 # =============================================================================
 # Pooling Functions with Indices
 # =============================================================================
+
 
 def _to_single(x):
     """Convert value to single int."""
@@ -5696,7 +5818,7 @@ def max_pool1d_with_indices(
     padding=0,
     dilation=1,
     ceil_mode=False,
-    return_indices=False
+    return_indices=False,
 ):
     """Max pool 1D with indices.
 
@@ -5753,7 +5875,7 @@ def max_pool2d_with_indices(
     padding=0,
     dilation=1,
     ceil_mode=False,
-    return_indices=False
+    return_indices=False,
 ):
     """Max pool 2D with indices.
 
@@ -5832,7 +5954,7 @@ def max_pool3d_with_indices(
     padding=0,
     dilation=1,
     ceil_mode=False,
-    return_indices=False
+    return_indices=False,
 ):
     """Max pool 3D with indices.
 
@@ -5918,6 +6040,7 @@ def adaptive_max_pool1d_with_indices(input: Tensor, output_size, return_indices:
     """
     # Use the ops implementation which now returns (output, indices)
     from ..ops.pooling import adaptive_max_pool1d as _adaptive_max_pool1d
+
     return _adaptive_max_pool1d(input, output_size)
 
 
@@ -5935,10 +6058,7 @@ def adaptive_max_pool2d_with_indices(input: Tensor, output_size, return_indices:
 
     if out_H == H and out_W == W:
         # Identity case
-        indices_array = mx.broadcast_to(
-            mx.arange(H * W).reshape(1, 1, H, W),
-            (N, C, H, W)
-        )
+        indices_array = mx.broadcast_to(mx.arange(H * W).reshape(1, 1, H, W), (N, C, H, W))
         return input, Tensor._from_mlx_array(indices_array.astype(mx.int64))
 
     outputs = []
@@ -6003,8 +6123,7 @@ def adaptive_max_pool3d_with_indices(input: Tensor, output_size, return_indices:
     if out_D == D and out_H == H and out_W == W:
         # Identity case
         indices_array = mx.broadcast_to(
-            mx.arange(D * H * W).reshape(1, 1, D, H, W),
-            (N, C, D, H, W)
+            mx.arange(D * H * W).reshape(1, 1, D, H, W), (N, C, D, H, W)
         )
         return input, Tensor._from_mlx_array(indices_array.astype(mx.int64))
 
@@ -6066,15 +6185,18 @@ def adaptive_max_pool3d_with_indices(input: Tensor, output_size, return_indices:
 def fractional_max_pool2d(*args, **kwargs):
     """Fractional max pool 2D."""
     # Parse arguments
-    input = args[0] if args else kwargs.get('input')
-    kernel_size = args[1] if len(args) > 1 else kwargs.get('kernel_size')
-    output_size = args[2] if len(args) > 2 else kwargs.get('output_size', None)
-    output_ratio = args[3] if len(args) > 3 else kwargs.get('output_ratio', None)
-    return_indices = args[4] if len(args) > 4 else kwargs.get('return_indices', False)
-    _random_samples = args[5] if len(args) > 5 else kwargs.get('_random_samples', None)
+    input = args[0] if args else kwargs.get("input")
+    kernel_size = args[1] if len(args) > 1 else kwargs.get("kernel_size")
+    output_size = args[2] if len(args) > 2 else kwargs.get("output_size", None)
+    output_ratio = args[3] if len(args) > 3 else kwargs.get("output_ratio", None)
+    return_indices = args[4] if len(args) > 4 else kwargs.get("return_indices", False)
+    _random_samples = args[5] if len(args) > 5 else kwargs.get("_random_samples", None)
 
     from .layers.pooling import FractionalMaxPool2d
-    pool = FractionalMaxPool2d(kernel_size, output_size, output_ratio, return_indices, _random_samples)
+
+    pool = FractionalMaxPool2d(
+        kernel_size, output_size, output_ratio, return_indices, _random_samples
+    )
     return pool(input)
 
 
@@ -6084,24 +6206,29 @@ def fractional_max_pool2d_with_indices(
     output_size=None,
     output_ratio=None,
     return_indices: bool = False,
-    _random_samples=None
+    _random_samples=None,
 ):
     """Fractional max pool 2D with indices."""
-    return fractional_max_pool2d(input, kernel_size, output_size, output_ratio, True, _random_samples)
+    return fractional_max_pool2d(
+        input, kernel_size, output_size, output_ratio, True, _random_samples
+    )
 
 
 def fractional_max_pool3d(*args, **kwargs):
     """Fractional max pool 3D."""
     # Parse arguments
-    input = args[0] if args else kwargs.get('input')
-    kernel_size = args[1] if len(args) > 1 else kwargs.get('kernel_size')
-    output_size = args[2] if len(args) > 2 else kwargs.get('output_size', None)
-    output_ratio = args[3] if len(args) > 3 else kwargs.get('output_ratio', None)
-    return_indices = args[4] if len(args) > 4 else kwargs.get('return_indices', False)
-    _random_samples = args[5] if len(args) > 5 else kwargs.get('_random_samples', None)
+    input = args[0] if args else kwargs.get("input")
+    kernel_size = args[1] if len(args) > 1 else kwargs.get("kernel_size")
+    output_size = args[2] if len(args) > 2 else kwargs.get("output_size", None)
+    output_ratio = args[3] if len(args) > 3 else kwargs.get("output_ratio", None)
+    return_indices = args[4] if len(args) > 4 else kwargs.get("return_indices", False)
+    _random_samples = args[5] if len(args) > 5 else kwargs.get("_random_samples", None)
 
     from .layers.pooling import FractionalMaxPool3d
-    pool = FractionalMaxPool3d(kernel_size, output_size, output_ratio, return_indices, _random_samples)
+
+    pool = FractionalMaxPool3d(
+        kernel_size, output_size, output_ratio, return_indices, _random_samples
+    )
     return pool(input)
 
 
@@ -6111,29 +6238,40 @@ def fractional_max_pool3d_with_indices(
     output_size=None,
     output_ratio=None,
     return_indices: bool = False,
-    _random_samples=None
+    _random_samples=None,
 ):
     """Fractional max pool 3D with indices."""
-    return fractional_max_pool3d(input, kernel_size, output_size, output_ratio, True, _random_samples)
+    return fractional_max_pool3d(
+        input, kernel_size, output_size, output_ratio, True, _random_samples
+    )
 
 
-def max_unpool1d(input: Tensor, indices: Tensor, kernel_size, stride=None, padding=0, output_size=None):
+def max_unpool1d(
+    input: Tensor, indices: Tensor, kernel_size, stride=None, padding=0, output_size=None
+):
     """Partial inverse of max_pool1d."""
     from .layers.pooling import MaxUnpool1d
+
     unpool = MaxUnpool1d(kernel_size, stride, padding)
     return unpool(input, indices, output_size)
 
 
-def max_unpool2d(input: Tensor, indices: Tensor, kernel_size, stride=None, padding=0, output_size=None):
+def max_unpool2d(
+    input: Tensor, indices: Tensor, kernel_size, stride=None, padding=0, output_size=None
+):
     """Partial inverse of max_pool2d."""
     from .layers.pooling import MaxUnpool2d
+
     unpool = MaxUnpool2d(kernel_size, stride, padding)
     return unpool(input, indices, output_size)
 
 
-def max_unpool3d(input: Tensor, indices: Tensor, kernel_size, stride=None, padding=0, output_size=None):
+def max_unpool3d(
+    input: Tensor, indices: Tensor, kernel_size, stride=None, padding=0, output_size=None
+):
     """Partial inverse of max_pool3d."""
     from .layers.pooling import MaxUnpool3d
+
     unpool = MaxUnpool3d(kernel_size, stride, padding)
     return unpool(input, indices, output_size)
 
@@ -6141,6 +6279,7 @@ def max_unpool3d(input: Tensor, indices: Tensor, kernel_size, stride=None, paddi
 def lp_pool3d(input: Tensor, norm_type: float, kernel_size, stride=None, ceil_mode=False):
     """3D power-average pooling."""
     from .layers.pooling import LPPool3d
+
     pool = LPPool3d(norm_type, kernel_size, stride, ceil_mode)
     return pool(input)
 
@@ -6149,9 +6288,10 @@ def lp_pool3d(input: Tensor, norm_type: float, kernel_size, stride=None, ceil_mo
 # Other Missing Functions
 # =============================================================================
 
+
 def conv_tbc(input: Tensor, weight: Tensor, bias: Optional[Tensor], pad: int = 0):
     """1D convolution with time-batch-channel layout.
-    
+
     This is used by fairseq. The input is (T, B, C) instead of (B, C, T).
     """
     # Transpose to (B, C_in, T) for standard conv1d
@@ -6170,21 +6310,22 @@ def ctc_loss(
     input_lengths: Tensor,
     target_lengths: Tensor,
     blank: int = 0,
-    reduction: str = 'mean',
-    zero_infinity: bool = False
+    reduction: str = "mean",
+    zero_infinity: bool = False,
 ) -> Tensor:
     """CTC (Connectionist Temporal Classification) loss.
-    
+
     Simplified implementation - for full functionality, use the CTCLoss module.
     """
     from .losses import CTCLoss
+
     loss_fn = CTCLoss(blank=blank, reduction=reduction, zero_infinity=zero_infinity)
     return loss_fn(log_probs, targets, input_lengths, target_lengths)
 
 
 def native_channel_shuffle(input: Tensor, groups: int) -> Tensor:
     """Channel shuffle operation.
-    
+
     This is the native implementation of channel_shuffle.
     """
     return channel_shuffle(input, groups)

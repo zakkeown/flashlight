@@ -110,6 +110,7 @@ class Embedding(Module):
         if _weight is None:
             # Initialize embedding weight
             from ... import randn
+
             self.weight = Parameter(randn(num_embeddings, embedding_dim))
             self.reset_parameters()
         else:
@@ -134,9 +135,7 @@ class Embedding(Module):
         import mlx.core as mx
 
         # Initialize from standard normal
-        weight_data = mx.random.normal(
-            shape=(self.num_embeddings, self.embedding_dim)
-        )
+        weight_data = mx.random.normal(shape=(self.num_embeddings, self.embedding_dim))
         self.weight.data = Tensor._from_mlx_array(weight_data)
 
         if self.padding_idx is not None:
@@ -157,21 +156,14 @@ class Embedding(Module):
 
             # Split, replace, and concatenate
             if self.padding_idx == 0:
-                new_weight = mx.concatenate([
-                    zeros_row,
-                    weight_mlx[1:]
-                ], axis=0)
+                new_weight = mx.concatenate([zeros_row, weight_mlx[1:]], axis=0)
             elif self.padding_idx == self.num_embeddings - 1:
-                new_weight = mx.concatenate([
-                    weight_mlx[:-1],
-                    zeros_row
-                ], axis=0)
+                new_weight = mx.concatenate([weight_mlx[:-1], zeros_row], axis=0)
             else:
-                new_weight = mx.concatenate([
-                    weight_mlx[:self.padding_idx],
-                    zeros_row,
-                    weight_mlx[self.padding_idx + 1:]
-                ], axis=0)
+                new_weight = mx.concatenate(
+                    [weight_mlx[: self.padding_idx], zeros_row, weight_mlx[self.padding_idx + 1 :]],
+                    axis=0,
+                )
 
             self.weight.data = Tensor._from_mlx_array(new_weight)
 
@@ -210,14 +202,18 @@ class Embedding(Module):
 
         # Handle autograd
         from ...autograd.context import is_grad_enabled
+
         if is_grad_enabled() and self.weight.requires_grad:
             from ...autograd.function import EmbeddingBackward
+
             result.requires_grad = True
             grad_fn = EmbeddingBackward(
-                self.weight, indices,
-                self.num_embeddings, self.embedding_dim,
+                self.weight,
+                indices,
+                self.num_embeddings,
+                self.embedding_dim,
                 padding_idx=self.padding_idx,
-                sparse=self.sparse
+                sparse=self.sparse,
             )
             grad_fn.output_tensor = result
             result._grad_fn = grad_fn
@@ -238,17 +234,17 @@ class Embedding(Module):
 
     def extra_repr(self) -> str:
         """Extra representation string."""
-        s = f'{self.num_embeddings}, {self.embedding_dim}'
+        s = f"{self.num_embeddings}, {self.embedding_dim}"
         if self.padding_idx is not None:
-            s += f', padding_idx={self.padding_idx}'
+            s += f", padding_idx={self.padding_idx}"
         if self.max_norm is not None:
-            s += f', max_norm={self.max_norm}'
+            s += f", max_norm={self.max_norm}"
         if self.norm_type != 2.0:
-            s += f', norm_type={self.norm_type}'
+            s += f", norm_type={self.norm_type}"
         if self.scale_grad_by_freq:
-            s += ', scale_grad_by_freq=True'
+            s += ", scale_grad_by_freq=True"
         if self.sparse:
-            s += ', sparse=True'
+            s += ", sparse=True"
         return s
 
     @classmethod
@@ -261,7 +257,7 @@ class Embedding(Module):
         norm_type: float = 2.0,
         scale_grad_by_freq: bool = False,
         sparse: bool = False,
-    ) -> 'Embedding':
+    ) -> "Embedding":
         """
         Create an Embedding instance from pre-trained embeddings.
 
@@ -286,9 +282,7 @@ class Embedding(Module):
             False
         """
         if embeddings.ndim != 2:
-            raise ValueError(
-                f"embeddings must be 2D, got {embeddings.ndim}D"
-            )
+            raise ValueError(f"embeddings must be 2D, got {embeddings.ndim}D")
 
         num_embeddings, embedding_dim = embeddings.shape
 
@@ -352,7 +346,7 @@ class EmbeddingBag(Module):
         max_norm: Optional[float] = None,
         norm_type: float = 2.0,
         scale_grad_by_freq: bool = False,
-        mode: str = 'mean',
+        mode: str = "mean",
         sparse: bool = False,
         _weight: Optional[Tensor] = None,
         include_last_offset: bool = False,
@@ -364,7 +358,7 @@ class EmbeddingBag(Module):
         super().__init__()
         # device and dtype accepted for PyTorch compatibility (MLX uses unified memory)
 
-        if mode not in ['sum', 'mean', 'max']:
+        if mode not in ["sum", "mean", "max"]:
             raise ValueError(f"mode must be 'sum', 'mean', or 'max', got '{mode}'")
 
         self.num_embeddings = num_embeddings
@@ -380,6 +374,7 @@ class EmbeddingBag(Module):
         # Initialize weight
         if _weight is None:
             from ... import randn
+
             self.weight = Parameter(randn(num_embeddings, embedding_dim))
             self.reset_parameters()
         else:
@@ -389,9 +384,7 @@ class EmbeddingBag(Module):
         """Initialize parameters."""
         import mlx.core as mx
 
-        weight_data = mx.random.normal(
-            shape=(self.num_embeddings, self.embedding_dim)
-        )
+        weight_data = mx.random.normal(shape=(self.num_embeddings, self.embedding_dim))
         self.weight.data = Tensor._from_mlx_array(weight_data)
 
         if self.padding_idx is not None:
@@ -404,11 +397,10 @@ class EmbeddingBag(Module):
             elif self.padding_idx == self.num_embeddings - 1:
                 new_weight = mx.concatenate([weight_mlx[:-1], zeros_row], axis=0)
             else:
-                new_weight = mx.concatenate([
-                    weight_mlx[:self.padding_idx],
-                    zeros_row,
-                    weight_mlx[self.padding_idx + 1:]
-                ], axis=0)
+                new_weight = mx.concatenate(
+                    [weight_mlx[: self.padding_idx], zeros_row, weight_mlx[self.padding_idx + 1 :]],
+                    axis=0,
+                )
             self.weight.data = Tensor._from_mlx_array(new_weight)
 
     def forward(
@@ -455,9 +447,9 @@ class EmbeddingBag(Module):
                 embeddings = embeddings * psw.reshape((batch_size, bag_size, 1))
 
             # Aggregate
-            if self.mode == 'sum':
+            if self.mode == "sum":
                 result = mx.sum(embeddings, axis=1)
-            elif self.mode == 'mean':
+            elif self.mode == "mean":
                 result = mx.mean(embeddings, axis=1)
             else:  # max
                 result = mx.max(embeddings, axis=1)
@@ -474,10 +466,7 @@ class EmbeddingBag(Module):
                 bag_boundaries = offsets_mlx
             else:
                 # Add length of input as final boundary
-                bag_boundaries = mx.concatenate([
-                    offsets_mlx,
-                    mx.array([len(indices)])
-                ])
+                bag_boundaries = mx.concatenate([offsets_mlx, mx.array([len(indices)])])
 
             num_bags = len(offsets_mlx)
 
@@ -500,9 +489,9 @@ class EmbeddingBag(Module):
                         bag_embeddings = bag_embeddings * psw.reshape((-1, 1))
 
                     # Aggregate
-                    if self.mode == 'sum':
+                    if self.mode == "sum":
                         results.append(mx.sum(bag_embeddings, axis=0))
-                    elif self.mode == 'mean':
+                    elif self.mode == "mean":
                         results.append(mx.mean(bag_embeddings, axis=0))
                     else:  # max
                         results.append(mx.max(bag_embeddings, axis=0))
@@ -513,17 +502,17 @@ class EmbeddingBag(Module):
 
     def extra_repr(self) -> str:
         """Extra representation string."""
-        s = f'{self.num_embeddings}, {self.embedding_dim}'
+        s = f"{self.num_embeddings}, {self.embedding_dim}"
         if self.max_norm is not None:
-            s += f', max_norm={self.max_norm}'
+            s += f", max_norm={self.max_norm}"
         if self.norm_type != 2.0:
-            s += f', norm_type={self.norm_type}'
+            s += f", norm_type={self.norm_type}"
         if self.scale_grad_by_freq:
-            s += ', scale_grad_by_freq=True'
-        s += f', mode={self.mode}'
+            s += ", scale_grad_by_freq=True"
+        s += f", mode={self.mode}"
         if self.padding_idx is not None:
-            s += f', padding_idx={self.padding_idx}'
+            s += f", padding_idx={self.padding_idx}"
         return s
 
 
-__all__ = ['Embedding', 'EmbeddingBag']
+__all__ = ["Embedding", "EmbeddingBag"]

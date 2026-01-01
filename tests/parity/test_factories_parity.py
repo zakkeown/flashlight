@@ -4,8 +4,8 @@ Tensor Factory Functions Parity Tests
 Tests numerical parity between flashlight factory functions and PyTorch.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 torch = pytest.importorskip("torch")
 
@@ -337,9 +337,7 @@ class TestMeshgridParity:
         x_np = np.array([1.0, 2.0, 3.0], dtype=np.float32)
         y_np = np.array([4.0, 5.0], dtype=np.float32)
 
-        torch_X, torch_Y = torch.meshgrid(
-            torch.tensor(x_np), torch.tensor(y_np), indexing="xy"
-        )
+        torch_X, torch_Y = torch.meshgrid(torch.tensor(x_np), torch.tensor(y_np), indexing="xy")
         mlx_X, mlx_Y = flashlight.meshgrid(
             flashlight.tensor(x_np), flashlight.tensor(y_np), indexing="xy"
         )
@@ -392,9 +390,7 @@ class TestWhereParity:
         x = np.random.randn(5, 5).astype(np.float32)
         y = np.random.randn(5, 5).astype(np.float32)
 
-        torch_out = torch.where(
-            torch.tensor(cond), torch.tensor(x), torch.tensor(y)
-        )
+        torch_out = torch.where(torch.tensor(cond), torch.tensor(x), torch.tensor(y))
         mlx_out = flashlight.where(
             flashlight.tensor(cond), flashlight.tensor(x), flashlight.tensor(y)
         )

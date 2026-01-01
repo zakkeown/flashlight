@@ -12,15 +12,18 @@ Tests the nn.losses module:
 """
 
 import sys
-sys.path.insert(0, '../..')
+
+sys.path.insert(0, "../..")
 
 import unittest
+
 import numpy as np
 
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
     import flashlight
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -33,11 +36,11 @@ class TestMSELoss(TestCase):
     def test_mse_loss_creation(self):
         """Test MSELoss creation with default parameters."""
         criterion = flashlight.nn.MSELoss()
-        self.assertEqual(criterion.reduction, 'mean')
+        self.assertEqual(criterion.reduction, "mean")
 
     def test_mse_loss_forward_mean(self):
         """Test MSELoss with reduction='mean'."""
-        criterion = flashlight.nn.MSELoss(reduction='mean')
+        criterion = flashlight.nn.MSELoss(reduction="mean")
         x = flashlight.tensor([[1.0, 2.0], [3.0, 4.0]])
         y = flashlight.tensor([[1.0, 1.0], [1.0, 1.0]])
         loss = criterion(x, y)
@@ -47,7 +50,7 @@ class TestMSELoss(TestCase):
 
     def test_mse_loss_forward_sum(self):
         """Test MSELoss with reduction='sum'."""
-        criterion = flashlight.nn.MSELoss(reduction='sum')
+        criterion = flashlight.nn.MSELoss(reduction="sum")
         x = flashlight.tensor([[1.0, 2.0], [3.0, 4.0]])
         y = flashlight.tensor([[1.0, 1.0], [1.0, 1.0]])
         loss = criterion(x, y)
@@ -56,7 +59,7 @@ class TestMSELoss(TestCase):
 
     def test_mse_loss_forward_none(self):
         """Test MSELoss with reduction='none'."""
-        criterion = flashlight.nn.MSELoss(reduction='none')
+        criterion = flashlight.nn.MSELoss(reduction="none")
         x = flashlight.tensor([[1.0, 2.0], [3.0, 4.0]])
         y = flashlight.tensor([[1.0, 1.0], [1.0, 1.0]])
         loss = criterion(x, y)
@@ -72,11 +75,11 @@ class TestL1Loss(TestCase):
     def test_l1_loss_creation(self):
         """Test L1Loss creation with default parameters."""
         criterion = flashlight.nn.L1Loss()
-        self.assertEqual(criterion.reduction, 'mean')
+        self.assertEqual(criterion.reduction, "mean")
 
     def test_l1_loss_forward_mean(self):
         """Test L1Loss with reduction='mean'."""
-        criterion = flashlight.nn.L1Loss(reduction='mean')
+        criterion = flashlight.nn.L1Loss(reduction="mean")
         x = flashlight.tensor([[1.0, 2.0], [3.0, 4.0]])
         y = flashlight.tensor([[1.0, 1.0], [1.0, 1.0]])
         loss = criterion(x, y)
@@ -85,7 +88,7 @@ class TestL1Loss(TestCase):
 
     def test_l1_loss_forward_sum(self):
         """Test L1Loss with reduction='sum'."""
-        criterion = flashlight.nn.L1Loss(reduction='sum')
+        criterion = flashlight.nn.L1Loss(reduction="sum")
         x = flashlight.tensor([[1.0, 2.0], [3.0, 4.0]])
         y = flashlight.tensor([[1.0, 1.0], [1.0, 1.0]])
         loss = criterion(x, y)
@@ -94,7 +97,7 @@ class TestL1Loss(TestCase):
 
     def test_l1_loss_forward_none(self):
         """Test L1Loss with reduction='none'."""
-        criterion = flashlight.nn.L1Loss(reduction='none')
+        criterion = flashlight.nn.L1Loss(reduction="none")
         x = flashlight.tensor([[1.0, 2.0], [3.0, 4.0]])
         y = flashlight.tensor([[1.0, 1.0], [1.0, 1.0]])
         loss = criterion(x, y)
@@ -110,7 +113,7 @@ class TestCrossEntropyLoss(TestCase):
     def test_cross_entropy_creation(self):
         """Test CrossEntropyLoss creation with default parameters."""
         criterion = flashlight.nn.CrossEntropyLoss()
-        self.assertEqual(criterion.reduction, 'mean')
+        self.assertEqual(criterion.reduction, "mean")
 
     def test_cross_entropy_forward_basic(self):
         """Test CrossEntropyLoss forward pass."""
@@ -125,7 +128,7 @@ class TestCrossEntropyLoss(TestCase):
 
     def test_cross_entropy_forward_none(self):
         """Test CrossEntropyLoss with reduction='none'."""
-        criterion = flashlight.nn.CrossEntropyLoss(reduction='none')
+        criterion = flashlight.nn.CrossEntropyLoss(reduction="none")
         logits = flashlight.tensor([[2.0, 0.0, 0.0], [0.0, 2.0, 0.0]])
         targets = flashlight.tensor([0, 1], dtype=flashlight.int32)
         loss = criterion(logits, targets)
@@ -139,7 +142,7 @@ class TestNLLLoss(TestCase):
     def test_nll_loss_creation(self):
         """Test NLLLoss creation with default parameters."""
         criterion = flashlight.nn.NLLLoss()
-        self.assertEqual(criterion.reduction, 'mean')
+        self.assertEqual(criterion.reduction, "mean")
 
     def test_nll_loss_forward(self):
         """Test NLLLoss forward pass."""
@@ -154,7 +157,7 @@ class TestNLLLoss(TestCase):
 
     def test_nll_loss_forward_none(self):
         """Test NLLLoss with reduction='none'."""
-        criterion = flashlight.nn.NLLLoss(reduction='none')
+        criterion = flashlight.nn.NLLLoss(reduction="none")
         log_probs = flashlight.tensor([[-0.5, -2.0], [-2.0, -0.5]])
         targets = flashlight.tensor([0, 1], dtype=flashlight.int32)
         loss = criterion(log_probs, targets)
@@ -168,17 +171,17 @@ class TestBCELoss(TestCase):
     def test_bce_loss_creation(self):
         """Test BCELoss creation with default parameters."""
         criterion = flashlight.nn.BCELoss()
-        self.assertEqual(criterion.reduction, 'mean')
+        self.assertEqual(criterion.reduction, "mean")
 
     def test_bce_loss_parameters(self):
         """Test BCELoss parameters."""
-        criterion = flashlight.nn.BCELoss(reduction='sum')
-        self.assertEqual(criterion.reduction, 'sum')
+        criterion = flashlight.nn.BCELoss(reduction="sum")
+        self.assertEqual(criterion.reduction, "sum")
 
     def test_bce_loss_none_reduction(self):
         """Test BCELoss with reduction='none'."""
-        criterion = flashlight.nn.BCELoss(reduction='none')
-        self.assertEqual(criterion.reduction, 'none')
+        criterion = flashlight.nn.BCELoss(reduction="none")
+        self.assertEqual(criterion.reduction, "none")
 
 
 @skipIfNoMLX
@@ -188,11 +191,11 @@ class TestBCEWithLogitsLoss(TestCase):
     def test_bce_with_logits_creation(self):
         """Test BCEWithLogitsLoss creation with default parameters."""
         criterion = flashlight.nn.BCEWithLogitsLoss()
-        self.assertEqual(criterion.reduction, 'mean')
+        self.assertEqual(criterion.reduction, "mean")
 
     def test_bce_with_logits_forward_mean(self):
         """Test BCEWithLogitsLoss forward pass."""
-        criterion = flashlight.nn.BCEWithLogitsLoss(reduction='mean')
+        criterion = flashlight.nn.BCEWithLogitsLoss(reduction="mean")
         # Positive logits for positive targets
         logits = flashlight.tensor([2.0, -2.0, 1.5])
         targets = flashlight.tensor([1.0, 0.0, 1.0])
@@ -202,7 +205,7 @@ class TestBCEWithLogitsLoss(TestCase):
 
     def test_bce_with_logits_forward_none(self):
         """Test BCEWithLogitsLoss with reduction='none'."""
-        criterion = flashlight.nn.BCEWithLogitsLoss(reduction='none')
+        criterion = flashlight.nn.BCEWithLogitsLoss(reduction="none")
         logits = flashlight.tensor([2.0, -2.0])
         targets = flashlight.tensor([1.0, 0.0])
         loss = criterion(logits, targets)
@@ -216,12 +219,12 @@ class TestSmoothL1Loss(TestCase):
     def test_smooth_l1_creation(self):
         """Test SmoothL1Loss creation with default parameters."""
         criterion = flashlight.nn.SmoothL1Loss()
-        self.assertEqual(criterion.reduction, 'mean')
+        self.assertEqual(criterion.reduction, "mean")
         self.assertEqual(criterion.beta, 1.0)
 
     def test_smooth_l1_forward_mean(self):
         """Test SmoothL1Loss forward pass."""
-        criterion = flashlight.nn.SmoothL1Loss(reduction='mean')
+        criterion = flashlight.nn.SmoothL1Loss(reduction="mean")
         x = flashlight.tensor([0.5, 2.0])
         y = flashlight.tensor([0.0, 0.0])
         loss = criterion(x, y)
@@ -240,12 +243,12 @@ class TestHuberLoss(TestCase):
     def test_huber_creation(self):
         """Test HuberLoss creation with default parameters."""
         criterion = flashlight.nn.HuberLoss()
-        self.assertEqual(criterion.reduction, 'mean')
+        self.assertEqual(criterion.reduction, "mean")
         self.assertEqual(criterion.delta, 1.0)
 
     def test_huber_forward_mean(self):
         """Test HuberLoss forward pass."""
-        criterion = flashlight.nn.HuberLoss(reduction='mean')
+        criterion = flashlight.nn.HuberLoss(reduction="mean")
         x = flashlight.tensor([0.5, 2.0])
         y = flashlight.tensor([0.0, 0.0])
         loss = criterion(x, y)
@@ -264,12 +267,12 @@ class TestKLDivLoss(TestCase):
     def test_kl_div_creation(self):
         """Test KLDivLoss creation with default parameters."""
         criterion = flashlight.nn.KLDivLoss()
-        self.assertEqual(criterion.reduction, 'mean')
+        self.assertEqual(criterion.reduction, "mean")
         self.assertFalse(criterion.log_target)
 
     def test_kl_div_forward(self):
         """Test KLDivLoss forward pass."""
-        criterion = flashlight.nn.KLDivLoss(reduction='mean')
+        criterion = flashlight.nn.KLDivLoss(reduction="mean")
         # Input is log-probabilities, target is probabilities
         log_q = flashlight.tensor([[-1.0, -0.5, -0.3]])
         p = flashlight.tensor([[0.2, 0.3, 0.5]])
@@ -290,7 +293,7 @@ class TestMarginRankingLoss(TestCase):
         """Test MarginRankingLoss creation with default parameters."""
         criterion = flashlight.nn.MarginRankingLoss()
         self.assertEqual(criterion.margin, 0.0)
-        self.assertEqual(criterion.reduction, 'mean')
+        self.assertEqual(criterion.reduction, "mean")
 
     def test_margin_ranking_forward(self):
         """Test MarginRankingLoss forward pass."""
@@ -346,7 +349,7 @@ class TestSoftMarginLoss(TestCase):
     def test_soft_margin_creation(self):
         """Test SoftMarginLoss creation with default parameters."""
         criterion = flashlight.nn.SoftMarginLoss()
-        self.assertEqual(criterion.reduction, 'mean')
+        self.assertEqual(criterion.reduction, "mean")
 
     def test_soft_margin_forward(self):
         """Test SoftMarginLoss forward pass."""
@@ -439,7 +442,7 @@ class TestMultiMarginLoss(TestCase):
 
     def test_forward_none(self):
         """Test MultiMarginLoss with reduction='none'."""
-        criterion = flashlight.nn.MultiMarginLoss(reduction='none')
+        criterion = flashlight.nn.MultiMarginLoss(reduction="none")
         x = flashlight.randn(4, 10)
         target = flashlight.tensor([0, 1, 2, 3], dtype=flashlight.int32)
         loss = criterion(x, target)
@@ -453,18 +456,21 @@ class TestMultiLabelMarginLoss(TestCase):
     def test_creation(self):
         """Test MultiLabelMarginLoss creation."""
         criterion = flashlight.nn.MultiLabelMarginLoss()
-        self.assertEqual(criterion.reduction, 'mean')
+        self.assertEqual(criterion.reduction, "mean")
 
     def test_forward_shape(self):
         """Test MultiLabelMarginLoss forward pass."""
         criterion = flashlight.nn.MultiLabelMarginLoss()
         x = flashlight.randn(4, 10)
-        target = flashlight.tensor([
-            [0, 1, -1, -1, -1, -1, -1, -1, -1, -1],
-            [2, 3, 4, -1, -1, -1, -1, -1, -1, -1],
-            [5, -1, -1, -1, -1, -1, -1, -1, -1, -1],
-            [6, 7, 8, 9, -1, -1, -1, -1, -1, -1]
-        ], dtype=flashlight.int32)
+        target = flashlight.tensor(
+            [
+                [0, 1, -1, -1, -1, -1, -1, -1, -1, -1],
+                [2, 3, 4, -1, -1, -1, -1, -1, -1, -1],
+                [5, -1, -1, -1, -1, -1, -1, -1, -1, -1],
+                [6, 7, 8, 9, -1, -1, -1, -1, -1, -1],
+            ],
+            dtype=flashlight.int32,
+        )
         loss = criterion(x, target)
         self.assertEqual(loss.shape, ())
 
@@ -476,7 +482,7 @@ class TestMultiLabelSoftMarginLoss(TestCase):
     def test_creation(self):
         """Test MultiLabelSoftMarginLoss creation."""
         criterion = flashlight.nn.MultiLabelSoftMarginLoss()
-        self.assertEqual(criterion.reduction, 'mean')
+        self.assertEqual(criterion.reduction, "mean")
 
     def test_forward_shape(self):
         """Test MultiLabelSoftMarginLoss forward pass."""
@@ -531,7 +537,7 @@ class TestGaussianNLLLoss(TestCase):
 
     def test_forward_none(self):
         """Test GaussianNLLLoss with reduction='none'."""
-        criterion = flashlight.nn.GaussianNLLLoss(reduction='none')
+        criterion = flashlight.nn.GaussianNLLLoss(reduction="none")
         pred = flashlight.randn(4, 10)
         target = flashlight.randn(4, 10)
         var = flashlight.ones(4, 10)
@@ -561,9 +567,7 @@ class TestAdaptiveLogSoftmaxWithLoss(TestCase):
     def test_creation(self):
         """Test AdaptiveLogSoftmaxWithLoss creation."""
         criterion = flashlight.nn.AdaptiveLogSoftmaxWithLoss(
-            in_features=64,
-            n_classes=1000,
-            cutoffs=[100, 500]
+            in_features=64, n_classes=1000, cutoffs=[100, 500]
         )
         self.assertEqual(criterion.in_features, 64)
         self.assertEqual(criterion.n_classes, 1000)
@@ -571,19 +575,14 @@ class TestAdaptiveLogSoftmaxWithLoss(TestCase):
     def test_creation_with_div_value(self):
         """Test AdaptiveLogSoftmaxWithLoss with custom div_value."""
         criterion = flashlight.nn.AdaptiveLogSoftmaxWithLoss(
-            in_features=64,
-            n_classes=100,
-            cutoffs=[20, 50],
-            div_value=2.0
+            in_features=64, n_classes=100, cutoffs=[20, 50], div_value=2.0
         )
         self.assertEqual(criterion.div_value, 2.0)
 
     def test_forward(self):
         """Test AdaptiveLogSoftmaxWithLoss forward pass."""
         criterion = flashlight.nn.AdaptiveLogSoftmaxWithLoss(
-            in_features=64,
-            n_classes=100,
-            cutoffs=[20, 50]
+            in_features=64, n_classes=100, cutoffs=[20, 50]
         )
         x = flashlight.randn(4, 64)
         target = flashlight.tensor([0, 10, 30, 70], dtype=flashlight.int32)
@@ -591,6 +590,7 @@ class TestAdaptiveLogSoftmaxWithLoss(TestCase):
         self.assertIsNotNone(result)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from tests.common_utils import run_tests
+
     run_tests()

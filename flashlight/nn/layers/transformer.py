@@ -5,16 +5,16 @@ Implements Transformer encoder and decoder layers following PyTorch's API.
 """
 
 import math
-from typing import Optional, Callable, Union
+from typing import Callable, Optional, Union
 
 from ...tensor import Tensor
-from ..module import Module
 from ..containers import ModuleList
-from .linear import Linear
-from .dropout import Dropout
-from .normalization import LayerNorm
-from .attention import MultiheadAttention
 from ..functional import relu
+from ..module import Module
+from .attention import MultiheadAttention
+from .dropout import Dropout
+from .linear import Linear
+from .normalization import LayerNorm
 
 
 class TransformerEncoderLayer(Module):
@@ -108,11 +108,13 @@ class TransformerEncoderLayer(Module):
     def _relu(self, x: Tensor) -> Tensor:
         """ReLU activation."""
         from ... import relu
+
         return relu(x)
 
     def _gelu(self, x: Tensor) -> Tensor:
         """GELU activation."""
         from ... import gelu
+
         return gelu(x)
 
     def forward(
@@ -138,7 +140,9 @@ class TransformerEncoderLayer(Module):
             # Pre-LN: norm before attention/feedforward
             src2 = self.norm1(src)
             src2, _ = self.self_attn(
-                src2, src2, src2,
+                src2,
+                src2,
+                src2,
                 attn_mask=src_mask,
                 key_padding_mask=src_key_padding_mask,
                 need_weights=False,
@@ -152,7 +156,9 @@ class TransformerEncoderLayer(Module):
         else:
             # Post-LN: norm after attention/feedforward
             src2, _ = self.self_attn(
-                src, src, src,
+                src,
+                src,
+                src,
                 attn_mask=src_mask,
                 key_padding_mask=src_key_padding_mask,
                 need_weights=False,
@@ -169,7 +175,7 @@ class TransformerEncoderLayer(Module):
 
     def extra_repr(self) -> str:
         """Extra representation string."""
-        return f'd_model={self.d_model}, nhead={self.nhead}, norm_first={self.norm_first}'
+        return f"d_model={self.d_model}, nhead={self.nhead}, norm_first={self.norm_first}"
 
 
 class TransformerDecoderLayer(Module):
@@ -270,11 +276,13 @@ class TransformerDecoderLayer(Module):
     def _relu(self, x: Tensor) -> Tensor:
         """ReLU activation."""
         from ... import relu
+
         return relu(x)
 
     def _gelu(self, x: Tensor) -> Tensor:
         """GELU activation."""
         from ... import gelu
+
         return gelu(x)
 
     def forward(
@@ -308,7 +316,9 @@ class TransformerDecoderLayer(Module):
             # Pre-LN
             tgt2 = self.norm1(tgt)
             tgt2, _ = self.self_attn(
-                tgt2, tgt2, tgt2,
+                tgt2,
+                tgt2,
+                tgt2,
                 attn_mask=tgt_mask,
                 key_padding_mask=tgt_key_padding_mask,
                 need_weights=False,
@@ -318,7 +328,9 @@ class TransformerDecoderLayer(Module):
 
             tgt2 = self.norm2(tgt)
             tgt2, _ = self.multihead_attn(
-                tgt2, memory, memory,
+                tgt2,
+                memory,
+                memory,
                 attn_mask=memory_mask,
                 key_padding_mask=memory_key_padding_mask,
                 need_weights=False,
@@ -332,7 +344,9 @@ class TransformerDecoderLayer(Module):
         else:
             # Post-LN
             tgt2, _ = self.self_attn(
-                tgt, tgt, tgt,
+                tgt,
+                tgt,
+                tgt,
                 attn_mask=tgt_mask,
                 key_padding_mask=tgt_key_padding_mask,
                 need_weights=False,
@@ -342,7 +356,9 @@ class TransformerDecoderLayer(Module):
             tgt = self.norm1(tgt)
 
             tgt2, _ = self.multihead_attn(
-                tgt, memory, memory,
+                tgt,
+                memory,
+                memory,
                 attn_mask=memory_mask,
                 key_padding_mask=memory_key_padding_mask,
                 need_weights=False,
@@ -359,7 +375,7 @@ class TransformerDecoderLayer(Module):
 
     def extra_repr(self) -> str:
         """Extra representation string."""
-        return f'd_model={self.d_model}, nhead={self.nhead}, norm_first={self.norm_first}'
+        return f"d_model={self.d_model}, nhead={self.nhead}, norm_first={self.norm_first}"
 
 
 class TransformerEncoder(Module):
@@ -398,9 +414,7 @@ class TransformerEncoder(Module):
         super().__init__()
 
         # Create copies of the encoder layer
-        self.layers = ModuleList([
-            self._clone_layer(encoder_layer) for _ in range(num_layers)
-        ])
+        self.layers = ModuleList([self._clone_layer(encoder_layer) for _ in range(num_layers)])
         self.num_layers = num_layers
         self.norm = norm
 
@@ -410,7 +424,7 @@ class TransformerEncoder(Module):
             d_model=layer.d_model,
             nhead=layer.nhead,
             dim_feedforward=layer.linear1.out_features,
-            dropout=layer.dropout.p if hasattr(layer.dropout, 'p') else 0.1,
+            dropout=layer.dropout.p if hasattr(layer.dropout, "p") else 0.1,
             activation=layer.activation,
             layer_norm_eps=layer.norm1.eps,
             batch_first=layer.self_attn.batch_first,
@@ -486,9 +500,7 @@ class TransformerDecoder(Module):
         super().__init__()
 
         # Create copies of the decoder layer
-        self.layers = ModuleList([
-            self._clone_layer(decoder_layer) for _ in range(num_layers)
-        ])
+        self.layers = ModuleList([self._clone_layer(decoder_layer) for _ in range(num_layers)])
         self.num_layers = num_layers
         self.norm = norm
 
@@ -498,7 +510,7 @@ class TransformerDecoder(Module):
             d_model=layer.d_model,
             nhead=layer.nhead,
             dim_feedforward=layer.linear1.out_features,
-            dropout=layer.dropout.p if hasattr(layer.dropout, 'p') else 0.1,
+            dropout=layer.dropout.p if hasattr(layer.dropout, "p") else 0.1,
             activation=layer.activation,
             layer_norm_eps=layer.norm1.eps,
             batch_first=layer.self_attn.batch_first,
@@ -655,11 +667,10 @@ class Transformer(Module):
         for p in self.parameters():
             if p.ndim > 1:
                 import mlx.core as mx
+
                 std = math.sqrt(2.0 / sum(p.shape))
                 data = mx.random.uniform(
-                    low=-std * math.sqrt(3),
-                    high=std * math.sqrt(3),
-                    shape=p.shape
+                    low=-std * math.sqrt(3), high=std * math.sqrt(3), shape=p.shape
                 )
                 p.data = Tensor._from_mlx_array(data)
 
@@ -740,14 +751,15 @@ class Transformer(Module):
                     [0., 0., 0., 0., 0.]])
         """
         import mlx.core as mx
-        mask = mx.triu(mx.full((sz, sz), float('-inf')), k=1)
+
+        mask = mx.triu(mx.full((sz, sz), float("-inf")), k=1)
         return Tensor._from_mlx_array(mask)
 
 
 __all__ = [
-    'TransformerEncoderLayer',
-    'TransformerDecoderLayer',
-    'TransformerEncoder',
-    'TransformerDecoder',
-    'Transformer',
+    "TransformerEncoderLayer",
+    "TransformerDecoderLayer",
+    "TransformerEncoder",
+    "TransformerDecoder",
+    "Transformer",
 ]

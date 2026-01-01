@@ -2,12 +2,13 @@
 
 import math
 from typing import Optional, Tuple, Union
+
 import mlx.core as mx
 
-from ..tensor import Tensor
 from ..ops.special import betaln, digamma
-from .exp_family import ExponentialFamily
+from ..tensor import Tensor
 from . import constraints
+from .exp_family import ExponentialFamily
 from .gamma import Gamma
 
 
@@ -21,7 +22,10 @@ class Beta(ExponentialFamily):
         validate_args: Whether to validate arguments
     """
 
-    arg_constraints = {'concentration1': constraints.positive, 'concentration0': constraints.positive}
+    arg_constraints = {
+        "concentration1": constraints.positive,
+        "concentration0": constraints.positive,
+    }
     support = constraints.unit_interval
     has_rsample = True
 
@@ -31,8 +35,16 @@ class Beta(ExponentialFamily):
         concentration0: Union[Tensor, float],
         validate_args: Optional[bool] = None,
     ):
-        self.concentration1 = concentration1._mlx_array if isinstance(concentration1, Tensor) else mx.array(concentration1)
-        self.concentration0 = concentration0._mlx_array if isinstance(concentration0, Tensor) else mx.array(concentration0)
+        self.concentration1 = (
+            concentration1._mlx_array
+            if isinstance(concentration1, Tensor)
+            else mx.array(concentration1)
+        )
+        self.concentration0 = (
+            concentration0._mlx_array
+            if isinstance(concentration0, Tensor)
+            else mx.array(concentration0)
+        )
 
         batch_shape = mx.broadcast_shapes(self.concentration1.shape, self.concentration0.shape)
         super().__init__(batch_shape, validate_args=validate_args)
@@ -44,12 +56,12 @@ class Beta(ExponentialFamily):
     @property
     def mode(self) -> Tensor:
         a, b = self.concentration1, self.concentration0
-        return Tensor(mx.where((a > 1) & (b > 1), (a - 1) / (a + b - 2), mx.array(float('nan'))))
+        return Tensor(mx.where((a > 1) & (b > 1), (a - 1) / (a + b - 2), mx.array(float("nan"))))
 
     @property
     def variance(self) -> Tensor:
         total = self.concentration1 + self.concentration0
-        return Tensor(self.concentration1 * self.concentration0 / (total ** 2 * (total + 1)))
+        return Tensor(self.concentration1 * self.concentration0 / (total**2 * (total + 1)))
 
     def sample(self, sample_shape: Tuple[int, ...] = ()) -> Tensor:
         # Sample using gamma ratio: Beta(a,b) = Gamma(a,1) / (Gamma(a,1) + Gamma(b,1))
@@ -88,4 +100,4 @@ class Beta(ExponentialFamily):
         return Tensor(log_beta_val)
 
 
-__all__ = ['Beta']
+__all__ = ["Beta"]

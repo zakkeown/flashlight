@@ -16,15 +16,18 @@ Tests gradient computation for arithmetic operations:
 """
 
 import sys
-sys.path.insert(0, '../..')
+
+sys.path.insert(0, "../..")
 
 import unittest
+
 import numpy as np
 
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
     import flashlight
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -143,8 +146,8 @@ class TestDivBackward(TestCase):
         loss.backward()
 
         # d(x/y)/dx = 1/y, d(x/y)/dy = -x/y^2
-        np.testing.assert_array_almost_equal(x.grad.numpy(), np.array([0.5, 1/3, 0.25]))
-        np.testing.assert_array_almost_equal(y.grad.numpy(), np.array([-1.0, -2/3, -0.5]))
+        np.testing.assert_array_almost_equal(x.grad.numpy(), np.array([0.5, 1 / 3, 0.25]))
+        np.testing.assert_array_almost_equal(y.grad.numpy(), np.array([-1.0, -2 / 3, -0.5]))
 
     def test_div_scalar(self):
         """Test division by scalar."""
@@ -195,7 +198,7 @@ class TestPowBackward(TestCase):
     def test_pow_simple(self):
         """Test basic power backward."""
         x = flashlight.tensor([2.0, 3.0, 4.0], requires_grad=True)
-        z = x ** 2
+        z = x**2
         loss = flashlight.sum(z)
         loss.backward()
 
@@ -205,7 +208,7 @@ class TestPowBackward(TestCase):
     def test_pow_3(self):
         """Test cube backward."""
         x = flashlight.tensor([2.0, 3.0], requires_grad=True)
-        z = x ** 3
+        z = x**3
         loss = flashlight.sum(z)
         loss.backward()
 
@@ -340,6 +343,7 @@ class TestChainedArithmetic(TestCase):
         np.testing.assert_array_almost_equal(x.grad.numpy(), np.array([16.0]))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from tests.common_utils import run_tests
+
     run_tests()

@@ -4,9 +4,11 @@ Convolution Operations
 Implements convolution operations with PyTorch-compatible API.
 """
 
+from typing import Tuple, Union
+
 import mlx.core as mx
+
 from ..tensor import Tensor
-from typing import Union, Tuple
 
 
 def _pair(x):
@@ -24,7 +26,7 @@ def conv2d(
     padding: Union[int, Tuple[int, int]] = 0,
     dilation: Union[int, Tuple[int, int]] = 1,
     groups: int = 1,
-    _cached_weight_mlx=None
+    _cached_weight_mlx=None,
 ) -> Tensor:
     """
     2D convolution operation.
@@ -46,14 +48,14 @@ def conv2d(
         MLX uses NHWC format internally. When nhwc_mode() is enabled, input/output
         stay in NHWC format to avoid redundant layout conversions.
     """
-    from ..layout import is_nhwc_mode, Layout
+    from ..layout import Layout, is_nhwc_mode
 
     # Check if we're in NHWC-native mode
     nhwc_native = is_nhwc_mode()
 
     # Get input in NHWC format (required by MLX)
     # Only skip conversion if input is explicitly marked as NHWC
-    if nhwc_native and hasattr(input, '_layout') and input._layout == Layout.NHWC:
+    if nhwc_native and hasattr(input, "_layout") and input._layout == Layout.NHWC:
         # Input is already in NHWC - no conversion needed
         input_nhwc = input._mlx_array
     else:
@@ -76,12 +78,7 @@ def conv2d(
 
     # Perform convolution
     output_nhwc = mx.conv2d(
-        input_nhwc,
-        weight_mlx,
-        stride=stride,
-        padding=padding,
-        dilation=dilation,
-        groups=groups
+        input_nhwc, weight_mlx, stride=stride, padding=padding, dilation=dilation, groups=groups
     )
 
     # Add bias if provided
@@ -101,13 +98,22 @@ def conv2d(
 
     # Handle autograd
     from ..autograd.context import is_grad_enabled
-    if is_grad_enabled() and (input.requires_grad or weight.requires_grad or (bias is not None and bias.requires_grad)):
+
+    if is_grad_enabled() and (
+        input.requires_grad or weight.requires_grad or (bias is not None and bias.requires_grad)
+    ):
         from ..autograd.function import Conv2dBackward
+
         result.requires_grad = True
         grad_fn = Conv2dBackward(
-            input, weight, bias,
-            stride=stride, padding=padding, dilation=dilation, groups=groups,
-            nhwc_native=nhwc_native
+            input,
+            weight,
+            bias,
+            stride=stride,
+            padding=padding,
+            dilation=dilation,
+            groups=groups,
+            nhwc_native=nhwc_native,
         )
         grad_fn.output_tensor = result
         result._grad_fn = grad_fn
@@ -115,4 +121,4 @@ def conv2d(
     return result
 
 
-__all__ = ['conv2d']
+__all__ = ["conv2d"]

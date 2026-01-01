@@ -5,6 +5,7 @@ PyTorch-compatible constraint classes for distributions.
 """
 
 from typing import Dict, Optional
+
 import mlx.core as mx
 
 from ..tensor import Tensor
@@ -334,7 +335,7 @@ class _CorrCholesky(Constraint):
         diag = mx.diagonal(data, axis1=-2, axis2=-1)
         is_pos_diag = mx.all(diag > 0, axis=-1)
         # Check unit rows
-        row_norms = mx.sum(data ** 2, axis=-1)
+        row_norms = mx.sum(data**2, axis=-1)
         is_unit = mx.all(mx.isclose(row_norms, mx.array(1.0)), axis=-1)
         result = is_tril & is_pos_diag & is_unit
         return Tensor(result)
@@ -549,36 +550,36 @@ class MixtureSameFamilyConstraint(Constraint):
 
 
 __all__ = [
-    'Constraint',
-    'MixtureSameFamilyConstraint',
-    'boolean',
-    'cat',
-    'corr_cholesky',
-    'dependent',
-    'dependent_property',
-    'greater_than',
-    'greater_than_eq',
-    'half_open_interval',
-    'independent',
-    'integer_interval',
-    'interval',
-    'is_dependent',
-    'less_than',
-    'lower_cholesky',
-    'lower_triangular',
-    'multinomial',
-    'nonnegative',
-    'nonnegative_integer',
-    'one_hot',
-    'positive',
-    'positive_definite',
-    'positive_integer',
-    'positive_semidefinite',
-    'real',
-    'real_vector',
-    'simplex',
-    'square',
-    'stack',
-    'symmetric',
-    'unit_interval',
+    "Constraint",
+    "MixtureSameFamilyConstraint",
+    "boolean",
+    "cat",
+    "corr_cholesky",
+    "dependent",
+    "dependent_property",
+    "greater_than",
+    "greater_than_eq",
+    "half_open_interval",
+    "independent",
+    "integer_interval",
+    "interval",
+    "is_dependent",
+    "less_than",
+    "lower_cholesky",
+    "lower_triangular",
+    "multinomial",
+    "nonnegative",
+    "nonnegative_integer",
+    "one_hot",
+    "positive",
+    "positive_definite",
+    "positive_integer",
+    "positive_semidefinite",
+    "real",
+    "real_vector",
+    "simplex",
+    "square",
+    "stack",
+    "symmetric",
+    "unit_interval",
 ]

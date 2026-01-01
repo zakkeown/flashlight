@@ -14,15 +14,15 @@ Spectral Normalization:
     Uses power iteration to estimate sigma.
 """
 
-import warnings
 import math
+import warnings
 from typing import Optional
 
 import mlx.core as mx
 
+from ...tensor import Tensor
 from ..module import Module
 from ..parameter import Parameter
-from ...tensor import Tensor
 
 
 class _WeightNorm:
@@ -51,17 +51,17 @@ class _WeightNorm:
 
         # Compute L2 norm
         if axes:
-            norm = mx.sqrt(mx.sum(v ** 2, axis=axes, keepdims=True))
+            norm = mx.sqrt(mx.sum(v**2, axis=axes, keepdims=True))
         else:
-            norm = mx.sqrt(mx.sum(v ** 2))
+            norm = mx.sqrt(mx.sum(v**2))
 
         # Normalize and scale
         return g * (v / (norm + 1e-12))
 
     def apply(self, module: Module, inputs) -> None:
         """Pre-forward hook to compute and set the normalized weight."""
-        v = getattr(module, self.name + '_v')
-        g = getattr(module, self.name + '_g')
+        v = getattr(module, self.name + "_v")
+        g = getattr(module, self.name + "_g")
 
         # Compute normalized weight
         weight = self.compute_weight(v._mlx_array, g._mlx_array, self.dim)
@@ -110,10 +110,10 @@ class _SpectralNorm:
         for _ in range(self.n_power_iterations):
             # v = W^T u / ||W^T u||
             v_new = mx.matmul(weight_mat.T, u_new)
-            v_new = v_new / (mx.sqrt(mx.sum(v_new ** 2)) + self.eps)
+            v_new = v_new / (mx.sqrt(mx.sum(v_new**2)) + self.eps)
             # u = W v / ||W v||
             u_new = mx.matmul(weight_mat, v_new)
-            u_new = u_new / (mx.sqrt(mx.sum(u_new ** 2)) + self.eps)
+            u_new = u_new / (mx.sqrt(mx.sum(u_new**2)) + self.eps)
 
         # Compute spectral norm: sigma = u^T W v
         sigma = mx.sum(u_new * mx.matmul(weight_mat, v_new))
@@ -125,9 +125,9 @@ class _SpectralNorm:
 
     def apply(self, module: Module, inputs) -> None:
         """Pre-forward hook to compute and set the spectrally normalized weight."""
-        weight_orig = getattr(module, self.name + '_orig')
-        u = getattr(module, self.name + '_u')
-        v = getattr(module, self.name + '_v')
+        weight_orig = getattr(module, self.name + "_orig")
+        u = getattr(module, self.name + "_u")
+        v = getattr(module, self.name + "_v")
 
         # Compute normalized weight
         weight_normalized, u_new, v_new = self.compute_weight(
@@ -136,8 +136,8 @@ class _SpectralNorm:
 
         # Update u and v for next iteration (only during training)
         if module.training:
-            module._buffers[self.name + '_u'] = Tensor._from_mlx_array(u_new)
-            module._buffers[self.name + '_v'] = Tensor._from_mlx_array(v_new)
+            module._buffers[self.name + "_u"] = Tensor._from_mlx_array(u_new)
+            module._buffers[self.name + "_v"] = Tensor._from_mlx_array(v_new)
 
         # Set the weight parameter
         setattr(module, self.name, Parameter(Tensor._from_mlx_array(weight_normalized)))
@@ -145,7 +145,7 @@ class _SpectralNorm:
 
 def orthogonal(
     module: Module,
-    name: str = 'weight',
+    name: str = "weight",
     orthogonal_map: Optional[str] = None,
     *,
     use_trivialization: bool = True,
@@ -165,16 +165,13 @@ def orthogonal(
     Returns:
         The module with orthogonal parametrization
     """
-    warnings.warn(
-        "orthogonal parametrization is a stub in MLX",
-        UserWarning
-    )
+    warnings.warn("orthogonal parametrization is a stub in MLX", UserWarning)
     return module
 
 
 def spectral_norm(
     module: Module,
-    name: str = 'weight',
+    name: str = "weight",
     n_power_iterations: int = 1,
     eps: float = 1e-12,
     dim: Optional[int] = None,
@@ -219,21 +216,21 @@ def spectral_norm(
 
     # Initialize u and v vectors randomly
     u = mx.random.normal(shape=(height,))
-    u = u / (mx.sqrt(mx.sum(u ** 2)) + eps)
+    u = u / (mx.sqrt(mx.sum(u**2)) + eps)
     v = mx.random.normal(shape=(width,))
-    v = v / (mx.sqrt(mx.sum(v ** 2)) + eps)
+    v = v / (mx.sqrt(mx.sum(v**2)) + eps)
 
     # Register the original weight and u, v vectors
     delattr(module, name)
-    module.register_parameter(name + '_orig', Parameter(weight))
-    module.register_buffer(name + '_u', Tensor._from_mlx_array(u))
-    module.register_buffer(name + '_v', Tensor._from_mlx_array(v))
+    module.register_parameter(name + "_orig", Parameter(weight))
+    module.register_buffer(name + "_u", Tensor._from_mlx_array(u))
+    module.register_buffer(name + "_v", Tensor._from_mlx_array(v))
 
     # Create the spectral norm helper
     sn = _SpectralNorm(name, n_power_iterations, dim, eps)
 
     # Store reference for removal
-    if not hasattr(module, '_spectral_norm_hooks'):
+    if not hasattr(module, "_spectral_norm_hooks"):
         module._spectral_norm_hooks = {}
 
     # Register pre-forward hook
@@ -248,7 +245,7 @@ def spectral_norm(
 
 def weight_norm(
     module: Module,
-    name: str = 'weight',
+    name: str = "weight",
     dim: int = 0,
 ) -> Module:
     """
@@ -289,9 +286,9 @@ def weight_norm(
     # Compute initial norm
     axes = [i for i in range(ndim) if i != dim]
     if axes:
-        norm = mx.sqrt(mx.sum(weight_array ** 2, axis=axes, keepdims=True))
+        norm = mx.sqrt(mx.sum(weight_array**2, axis=axes, keepdims=True))
     else:
-        norm = mx.sqrt(mx.sum(weight_array ** 2, keepdims=True))
+        norm = mx.sqrt(mx.sum(weight_array**2, keepdims=True))
 
     # g is the magnitude (shape matches weight along dim, 1 elsewhere)
     g = norm
@@ -301,14 +298,14 @@ def weight_norm(
 
     # Remove original weight and register new parameters
     delattr(module, name)
-    module.register_parameter(name + '_g', Parameter(Tensor._from_mlx_array(g)))
-    module.register_parameter(name + '_v', Parameter(Tensor._from_mlx_array(v)))
+    module.register_parameter(name + "_g", Parameter(Tensor._from_mlx_array(g)))
+    module.register_parameter(name + "_v", Parameter(Tensor._from_mlx_array(v)))
 
     # Create the weight norm helper
     wn = _WeightNorm(name, dim)
 
     # Store reference for removal
-    if not hasattr(module, '_weight_norm_hooks'):
+    if not hasattr(module, "_weight_norm_hooks"):
         module._weight_norm_hooks = {}
 
     # Register pre-forward hook
@@ -321,7 +318,7 @@ def weight_norm(
     return module
 
 
-def remove_spectral_norm(module: Module, name: str = 'weight') -> Module:
+def remove_spectral_norm(module: Module, name: str = "weight") -> Module:
     """
     Remove spectral normalization from a module.
 
@@ -332,7 +329,7 @@ def remove_spectral_norm(module: Module, name: str = 'weight') -> Module:
     Returns:
         The module with spectral normalization removed
     """
-    if not hasattr(module, '_spectral_norm_hooks') or name not in module._spectral_norm_hooks:
+    if not hasattr(module, "_spectral_norm_hooks") or name not in module._spectral_norm_hooks:
         raise ValueError(f"spectral_norm not applied to {name}")
 
     # Get the current weight value
@@ -344,12 +341,12 @@ def remove_spectral_norm(module: Module, name: str = 'weight') -> Module:
     del module._spectral_norm_hooks[name]
 
     # Remove the split parameters
-    delattr(module, name + '_orig')
-    if hasattr(module, '_buffers'):
-        if name + '_u' in module._buffers:
-            del module._buffers[name + '_u']
-        if name + '_v' in module._buffers:
-            del module._buffers[name + '_v']
+    delattr(module, name + "_orig")
+    if hasattr(module, "_buffers"):
+        if name + "_u" in module._buffers:
+            del module._buffers[name + "_u"]
+        if name + "_v" in module._buffers:
+            del module._buffers[name + "_v"]
 
     # Restore original weight
     module.register_parameter(name, Parameter(weight))
@@ -357,7 +354,7 @@ def remove_spectral_norm(module: Module, name: str = 'weight') -> Module:
     return module
 
 
-def remove_weight_norm(module: Module, name: str = 'weight') -> Module:
+def remove_weight_norm(module: Module, name: str = "weight") -> Module:
     """
     Remove weight normalization from a module.
 
@@ -368,7 +365,7 @@ def remove_weight_norm(module: Module, name: str = 'weight') -> Module:
     Returns:
         The module with weight normalization removed
     """
-    if not hasattr(module, '_weight_norm_hooks') or name not in module._weight_norm_hooks:
+    if not hasattr(module, "_weight_norm_hooks") or name not in module._weight_norm_hooks:
         raise ValueError(f"weight_norm not applied to {name}")
 
     # Get the current weight value
@@ -380,8 +377,8 @@ def remove_weight_norm(module: Module, name: str = 'weight') -> Module:
     del module._weight_norm_hooks[name]
 
     # Remove the split parameters
-    delattr(module, name + '_g')
-    delattr(module, name + '_v')
+    delattr(module, name + "_g")
+    delattr(module, name + "_v")
 
     # Restore combined weight
     module.register_parameter(name, Parameter(weight))
@@ -390,9 +387,9 @@ def remove_weight_norm(module: Module, name: str = 'weight') -> Module:
 
 
 __all__ = [
-    'orthogonal',
-    'spectral_norm',
-    'weight_norm',
-    'remove_spectral_norm',
-    'remove_weight_norm',
+    "orthogonal",
+    "spectral_norm",
+    "weight_norm",
+    "remove_spectral_norm",
+    "remove_weight_norm",
 ]

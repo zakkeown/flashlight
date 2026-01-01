@@ -4,7 +4,8 @@ Shape Manipulation Operations
 Implements PyTorch-compatible shape manipulation operations with MLX backend.
 """
 
-from typing import Union, Tuple, List, Optional
+from typing import List, Optional, Tuple, Union
+
 import mlx.core as mx
 
 from ..tensor import Tensor
@@ -34,6 +35,7 @@ def cat(tensors: Union[Tuple[Tensor, ...], List[Tensor]], dim: int = 0) -> Tenso
     if is_grad_enabled() and any(t.requires_grad for t in tensors):
         result.requires_grad = True
         from ..autograd.function import CatBackward
+
         grad_fn = CatBackward(list(tensors), dim=dim)
         grad_fn.output_tensor = result
         result._grad_fn = grad_fn
@@ -65,7 +67,9 @@ def stack(tensors: Union[Tuple[Tensor, ...], List[Tensor]], dim: int = 0) -> Ten
     return result
 
 
-def split(tensor: Tensor, split_size_or_sections: Union[int, List[int]], dim: int = 0) -> Tuple[Tensor, ...]:
+def split(
+    tensor: Tensor, split_size_or_sections: Union[int, List[int]], dim: int = 0
+) -> Tuple[Tensor, ...]:
     """
     Split tensor into chunks.
 
@@ -191,7 +195,9 @@ def tile(tensor: Tensor, dims: Tuple[int, ...]) -> Tensor:
     return repeat(tensor, dims)
 
 
-def repeat_interleave(tensor: Tensor, repeats: Union[int, Tensor], dim: Optional[int] = None) -> Tensor:
+def repeat_interleave(
+    tensor: Tensor, repeats: Union[int, Tensor], dim: Optional[int] = None
+) -> Tensor:
     """
     Repeat elements of tensor.
 
@@ -329,7 +335,11 @@ def unbind(tensor: Tensor, dim: int = 0) -> Tuple[Tensor, ...]:
     return tuple(results)
 
 
-def roll(input: Tensor, shifts: Union[int, Tuple[int, ...]], dims: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:
+def roll(
+    input: Tensor,
+    shifts: Union[int, Tuple[int, ...]],
+    dims: Optional[Union[int, Tuple[int, ...]]] = None,
+) -> Tensor:
     """
     Roll the tensor along the given dimension(s).
 
@@ -514,6 +524,7 @@ def rot90(input: Tensor, k: int = 1, dims: Tuple[int, int] = (0, 1)) -> Tensor:
 # Extended Shape Operations (Sprint 4)
 # =============================================================================
 
+
 def ravel(input: Tensor) -> Tensor:
     """
     Return a contiguous flattened tensor.
@@ -592,7 +603,9 @@ def adjoint(input: Tensor) -> Tensor:
     return result
 
 
-def moveaxis(input: Tensor, source: Union[int, Tuple[int, ...]], destination: Union[int, Tuple[int, ...]]) -> Tensor:
+def moveaxis(
+    input: Tensor, source: Union[int, Tuple[int, ...]], destination: Union[int, Tuple[int, ...]]
+) -> Tensor:
     """
     Move axes of a tensor to new positions.
 
@@ -816,7 +829,9 @@ def dsplit(tensor: Tensor, indices_or_sections: Union[int, List[int]]) -> Tuple[
     return tensor_split(tensor, indices_or_sections, dim=2)
 
 
-def tensor_split(input: Tensor, indices_or_sections: Union[int, List[int], Tensor], dim: int = 0) -> Tuple[Tensor, ...]:
+def tensor_split(
+    input: Tensor, indices_or_sections: Union[int, List[int], Tensor], dim: int = 0
+) -> Tuple[Tensor, ...]:
     """
     Split a tensor into multiple sub-tensors.
 
@@ -1006,11 +1021,14 @@ def diag_embed(input: Tensor, offset: int = 0, dim1: int = -2, dim2: int = -1) -
                 mask = (rows == r) & (cols == c)
                 batch_result = mx.where(mask, flat_input[b, i], batch_result)
             # Update the batch slice
-            flat_result = mx.concatenate([
-                flat_result[:b],
-                mx.expand_dims(batch_result, axis=0),
-                flat_result[b+1:]
-            ], axis=0) if batch_size > 1 else mx.expand_dims(batch_result, axis=0)
+            flat_result = (
+                mx.concatenate(
+                    [flat_result[:b], mx.expand_dims(batch_result, axis=0), flat_result[b + 1 :]],
+                    axis=0,
+                )
+                if batch_size > 1
+                else mx.expand_dims(batch_result, axis=0)
+            )
 
         # Reshape back to output shape
         result = mx.reshape(flat_result, out_shape)
@@ -1117,7 +1135,7 @@ def unflatten(input: Tensor, dim: int, sizes: Tuple[int, ...]) -> Tensor:
             raise RuntimeError(f"Unflatten size mismatch: {shape[dim]} vs {prod(sizes)}")
 
     # Build new shape
-    new_shape = shape[:dim] + list(sizes) + shape[dim+1:]
+    new_shape = shape[:dim] + list(sizes) + shape[dim + 1 :]
 
     result_array = mx.reshape(input._mlx_array, new_shape)
     result = Tensor._from_mlx_array(result_array)
@@ -1167,7 +1185,8 @@ def combinations(input: Tensor, r: int = 2, with_replacement: bool = False) -> T
     Returns:
         Tensor of combinations
     """
-    from itertools import combinations as iter_combinations, combinations_with_replacement
+    from itertools import combinations as iter_combinations
+    from itertools import combinations_with_replacement
 
     arr = input._mlx_array
     n = arr.shape[0]
@@ -1236,7 +1255,9 @@ def unsafe_split(tensor: Tensor, split_size: int, dim: int = 0) -> Tuple[Tensor,
     return split(tensor, split_size, dim)
 
 
-def unsafe_split_with_sizes(tensor: Tensor, split_sizes: List[int], dim: int = 0) -> Tuple[Tensor, ...]:
+def unsafe_split_with_sizes(
+    tensor: Tensor, split_sizes: List[int], dim: int = 0
+) -> Tuple[Tensor, ...]:
     """
     Like split_with_sizes but may return empty tensors.
 
@@ -1252,16 +1273,49 @@ def unsafe_split_with_sizes(tensor: Tensor, split_sizes: List[int], dim: int = 0
 
 
 __all__ = [
-    'cat', 'stack', 'split', 'chunk',
-    'expand', 'repeat', 'tile', 'repeat_interleave',
-    'gather', 'narrow', 'select', 'unbind',
-    'roll', 'flip', 'fliplr', 'flipud', 'rot90',
-    'ravel', 't', 'adjoint', 'moveaxis', 'swapaxes',
-    'hstack', 'vstack', 'dstack', 'column_stack', 'row_stack',
-    'hsplit', 'vsplit', 'dsplit', 'tensor_split',
-    'block_diag', 'diag_embed', 'diagflat',
+    "cat",
+    "stack",
+    "split",
+    "chunk",
+    "expand",
+    "repeat",
+    "tile",
+    "repeat_interleave",
+    "gather",
+    "narrow",
+    "select",
+    "unbind",
+    "roll",
+    "flip",
+    "fliplr",
+    "flipud",
+    "rot90",
+    "ravel",
+    "t",
+    "adjoint",
+    "moveaxis",
+    "swapaxes",
+    "hstack",
+    "vstack",
+    "dstack",
+    "column_stack",
+    "row_stack",
+    "hsplit",
+    "vsplit",
+    "dsplit",
+    "tensor_split",
+    "block_diag",
+    "diag_embed",
+    "diagflat",
     # Additional shape ops
-    'movedim', 'swapdims',
-    'broadcast_tensors', 'unflatten', 'concat', 'combinations',
-    'split_with_sizes', 'unsafe_chunk', 'unsafe_split', 'unsafe_split_with_sizes',
+    "movedim",
+    "swapdims",
+    "broadcast_tensors",
+    "unflatten",
+    "concat",
+    "combinations",
+    "split_with_sizes",
+    "unsafe_chunk",
+    "unsafe_split",
+    "unsafe_split_with_sizes",
 ]

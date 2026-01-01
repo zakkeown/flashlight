@@ -1,11 +1,12 @@
 """Mixture of Same Family Distribution"""
 
 from typing import Optional, Tuple
+
 import mlx.core as mx
 
 from ..tensor import Tensor
-from .distribution import Distribution
 from . import constraints
+from .distribution import Distribution
 
 
 class MixtureSameFamily(Distribution):
@@ -69,7 +70,7 @@ class MixtureSameFamily(Distribution):
             comp_var = comp_var._mlx_array
         mean = self.mean._mlx_array
         # Var = E[Var(X|Z)] + Var(E[X|Z])
-        return Tensor(mx.sum(probs * (comp_var + comp_mean ** 2), axis=-2) - mean ** 2)
+        return Tensor(mx.sum(probs * (comp_var + comp_mean**2), axis=-2) - mean**2)
 
     def sample(self, sample_shape: Tuple[int, ...] = ()) -> Tensor:
         # Sample mixture indices
@@ -100,4 +101,4 @@ class MixtureSameFamily(Distribution):
         return Tensor(mx.logsumexp(mix_log_prob + comp_log_prob, axis=-1))
 
 
-__all__ = ['MixtureSameFamily']
+__all__ = ["MixtureSameFamily"]

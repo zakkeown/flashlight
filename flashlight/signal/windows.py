@@ -5,13 +5,13 @@ PyTorch-compatible torch.signal.windows module for MLX.
 Provides various window functions for signal processing.
 """
 
-from typing import Optional, Iterable
 import math
+from typing import Iterable, Optional
 
 import mlx.core as mx
 
-from ..tensor import Tensor
 from ..dtype import get_dtype
+from ..tensor import Tensor
 
 
 def _to_mlx_dtype(dtype):
@@ -99,7 +99,11 @@ def blackman(
     indices = mx.arange(n, dtype=mx.float32)
 
     a0, a1, a2 = 0.42, 0.5, 0.08
-    window = a0 - a1 * mx.cos(2 * math.pi * indices / (n - 1)) + a2 * mx.cos(4 * math.pi * indices / (n - 1))
+    window = (
+        a0
+        - a1 * mx.cos(2 * math.pi * indices / (n - 1))
+        + a2 * mx.cos(4 * math.pi * indices / (n - 1))
+    )
 
     if not sym:
         window = window[:-1]
@@ -439,7 +443,7 @@ def kaiser(
     alpha = (n - 1) / 2.0
     ratio = (indices - alpha) / alpha
     # Clamp to avoid sqrt of negative due to numerical precision
-    arg = beta * mx.sqrt(mx.maximum(1 - ratio ** 2, mx.array(0.0)))
+    arg = beta * mx.sqrt(mx.maximum(1 - ratio**2, mx.array(0.0)))
 
     # I0 approximation via series expansion
     window = _i0_approx(arg) / _i0_approx(mx.array(beta))
@@ -498,15 +502,15 @@ def nuttall(
 
 
 __all__ = [
-    'bartlett',
-    'blackman',
-    'cosine',
-    'exponential',
-    'gaussian',
-    'general_cosine',
-    'general_hamming',
-    'hamming',
-    'hann',
-    'kaiser',
-    'nuttall',
+    "bartlett",
+    "blackman",
+    "cosine",
+    "exponential",
+    "gaussian",
+    "general_cosine",
+    "general_hamming",
+    "hamming",
+    "hann",
+    "kaiser",
+    "nuttall",
 ]

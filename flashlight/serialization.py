@@ -6,8 +6,10 @@ Implements PyTorch-compatible save/load functions for models and tensors.
 
 import os
 import pickle
-from typing import Any, Dict, Union, IO
+from typing import IO, Any, Dict, Union
+
 import mlx.core as mx
+
 from .tensor import Tensor
 
 
@@ -50,7 +52,7 @@ def save(
 
     # Handle file path vs file object
     if isinstance(f, (str, os.PathLike)):
-        with open(f, 'wb') as file:
+        with open(f, "wb") as file:
             pickle_module.dump(serializable, file, protocol=pickle_protocol)
     else:
         pickle_module.dump(serializable, f, protocol=pickle_protocol)
@@ -62,7 +64,7 @@ def load(
     pickle_module=None,
     weights_only=None,
     mmap=None,
-    **pickle_load_args
+    **pickle_load_args,
 ) -> Any:
     """
     Load an object from a file.
@@ -100,7 +102,7 @@ def load(
 
     # Handle file path vs file object
     if isinstance(f, (str, os.PathLike)):
-        with open(f, 'rb') as file:
+        with open(f, "rb") as file:
             obj = pickle_module.load(file, **pickle_load_args)
     else:
         obj = pickle_module.load(f, **pickle_load_args)
@@ -118,25 +120,25 @@ def _to_serializable(obj: Any) -> Any:
     if isinstance(obj, Tensor):
         # Convert Tensor to serializable dict
         return {
-            '__mlx_tensor__': True,
-            'data': obj._mlx_array.tolist(),
-            'shape': list(obj.shape),
-            'dtype': str(obj.dtype),
-            'requires_grad': obj.requires_grad
+            "__mlx_tensor__": True,
+            "data": obj._mlx_array.tolist(),
+            "shape": list(obj.shape),
+            "dtype": str(obj.dtype),
+            "requires_grad": obj.requires_grad,
         }
     elif isinstance(obj, dict):
         return {k: _to_serializable(v) for k, v in obj.items()}
     elif isinstance(obj, (list, tuple)):
         result = [_to_serializable(item) for item in obj]
         return type(obj)(result) if isinstance(obj, tuple) else result
-    elif hasattr(obj, '_mlx_array'):
+    elif hasattr(obj, "_mlx_array"):
         # Handle Parameter objects
         return {
-            '__mlx_tensor__': True,
-            'data': obj._mlx_array.tolist(),
-            'shape': list(obj.shape),
-            'dtype': str(obj.dtype),
-            'requires_grad': getattr(obj, 'requires_grad', False)
+            "__mlx_tensor__": True,
+            "data": obj._mlx_array.tolist(),
+            "shape": list(obj.shape),
+            "dtype": str(obj.dtype),
+            "requires_grad": getattr(obj, "requires_grad", False),
         }
     else:
         return obj
@@ -149,27 +151,27 @@ def _from_serializable(obj: Any) -> Any:
     Recursively converts serializable dicts back to Tensors.
     """
     if isinstance(obj, dict):
-        if obj.get('__mlx_tensor__', False):
+        if obj.get("__mlx_tensor__", False):
             # Reconstruct Tensor
-            data = obj['data']
-            dtype_str = obj.get('dtype', 'float32')
-            requires_grad = obj.get('requires_grad', False)
+            data = obj["data"]
+            dtype_str = obj.get("dtype", "float32")
+            requires_grad = obj.get("requires_grad", False)
 
             # Map dtype string to MLX dtype
             dtype_map = {
-                'float32': mx.float32,
-                'float16': mx.float16,
-                'bfloat16': mx.bfloat16,
-                'float64': mx.float32,  # MLX doesn't support float64, use float32
-                'int32': mx.int32,
-                'int64': mx.int64,
-                'int16': mx.int16,
-                'int8': mx.int8,
-                'uint8': mx.uint8,
-                'uint16': mx.uint16,
-                'uint32': mx.uint32,
-                'uint64': mx.uint64,
-                'bool': mx.bool_,
+                "float32": mx.float32,
+                "float16": mx.float16,
+                "bfloat16": mx.bfloat16,
+                "float64": mx.float32,  # MLX doesn't support float64, use float32
+                "int32": mx.int32,
+                "int64": mx.int64,
+                "int16": mx.int16,
+                "int8": mx.int8,
+                "uint8": mx.uint8,
+                "uint16": mx.uint16,
+                "uint32": mx.uint32,
+                "uint64": mx.uint64,
+                "bool": mx.bool_,
             }
             dtype = dtype_map.get(dtype_str, mx.float32)
 
@@ -186,4 +188,4 @@ def _from_serializable(obj: Any) -> Any:
         return obj
 
 
-__all__ = ['save', 'load']
+__all__ = ["save", "load"]

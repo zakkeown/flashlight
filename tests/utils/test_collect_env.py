@@ -8,20 +8,20 @@ import unittest
 from unittest.mock import patch
 
 from flashlight.utils.collect_env import (
-    get_python_version,
-    get_python_platform,
-    get_os,
-    get_os_version,
-    get_mac_version,
+    SystemEnv,
     get_cpu_info,
+    get_env_info,
+    get_flashlight_version,
     get_gpu_info,
+    get_mac_version,
     get_metal_available,
     get_mlx_version,
-    get_flashlight_version,
     get_numpy_version,
-    get_env_info,
+    get_os,
+    get_os_version,
     get_pretty_env_info,
-    SystemEnv,
+    get_python_platform,
+    get_python_version,
 )
 
 

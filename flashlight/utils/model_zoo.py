@@ -6,18 +6,19 @@ Provides PyTorch-compatible API for downloading model checkpoints.
 
 import hashlib
 import os
+import shutil
 import sys
 import tempfile
 import warnings
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
 from urllib.parse import urlparse
-from urllib.request import urlopen, Request
-import shutil
+from urllib.request import Request, urlopen
 
 # Try to import tqdm for progress bar
 try:
     from tqdm import tqdm
+
     HAS_TQDM = True
 except ImportError:
     HAS_TQDM = False
@@ -96,7 +97,9 @@ def _download_url_to_file(
 
     with open(dst, "wb") as f:
         if progress and HAS_TQDM and file_size:
-            with tqdm(total=file_size, unit="B", unit_scale=True, desc=os.path.basename(dst)) as pbar:
+            with tqdm(
+                total=file_size, unit="B", unit_scale=True, desc=os.path.basename(dst)
+            ) as pbar:
                 while True:
                     buffer = u.read(8192)
                     if len(buffer) == 0:

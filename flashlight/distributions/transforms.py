@@ -4,8 +4,9 @@ Transforms Module
 PyTorch-compatible transforms for distributions.
 """
 
-from typing import List, Optional, Sequence
 import math
+from typing import List, Optional, Sequence
+
 import mlx.core as mx
 
 from ..tensor import Tensor
@@ -335,7 +336,7 @@ class CorrCholeskyTransform(Transform):
         z = mx.tanh(data)
         L = mx.tril(mx.ones_like(data))
         # Simplified: just normalize rows
-        norms = mx.sqrt(mx.sum(L ** 2, axis=-1, keepdims=True))
+        norms = mx.sqrt(mx.sum(L**2, axis=-1, keepdims=True))
         result = L / norms
         return Tensor(result)
 
@@ -352,7 +353,9 @@ class StickBreakingTransform(Transform):
         # Stick breaking: x_i = z_i * prod(1 - z_j for j < i)
         z1m_cumprod = mx.cumprod(1 - z, axis=-1)
         # Shift and pad
-        z1m_cumprod_shifted = mx.concatenate([mx.ones((*data.shape[:-1], 1)), z1m_cumprod[..., :-1]], axis=-1)
+        z1m_cumprod_shifted = mx.concatenate(
+            [mx.ones((*data.shape[:-1], 1)), z1m_cumprod[..., :-1]], axis=-1
+        )
         p = z * z1m_cumprod_shifted
         # Last element
         last = z1m_cumprod[..., -1:]
@@ -444,17 +447,17 @@ class ReshapeTransform(Transform):
 
     def _call(self, x):
         data = x._mlx_array if isinstance(x, Tensor) else x
-        batch_shape = data.shape[:-len(self.in_shape)]
+        batch_shape = data.shape[: -len(self.in_shape)]
         return Tensor(mx.reshape(data, batch_shape + tuple(self.out_shape)))
 
     def _inverse(self, y):
         data = y._mlx_array if isinstance(y, Tensor) else y
-        batch_shape = data.shape[:-len(self.out_shape)]
+        batch_shape = data.shape[: -len(self.out_shape)]
         return Tensor(mx.reshape(data, batch_shape + tuple(self.in_shape)))
 
     def log_abs_det_jacobian(self, x, y):
         data = x._mlx_array if isinstance(x, Tensor) else x
-        return Tensor(mx.zeros(data.shape[:-len(self.in_shape)]))
+        return Tensor(mx.zeros(data.shape[: -len(self.in_shape)]))
 
 
 class CumulativeDistributionTransform(Transform):
@@ -486,24 +489,24 @@ class CumulativeDistributionTransform(Transform):
 identity_transform = ComposeTransform([])
 
 __all__ = [
-    'Transform',
-    'ComposeTransform',
-    'ExpTransform',
-    'PowerTransform',
-    'SigmoidTransform',
-    'TanhTransform',
-    'AbsTransform',
-    'AffineTransform',
-    'SoftmaxTransform',
-    'SoftplusTransform',
-    'LowerCholeskyTransform',
-    'PositiveDefiniteTransform',
-    'CorrCholeskyTransform',
-    'StickBreakingTransform',
-    'CatTransform',
-    'StackTransform',
-    'IndependentTransform',
-    'ReshapeTransform',
-    'CumulativeDistributionTransform',
-    'identity_transform',
+    "Transform",
+    "ComposeTransform",
+    "ExpTransform",
+    "PowerTransform",
+    "SigmoidTransform",
+    "TanhTransform",
+    "AbsTransform",
+    "AffineTransform",
+    "SoftmaxTransform",
+    "SoftplusTransform",
+    "LowerCholeskyTransform",
+    "PositiveDefiniteTransform",
+    "CorrCholeskyTransform",
+    "StickBreakingTransform",
+    "CatTransform",
+    "StackTransform",
+    "IndependentTransform",
+    "ReshapeTransform",
+    "CumulativeDistributionTransform",
+    "identity_transform",
 ]

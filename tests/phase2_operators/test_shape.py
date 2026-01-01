@@ -5,15 +5,18 @@ Tests shape manipulation operations (cat, stack, split, expand, repeat, etc.)
 """
 
 import sys
-sys.path.insert(0, '../..')
+
+sys.path.insert(0, "../..")
 
 import unittest
+
 import numpy as np
 
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
     import flashlight
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -428,6 +431,7 @@ class TestRot90(TestCase):
         np.testing.assert_array_equal(y.numpy(), x.numpy())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from tests.common_utils import run_tests
+
     run_tests()

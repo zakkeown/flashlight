@@ -1,20 +1,23 @@
 """Relaxed Categorical Distribution"""
 
 from typing import Optional, Tuple, Union
+
 import mlx.core as mx
 
 from ..tensor import Tensor
-from .distribution import Distribution
 from . import constraints
-from ._constants import UNIFORM_LOW, UNIFORM_HIGH, safe_log
+from ._constants import UNIFORM_HIGH, UNIFORM_LOW, safe_log
+from .distribution import Distribution
 
 
 class RelaxedOneHotCategorical(Distribution):
     """Relaxed One-Hot Categorical distribution (Concrete/Gumbel-Softmax)."""
 
-    arg_constraints = {'temperature': constraints.positive,
-                      'probs': constraints.simplex,
-                      'logits': constraints.real_vector}
+    arg_constraints = {
+        "temperature": constraints.positive,
+        "probs": constraints.simplex,
+        "logits": constraints.real_vector,
+    }
     support = constraints.simplex
     has_rsample = True
 
@@ -28,7 +31,9 @@ class RelaxedOneHotCategorical(Distribution):
         if (probs is None) == (logits is None):
             raise ValueError("Exactly one of probs or logits must be specified")
 
-        self.temperature = temperature._mlx_array if isinstance(temperature, Tensor) else mx.array(temperature)
+        self.temperature = (
+            temperature._mlx_array if isinstance(temperature, Tensor) else mx.array(temperature)
+        )
         if probs is not None:
             self.probs = probs._mlx_array if isinstance(probs, Tensor) else mx.array(probs)
             self.logits = mx.log(self.probs)
@@ -63,4 +68,4 @@ class RelaxedOneHotCategorical(Distribution):
         return Tensor(log_prob)
 
 
-__all__ = ['RelaxedOneHotCategorical']
+__all__ = ["RelaxedOneHotCategorical"]

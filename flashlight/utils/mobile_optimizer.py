@@ -6,9 +6,9 @@ MLX is already optimized for Apple Silicon, so these provide API compatibility
 while applying MLX-specific optimizations where applicable.
 """
 
+import warnings
 from enum import Enum
 from typing import Any, Dict, List, Optional, Set, Union
-import warnings
 
 
 class MobileOptimizerType(Enum):
@@ -120,8 +120,9 @@ def _fuse_conv_bn(module: Any) -> None:
     This optimization folds batch normalization parameters into the
     preceding convolution, eliminating the batch norm computation.
     """
-    import flashlight.nn as nn
     import mlx.core as mx
+
+    import flashlight.nn as nn
 
     children = list(module.named_children())
 
@@ -205,29 +206,35 @@ def generate_mobile_module_lints(module: Any) -> List[Dict[str, Any]]:
     def check_module(name: str, mod: Any) -> None:
         # Check for dropout
         if isinstance(mod, (nn.Dropout, nn.Dropout2d, nn.Dropout3d)):
-            lints.append({
-                "code": LintCode.DROPOUT,
-                "name": name,
-                "message": f"Dropout layer '{name}' found. Consider removing for inference.",
-            })
+            lints.append(
+                {
+                    "code": LintCode.DROPOUT,
+                    "name": name,
+                    "message": f"Dropout layer '{name}' found. Consider removing for inference.",
+                }
+            )
 
         # Check for batch norm in training mode
         if isinstance(mod, (nn.BatchNorm1d, nn.BatchNorm2d)):
             if mod.training:
-                lints.append({
-                    "code": LintCode.BATCHNORM,
-                    "name": name,
-                    "message": f"BatchNorm '{name}' is in training mode. Call model.eval() for inference.",
-                })
+                lints.append(
+                    {
+                        "code": LintCode.BATCHNORM,
+                        "name": name,
+                        "message": f"BatchNorm '{name}' is in training mode. Call model.eval() for inference.",
+                    }
+                )
 
         # Check for requires_grad on parameters
         for param_name, param in mod.named_parameters():
             if hasattr(param, "requires_grad") and param.requires_grad:
-                lints.append({
-                    "code": LintCode.REQUIRES_GRAD,
-                    "name": f"{name}.{param_name}",
-                    "message": f"Parameter '{name}.{param_name}' has requires_grad=True.",
-                })
+                lints.append(
+                    {
+                        "code": LintCode.REQUIRES_GRAD,
+                        "name": f"{name}.{param_name}",
+                        "message": f"Parameter '{name}.{param_name}' has requires_grad=True.",
+                    }
+                )
                 break  # Only report once per module
 
     # Walk the module tree

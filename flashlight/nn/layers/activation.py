@@ -9,9 +9,10 @@ Implements PyTorch-compatible activation function layers:
 """
 
 from typing import Optional
-from ..module import Module
-from ...tensor import Tensor
+
 from ... import ops
+from ...tensor import Tensor
+from ..module import Module
 
 
 class ReLU(Module):
@@ -46,7 +47,7 @@ class ReLU(Module):
         return result
 
     def extra_repr(self) -> str:
-        return f'inplace={self.inplace}' if self.inplace else ''
+        return f"inplace={self.inplace}" if self.inplace else ""
 
 
 class LeakyReLU(Module):
@@ -83,7 +84,7 @@ class LeakyReLU(Module):
         return result
 
     def extra_repr(self) -> str:
-        return f'negative_slope={self.negative_slope}'
+        return f"negative_slope={self.negative_slope}"
 
 
 class ELU(Module):
@@ -115,7 +116,7 @@ class ELU(Module):
         return ops.elu(input, alpha=self.alpha)
 
     def extra_repr(self) -> str:
-        return f'alpha={self.alpha}'
+        return f"alpha={self.alpha}"
 
 
 class Sigmoid(Module):
@@ -183,7 +184,7 @@ class GELU(Module):
         >>> output = m(x)
     """
 
-    def __init__(self, approximate: str = 'none'):
+    def __init__(self, approximate: str = "none"):
         super().__init__()
         self.approximate = approximate
 
@@ -248,7 +249,7 @@ class Softmax(Module):
         return ops.softmax(input, dim=self.dim)
 
     def extra_repr(self) -> str:
-        return f'dim={self.dim}'
+        return f"dim={self.dim}"
 
 
 class LogSoftmax(Module):
@@ -278,7 +279,7 @@ class LogSoftmax(Module):
         return ops.log_softmax(input, dim=self.dim)
 
     def extra_repr(self) -> str:
-        return f'dim={self.dim}'
+        return f"dim={self.dim}"
 
 
 class ReLU6(Module):
@@ -301,6 +302,7 @@ class ReLU6(Module):
 
     def forward(self, input: Tensor) -> Tensor:
         import mlx.core as mx
+
         x = input._mlx_array
         result = mx.minimum(mx.maximum(x, 0), 6)
         return Tensor._from_mlx_array(result)
@@ -328,6 +330,7 @@ class SELU(Module):
 
     def forward(self, input: Tensor) -> Tensor:
         import mlx.core as mx
+
         alpha = 1.6732632423543772848170429916717
         scale = 1.0507009873554804934193349852946
         x = input._mlx_array
@@ -357,12 +360,13 @@ class CELU(Module):
 
     def forward(self, input: Tensor) -> Tensor:
         import mlx.core as mx
+
         x = input._mlx_array
         result = mx.maximum(x, 0) + mx.minimum(0, self.alpha * (mx.exp(x / self.alpha) - 1))
         return Tensor._from_mlx_array(result)
 
     def extra_repr(self) -> str:
-        return f'alpha={self.alpha}'
+        return f"alpha={self.alpha}"
 
 
 class Hardtanh(Module):
@@ -381,15 +385,24 @@ class Hardtanh(Module):
         - Output: (*, ) same shape as input
     """
 
-    def __init__(self, min_val: float = -1.0, max_val: float = 1.0, inplace: bool = False, min_value: float = None, max_value: float = None):
+    def __init__(
+        self,
+        min_val: float = -1.0,
+        max_val: float = 1.0,
+        inplace: bool = False,
+        min_value: float = None,
+        max_value: float = None,
+    ):
         super().__init__()
         # min_value and max_value are deprecated aliases for min_val and max_val
         if min_value is not None:
             import warnings
+
             warnings.warn("min_value is deprecated, use min_val instead", DeprecationWarning)
             min_val = min_value
         if max_value is not None:
             import warnings
+
             warnings.warn("max_value is deprecated, use max_val instead", DeprecationWarning)
             max_val = max_value
         self.min_val = min_val
@@ -398,12 +411,13 @@ class Hardtanh(Module):
 
     def forward(self, input: Tensor) -> Tensor:
         import mlx.core as mx
+
         x = input._mlx_array
         result = mx.clip(x, self.min_val, self.max_val)
         return Tensor._from_mlx_array(result)
 
     def extra_repr(self) -> str:
-        return f'min_val={self.min_val}, max_val={self.max_val}'
+        return f"min_val={self.min_val}, max_val={self.max_val}"
 
 
 class Hardsigmoid(Module):
@@ -426,6 +440,7 @@ class Hardsigmoid(Module):
 
     def forward(self, input: Tensor) -> Tensor:
         import mlx.core as mx
+
         x = input._mlx_array
         result = mx.clip((x + 3) / 6, 0, 1)
         return Tensor._from_mlx_array(result)
@@ -451,6 +466,7 @@ class Hardswish(Module):
 
     def forward(self, input: Tensor) -> Tensor:
         import mlx.core as mx
+
         x = input._mlx_array
         result = x * mx.clip((x + 3) / 6, 0, 1)
         return Tensor._from_mlx_array(result)
@@ -476,12 +492,13 @@ class Hardshrink(Module):
 
     def forward(self, input: Tensor) -> Tensor:
         import mlx.core as mx
+
         x = input._mlx_array
         result = mx.where(mx.abs(x) > self.lambd, x, 0)
         return Tensor._from_mlx_array(result)
 
     def extra_repr(self) -> str:
-        return f'lambd={self.lambd}'
+        return f"lambd={self.lambd}"
 
 
 class Softplus(Module):
@@ -506,18 +523,15 @@ class Softplus(Module):
 
     def forward(self, input: Tensor) -> Tensor:
         import mlx.core as mx
+
         x = input._mlx_array
         beta_x = self.beta * x
         # Use linear approximation for large values to avoid overflow
-        result = mx.where(
-            beta_x > self.threshold,
-            x,
-            mx.log1p(mx.exp(beta_x)) / self.beta
-        )
+        result = mx.where(beta_x > self.threshold, x, mx.log1p(mx.exp(beta_x)) / self.beta)
         return Tensor._from_mlx_array(result)
 
     def extra_repr(self) -> str:
-        return f'beta={self.beta}, threshold={self.threshold}'
+        return f"beta={self.beta}, threshold={self.threshold}"
 
 
 class Softshrink(Module):
@@ -542,13 +556,15 @@ class Softshrink(Module):
 
     def forward(self, input: Tensor) -> Tensor:
         import mlx.core as mx
+
         x = input._mlx_array
-        result = mx.where(x > self.lambd, x - self.lambd,
-                         mx.where(x < -self.lambd, x + self.lambd, 0))
+        result = mx.where(
+            x > self.lambd, x - self.lambd, mx.where(x < -self.lambd, x + self.lambd, 0)
+        )
         return Tensor._from_mlx_array(result)
 
     def extra_repr(self) -> str:
-        return f'lambd={self.lambd}'
+        return f"lambd={self.lambd}"
 
 
 class Softsign(Module):
@@ -567,6 +583,7 @@ class Softsign(Module):
 
     def forward(self, input: Tensor) -> Tensor:
         import mlx.core as mx
+
         x = input._mlx_array
         result = x / (1 + mx.abs(x))
         return Tensor._from_mlx_array(result)
@@ -588,6 +605,7 @@ class Tanhshrink(Module):
 
     def forward(self, input: Tensor) -> Tensor:
         import mlx.core as mx
+
         x = input._mlx_array
         result = x - mx.tanh(x)
         return Tensor._from_mlx_array(result)
@@ -609,6 +627,7 @@ class LogSigmoid(Module):
 
     def forward(self, input: Tensor) -> Tensor:
         import mlx.core as mx
+
         x = input._mlx_array
         # Numerically stable: -softplus(-x)
         result = -mx.log1p(mx.exp(-x))
@@ -635,12 +654,13 @@ class Softmin(Module):
 
     def forward(self, input: Tensor) -> Tensor:
         import mlx.core as mx
+
         x = input._mlx_array
         result = mx.softmax(-x, axis=self.dim)
         return Tensor._from_mlx_array(result)
 
     def extra_repr(self) -> str:
-        return f'dim={self.dim}'
+        return f"dim={self.dim}"
 
 
 class Mish(Module):
@@ -663,6 +683,7 @@ class Mish(Module):
 
     def forward(self, input: Tensor) -> Tensor:
         import mlx.core as mx
+
         x = input._mlx_array
         result = x * mx.tanh(mx.log1p(mx.exp(x)))
         return Tensor._from_mlx_array(result)
@@ -690,13 +711,14 @@ class GLU(Module):
 
     def forward(self, input: Tensor) -> Tensor:
         import mlx.core as mx
+
         x = input._mlx_array
         a, b = mx.split(x, 2, axis=self.dim)
         result = a * mx.sigmoid(b)
         return Tensor._from_mlx_array(result)
 
     def extra_repr(self) -> str:
-        return f'dim={self.dim}'
+        return f"dim={self.dim}"
 
 
 class PReLU(Module):
@@ -721,11 +743,14 @@ class PReLU(Module):
         # device and dtype accepted for PyTorch compatibility (MLX uses unified memory)
         self.num_parameters = num_parameters
         import mlx.core as mx
+
         from ..parameter import Parameter
+
         self.weight = Parameter(Tensor._from_mlx_array(mx.full((num_parameters,), init)))
 
     def forward(self, input: Tensor) -> Tensor:
         import mlx.core as mx
+
         x = input._mlx_array
         w = self.weight._mlx_array
         # Broadcast weight if needed
@@ -740,7 +765,7 @@ class PReLU(Module):
         return Tensor._from_mlx_array(result)
 
     def extra_repr(self) -> str:
-        return f'num_parameters={self.num_parameters}'
+        return f"num_parameters={self.num_parameters}"
 
 
 class Threshold(Module):
@@ -767,12 +792,13 @@ class Threshold(Module):
 
     def forward(self, input: Tensor) -> Tensor:
         import mlx.core as mx
+
         x = input._mlx_array
         result = mx.where(x > self.threshold, x, self.value)
         return Tensor._from_mlx_array(result)
 
     def extra_repr(self) -> str:
-        return f'threshold={self.threshold}, value={self.value}'
+        return f"threshold={self.threshold}, value={self.value}"
 
 
 class RReLU(Module):
@@ -792,7 +818,7 @@ class RReLU(Module):
         - Output: (*, ) same shape as input
     """
 
-    def __init__(self, lower: float = 1.0/8, upper: float = 1.0/3, inplace: bool = False):
+    def __init__(self, lower: float = 1.0 / 8, upper: float = 1.0 / 3, inplace: bool = False):
         super().__init__()
         self.lower = lower
         self.upper = upper
@@ -800,6 +826,7 @@ class RReLU(Module):
 
     def forward(self, input: Tensor) -> Tensor:
         import mlx.core as mx
+
         x = input._mlx_array
         if self.training:
             slope = mx.random.uniform(low=self.lower, high=self.upper, shape=x.shape)
@@ -809,7 +836,7 @@ class RReLU(Module):
         return Tensor._from_mlx_array(result)
 
     def extra_repr(self) -> str:
-        return f'lower={self.lower}, upper={self.upper}'
+        return f"lower={self.lower}, upper={self.upper}"
 
 
 class Softmax2d(Module):
@@ -828,6 +855,7 @@ class Softmax2d(Module):
 
     def forward(self, input: Tensor) -> Tensor:
         import mlx.core as mx
+
         # Apply softmax over channel dimension (dim=1)
         result = mx.softmax(input._mlx_array, axis=1)
         return Tensor._from_mlx_array(result)
@@ -853,6 +881,7 @@ class ChannelShuffle(Module):
 
     def forward(self, input: Tensor) -> Tensor:
         import mlx.core as mx
+
         x = input._mlx_array
         N, C, H, W = x.shape
         g = self.groups
@@ -865,7 +894,7 @@ class ChannelShuffle(Module):
         return Tensor._from_mlx_array(x)
 
     def extra_repr(self) -> str:
-        return f'groups={self.groups}'
+        return f"groups={self.groups}"
 
 
 class Bilinear(Module):
@@ -884,10 +913,20 @@ class Bilinear(Module):
         - Output: (*, out_features)
     """
 
-    def __init__(self, in1_features: int, in2_features: int, out_features: int, bias: bool = True, device=None, dtype=None):
+    def __init__(
+        self,
+        in1_features: int,
+        in2_features: int,
+        out_features: int,
+        bias: bool = True,
+        device=None,
+        dtype=None,
+    ):
         super().__init__()
         import mlx.core as mx
+
         from ..parameter import Parameter
+
         # device and dtype accepted for PyTorch compatibility (MLX uses unified memory)
 
         self.in1_features = in1_features
@@ -896,52 +935,55 @@ class Bilinear(Module):
 
         # Weight shape: (out_features, in1_features, in2_features)
         k = 1.0 / in1_features
-        weight = mx.random.uniform(low=-k**0.5, high=k**0.5, shape=(out_features, in1_features, in2_features))
+        weight = mx.random.uniform(
+            low=-(k**0.5), high=k**0.5, shape=(out_features, in1_features, in2_features)
+        )
         self.weight = Parameter(Tensor._from_mlx_array(weight))
 
         if bias:
-            bias_init = mx.random.uniform(low=-k**0.5, high=k**0.5, shape=(out_features,))
+            bias_init = mx.random.uniform(low=-(k**0.5), high=k**0.5, shape=(out_features,))
             self.bias = Parameter(Tensor._from_mlx_array(bias_init))
         else:
             self.bias = None
 
     def forward(self, input1: Tensor, input2: Tensor) -> Tensor:
         from ..functional import bilinear
+
         return bilinear(input1, input2, self.weight, self.bias)
 
     def extra_repr(self) -> str:
-        return f'in1_features={self.in1_features}, in2_features={self.in2_features}, out_features={self.out_features}, bias={self.bias is not None}'
+        return f"in1_features={self.in1_features}, in2_features={self.in2_features}, out_features={self.out_features}, bias={self.bias is not None}"
 
 
 __all__ = [
-    'ReLU',
-    'LeakyReLU',
-    'ELU',
-    'Sigmoid',
-    'Tanh',
-    'GELU',
-    'SiLU',
-    'Softmax',
-    'LogSoftmax',
-    'ReLU6',
-    'SELU',
-    'CELU',
-    'Hardtanh',
-    'Hardsigmoid',
-    'Hardswish',
-    'Hardshrink',
-    'Softplus',
-    'Softshrink',
-    'Softsign',
-    'Tanhshrink',
-    'LogSigmoid',
-    'Softmin',
-    'Mish',
-    'GLU',
-    'PReLU',
-    'Threshold',
-    'RReLU',
-    'Softmax2d',
-    'ChannelShuffle',
-    'Bilinear',
+    "ReLU",
+    "LeakyReLU",
+    "ELU",
+    "Sigmoid",
+    "Tanh",
+    "GELU",
+    "SiLU",
+    "Softmax",
+    "LogSoftmax",
+    "ReLU6",
+    "SELU",
+    "CELU",
+    "Hardtanh",
+    "Hardsigmoid",
+    "Hardswish",
+    "Hardshrink",
+    "Softplus",
+    "Softshrink",
+    "Softsign",
+    "Tanhshrink",
+    "LogSigmoid",
+    "Softmin",
+    "Mish",
+    "GLU",
+    "PReLU",
+    "Threshold",
+    "RReLU",
+    "Softmax2d",
+    "ChannelShuffle",
+    "Bilinear",
 ]

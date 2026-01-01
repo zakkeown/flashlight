@@ -14,13 +14,13 @@ class TestDataReexports(unittest.TestCase):
     def test_dataset_imports(self):
         """Test Dataset class imports."""
         from flashlight.utils.data import (
-            Dataset,
-            TensorDataset,
-            IterableDataset,
-            ConcatDataset,
             ChainDataset,
-            Subset,
+            ConcatDataset,
+            Dataset,
+            IterableDataset,
             StackDataset,
+            Subset,
+            TensorDataset,
         )
 
         self.assertIsNotNone(Dataset)
@@ -34,13 +34,13 @@ class TestDataReexports(unittest.TestCase):
     def test_sampler_imports(self):
         """Test Sampler class imports."""
         from flashlight.utils.data import (
+            BatchSampler,
+            DistributedSampler,
+            RandomSampler,
             Sampler,
             SequentialSampler,
-            RandomSampler,
-            BatchSampler,
             SubsetRandomSampler,
             WeightedRandomSampler,
-            DistributedSampler,
         )
 
         self.assertIsNotNone(Sampler)
@@ -61,8 +61,8 @@ class TestDataReexports(unittest.TestCase):
     def test_utility_function_imports(self):
         """Test utility function imports."""
         from flashlight.utils.data import (
-            get_worker_info,
             default_convert,
+            get_worker_info,
             random_split,
         )
 
@@ -73,10 +73,10 @@ class TestDataReexports(unittest.TestCase):
     def test_datapipe_imports(self):
         """Test DataPipe imports."""
         from flashlight.utils.data import (
+            DataChunk,
+            DFIterDataPipe,
             IterDataPipe,
             MapDataPipe,
-            DFIterDataPipe,
-            DataChunk,
             functional_datapipe,
         )
 
@@ -90,10 +90,10 @@ class TestDataReexports(unittest.TestCase):
         """Test validation decorator imports."""
         from flashlight.utils.data import (
             argument_validation,
-            runtime_validation,
-            runtime_validation_disabled,
             guaranteed_datapipes_determinism,
             non_deterministic,
+            runtime_validation,
+            runtime_validation_disabled,
         )
 
         self.assertIsNotNone(argument_validation)
@@ -113,14 +113,25 @@ class TestDataReexports(unittest.TestCase):
         from flashlight.utils import data
 
         expected_exports = [
-            'Dataset', 'TensorDataset', 'IterableDataset',
-            'ConcatDataset', 'ChainDataset', 'Subset', 'StackDataset',
-            'random_split',
-            'Sampler', 'SequentialSampler', 'RandomSampler',
-            'BatchSampler', 'SubsetRandomSampler', 'WeightedRandomSampler',
-            'DistributedSampler',
-            'DataLoader', 'default_collate',
-            'get_worker_info', 'default_convert',
+            "Dataset",
+            "TensorDataset",
+            "IterableDataset",
+            "ConcatDataset",
+            "ChainDataset",
+            "Subset",
+            "StackDataset",
+            "random_split",
+            "Sampler",
+            "SequentialSampler",
+            "RandomSampler",
+            "BatchSampler",
+            "SubsetRandomSampler",
+            "WeightedRandomSampler",
+            "DistributedSampler",
+            "DataLoader",
+            "default_collate",
+            "get_worker_info",
+            "default_convert",
         ]
 
         for item in expected_exports:
@@ -143,8 +154,8 @@ class TestDataFunctionality(unittest.TestCase):
 
     def test_tensor_dataset_works(self):
         """Test TensorDataset functionality through re-export."""
-        from flashlight.utils.data import TensorDataset
         import flashlight
+        from flashlight.utils.data import TensorDataset
 
         x = flashlight.randn(10, 5)
         y = flashlight.randint(0, 2, (10,))
@@ -157,8 +168,8 @@ class TestDataFunctionality(unittest.TestCase):
 
     def test_dataloader_works(self):
         """Test DataLoader functionality through re-export."""
-        from flashlight.utils.data import DataLoader, TensorDataset
         import flashlight
+        from flashlight.utils.data import DataLoader, TensorDataset
 
         x = flashlight.randn(100, 10)
         y = flashlight.randint(0, 2, (100,))
@@ -176,8 +187,8 @@ class TestDataFunctionality(unittest.TestCase):
 
     def test_random_sampler_works(self):
         """Test RandomSampler functionality through re-export."""
-        from flashlight.utils.data import RandomSampler, TensorDataset
         import flashlight
+        from flashlight.utils.data import RandomSampler, TensorDataset
 
         x = flashlight.randn(50, 5)
         dataset = TensorDataset(x)
@@ -191,8 +202,8 @@ class TestDataFunctionality(unittest.TestCase):
 
     def test_sequential_sampler_works(self):
         """Test SequentialSampler functionality through re-export."""
-        from flashlight.utils.data import SequentialSampler, TensorDataset
         import flashlight
+        from flashlight.utils.data import SequentialSampler, TensorDataset
 
         x = flashlight.randn(20, 5)
         dataset = TensorDataset(x)
@@ -204,8 +215,8 @@ class TestDataFunctionality(unittest.TestCase):
 
     def test_random_split_works(self):
         """Test random_split functionality through re-export."""
-        from flashlight.utils.data import random_split, TensorDataset
         import flashlight
+        from flashlight.utils.data import TensorDataset, random_split
 
         x = flashlight.randn(100, 5)
         dataset = TensorDataset(x)

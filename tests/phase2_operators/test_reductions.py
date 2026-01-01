@@ -5,15 +5,18 @@ Tests reduction operations (sum, mean, max, min, argmax, var, std, etc.)
 """
 
 import sys
-sys.path.insert(0, '../..')
+
+sys.path.insert(0, "../..")
 
 import unittest
+
 import numpy as np
 
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
     import flashlight
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -421,6 +424,7 @@ class TestTensorMethods(TestCase):
         np.testing.assert_array_almost_equal(result.numpy(), np.array([-1.0, 0.5, 1.0]))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from tests.common_utils import run_tests
+
     run_tests()

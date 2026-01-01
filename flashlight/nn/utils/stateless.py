@@ -8,8 +8,8 @@ Provides utilities for running modules with different parameters.
 import warnings
 from typing import Any, Dict
 
-from ..module import Module
 from ...tensor import Tensor
+from ..module import Module
 
 
 def functional_call(
@@ -49,7 +49,7 @@ def functional_call(
     # Replace parameters
     try:
         for name, value in parameters_and_buffers.items():
-            parts = name.split('.')
+            parts = name.split(".")
             obj = module
             for part in parts[:-1]:
                 obj = getattr(obj, part)
@@ -60,7 +60,7 @@ def functional_call(
     finally:
         # Restore original parameters
         for name, param in original_params.items():
-            parts = name.split('.')
+            parts = name.split(".")
             obj = module
             for part in parts[:-1]:
                 obj = getattr(obj, part)
@@ -68,5 +68,5 @@ def functional_call(
 
 
 __all__ = [
-    'functional_call',
+    "functional_call",
 ]

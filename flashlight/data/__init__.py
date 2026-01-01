@@ -4,17 +4,25 @@ Data Loading Module
 Implements PyTorch-compatible data loading utilities for MLX.
 """
 
+from .dataloader import DataLoader, default_collate
 from .dataset import (
-    Dataset, TensorDataset, IterableDataset,
-    ConcatDataset, ChainDataset, Subset, StackDataset,
+    ChainDataset,
+    ConcatDataset,
+    Dataset,
+    IterableDataset,
+    StackDataset,
+    Subset,
+    TensorDataset,
     random_split,
 )
 from .sampler import (
-    Sampler, SequentialSampler, RandomSampler, BatchSampler,
-    SubsetRandomSampler, WeightedRandomSampler,
+    BatchSampler,
+    RandomSampler,
+    Sampler,
+    SequentialSampler,
+    SubsetRandomSampler,
+    WeightedRandomSampler,
 )
-from .dataloader import DataLoader, default_collate
-
 
 # Worker info placeholder (not applicable to MLX's single-threaded execution)
 _worker_info = None
@@ -42,6 +50,7 @@ class IterDataPipe(IterableDataset):
     DataPipes are a PyTorch 2.0+ feature for composable data loading.
     This is a basic implementation for compatibility.
     """
+
     pass
 
 
@@ -51,6 +60,7 @@ class MapDataPipe(Dataset):
     DataPipes are a PyTorch 2.0+ feature for composable data loading.
     This is a basic implementation for compatibility.
     """
+
     pass
 
 
@@ -60,6 +70,7 @@ class DFIterDataPipe(IterDataPipe):
     DataPipe for iterating over DataFrame-like data structures.
     This is a compatibility stub for PyTorch's DataPipe infrastructure.
     """
+
     pass
 
 
@@ -84,7 +95,7 @@ class DataChunk:
     def __getitem__(self, idx):
         return self.items[idx]
 
-    def as_str(self, indent=''):
+    def as_str(self, indent=""):
         return indent + str(self.items)
 
     def raw_iterator(self):
@@ -96,6 +107,7 @@ class _DatasetKind:
 
     Internal class matching PyTorch's _DatasetKind.
     """
+
     Map = 0
     Iterable = 1
 
@@ -112,13 +124,15 @@ def functional_datapipe(*args, **kwargs):
     Returns:
         Decorator function
     """
-    name = args[0] if args else kwargs.get('name', None)
+    name = args[0] if args else kwargs.get("name", None)
+
     def decorator(cls):
         # In PyTorch, this registers the class as a functional datapipe
         # For MLX compatibility, we just return the class unchanged
         if name is not None:
             cls._datapipe_name = name
         return cls
+
     return decorator
 
 
@@ -136,8 +150,10 @@ def argument_validation(*args, **kwargs):
     """
     if args and callable(args[0]):
         return args[0]
+
     def decorator(fn):
         return fn
+
     return decorator
 
 
@@ -155,8 +171,10 @@ def runtime_validation(*args, **kwargs):
     """
     if args and callable(args[0]):
         return args[0]
+
     def decorator(fn):
         return fn
+
     return decorator
 
 
@@ -203,9 +221,11 @@ class non_deterministic:
     def __call__(self, *args, **kwargs):
         if self.fn is not None:
             return self.fn(*args, **kwargs)
+
         # Used as decorator
         def wrapper(fn):
             return fn
+
         return wrapper(*args) if args else wrapper
 
     def __enter__(self):
@@ -222,8 +242,9 @@ class DistributedSampler(Sampler):
     It simply returns indices for the full dataset.
     """
 
-    def __init__(self, dataset, num_replicas=None, rank=None, shuffle=True,
-                 seed=0, drop_last=False):
+    def __init__(
+        self, dataset, num_replicas=None, rank=None, shuffle=True, seed=0, drop_last=False
+    ):
         if num_replicas is None:
             num_replicas = 1
         if rank is None:
@@ -271,7 +292,7 @@ class DistributedSampler(Sampler):
 
         # Subsample for this replica
         offset = self.rank * self.num_samples
-        indices = indices[offset:offset + self.num_samples]
+        indices = indices[offset : offset + self.num_samples]
 
         return iter(indices)
 
@@ -285,40 +306,40 @@ class DistributedSampler(Sampler):
 
 __all__ = [
     # Datasets
-    'Dataset',
-    'TensorDataset',
-    'IterableDataset',
-    'ConcatDataset',
-    'ChainDataset',
-    'Subset',
-    'StackDataset',
-    'random_split',
+    "Dataset",
+    "TensorDataset",
+    "IterableDataset",
+    "ConcatDataset",
+    "ChainDataset",
+    "Subset",
+    "StackDataset",
+    "random_split",
     # Samplers
-    'Sampler',
-    'SequentialSampler',
-    'RandomSampler',
-    'BatchSampler',
-    'SubsetRandomSampler',
-    'WeightedRandomSampler',
-    'DistributedSampler',
+    "Sampler",
+    "SequentialSampler",
+    "RandomSampler",
+    "BatchSampler",
+    "SubsetRandomSampler",
+    "WeightedRandomSampler",
+    "DistributedSampler",
     # DataLoader
-    'DataLoader',
-    'default_collate',
+    "DataLoader",
+    "default_collate",
     # Utility functions
-    'get_worker_info',
-    'default_convert',
+    "get_worker_info",
+    "default_convert",
     # DataPipes
-    'IterDataPipe',
-    'MapDataPipe',
-    'DFIterDataPipe',
-    'DataChunk',
-    'functional_datapipe',
+    "IterDataPipe",
+    "MapDataPipe",
+    "DFIterDataPipe",
+    "DataChunk",
+    "functional_datapipe",
     # Validation and determinism
-    'argument_validation',
-    'runtime_validation',
-    'runtime_validation_disabled',
-    'guaranteed_datapipes_determinism',
-    'non_deterministic',
+    "argument_validation",
+    "runtime_validation",
+    "runtime_validation_disabled",
+    "guaranteed_datapipes_determinism",
+    "non_deterministic",
     # Internal
-    '_DatasetKind',
+    "_DatasetKind",
 ]

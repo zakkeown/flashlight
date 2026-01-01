@@ -5,8 +5,8 @@ PyTorch-compatible torch.nn.utils module providing various utilities
 for neural network training and manipulation.
 """
 
-from typing import Iterable, List, Optional, Union
 import math
+from typing import Iterable, List, Optional, Union
 
 from ...tensor import Tensor
 from ..module import Module
@@ -50,17 +50,21 @@ def clip_grad_norm_(
     max_norm = float(max_norm)
     norm_type = float(norm_type)
 
-    if norm_type == float('inf'):
+    if norm_type == float("inf"):
         norms = [mx.abs(g._mlx_array).max() for g in grads]
         total_norm = Tensor(mx.max(mx.stack(norms)))
     else:
         total_norm_sq = sum(mx.power(mx.abs(g._mlx_array), norm_type).sum() for g in grads)
         total_norm = Tensor(mx.power(total_norm_sq, 1.0 / norm_type))
 
-    total_norm_val = float(total_norm.item()) if hasattr(total_norm, 'item') else float(total_norm._mlx_array.item())
+    total_norm_val = (
+        float(total_norm.item())
+        if hasattr(total_norm, "item")
+        else float(total_norm._mlx_array.item())
+    )
     if error_if_nonfinite and (math.isnan(total_norm_val) or math.isinf(total_norm_val)):
         raise RuntimeError(
-            f'The total norm of order {norm_type} is non-finite, so it cannot be clipped.'
+            f"The total norm of order {norm_type} is non-finite, so it cannot be clipped."
         )
 
     clip_coef = max_norm / (total_norm_val + 1e-6)
@@ -122,7 +126,7 @@ def get_total_norm(
 
     norm_type = float(norm_type)
 
-    if norm_type == float('inf'):
+    if norm_type == float("inf"):
         norms = [mx.abs(t._mlx_array).max() for t in tensors]
         total_norm = Tensor(mx.max(mx.stack(norms)))
     else:
@@ -130,9 +134,13 @@ def get_total_norm(
         total_norm = Tensor(mx.power(total_norm_sq, 1.0 / norm_type))
 
     if error_if_nonfinite:
-        total_norm_val = float(total_norm.item()) if hasattr(total_norm, 'item') else float(total_norm._mlx_array.item())
+        total_norm_val = (
+            float(total_norm.item())
+            if hasattr(total_norm, "item")
+            else float(total_norm._mlx_array.item())
+        )
         if math.isnan(total_norm_val) or math.isinf(total_norm_val):
-            raise RuntimeError(f'The total norm is non-finite.')
+            raise RuntimeError(f"The total norm is non-finite.")
 
     return total_norm
 
@@ -167,11 +175,11 @@ def vector_to_parameters(vec: Tensor, parameters: Iterable[Tensor]) -> None:
     pointer = 0
     for param in parameters:
         num_param = param.numel if isinstance(param.numel, int) else param.numel()
-        param._mlx_array = vec._mlx_array[pointer:pointer + num_param].reshape(param.shape)
+        param._mlx_array = vec._mlx_array[pointer : pointer + num_param].reshape(param.shape)
         pointer += num_param
 
 
-def weight_norm(module: Module, name: str = 'weight', dim: int = 0) -> Module:
+def weight_norm(module: Module, name: str = "weight", dim: int = 0) -> Module:
     """
     Apply weight normalization to a parameter in the given module.
 
@@ -194,10 +202,11 @@ def weight_norm(module: Module, name: str = 'weight', dim: int = 0) -> Module:
         >>> layer = nn.utils.weight_norm(layer)
     """
     from .parametrizations import weight_norm as _weight_norm
+
     return _weight_norm(module, name, dim)
 
 
-def remove_weight_norm(module: Module, name: str = 'weight') -> Module:
+def remove_weight_norm(module: Module, name: str = "weight") -> Module:
     """
     Remove weight normalization from a module.
 
@@ -209,10 +218,17 @@ def remove_weight_norm(module: Module, name: str = 'weight') -> Module:
         The module with weight normalization removed
     """
     from .parametrizations import remove_weight_norm as _remove_weight_norm
+
     return _remove_weight_norm(module, name)
 
 
-def spectral_norm(module: Module, name: str = 'weight', n_power_iterations: int = 1, eps: float = 1e-12, dim: Optional[int] = None) -> Module:
+def spectral_norm(
+    module: Module,
+    name: str = "weight",
+    n_power_iterations: int = 1,
+    eps: float = 1e-12,
+    dim: Optional[int] = None,
+) -> Module:
     """
     Apply spectral normalization to a parameter in the given module.
 
@@ -235,10 +251,11 @@ def spectral_norm(module: Module, name: str = 'weight', n_power_iterations: int 
         >>> layer = nn.utils.spectral_norm(layer)
     """
     from .parametrizations import spectral_norm as _spectral_norm
+
     return _spectral_norm(module, name, n_power_iterations, eps, dim)
 
 
-def remove_spectral_norm(module: Module, name: str = 'weight') -> Module:
+def remove_spectral_norm(module: Module, name: str = "weight") -> Module:
     """
     Remove spectral normalization from a module.
 
@@ -250,6 +267,7 @@ def remove_spectral_norm(module: Module, name: str = 'weight') -> Module:
         The module with spectral normalization removed
     """
     from .parametrizations import remove_spectral_norm as _remove_spectral_norm
+
     return _remove_spectral_norm(module, name)
 
 
@@ -292,7 +310,11 @@ def clip_grads_with_norm_(
     if isinstance(parameters, Tensor):
         parameters = [parameters]
 
-    total_norm_val = float(total_norm.item()) if hasattr(total_norm, 'item') else float(total_norm._mlx_array.item())
+    total_norm_val = (
+        float(total_norm.item())
+        if hasattr(total_norm, "item")
+        else float(total_norm._mlx_array.item())
+    )
     clip_coef = max_norm / (total_norm_val + 1e-6)
     if clip_coef < 1:
         for p in parameters:
@@ -356,8 +378,9 @@ def fuse_conv_bn_eval(conv: Module, bn: Module, transpose: bool = False) -> Modu
         W_fused = W * (gamma / sqrt(running_var + eps))
         b_fused = gamma * (b - running_mean) / sqrt(running_var + eps) + beta
     """
-    import mlx.core as mx
     import copy
+
+    import mlx.core as mx
 
     # Get conv parameters
     conv_w = conv.weight._mlx_array
@@ -382,12 +405,13 @@ def fuse_conv_bn_eval(conv: Module, bn: Module, transpose: bool = False) -> Modu
     # Set the bias (create one if it didn't exist)
     if fused_conv.bias is None:
         from ..parameter import Parameter
+
         fused_conv.bias = Parameter(Tensor._from_mlx_array(fused_b))
     else:
         fused_conv.bias._mlx_array = fused_b
 
     # Invalidate any weight cache in the conv layer
-    if hasattr(fused_conv, '_cached_weight_mlx'):
+    if hasattr(fused_conv, "_cached_weight_mlx"):
         fused_conv._cached_weight_mlx = None
         fused_conv._cached_weight_id = None
 
@@ -492,8 +516,9 @@ def fuse_linear_bn_eval(linear: Module, bn: Module) -> Module:
         W_fused = W * (gamma / sqrt(running_var + eps))
         b_fused = gamma * (b - running_mean) / sqrt(running_var + eps) + beta
     """
-    import mlx.core as mx
     import copy
+
+    import mlx.core as mx
 
     # Get linear parameters
     linear_w = linear.weight._mlx_array
@@ -507,9 +532,7 @@ def fuse_linear_bn_eval(linear: Module, bn: Module) -> Module:
     bn_b = bn.bias._mlx_array if bn.bias is not None else mx.zeros(bn.num_features)
 
     # Fuse the weights
-    fused_w, fused_b = fuse_linear_bn_weights(
-        linear_w, linear_b, bn_rm, bn_rv, bn_eps, bn_w, bn_b
-    )
+    fused_w, fused_b = fuse_linear_bn_weights(linear_w, linear_b, bn_rm, bn_rv, bn_eps, bn_w, bn_b)
 
     # Create a copy of the linear layer with fused weights
     fused_linear = copy.deepcopy(linear)
@@ -518,12 +541,13 @@ def fuse_linear_bn_eval(linear: Module, bn: Module) -> Module:
     # Set the bias (create one if it didn't exist)
     if fused_linear.bias is None:
         from ..parameter import Parameter
+
         fused_linear.bias = Parameter(Tensor._from_mlx_array(fused_b))
     else:
         fused_linear.bias._mlx_array = fused_b
 
     # Invalidate any weight cache in the linear layer
-    if hasattr(fused_linear, '_weight_cache'):
+    if hasattr(fused_linear, "_weight_cache"):
         fused_linear._weight_cache = {}
 
     return fused_linear
@@ -589,31 +613,28 @@ def fuse_linear_bn_weights(linear_w, linear_b, bn_rm, bn_rv, bn_eps, bn_w, bn_b)
 
 
 # Import submodules
-from . import rnn
-from . import parametrizations
-from . import stateless
-
+from . import parametrizations, rnn, stateless
 
 __all__ = [
-    'clip_grad_norm_',
-    'clip_grad_norm',
-    'clip_grad_value_',
-    'clip_grads_with_norm_',
-    'get_total_norm',
-    'parameters_to_vector',
-    'vector_to_parameters',
-    'weight_norm',
-    'remove_weight_norm',
-    'spectral_norm',
-    'remove_spectral_norm',
-    'skip_init',
-    'convert_conv2d_weight_memory_format',
-    'convert_conv3d_weight_memory_format',
-    'fuse_conv_bn_eval',
-    'fuse_conv_bn_weights',
-    'fuse_linear_bn_eval',
-    'fuse_linear_bn_weights',
-    'rnn',
-    'parametrizations',
-    'stateless',
+    "clip_grad_norm_",
+    "clip_grad_norm",
+    "clip_grad_value_",
+    "clip_grads_with_norm_",
+    "get_total_norm",
+    "parameters_to_vector",
+    "vector_to_parameters",
+    "weight_norm",
+    "remove_weight_norm",
+    "spectral_norm",
+    "remove_spectral_norm",
+    "skip_init",
+    "convert_conv2d_weight_memory_format",
+    "convert_conv3d_weight_memory_format",
+    "fuse_conv_bn_eval",
+    "fuse_conv_bn_weights",
+    "fuse_linear_bn_eval",
+    "fuse_linear_bn_weights",
+    "rnn",
+    "parametrizations",
+    "stateless",
 ]

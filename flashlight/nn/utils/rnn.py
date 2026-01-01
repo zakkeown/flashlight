@@ -38,8 +38,10 @@ class PackedSequence:
         self.unsorted_indices = unsorted_indices
 
     def __repr__(self):
-        return (f"PackedSequence(data={self.data.shape}, "
-                f"batch_sizes={self.batch_sizes.shape if self.batch_sizes is not None else None})")
+        return (
+            f"PackedSequence(data={self.data.shape}, "
+            f"batch_sizes={self.batch_sizes.shape if self.batch_sizes is not None else None})"
+        )
 
 
 def pack_padded_sequence(
@@ -81,7 +83,7 @@ def pack_padded_sequence(
     # Convert lengths to list for processing
     if isinstance(lengths, Tensor):
         lengths_list = lengths.tolist()
-    elif hasattr(lengths, 'tolist'):
+    elif hasattr(lengths, "tolist"):
         lengths_list = lengths.tolist()
     else:
         lengths_list = list(lengths)
@@ -119,11 +121,9 @@ def pack_padded_sequence(
         unsorted_indices = mx.zeros((batch_size,), dtype=mx.int64)
         for i in range(batch_size):
             idx = int(sorted_indices[i].item())
-            unsorted_indices = mx.concatenate([
-                unsorted_indices[:idx],
-                mx.array([i], dtype=mx.int64),
-                unsorted_indices[idx + 1:]
-            ])
+            unsorted_indices = mx.concatenate(
+                [unsorted_indices[:idx], mx.array([i], dtype=mx.int64), unsorted_indices[idx + 1 :]]
+            )
         sorted_lengths = [lengths_list[int(i)] for i in sorted_indices.tolist()]
         # Reorder input according to sorted indices
         input_data = input_data[:, sorted_indices.astype(mx.int32)]
@@ -223,16 +223,16 @@ def pad_packed_sequence(
     for t in range(seq_len):
         n_active = batch_sizes[t]
         # Get the data for this time step
-        step_data = data[data_offset:data_offset + n_active]
+        step_data = data[data_offset : data_offset + n_active]
         # Place it in the output tensor
-        output = mx.concatenate([
-            output[:t],
-            mx.expand_dims(
-                mx.concatenate([step_data, output[t, n_active:]], axis=0),
-                axis=0
-            ),
-            output[t + 1:]
-        ], axis=0)
+        output = mx.concatenate(
+            [
+                output[:t],
+                mx.expand_dims(mx.concatenate([step_data, output[t, n_active:]], axis=0), axis=0),
+                output[t + 1 :],
+            ],
+            axis=0,
+        )
         data_offset += n_active
 
     # Restore original order if unsorted_indices is available
@@ -256,7 +256,7 @@ def pad_sequence(
     sequences: List[Tensor],
     batch_first: bool = False,
     padding_value: float = 0.0,
-    padding_side: str = 'right',
+    padding_side: str = "right",
 ) -> Tensor:
     """
     Pad a list of variable length Tensors with padding_value.
@@ -272,7 +272,7 @@ def pad_sequence(
     """
     import mlx.core as mx
 
-    if padding_side not in ('left', 'right'):
+    if padding_side not in ("left", "right"):
         raise ValueError(f"padding_side must be 'left' or 'right', got {padding_side}")
 
     max_len = max(s.shape[0] for s in sequences)
@@ -289,7 +289,7 @@ def pad_sequence(
         if length < max_len:
             pad_shape = (max_len - length,) + trailing_dims
             padding = mx.full(pad_shape, padding_value, dtype=mlx_dtype)
-            if padding_side == 'right':
+            if padding_side == "right":
                 padded.append(mx.concatenate([seq._mlx_array, padding], axis=0))
             else:  # left padding
                 padded.append(mx.concatenate([padding, seq._mlx_array], axis=0))
@@ -337,12 +337,7 @@ def pack_sequence(
     padded = pad_sequence(sequences, batch_first=False)
 
     # Pack with batch_first=False (since pad_sequence returns [seq, batch, *])
-    return pack_padded_sequence(
-        padded,
-        lengths,
-        batch_first=False,
-        enforce_sorted=enforce_sorted
-    )
+    return pack_padded_sequence(padded, lengths, batch_first=False, enforce_sorted=enforce_sorted)
 
 
 def unpack_sequence(packed_sequences: PackedSequence) -> List[Tensor]:
@@ -391,7 +386,7 @@ def unpad_sequence(
         List of unpadded Tensors
     """
     result = []
-    lengths_list = lengths.tolist() if hasattr(lengths, 'tolist') else list(lengths)
+    lengths_list = lengths.tolist() if hasattr(lengths, "tolist") else list(lengths)
 
     for i, length in enumerate(lengths_list):
         length = int(length)
@@ -419,9 +414,9 @@ def invert_permutation(permutation: Tensor) -> Tensor:
     import mlx.core as mx
 
     # Handle both Tensor and raw mlx array
-    if hasattr(permutation, '_mlx_array'):
+    if hasattr(permutation, "_mlx_array"):
         data = permutation._mlx_array
-    elif hasattr(permutation, '_data'):
+    elif hasattr(permutation, "_data"):
         data = permutation._data
     else:
         data = permutation
@@ -434,23 +429,19 @@ def invert_permutation(permutation: Tensor) -> Tensor:
     inverse = mx.zeros((n,), dtype=mx.int64)
     for i in range(n):
         # Convert MLX scalar to Python int
-        idx = int(data[i].item()) if hasattr(data[i], 'item') else int(data[i])
-        inverse = mx.concatenate([
-            inverse[:idx],
-            mx.array([i]),
-            inverse[idx + 1:]
-        ])
+        idx = int(data[i].item()) if hasattr(data[i], "item") else int(data[i])
+        inverse = mx.concatenate([inverse[:idx], mx.array([i]), inverse[idx + 1 :]])
 
     return Tensor._from_mlx_array(inverse)
 
 
 __all__ = [
-    'PackedSequence',
-    'pack_padded_sequence',
-    'pad_packed_sequence',
-    'pad_sequence',
-    'pack_sequence',
-    'unpack_sequence',
-    'unpad_sequence',
-    'invert_permutation',
+    "PackedSequence",
+    "pack_padded_sequence",
+    "pad_packed_sequence",
+    "pad_sequence",
+    "pack_sequence",
+    "unpack_sequence",
+    "unpad_sequence",
+    "invert_permutation",
 ]

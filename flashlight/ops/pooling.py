@@ -4,12 +4,14 @@ Pooling Operations
 Implements pooling operations with PyTorch-compatible API.
 """
 
+from functools import lru_cache
+from typing import Optional, Tuple, Union
+
 import mlx.core as mx
 import mlx.nn as mxnn
-from functools import lru_cache
-from ..tensor import Tensor
+
 from ..distributions._constants import PROB_EPSILON
-from typing import Union, Tuple, Optional
+from ..tensor import Tensor
 
 
 def _pair(x):
@@ -21,13 +23,17 @@ def _pair(x):
 
 # Cached pool object getters to avoid allocation overhead on every call
 @lru_cache(maxsize=64)
-def _get_max_pool2d(kernel_size: Tuple[int, int], stride: Tuple[int, int], padding: Tuple[int, int]):
+def _get_max_pool2d(
+    kernel_size: Tuple[int, int], stride: Tuple[int, int], padding: Tuple[int, int]
+):
     """Get or create a cached MaxPool2d layer."""
     return mxnn.MaxPool2d(kernel_size=kernel_size, stride=stride, padding=padding)
 
 
 @lru_cache(maxsize=64)
-def _get_avg_pool2d(kernel_size: Tuple[int, int], stride: Tuple[int, int], padding: Tuple[int, int]):
+def _get_avg_pool2d(
+    kernel_size: Tuple[int, int], stride: Tuple[int, int], padding: Tuple[int, int]
+):
     """Get or create a cached AvgPool2d layer."""
     return mxnn.AvgPool2d(kernel_size=kernel_size, stride=stride, padding=padding)
 
@@ -51,7 +57,7 @@ def max_pool2d(
     padding: Union[int, Tuple[int, int]] = 0,
     dilation: Union[int, Tuple[int, int]] = 1,
     return_indices: bool = False,
-    ceil_mode: bool = False
+    ceil_mode: bool = False,
 ) -> Tensor:
     """
     2D max pooling operation.
@@ -75,12 +81,17 @@ def max_pool2d(
     """
     if return_indices:
         from ..nn.functional import max_pool2d_with_indices
+
         return max_pool2d_with_indices(
-            input, kernel_size=kernel_size, stride=stride, padding=padding,
-            dilation=dilation, ceil_mode=ceil_mode
+            input,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=padding,
+            dilation=dilation,
+            ceil_mode=ceil_mode,
         )
 
-    from ..layout import is_nhwc_mode, Layout
+    from ..layout import Layout, is_nhwc_mode
 
     # Check if we're in NHWC-native mode
     nhwc_native = is_nhwc_mode()
@@ -95,7 +106,7 @@ def max_pool2d(
 
     # Get input in NHWC format (required by MLX)
     # Use getattr for faster attribute access with default
-    if nhwc_native and getattr(input, '_layout', None) == Layout.NHWC:
+    if nhwc_native and getattr(input, "_layout", None) == Layout.NHWC:
         # Input is already in NHWC - no conversion needed
         input_nhwc = input._mlx_array
     else:
@@ -119,12 +130,19 @@ def max_pool2d(
 
     # Handle autograd
     from ..autograd.context import is_grad_enabled
+
     if is_grad_enabled() and input.requires_grad:
         from ..autograd.function import MaxPool2dBackward
+
         result.requires_grad = True
         grad_fn = MaxPool2dBackward(
-            input, kernel_size=kernel_size, stride=stride, padding=padding,
-            nhwc_native=nhwc_native, input_nhwc=input_nhwc, output_nhwc=output_nhwc
+            input,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=padding,
+            nhwc_native=nhwc_native,
+            input_nhwc=input_nhwc,
+            output_nhwc=output_nhwc,
         )
         grad_fn.output_tensor = result
         result._grad_fn = grad_fn
@@ -139,7 +157,7 @@ def avg_pool2d(
     padding: Union[int, Tuple[int, int]] = 0,
     ceil_mode: bool = False,
     count_include_pad: bool = True,
-    divisor_override: Optional[int] = None
+    divisor_override: Optional[int] = None,
 ) -> Tensor:
     """
     2D average pooling operation.
@@ -160,7 +178,7 @@ def avg_pool2d(
         MLX uses NHWC format internally. When nhwc_mode() is enabled, input/output
         stay in NHWC format to avoid redundant layout conversions.
     """
-    from ..layout import is_nhwc_mode, Layout
+    from ..layout import Layout, is_nhwc_mode
 
     # Check if we're in NHWC-native mode
     nhwc_native = is_nhwc_mode()
@@ -174,7 +192,7 @@ def avg_pool2d(
     padding = _pair(padding)
 
     # Get input in NHWC format (required by MLX)
-    if nhwc_native and hasattr(input, '_layout') and input._layout == Layout.NHWC:
+    if nhwc_native and hasattr(input, "_layout") and input._layout == Layout.NHWC:
         # Input is already in NHWC - no conversion needed
         input_nhwc = input._mlx_array
         N, H, W, C = input_nhwc.shape
@@ -191,15 +209,13 @@ def avg_pool2d(
         # Use sum pooling approach: compute sum, then divide by actual counts
         # First, pad the input with zeros
         padded_input = mx.pad(
-            input_nhwc,
-            [(0, 0), (padding[0], padding[0]), (padding[1], padding[1]), (0, 0)]
+            input_nhwc, [(0, 0), (padding[0], padding[0]), (padding[1], padding[1]), (0, 0)]
         )
 
         # Create a mask of 1s for original input, 0s for padding
         ones_mask = mx.ones((N, H, W, C))
         padded_mask = mx.pad(
-            ones_mask,
-            [(0, 0), (padding[0], padding[0]), (padding[1], padding[1]), (0, 0)]
+            ones_mask, [(0, 0), (padding[0], padding[0]), (padding[1], padding[1]), (0, 0)]
         )
 
         # Compute sum pooling (use avg pool and multiply by kernel area)
@@ -232,13 +248,20 @@ def avg_pool2d(
 
     # Handle autograd
     from ..autograd.context import is_grad_enabled
+
     if is_grad_enabled() and input.requires_grad:
         from ..autograd.function import AvgPool2dBackward
+
         result.requires_grad = True
         grad_fn = AvgPool2dBackward(
-            input, kernel_size=kernel_size, stride=stride, padding=padding,
-            nhwc_native=nhwc_native, divisor_override=divisor_override,
-            count_include_pad=count_include_pad, input_nhwc=input_nhwc
+            input,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=padding,
+            nhwc_native=nhwc_native,
+            divisor_override=divisor_override,
+            count_include_pad=count_include_pad,
+            input_nhwc=input_nhwc,
         )
         grad_fn.output_tensor = result
         result._grad_fn = grad_fn
@@ -259,7 +282,7 @@ def avg_pool1d(
     stride: Union[int, Tuple[int], None] = None,
     padding: Union[int, Tuple[int]] = 0,
     ceil_mode: bool = False,
-    count_include_pad: bool = True
+    count_include_pad: bool = True,
 ) -> Tensor:
     """
     1D average pooling operation.
@@ -299,6 +322,7 @@ def avg_pool1d(
     result = Tensor._from_mlx_array(output_3d)
 
     from ..autograd.context import is_grad_enabled
+
     if is_grad_enabled() and input.requires_grad:
         result.requires_grad = True
 
@@ -312,7 +336,7 @@ def max_pool1d(
     padding: Union[int, Tuple[int]] = 0,
     dilation: Union[int, Tuple[int]] = 1,
     return_indices: bool = False,
-    ceil_mode: bool = False
+    ceil_mode: bool = False,
 ) -> Tensor:
     """
     1D max pooling operation.
@@ -332,9 +356,14 @@ def max_pool1d(
     """
     if return_indices:
         from ..nn.functional import max_pool1d_with_indices
+
         return max_pool1d_with_indices(
-            input, kernel_size=kernel_size, stride=stride, padding=padding,
-            dilation=dilation, ceil_mode=ceil_mode
+            input,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=padding,
+            dilation=dilation,
+            ceil_mode=ceil_mode,
         )
 
     kernel_size = _single(kernel_size)
@@ -361,6 +390,7 @@ def max_pool1d(
     result = Tensor._from_mlx_array(output_3d)
 
     from ..autograd.context import is_grad_enabled
+
     if is_grad_enabled() and input.requires_grad:
         result.requires_grad = True
 
@@ -408,10 +438,7 @@ def adaptive_max_pool1d(input: Tensor, output_size: int) -> Tuple[Tensor, Tensor
 
     if output_size == L:
         # Identity case - indices are just 0, 1, 2, ...
-        indices_array = mx.broadcast_to(
-            mx.arange(L).reshape(1, 1, L),
-            (N, C, L)
-        )
+        indices_array = mx.broadcast_to(mx.arange(L).reshape(1, 1, L), (N, C, L))
         return input, Tensor._from_mlx_array(indices_array.astype(mx.int64))
 
     # Compute adaptive pooling regions
@@ -443,6 +470,7 @@ def adaptive_max_pool1d(input: Tensor, output_size: int) -> Tuple[Tensor, Tensor
 
     # Handle autograd
     from ..autograd.context import is_grad_enabled
+
     if is_grad_enabled() and input.requires_grad:
         output.requires_grad = True
 
@@ -463,7 +491,7 @@ def avg_pool3d(
     padding: Union[int, Tuple[int, int, int]] = 0,
     ceil_mode: bool = False,
     count_include_pad: bool = True,
-    divisor_override: int = None
+    divisor_override: int = None,
 ) -> Tensor:
     """
     3D average pooling operation.
@@ -514,7 +542,7 @@ def avg_pool3d(
     outputs = []
     for d_out in range(D_out):
         d_start = d_out * sD
-        depth_slice = x[:, d_start:d_start + kD, :, :, :]
+        depth_slice = x[:, d_start : d_start + kD, :, :, :]
         depth_avg = mx.mean(depth_slice, axis=1)  # [N, H, W, C]
 
         # Apply 2D pooling on H,W dimensions
@@ -527,6 +555,7 @@ def avg_pool3d(
     out = Tensor._from_mlx_array(result)
 
     from ..autograd.context import is_grad_enabled
+
     if is_grad_enabled() and input.requires_grad:
         out.requires_grad = True
 
@@ -540,7 +569,7 @@ def max_pool3d(
     padding: Union[int, Tuple[int, int, int]] = 0,
     dilation: Union[int, Tuple[int, int, int]] = 1,
     return_indices: bool = False,
-    ceil_mode: bool = False
+    ceil_mode: bool = False,
 ) -> Tensor:
     """
     3D max pooling operation.
@@ -560,9 +589,14 @@ def max_pool3d(
     """
     if return_indices:
         from ..nn.functional import max_pool3d_with_indices
+
         return max_pool3d_with_indices(
-            input, kernel_size=kernel_size, stride=stride, padding=padding,
-            dilation=dilation, ceil_mode=ceil_mode
+            input,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=padding,
+            dilation=dilation,
+            ceil_mode=ceil_mode,
         )
 
     kernel_size = _triple(kernel_size)
@@ -597,7 +631,7 @@ def max_pool3d(
     outputs = []
     for d_out in range(D_out):
         d_start = d_out * sD
-        depth_slice = x[:, d_start:d_start + kD, :, :, :]
+        depth_slice = x[:, d_start : d_start + kD, :, :, :]
         depth_max = mx.max(depth_slice, axis=1)  # [N, H, W, C]
 
         # Apply 2D pooling on H,W dimensions
@@ -610,16 +644,14 @@ def max_pool3d(
     out = Tensor._from_mlx_array(result)
 
     from ..autograd.context import is_grad_enabled
+
     if is_grad_enabled() and input.requires_grad:
         out.requires_grad = True
 
     return out
 
 
-def adaptive_avg_pool3d(
-    input: Tensor,
-    output_size: Union[int, Tuple[int, int, int]]
-) -> Tensor:
+def adaptive_avg_pool3d(input: Tensor, output_size: Union[int, Tuple[int, int, int]]) -> Tensor:
     """
     3D adaptive average pooling.
 
@@ -653,14 +685,12 @@ def adaptive_avg_pool3d(
         input,
         kernel_size=(kernel_d, kernel_h, kernel_w),
         stride=(stride_d, stride_h, stride_w),
-        padding=0
+        padding=0,
     )
 
 
 def adaptive_max_pool3d(
-    input: Tensor,
-    output_size: Union[int, Tuple[int, int, int]],
-    return_indices: bool = False
+    input: Tensor, output_size: Union[int, Tuple[int, int, int]], return_indices: bool = False
 ):
     """
     3D adaptive max pooling.
@@ -730,7 +760,9 @@ def adaptive_max_pool3d(
                     region_d = d_end - d_start
                     region_h = h_end - h_start
                     region_w = w_end - w_start
-                    region_flat = mx.reshape(region, (N, C, -1))  # [N, C, region_d * region_h * region_w]
+                    region_flat = mx.reshape(
+                        region, (N, C, -1)
+                    )  # [N, C, region_d * region_h * region_w]
                     local_argmax = mx.argmax(region_flat, axis=2)  # [N, C]
 
                     # Convert local index to (local_d, local_h, local_w)
@@ -767,6 +799,7 @@ def adaptive_max_pool3d(
 
     # Handle autograd
     from ..autograd.context import is_grad_enabled
+
     if is_grad_enabled() and input.requires_grad:
         result.requires_grad = True
 
@@ -779,9 +812,14 @@ def adaptive_max_pool3d(
 
 
 __all__ = [
-    'max_pool2d', 'avg_pool2d',
-    'max_pool1d', 'avg_pool1d',
-    'max_pool3d', 'avg_pool3d',
-    'adaptive_avg_pool1d', 'adaptive_max_pool1d',
-    'adaptive_avg_pool3d', 'adaptive_max_pool3d',
+    "max_pool2d",
+    "avg_pool2d",
+    "max_pool1d",
+    "avg_pool1d",
+    "max_pool3d",
+    "avg_pool3d",
+    "adaptive_avg_pool1d",
+    "adaptive_max_pool1d",
+    "adaptive_avg_pool3d",
+    "adaptive_max_pool3d",
 ]

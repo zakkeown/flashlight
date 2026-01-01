@@ -4,12 +4,13 @@ Quick Operations - One-liner MLX wrappers
 These are simple pass-through functions to MLX equivalents.
 """
 
-from typing import Union, Tuple, List, Optional
+from typing import List, Optional, Tuple, Union
+
 import mlx.core as mx
 
-from ..tensor import Tensor
 from ..autograd.context import is_grad_enabled
-from ..distributions._constants import FLOAT32_TINY, PROB_EPSILON, CF_TINY
+from ..distributions._constants import CF_TINY, FLOAT32_TINY, PROB_EPSILON
+from ..tensor import Tensor
 
 
 def atleast_1d(*tensors: Tensor) -> Union[Tensor, List[Tensor]]:
@@ -173,7 +174,9 @@ def logsumexp(input: Tensor, dim: int, keepdim: bool = False) -> Tensor:
     return result
 
 
-def addmm(input: Tensor, mat1: Tensor, mat2: Tensor, beta: float = 1.0, alpha: float = 1.0) -> Tensor:
+def addmm(
+    input: Tensor, mat1: Tensor, mat2: Tensor, beta: float = 1.0, alpha: float = 1.0
+) -> Tensor:
     """Compute beta * input + alpha * (mat1 @ mat2)."""
     mm_result = mx.matmul(mat1._mlx_array, mat2._mlx_array)
     result_arr = beta * input._mlx_array + alpha * mm_result
@@ -183,7 +186,9 @@ def addmm(input: Tensor, mat1: Tensor, mat2: Tensor, beta: float = 1.0, alpha: f
     return result
 
 
-def baddbmm(input: Tensor, batch1: Tensor, batch2: Tensor, beta: float = 1.0, alpha: float = 1.0) -> Tensor:
+def baddbmm(
+    input: Tensor, batch1: Tensor, batch2: Tensor, beta: float = 1.0, alpha: float = 1.0
+) -> Tensor:
     """Batch add and batch matrix multiply: beta * input + alpha * (batch1 @ batch2)."""
     bmm_result = mx.matmul(batch1._mlx_array, batch2._mlx_array)
     result_arr = beta * input._mlx_array + alpha * bmm_result
@@ -201,7 +206,9 @@ def mv(input: Tensor, vec: Tensor) -> Tensor:
     return result
 
 
-def addr(input: Tensor, vec1: Tensor, vec2: Tensor, beta: float = 1.0, alpha: float = 1.0) -> Tensor:
+def addr(
+    input: Tensor, vec1: Tensor, vec2: Tensor, beta: float = 1.0, alpha: float = 1.0
+) -> Tensor:
     """Outer product and add: beta * input + alpha * (vec1 outer vec2)."""
     outer = mx.outer(vec1._mlx_array, vec2._mlx_array)
     result_arr = beta * input._mlx_array + alpha * outer
@@ -216,7 +223,9 @@ def numel(input: Tensor) -> int:
     return input._mlx_array.size
 
 
-def addbmm(input: Tensor, batch1: Tensor, batch2: Tensor, beta: float = 1.0, alpha: float = 1.0) -> Tensor:
+def addbmm(
+    input: Tensor, batch1: Tensor, batch2: Tensor, beta: float = 1.0, alpha: float = 1.0
+) -> Tensor:
     """Add batch matrix multiply: beta * input + alpha * sum(batch1[i] @ batch2[i]).
 
     Performs batch matrix multiply and sums over batch dimension, then adds to input.
@@ -274,9 +283,9 @@ def dist(input: Tensor, other: Tensor, p: float = 2.0) -> Tensor:
         Scalar tensor containing the p-norm of the difference
     """
     diff = input._mlx_array - other._mlx_array
-    if p == float('inf'):
+    if p == float("inf"):
         result_arr = mx.max(mx.abs(diff))
-    elif p == float('-inf'):
+    elif p == float("-inf"):
         result_arr = mx.min(mx.abs(diff))
     elif p == 0:
         result_arr = mx.sum(mx.not_equal(diff, 0).astype(mx.float32))
@@ -320,7 +329,9 @@ def corrcoef(input: Tensor) -> Tensor:
     return result
 
 
-def cov(input: Tensor, correction: int = 1, fweights: Tensor = None, aweights: Tensor = None) -> Tensor:
+def cov(
+    input: Tensor, correction: int = 1, fweights: Tensor = None, aweights: Tensor = None
+) -> Tensor:
     """Estimate covariance matrix.
 
     Args:
@@ -471,7 +482,9 @@ def ger(input: Tensor, vec2: Tensor) -> Tensor:
     return result
 
 
-def frobenius_norm(input: Tensor, dim: Union[int, Tuple[int, ...]] = None, keepdim: bool = False) -> Tensor:
+def frobenius_norm(
+    input: Tensor, dim: Union[int, Tuple[int, ...]] = None, keepdim: bool = False
+) -> Tensor:
     """Compute Frobenius norm.
 
     Args:
@@ -488,7 +501,9 @@ def frobenius_norm(input: Tensor, dim: Union[int, Tuple[int, ...]] = None, keepd
     else:
         if isinstance(dim, int):
             dim = (dim,)
-        result_arr = mx.sqrt(mx.sum(input._mlx_array * input._mlx_array, axis=dim, keepdims=keepdim))
+        result_arr = mx.sqrt(
+            mx.sum(input._mlx_array * input._mlx_array, axis=dim, keepdims=keepdim)
+        )
 
     result = Tensor._from_mlx_array(result_arr)
     if is_grad_enabled() and input.requires_grad:
@@ -514,30 +529,30 @@ def frombuffer(buffer, dtype=None, count: int = -1, offset: int = 0) -> Tensor:
 
     # Map dtype to struct format and MLX dtype
     dtype_map = {
-        None: ('f', mx.float32, 4),  # default float32
-        'float32': ('f', mx.float32, 4),
-        'float16': ('e', mx.float16, 2),
-        'int32': ('i', mx.int32, 4),
-        'int64': ('q', mx.int64, 8),
-        'int16': ('h', mx.int16, 2),
-        'int8': ('b', mx.int8, 1),
-        'uint8': ('B', mx.uint8, 1),
-        'uint16': ('H', mx.uint16, 2),
-        'uint32': ('I', mx.uint32, 4),
-        'uint64': ('Q', mx.uint64, 8),
-        'bool': ('?', mx.bool_, 1),
+        None: ("f", mx.float32, 4),  # default float32
+        "float32": ("f", mx.float32, 4),
+        "float16": ("e", mx.float16, 2),
+        "int32": ("i", mx.int32, 4),
+        "int64": ("q", mx.int64, 8),
+        "int16": ("h", mx.int16, 2),
+        "int8": ("b", mx.int8, 1),
+        "uint8": ("B", mx.uint8, 1),
+        "uint16": ("H", mx.uint16, 2),
+        "uint32": ("I", mx.uint32, 4),
+        "uint64": ("Q", mx.uint64, 8),
+        "bool": ("?", mx.bool_, 1),
     }
 
     # Handle torch dtype objects
-    if dtype is not None and hasattr(dtype, '__name__'):
+    if dtype is not None and hasattr(dtype, "__name__"):
         dtype_key = dtype.__name__
     elif dtype is not None:
-        dtype_key = str(dtype).replace('torch.', '')
+        dtype_key = str(dtype).replace("torch.", "")
     else:
         dtype_key = None
 
     if dtype_key not in dtype_map:
-        dtype_key = 'float32'  # fallback
+        dtype_key = "float32"  # fallback
 
     fmt_char, mlx_dtype, elem_size = dtype_map[dtype_key]
 
@@ -557,8 +572,8 @@ def frombuffer(buffer, dtype=None, count: int = -1, offset: int = 0) -> Tensor:
         count = min(count, len(data) // elem_size)
 
     # Unpack using struct
-    fmt = f'<{count}{fmt_char}'  # Little-endian
-    values = struct.unpack(fmt, data[:count * elem_size])
+    fmt = f"<{count}{fmt_char}"  # Little-endian
+    values = struct.unpack(fmt, data[: count * elem_size])
 
     result = Tensor._from_mlx_array(mx.array(list(values), dtype=mlx_dtype))
     return result
@@ -598,19 +613,25 @@ def binomial(count: Tensor, prob: Tensor) -> Tensor:
         # Success if uniform < p
         success = (uniform < p_arr).astype(mx.float32)
         # Only count if this trial is within count for this element
-        within_count = (mx.array(trial, dtype=mx.float32) < n_arr.astype(mx.float32)).astype(mx.float32)
+        within_count = (mx.array(trial, dtype=mx.float32) < n_arr.astype(mx.float32)).astype(
+            mx.float32
+        )
         result = result + success * within_count
 
     return Tensor._from_mlx_array(result.astype(n_arr.dtype))
 
 
-def convolution(input: Tensor, weight: Tensor, bias: Tensor = None,
-                stride: Union[int, Tuple[int, ...]] = 1,
-                padding: Union[int, Tuple[int, ...]] = 0,
-                dilation: Union[int, Tuple[int, ...]] = 1,
-                transposed: bool = False,
-                output_padding: Union[int, Tuple[int, ...]] = 0,
-                groups: int = 1) -> Tensor:
+def convolution(
+    input: Tensor,
+    weight: Tensor,
+    bias: Tensor = None,
+    stride: Union[int, Tuple[int, ...]] = 1,
+    padding: Union[int, Tuple[int, ...]] = 0,
+    dilation: Union[int, Tuple[int, ...]] = 1,
+    transposed: bool = False,
+    output_padding: Union[int, Tuple[int, ...]] = 0,
+    groups: int = 1,
+) -> Tensor:
     """Generic convolution operation.
 
     Args:
@@ -633,23 +654,35 @@ def convolution(input: Tensor, weight: Tensor, bias: Tensor = None,
     if ndim == 1:
         if transposed:
             from ..nn.functional import conv_transpose1d
-            return conv_transpose1d(input, weight, bias, stride, padding, output_padding, groups, dilation)
+
+            return conv_transpose1d(
+                input, weight, bias, stride, padding, output_padding, groups, dilation
+            )
         else:
             from ..ops.conv1d import conv1d
+
             return conv1d(input, weight, bias, stride, padding, dilation, groups)
     elif ndim == 2:
         if transposed:
             from ..nn.functional import conv_transpose2d
-            return conv_transpose2d(input, weight, bias, stride, padding, output_padding, groups, dilation)
+
+            return conv_transpose2d(
+                input, weight, bias, stride, padding, output_padding, groups, dilation
+            )
         else:
             from ..ops.convolution import conv2d
+
             return conv2d(input, weight, bias, stride, padding, dilation, groups)
     elif ndim == 3:
         if transposed:
             from ..nn.functional import conv_transpose3d
-            return conv_transpose3d(input, weight, bias, stride, padding, output_padding, groups, dilation)
+
+            return conv_transpose3d(
+                input, weight, bias, stride, padding, output_padding, groups, dilation
+            )
         else:
             from ..ops.conv3d import conv3d
+
             return conv3d(input, weight, bias, stride, padding, dilation, groups)
     else:
         raise ValueError(f"Unsupported number of spatial dimensions: {ndim}")
@@ -676,10 +709,10 @@ def affine_grid_generator(theta: Tensor, size: List[int], align_corners: bool = 
             y = mx.linspace(-1, 1, H)
             x = mx.linspace(-1, 1, W)
         else:
-            y = mx.linspace(-1 + 1/H, 1 - 1/H, H)
-            x = mx.linspace(-1 + 1/W, 1 - 1/W, W)
+            y = mx.linspace(-1 + 1 / H, 1 - 1 / H, H)
+            x = mx.linspace(-1 + 1 / W, 1 - 1 / W, W)
 
-        yy, xx = mx.meshgrid(y, x, indexing='ij')
+        yy, xx = mx.meshgrid(y, x, indexing="ij")
         ones = mx.ones_like(xx)
         grid = mx.stack([xx, yy, ones], axis=-1)  # (H, W, 3)
         grid = mx.reshape(grid, (H * W, 3))  # (H*W, 3)
@@ -701,11 +734,11 @@ def affine_grid_generator(theta: Tensor, size: List[int], align_corners: bool = 
             y = mx.linspace(-1, 1, H)
             x = mx.linspace(-1, 1, W)
         else:
-            z = mx.linspace(-1 + 1/D, 1 - 1/D, D)
-            y = mx.linspace(-1 + 1/H, 1 - 1/H, H)
-            x = mx.linspace(-1 + 1/W, 1 - 1/W, W)
+            z = mx.linspace(-1 + 1 / D, 1 - 1 / D, D)
+            y = mx.linspace(-1 + 1 / H, 1 - 1 / H, H)
+            x = mx.linspace(-1 + 1 / W, 1 - 1 / W, W)
 
-        zz, yy, xx = mx.meshgrid(z, y, x, indexing='ij')
+        zz, yy, xx = mx.meshgrid(z, y, x, indexing="ij")
         ones = mx.ones_like(xx)
         grid = mx.stack([xx, yy, zz, ones], axis=-1)
         grid = mx.reshape(grid, (D * H * W, 4))
@@ -725,29 +758,65 @@ def affine_grid_generator(theta: Tensor, size: List[int], align_corners: bool = 
 
 
 __all__ = [
-    'atleast_1d', 'atleast_2d', 'atleast_3d',
-    'bitwise_and', 'bitwise_or', 'bitwise_xor', 'bitwise_not',
-    'broadcast_to', 'concatenate',
-    'conj', 'erf', 'erfinv',
-    'negative', 'positive',
-    'real', 'imag',
-    'logaddexp', 'logsumexp',
-    'addmm', 'baddbmm', 'mv', 'addr',
-    'numel',
+    "atleast_1d",
+    "atleast_2d",
+    "atleast_3d",
+    "bitwise_and",
+    "bitwise_or",
+    "bitwise_xor",
+    "bitwise_not",
+    "broadcast_to",
+    "concatenate",
+    "conj",
+    "erf",
+    "erfinv",
+    "negative",
+    "positive",
+    "real",
+    "imag",
+    "logaddexp",
+    "logsumexp",
+    "addmm",
+    "baddbmm",
+    "mv",
+    "addr",
+    "numel",
     # New additions
-    'addbmm', 'addmv', 'chain_matmul', 'dist',
-    'corrcoef', 'cov', 'bilinear', 'constant_pad_nd',
-    'ger', 'frobenius_norm', 'frombuffer', 'binomial',
-    'convolution', 'affine_grid_generator',
+    "addbmm",
+    "addmv",
+    "chain_matmul",
+    "dist",
+    "corrcoef",
+    "cov",
+    "bilinear",
+    "constant_pad_nd",
+    "ger",
+    "frobenius_norm",
+    "frombuffer",
+    "binomial",
+    "convolution",
+    "affine_grid_generator",
     # In-place operations at torch.* level
-    'dropout_', 'alpha_dropout_', 'feature_alpha_dropout_',
-    'erf_', 'erfc_', 'exp2_', 'i0_', 'fill_',
+    "dropout_",
+    "alpha_dropout_",
+    "feature_alpha_dropout_",
+    "erf_",
+    "erfc_",
+    "exp2_",
+    "i0_",
+    "fill_",
     # Grid sampler
-    'grid_sampler', 'grid_sampler_2d', 'grid_sampler_3d',
+    "grid_sampler",
+    "grid_sampler_2d",
+    "grid_sampler_3d",
     # Histogram
-    'histogram', 'histogramdd',
+    "histogram",
+    "histogramdd",
     # Other
-    'feature_dropout', 'igamma', 'igammac', 'polygamma',
+    "feature_dropout",
+    "igamma",
+    "igammac",
+    "polygamma",
 ]
 
 
@@ -773,7 +842,7 @@ def alpha_dropout_(input: Tensor, p: float = 0.5, training: bool = True) -> Tens
     mask = mx.random.uniform(shape=input.shape) > p
     # Apply alpha dropout transformation
     input._mlx_array = mx.where(mask, input._mlx_array, alpha_p)
-    a = ((1 - p) * (1 + p * alpha_p ** 2)) ** -0.5
+    a = ((1 - p) * (1 + p * alpha_p**2)) ** -0.5
     b = -a * alpha_p * p
     input._mlx_array = input._mlx_array * a + b
     return input
@@ -793,7 +862,7 @@ def feature_alpha_dropout_(input: Tensor, p: float = 0.5, training: bool = True)
     mask = mx.broadcast_to(mask, input.shape)
 
     input._mlx_array = mx.where(mask, input._mlx_array, alpha_p)
-    a = ((1 - p) * (1 + p * alpha_p ** 2)) ** -0.5
+    a = ((1 - p) * (1 + p * alpha_p**2)) ** -0.5
     b = -a * alpha_p * p
     input._mlx_array = input._mlx_array * a + b
     return input
@@ -821,6 +890,7 @@ def i0_(input: Tensor) -> Tensor:
     """In-place modified Bessel function of first kind, order 0."""
     # Use the pure MLX implementation from arithmetic
     from .arithmetic import i0
+
     result = i0(input)
     input._mlx_array = result._mlx_array
     return input
@@ -832,8 +902,13 @@ def fill_(input: Tensor, value: float) -> Tensor:
     return input
 
 
-def grid_sampler(input: Tensor, grid: Tensor, interpolation_mode: int = 0,
-                 padding_mode: int = 0, align_corners: bool = False) -> Tensor:
+def grid_sampler(
+    input: Tensor,
+    grid: Tensor,
+    interpolation_mode: int = 0,
+    padding_mode: int = 0,
+    align_corners: bool = False,
+) -> Tensor:
     """Sample input using grid coordinates.
 
     Args:
@@ -847,29 +922,49 @@ def grid_sampler(input: Tensor, grid: Tensor, interpolation_mode: int = 0,
         Sampled tensor
     """
     # Convert mode integers to strings
-    interp_modes = {0: 'bilinear', 1: 'nearest', 2: 'bicubic'}
-    pad_modes = {0: 'zeros', 1: 'border', 2: 'reflection'}
+    interp_modes = {0: "bilinear", 1: "nearest", 2: "bicubic"}
+    pad_modes = {0: "zeros", 1: "border", 2: "reflection"}
 
     from ..nn.functional import grid_sample
-    return grid_sample(input, grid, mode=interp_modes.get(interpolation_mode, 'bilinear'),
-                       padding_mode=pad_modes.get(padding_mode, 'zeros'),
-                       align_corners=align_corners)
+
+    return grid_sample(
+        input,
+        grid,
+        mode=interp_modes.get(interpolation_mode, "bilinear"),
+        padding_mode=pad_modes.get(padding_mode, "zeros"),
+        align_corners=align_corners,
+    )
 
 
-def grid_sampler_2d(input: Tensor, grid: Tensor, interpolation_mode: int = 0,
-                    padding_mode: int = 0, align_corners: bool = False) -> Tensor:
+def grid_sampler_2d(
+    input: Tensor,
+    grid: Tensor,
+    interpolation_mode: int = 0,
+    padding_mode: int = 0,
+    align_corners: bool = False,
+) -> Tensor:
     """2D grid sampler. See grid_sampler for details."""
     return grid_sampler(input, grid, interpolation_mode, padding_mode, align_corners)
 
 
-def grid_sampler_3d(input: Tensor, grid: Tensor, interpolation_mode: int = 0,
-                    padding_mode: int = 0, align_corners: bool = False) -> Tensor:
+def grid_sampler_3d(
+    input: Tensor,
+    grid: Tensor,
+    interpolation_mode: int = 0,
+    padding_mode: int = 0,
+    align_corners: bool = False,
+) -> Tensor:
     """3D grid sampler. See grid_sampler for details."""
     return grid_sampler(input, grid, interpolation_mode, padding_mode, align_corners)
 
 
-def histogram(input: Tensor, bins: int = 100, range_: Tuple[float, float] = None,
-              weight: Tensor = None, density: bool = False) -> Tuple[Tensor, Tensor]:
+def histogram(
+    input: Tensor,
+    bins: int = 100,
+    range_: Tuple[float, float] = None,
+    weight: Tensor = None,
+    density: bool = False,
+) -> Tuple[Tensor, Tensor]:
     """Compute histogram of tensor values.
 
     Pure MLX implementation using sorting and counting.
@@ -936,8 +1031,13 @@ def histogram(input: Tensor, bins: int = 100, range_: Tuple[float, float] = None
     return hist_tensor, edges_tensor
 
 
-def histogramdd(input: Tensor, bins: int = 10, range_: List[Tuple[float, float]] = None,
-                weight: Tensor = None, density: bool = False):
+def histogramdd(
+    input: Tensor,
+    bins: int = 10,
+    range_: List[Tuple[float, float]] = None,
+    weight: Tensor = None,
+    density: bool = False,
+):
     """Compute multi-dimensional histogram.
 
     Pure MLX implementation for multi-dimensional histograms.
@@ -1064,6 +1164,7 @@ def igamma(input: Tensor, other: Tensor) -> Tensor:
 
     # Compute log(x^a * e^-x / Gamma(a)) = a*log(x) - x - lgamma(a)
     from ..ops.arithmetic import lgamma as _lgamma
+
     lgamma_a = _lgamma(input)._mlx_array
 
     log_prefactor = a * mx.log(x + eps) - x - lgamma_a
@@ -1119,6 +1220,7 @@ def polygamma(n: int, input: Tensor) -> Tensor:
     if n == 0:
         # Return digamma
         from ..ops.arithmetic import digamma as _digamma
+
         return _digamma(input)
 
     # For n >= 1, use asymptotic expansion with recurrence
@@ -1161,7 +1263,9 @@ def polygamma(n: int, input: Tensor) -> Tensor:
         coeff2 = 1.0
         for j in range(n + 1, n + 2):
             coeff2 *= j
-        result = result + sign * B2 * coeff2 / mx.power(x_shifted, mx.array(n + 2, dtype=mx.float32))
+        result = result + sign * B2 * coeff2 / mx.power(
+            x_shifted, mx.array(n + 2, dtype=mx.float32)
+        )
 
     # Apply recurrence backwards
     # polygamma(n, x) = polygamma(n, x+1) + (-1)^(n+1) * n! / x^(n+1)
@@ -1183,6 +1287,7 @@ def polygamma(n: int, input: Tensor) -> Tensor:
 # RNN Functions (torch.lstm, torch.gru)
 # ============================================================================
 
+
 def _lstm_cell(input_arr, h_arr, c_arr, weight_ih, weight_hh, bias_ih, bias_hh, has_biases):
     """Apply a single LSTM cell step.
 
@@ -1200,9 +1305,9 @@ def _lstm_cell(input_arr, h_arr, c_arr, weight_ih, weight_hh, bias_ih, bias_hh, 
     # Split into 4 gates (i, f, g, o)
     hidden_size = h_arr.shape[-1]
     i = mx.sigmoid(gates[..., :hidden_size])  # input gate
-    f = mx.sigmoid(gates[..., hidden_size:2*hidden_size])  # forget gate
-    g = mx.tanh(gates[..., 2*hidden_size:3*hidden_size])  # cell gate
-    o = mx.sigmoid(gates[..., 3*hidden_size:])  # output gate
+    f = mx.sigmoid(gates[..., hidden_size : 2 * hidden_size])  # forget gate
+    g = mx.tanh(gates[..., 2 * hidden_size : 3 * hidden_size])  # cell gate
+    o = mx.sigmoid(gates[..., 3 * hidden_size :])  # output gate
 
     # Update cell and hidden state
     c_new = f * c_arr + i * g
@@ -1227,12 +1332,16 @@ def _gru_cell(input_arr, h_arr, weight_ih, weight_hh, bias_ih, bias_hh, has_bias
     hidden_size = h_arr.shape[-1]
 
     # Split gates
-    ir, iz, in_ = (igates[..., :hidden_size],
-                   igates[..., hidden_size:2*hidden_size],
-                   igates[..., 2*hidden_size:])
-    hr, hz, hn = (hgates[..., :hidden_size],
-                  hgates[..., hidden_size:2*hidden_size],
-                  hgates[..., 2*hidden_size:])
+    ir, iz, in_ = (
+        igates[..., :hidden_size],
+        igates[..., hidden_size : 2 * hidden_size],
+        igates[..., 2 * hidden_size :],
+    )
+    hr, hz, hn = (
+        hgates[..., :hidden_size],
+        hgates[..., hidden_size : 2 * hidden_size],
+        hgates[..., 2 * hidden_size :],
+    )
 
     # Apply gate activations
     r = mx.sigmoid(ir + hr)  # reset gate
@@ -1245,9 +1354,17 @@ def _gru_cell(input_arr, h_arr, weight_ih, weight_hh, bias_ih, bias_hh, has_bias
     return h_new
 
 
-def lstm(data: Tensor, batch_sizes: Tensor, hx: Tuple[Tensor, Tensor],
-         params: List[Tensor], has_biases: bool, num_layers: int,
-         dropout: float, training: bool, bidirectional: bool) -> Tuple[Tensor, Tensor, Tensor]:
+def lstm(
+    data: Tensor,
+    batch_sizes: Tensor,
+    hx: Tuple[Tensor, Tensor],
+    params: List[Tensor],
+    has_biases: bool,
+    num_layers: int,
+    dropout: float,
+    training: bool,
+    bidirectional: bool,
+) -> Tuple[Tensor, Tensor, Tensor]:
     """Apply LSTM to packed sequence.
 
     This is a lower-level LSTM function used by nn.LSTM for packed sequences.
@@ -1322,19 +1439,34 @@ def lstm(data: Tensor, batch_sizes: Tensor, hx: Tuple[Tensor, Tensor],
             timestep_offset = 0
             for t in range(total_timesteps):
                 curr_batch = batch_sizes_arr[t]
-                x_t = data_arr[timestep_offset:timestep_offset + curr_batch]
+                x_t = data_arr[timestep_offset : timestep_offset + curr_batch]
 
                 # Process only active sequences
                 h_active = h_f[:curr_batch]
                 c_active = c_f[:curr_batch]
 
-                h_new, c_new = _lstm_cell(x_t, h_active, c_active,
-                                          weight_ih_f, weight_hh_f,
-                                          bias_ih_f, bias_hh_f, has_biases)
+                h_new, c_new = _lstm_cell(
+                    x_t,
+                    h_active,
+                    c_active,
+                    weight_ih_f,
+                    weight_hh_f,
+                    bias_ih_f,
+                    bias_hh_f,
+                    has_biases,
+                )
 
                 # Update hidden states
-                h_f = mx.concatenate([h_new, h_f[curr_batch:]], axis=0) if curr_batch < h_f.shape[0] else h_new
-                c_f = mx.concatenate([c_new, c_f[curr_batch:]], axis=0) if curr_batch < c_f.shape[0] else c_new
+                h_f = (
+                    mx.concatenate([h_new, h_f[curr_batch:]], axis=0)
+                    if curr_batch < h_f.shape[0]
+                    else h_new
+                )
+                c_f = (
+                    mx.concatenate([c_new, c_f[curr_batch:]], axis=0)
+                    if curr_batch < c_f.shape[0]
+                    else c_new
+                )
 
                 layer_output.append(h_new)
                 timestep_offset += curr_batch
@@ -1343,17 +1475,32 @@ def lstm(data: Tensor, batch_sizes: Tensor, hx: Tuple[Tensor, Tensor],
             timestep_offset = 0
             for t in range(total_timesteps):
                 curr_batch = batch_sizes_arr[t]
-                x_t = prev_layer_output[timestep_offset:timestep_offset + curr_batch]
+                x_t = prev_layer_output[timestep_offset : timestep_offset + curr_batch]
 
                 h_active = h_f[:curr_batch]
                 c_active = c_f[:curr_batch]
 
-                h_new, c_new = _lstm_cell(x_t, h_active, c_active,
-                                          weight_ih_f, weight_hh_f,
-                                          bias_ih_f, bias_hh_f, has_biases)
+                h_new, c_new = _lstm_cell(
+                    x_t,
+                    h_active,
+                    c_active,
+                    weight_ih_f,
+                    weight_hh_f,
+                    bias_ih_f,
+                    bias_hh_f,
+                    has_biases,
+                )
 
-                h_f = mx.concatenate([h_new, h_f[curr_batch:]], axis=0) if curr_batch < h_f.shape[0] else h_new
-                c_f = mx.concatenate([c_new, c_f[curr_batch:]], axis=0) if curr_batch < c_f.shape[0] else c_new
+                h_f = (
+                    mx.concatenate([h_new, h_f[curr_batch:]], axis=0)
+                    if curr_batch < h_f.shape[0]
+                    else h_new
+                )
+                c_f = (
+                    mx.concatenate([c_new, c_f[curr_batch:]], axis=0)
+                    if curr_batch < c_f.shape[0]
+                    else c_new
+                )
 
                 layer_output.append(h_new)
                 timestep_offset += curr_batch
@@ -1384,17 +1531,32 @@ def lstm(data: Tensor, batch_sizes: Tensor, hx: Tuple[Tensor, Tensor],
                 for t in range(total_timesteps - 1, -1, -1):
                     curr_batch = batch_sizes_arr[t]
                     timestep_offset -= curr_batch
-                    x_t = data_arr[timestep_offset:timestep_offset + curr_batch]
+                    x_t = data_arr[timestep_offset : timestep_offset + curr_batch]
 
                     h_active = h_b[:curr_batch]
                     c_active = c_b[:curr_batch]
 
-                    h_new, c_new = _lstm_cell(x_t, h_active, c_active,
-                                              weight_ih_b, weight_hh_b,
-                                              bias_ih_b, bias_hh_b, has_biases)
+                    h_new, c_new = _lstm_cell(
+                        x_t,
+                        h_active,
+                        c_active,
+                        weight_ih_b,
+                        weight_hh_b,
+                        bias_ih_b,
+                        bias_hh_b,
+                        has_biases,
+                    )
 
-                    h_b = mx.concatenate([h_new, h_b[curr_batch:]], axis=0) if curr_batch < h_b.shape[0] else h_new
-                    c_b = mx.concatenate([c_new, c_b[curr_batch:]], axis=0) if curr_batch < c_b.shape[0] else c_new
+                    h_b = (
+                        mx.concatenate([h_new, h_b[curr_batch:]], axis=0)
+                        if curr_batch < h_b.shape[0]
+                        else h_new
+                    )
+                    c_b = (
+                        mx.concatenate([c_new, c_b[curr_batch:]], axis=0)
+                        if curr_batch < c_b.shape[0]
+                        else c_new
+                    )
 
                     layer_output_b.insert(0, h_new)
             else:
@@ -1403,17 +1565,32 @@ def lstm(data: Tensor, batch_sizes: Tensor, hx: Tuple[Tensor, Tensor],
                     curr_batch = batch_sizes_arr[t]
                     timestep_offset -= curr_batch
                     # For bidirectional later layers, input comes from concatenated forward+backward
-                    x_t = prev_layer_output[timestep_offset:timestep_offset + curr_batch]
+                    x_t = prev_layer_output[timestep_offset : timestep_offset + curr_batch]
 
                     h_active = h_b[:curr_batch]
                     c_active = c_b[:curr_batch]
 
-                    h_new, c_new = _lstm_cell(x_t, h_active, c_active,
-                                              weight_ih_b, weight_hh_b,
-                                              bias_ih_b, bias_hh_b, has_biases)
+                    h_new, c_new = _lstm_cell(
+                        x_t,
+                        h_active,
+                        c_active,
+                        weight_ih_b,
+                        weight_hh_b,
+                        bias_ih_b,
+                        bias_hh_b,
+                        has_biases,
+                    )
 
-                    h_b = mx.concatenate([h_new, h_b[curr_batch:]], axis=0) if curr_batch < h_b.shape[0] else h_new
-                    c_b = mx.concatenate([c_new, c_b[curr_batch:]], axis=0) if curr_batch < c_b.shape[0] else c_new
+                    h_b = (
+                        mx.concatenate([h_new, h_b[curr_batch:]], axis=0)
+                        if curr_batch < h_b.shape[0]
+                        else h_new
+                    )
+                    c_b = (
+                        mx.concatenate([c_new, c_b[curr_batch:]], axis=0)
+                        if curr_batch < c_b.shape[0]
+                        else c_new
+                    )
 
                     layer_output_b.insert(0, h_new)
 
@@ -1421,8 +1598,9 @@ def lstm(data: Tensor, batch_sizes: Tensor, hx: Tuple[Tensor, Tensor],
             c_list[layer * num_directions + 1] = c_b
 
             # Concatenate forward and backward outputs
-            layer_output = [mx.concatenate([f, b], axis=-1)
-                           for f, b in zip(layer_output, layer_output_b)]
+            layer_output = [
+                mx.concatenate([f, b], axis=-1) for f, b in zip(layer_output, layer_output_b)
+            ]
 
         prev_layer_output = mx.concatenate(layer_output, axis=0)
 
@@ -1439,9 +1617,17 @@ def lstm(data: Tensor, batch_sizes: Tensor, hx: Tuple[Tensor, Tensor],
     return output, h_n, c_n
 
 
-def gru(data: Tensor, batch_sizes: Tensor, hx: Tensor,
-        params: List[Tensor], has_biases: bool, num_layers: int,
-        dropout: float, training: bool, bidirectional: bool) -> Tuple[Tensor, Tensor]:
+def gru(
+    data: Tensor,
+    batch_sizes: Tensor,
+    hx: Tensor,
+    params: List[Tensor],
+    has_biases: bool,
+    num_layers: int,
+    dropout: float,
+    training: bool,
+    bidirectional: bool,
+) -> Tuple[Tensor, Tensor]:
     """Apply GRU to packed sequence.
 
     This is a lower-level GRU function used by nn.GRU for packed sequences.
@@ -1507,14 +1693,19 @@ def gru(data: Tensor, batch_sizes: Tensor, hx: Tensor,
             timestep_offset = 0
             for t in range(total_timesteps):
                 curr_batch = batch_sizes_arr[t]
-                x_t = data_arr[timestep_offset:timestep_offset + curr_batch]
+                x_t = data_arr[timestep_offset : timestep_offset + curr_batch]
 
                 h_active = h_f[:curr_batch]
 
-                h_new = _gru_cell(x_t, h_active, weight_ih_f, weight_hh_f,
-                                  bias_ih_f, bias_hh_f, has_biases)
+                h_new = _gru_cell(
+                    x_t, h_active, weight_ih_f, weight_hh_f, bias_ih_f, bias_hh_f, has_biases
+                )
 
-                h_f = mx.concatenate([h_new, h_f[curr_batch:]], axis=0) if curr_batch < h_f.shape[0] else h_new
+                h_f = (
+                    mx.concatenate([h_new, h_f[curr_batch:]], axis=0)
+                    if curr_batch < h_f.shape[0]
+                    else h_new
+                )
 
                 layer_output.append(h_new)
                 timestep_offset += curr_batch
@@ -1522,14 +1713,19 @@ def gru(data: Tensor, batch_sizes: Tensor, hx: Tensor,
             timestep_offset = 0
             for t in range(total_timesteps):
                 curr_batch = batch_sizes_arr[t]
-                x_t = prev_layer_output[timestep_offset:timestep_offset + curr_batch]
+                x_t = prev_layer_output[timestep_offset : timestep_offset + curr_batch]
 
                 h_active = h_f[:curr_batch]
 
-                h_new = _gru_cell(x_t, h_active, weight_ih_f, weight_hh_f,
-                                  bias_ih_f, bias_hh_f, has_biases)
+                h_new = _gru_cell(
+                    x_t, h_active, weight_ih_f, weight_hh_f, bias_ih_f, bias_hh_f, has_biases
+                )
 
-                h_f = mx.concatenate([h_new, h_f[curr_batch:]], axis=0) if curr_batch < h_f.shape[0] else h_new
+                h_f = (
+                    mx.concatenate([h_new, h_f[curr_batch:]], axis=0)
+                    if curr_batch < h_f.shape[0]
+                    else h_new
+                )
 
                 layer_output.append(h_new)
                 timestep_offset += curr_batch
@@ -1558,14 +1754,19 @@ def gru(data: Tensor, batch_sizes: Tensor, hx: Tensor,
                 for t in range(total_timesteps - 1, -1, -1):
                     curr_batch = batch_sizes_arr[t]
                     timestep_offset -= curr_batch
-                    x_t = data_arr[timestep_offset:timestep_offset + curr_batch]
+                    x_t = data_arr[timestep_offset : timestep_offset + curr_batch]
 
                     h_active = h_b[:curr_batch]
 
-                    h_new = _gru_cell(x_t, h_active, weight_ih_b, weight_hh_b,
-                                      bias_ih_b, bias_hh_b, has_biases)
+                    h_new = _gru_cell(
+                        x_t, h_active, weight_ih_b, weight_hh_b, bias_ih_b, bias_hh_b, has_biases
+                    )
 
-                    h_b = mx.concatenate([h_new, h_b[curr_batch:]], axis=0) if curr_batch < h_b.shape[0] else h_new
+                    h_b = (
+                        mx.concatenate([h_new, h_b[curr_batch:]], axis=0)
+                        if curr_batch < h_b.shape[0]
+                        else h_new
+                    )
 
                     layer_output_b.insert(0, h_new)
             else:
@@ -1573,22 +1774,28 @@ def gru(data: Tensor, batch_sizes: Tensor, hx: Tensor,
                 for t in range(total_timesteps - 1, -1, -1):
                     curr_batch = batch_sizes_arr[t]
                     timestep_offset -= curr_batch
-                    x_t = prev_layer_output[timestep_offset:timestep_offset + curr_batch]
+                    x_t = prev_layer_output[timestep_offset : timestep_offset + curr_batch]
 
                     h_active = h_b[:curr_batch]
 
-                    h_new = _gru_cell(x_t, h_active, weight_ih_b, weight_hh_b,
-                                      bias_ih_b, bias_hh_b, has_biases)
+                    h_new = _gru_cell(
+                        x_t, h_active, weight_ih_b, weight_hh_b, bias_ih_b, bias_hh_b, has_biases
+                    )
 
-                    h_b = mx.concatenate([h_new, h_b[curr_batch:]], axis=0) if curr_batch < h_b.shape[0] else h_new
+                    h_b = (
+                        mx.concatenate([h_new, h_b[curr_batch:]], axis=0)
+                        if curr_batch < h_b.shape[0]
+                        else h_new
+                    )
 
                     layer_output_b.insert(0, h_new)
 
             h_list[layer * num_directions + 1] = h_b
 
             # Concatenate forward and backward outputs
-            layer_output = [mx.concatenate([f, b], axis=-1)
-                           for f, b in zip(layer_output, layer_output_b)]
+            layer_output = [
+                mx.concatenate([f, b], axis=-1) for f, b in zip(layer_output, layer_output_b)
+            ]
 
         prev_layer_output = mx.concatenate(layer_output, axis=0)
 
@@ -1608,6 +1815,7 @@ def gru(data: Tensor, batch_sizes: Tensor, hx: Tensor,
 # Matrix Functions
 # ============================================================================
 
+
 def logdet(input: Tensor) -> Tensor:
     """Compute log determinant of a matrix.
 
@@ -1623,9 +1831,13 @@ def logdet(input: Tensor) -> Tensor:
     try:
         L = mx.linalg.cholesky(arr, stream=cpu_stream)
         mx.eval(L)
-        diag_L = mx.diag(L) if arr.ndim == 2 else mx.take_along_axis(
-            L, mx.arange(L.shape[-1])[None, :, None].broadcast_to(L.shape[:-1] + (1,)), axis=-1
-        ).squeeze(-1)
+        diag_L = (
+            mx.diag(L)
+            if arr.ndim == 2
+            else mx.take_along_axis(
+                L, mx.arange(L.shape[-1])[None, :, None].broadcast_to(L.shape[:-1] + (1,)), axis=-1
+            ).squeeze(-1)
+        )
         # Check if Cholesky produced valid results (all positive diagonals)
         # MLX doesn't throw on non-positive-definite matrices, it produces NaN/negative values
         if mx.any(diag_L <= 0).item() or mx.any(mx.isnan(diag_L)).item():
@@ -1651,7 +1863,7 @@ def logdet(input: Tensor) -> Tensor:
             log_det = mx.sum(mx.log(mx.abs(diag_U)))
         except:
             # Ultimate fallback for singular matrices
-            log_det = mx.array(float('-inf'), dtype=mx.float32)
+            log_det = mx.array(float("-inf"), dtype=mx.float32)
 
     result_tensor = Tensor._from_mlx_array(log_det.astype(input._mlx_array.dtype))
     if is_grad_enabled() and input.requires_grad:
@@ -1677,7 +1889,7 @@ def matrix_exp(input: Tensor) -> Tensor:
         s = int(max(0, mx.ceil(mx.log2(norm + CF_TINY)).item()))
 
         # Scale matrix
-        A = arr / (2.0 ** s)
+        A = arr / (2.0**s)
 
         # Taylor series: I + A + A^2/2! + A^3/3! + ...
         result = mx.eye(n, dtype=mx.float32)
@@ -1700,7 +1912,7 @@ def matrix_exp(input: Tensor) -> Tensor:
             A_b = arr[b]
             norm = mx.sqrt(mx.sum(A_b * A_b))
             s = int(max(0, mx.ceil(mx.log2(norm + CF_TINY)).item()))
-            A = A_b / (2.0 ** s)
+            A = A_b / (2.0**s)
 
             res = mx.eye(n, dtype=mx.float32)
             term = mx.eye(n, dtype=mx.float32)
@@ -1770,7 +1982,7 @@ def matrix_power(input: Tensor, n: int) -> Tensor:
     return result_tensor
 
 
-def _matrix_power_positive(A: 'mx.array', n: int) -> 'mx.array':
+def _matrix_power_positive(A: "mx.array", n: int) -> "mx.array":
     """Helper: compute A^n for n > 0 using binary exponentiation."""
     size = A.shape[0]
     result = mx.eye(size, dtype=mx.float32)
@@ -1789,6 +2001,7 @@ def _matrix_power_positive(A: 'mx.array', n: int) -> 'mx.array':
 # NaN-aware Operations
 # ============================================================================
 
+
 def nanmedian(input: Tensor, dim: int = None, keepdim: bool = False):
     """Compute median, ignoring NaN values.
 
@@ -1805,14 +2018,16 @@ def nanmedian(input: Tensor, dim: int = None, keepdim: bool = False):
         flat = mx.reshape(arr, (-1,))
         mask = mx.logical_not(mx.isnan(flat))
         # Replace NaN with inf so they sort to end
-        sorted_arr = mx.sort(mx.where(mask, flat, mx.array(float('inf'), dtype=mx.float32)))
+        sorted_arr = mx.sort(mx.where(mask, flat, mx.array(float("inf"), dtype=mx.float32)))
 
         # Count valid (non-NaN) elements
         count = mx.sum(mask.astype(mx.int32))
 
         # If all NaN, return NaN
         if count.item() == 0:
-            result_tensor = Tensor._from_mlx_array(mx.array(float('nan'), dtype=input._mlx_array.dtype))
+            result_tensor = Tensor._from_mlx_array(
+                mx.array(float("nan"), dtype=input._mlx_array.dtype)
+            )
             return result_tensor
 
         # Lower-middle index (PyTorch convention)
@@ -1842,10 +2057,10 @@ def nanmedian(input: Tensor, dim: int = None, keepdim: bool = False):
     for i in range(flat.shape[0]):
         row = flat[i]
         mask = mx.logical_not(mx.isnan(row))
-        sorted_row = mx.sort(mx.where(mask, row, mx.array(float('inf'), dtype=mx.float32)))
+        sorted_row = mx.sort(mx.where(mask, row, mx.array(float("inf"), dtype=mx.float32)))
         count = mx.sum(mask.astype(mx.int32)).item()
         if count == 0:
-            results.append(float('nan'))
+            results.append(float("nan"))
         else:
             mid_idx = (count - 1) // 2
             results.append(sorted_row[mid_idx].item())
@@ -1860,8 +2075,9 @@ def nanmedian(input: Tensor, dim: int = None, keepdim: bool = False):
     return result_tensor
 
 
-def nanquantile(input: Tensor, q: float, dim: int = None, keepdim: bool = False,
-                interpolation: str = 'linear') -> Tensor:
+def nanquantile(
+    input: Tensor, q: float, dim: int = None, keepdim: bool = False, interpolation: str = "linear"
+) -> Tensor:
     """Compute quantile, ignoring NaN values.
 
     Pure MLX implementation using sort and linear interpolation.
@@ -1872,11 +2088,11 @@ def nanquantile(input: Tensor, q: float, dim: int = None, keepdim: bool = False,
         """Compute quantile for 1D array, ignoring NaN."""
         mask = mx.logical_not(mx.isnan(x))
         # Replace NaN with inf so they sort to end
-        sorted_x = mx.sort(mx.where(mask, x, mx.array(float('inf'), dtype=mx.float32)))
+        sorted_x = mx.sort(mx.where(mask, x, mx.array(float("inf"), dtype=mx.float32)))
         count = mx.sum(mask.astype(mx.int32)).item()
 
         if count == 0:
-            return float('nan')
+            return float("nan")
 
         # Index for quantile
         idx = q_val * (count - 1)
@@ -1884,15 +2100,15 @@ def nanquantile(input: Tensor, q: float, dim: int = None, keepdim: bool = False,
         idx_ceil = min(idx_floor + 1, count - 1)
         frac = idx - idx_floor
 
-        if interpolation == 'linear':
+        if interpolation == "linear":
             result = sorted_x[idx_floor] * (1 - frac) + sorted_x[idx_ceil] * frac
-        elif interpolation == 'lower':
+        elif interpolation == "lower":
             result = sorted_x[idx_floor]
-        elif interpolation == 'higher':
+        elif interpolation == "higher":
             result = sorted_x[idx_ceil]
-        elif interpolation == 'nearest':
+        elif interpolation == "nearest":
             result = sorted_x[idx_floor] if frac < 0.5 else sorted_x[idx_ceil]
-        elif interpolation == 'midpoint':
+        elif interpolation == "midpoint":
             result = (sorted_x[idx_floor] + sorted_x[idx_ceil]) / 2
         else:
             result = sorted_x[idx_floor] * (1 - frac) + sorted_x[idx_ceil] * frac
@@ -1939,8 +2155,10 @@ def nanquantile(input: Tensor, q: float, dim: int = None, keepdim: bool = False,
 # Strided Operations
 # ============================================================================
 
-def as_strided(input: Tensor, size: Tuple[int, ...], stride: Tuple[int, ...],
-               storage_offset: int = 0) -> Tensor:
+
+def as_strided(
+    input: Tensor, size: Tuple[int, ...], stride: Tuple[int, ...], storage_offset: int = 0
+) -> Tensor:
     """Create a view with specified size and strides.
 
     Warning: This is an advanced operation that can create overlapping views.
@@ -1981,16 +2199,22 @@ def as_strided(input: Tensor, size: Tuple[int, ...], stride: Tuple[int, ...],
     return result_tensor
 
 
-def as_strided_(input: Tensor, size: Tuple[int, ...], stride: Tuple[int, ...],
-                storage_offset: int = 0) -> Tensor:
+def as_strided_(
+    input: Tensor, size: Tuple[int, ...], stride: Tuple[int, ...], storage_offset: int = 0
+) -> Tensor:
     """In-place version of as_strided."""
     result = as_strided(input, size, stride, storage_offset)
     input._mlx_array = result._mlx_array
     return input
 
 
-def as_strided_scatter(input: Tensor, src: Tensor, size: Tuple[int, ...],
-                       stride: Tuple[int, ...], storage_offset: int = 0) -> Tensor:
+def as_strided_scatter(
+    input: Tensor,
+    src: Tensor,
+    size: Tuple[int, ...],
+    stride: Tuple[int, ...],
+    storage_offset: int = 0,
+) -> Tensor:
     """Scatter values from src into input using as_strided view.
 
     Pure MLX implementation using index computation.
@@ -2033,12 +2257,13 @@ def as_strided_scatter(input: Tensor, src: Tensor, size: Tuple[int, ...],
     return result_tensor
 
 
-def empty_permuted(size: Tuple[int, ...], physical_layout: Tuple[int, ...],
-                   dtype=None, device=None) -> Tensor:
+def empty_permuted(
+    size: Tuple[int, ...], physical_layout: Tuple[int, ...], dtype=None, device=None
+) -> Tensor:
     """Create empty tensor with specified physical layout."""
     if dtype is None:
         dtype = mx.float32
-    elif hasattr(dtype, '_mlx_dtype'):
+    elif hasattr(dtype, "_mlx_dtype"):
         dtype = dtype._mlx_dtype
     elif not isinstance(dtype, mx.Dtype):
         dtype = mx.float32
@@ -2049,12 +2274,13 @@ def empty_permuted(size: Tuple[int, ...], physical_layout: Tuple[int, ...],
     return result
 
 
-def empty_strided(size: Tuple[int, ...], stride: Tuple[int, ...],
-                  dtype=None, device=None) -> Tensor:
+def empty_strided(
+    size: Tuple[int, ...], stride: Tuple[int, ...], dtype=None, device=None
+) -> Tensor:
     """Create empty tensor with specified strides."""
     if dtype is None:
         dtype = mx.float32
-    elif hasattr(dtype, '_mlx_dtype'):
+    elif hasattr(dtype, "_mlx_dtype"):
         dtype = dtype._mlx_dtype
     elif not isinstance(dtype, mx.Dtype):
         dtype = mx.float32
@@ -2119,8 +2345,10 @@ def nonzero_static(input: Tensor, size: int, fill_value: int = -1) -> Tensor:
 # Scatter/Index Operations
 # ============================================================================
 
-def index_put_(input: Tensor, indices: Tuple[Tensor, ...], values: Tensor,
-               accumulate: bool = False) -> Tensor:
+
+def index_put_(
+    input: Tensor, indices: Tuple[Tensor, ...], values: Tensor, accumulate: bool = False
+) -> Tensor:
     """In-place put values at indices.
 
     Args:
@@ -2166,7 +2394,11 @@ def index_put_(input: Tensor, indices: Tuple[Tensor, ...], values: Tensor,
         stride = 1
         for dim in range(len(shape) - 1, -1, -1):
             if dim < len(idx_arrays):
-                coord = idx_arrays[dim].flatten()[i].item() if idx_arrays[dim].size > 1 else idx_arrays[dim].item()
+                coord = (
+                    idx_arrays[dim].flatten()[i].item()
+                    if idx_arrays[dim].size > 1
+                    else idx_arrays[dim].item()
+                )
             else:
                 coord = 0
             flat_idx += coord * stride
@@ -2181,8 +2413,9 @@ def index_put_(input: Tensor, indices: Tuple[Tensor, ...], values: Tensor,
     return input
 
 
-def index_reduce(input: Tensor, dim: int, index: Tensor, source: Tensor,
-                 reduce: str, include_self: bool = True) -> Tensor:
+def index_reduce(
+    input: Tensor, dim: int, index: Tensor, source: Tensor, reduce: str, include_self: bool = True
+) -> Tensor:
     """Reduce into input at indices along dimension.
 
     Args:
@@ -2215,20 +2448,20 @@ def index_reduce(input: Tensor, dim: int, index: Tensor, source: Tensor,
         for i, ix in enumerate(idx_list):
             s = src_list[i] if isinstance(src_list, list) else src_list
 
-            if reduce == 'prod':
+            if reduce == "prod":
                 if not include_self and counts[ix] == 0:
                     result[ix] = s
                 else:
                     result[ix] *= s
-            elif reduce == 'mean':
+            elif reduce == "mean":
                 result[ix] += s
                 counts[ix] += 1
-            elif reduce == 'amax':
+            elif reduce == "amax":
                 result[ix] = max(result[ix], s)
-            elif reduce == 'amin':
+            elif reduce == "amin":
                 result[ix] = min(result[ix], s)
 
-        if reduce == 'mean':
+        if reduce == "mean":
             result = [r / max(c, 1) for r, c in zip(result, counts)]
 
         return Tensor._from_mlx_array(mx.array(result, dtype=arr.dtype))
@@ -2250,6 +2483,7 @@ def index_reduce(input: Tensor, dim: int, index: Tensor, source: Tensor,
 
     # Flatten all but last dimension for iteration
     import itertools
+
     other_dims = shape[:-1]
     n = shape[-1]
 
@@ -2269,20 +2503,20 @@ def index_reduce(input: Tensor, dim: int, index: Tensor, source: Tensor,
         counts = [1 if include_self else 0] * n
         for i, ix in enumerate(idx_flat):
             s = src_flat[i] if i < len(src_flat) else src_flat[0]
-            if reduce == 'prod':
+            if reduce == "prod":
                 if not include_self and counts[ix] == 0:
                     row[ix] = s
                 else:
                     row[ix] *= s
-            elif reduce == 'mean':
+            elif reduce == "mean":
                 row[ix] += s
                 counts[ix] += 1
-            elif reduce == 'amax':
+            elif reduce == "amax":
                 row[ix] = max(row[ix], s)
-            elif reduce == 'amin':
+            elif reduce == "amin":
                 row[ix] = min(row[ix], s)
 
-        if reduce == 'mean':
+        if reduce == "mean":
             for j in range(n):
                 row[j] = row[j] / max(counts[j], 1)
 
@@ -2327,6 +2561,7 @@ def masked_scatter(input: Tensor, mask: Tensor, source: Tensor) -> Tensor:
 # ============================================================================
 # Linear Algebra Extensions
 # ============================================================================
+
 
 def cholesky_inverse(input: Tensor, upper: bool = False) -> Tensor:
     """Compute inverse of symmetric positive-definite matrix from Cholesky factor.
@@ -2439,8 +2674,9 @@ def lu_solve(b: Tensor, LU_data: Tensor, LU_pivots: Tensor, *, out=None) -> Tens
     return Tensor._from_mlx_array(x.astype(b._mlx_array.dtype))
 
 
-def lu_unpack(LU_data: Tensor, LU_pivots: Tensor, unpack_data: bool = True,
-              unpack_pivots: bool = True):
+def lu_unpack(
+    LU_data: Tensor, LU_pivots: Tensor, unpack_data: bool = True, unpack_pivots: bool = True
+):
     """Unpack LU factorization.
 
     PyTorch's pivots are 1-indexed (values from 1 to n), representing row swaps
@@ -2575,6 +2811,7 @@ def geqrf(input: Tensor) -> Tuple[Tensor, Tensor]:
 # Special Math Functions
 # ============================================================================
 
+
 def mvlgamma(input: Tensor, p: int) -> Tensor:
     """Compute multivariate log-gamma function.
 
@@ -2612,13 +2849,15 @@ def mvlgamma(input: Tensor, p: int) -> Tensor:
 def ldexp_(input: Tensor, other: Tensor) -> Tensor:
     """In-place ldexp (input * 2^other)."""
     from ..ops.arithmetic import ldexp as _ldexp
+
     result = _ldexp(input, other)
     input._mlx_array = result._mlx_array
     return input
 
 
-def embedding_renorm_(weight: Tensor, input: Tensor, max_norm: float,
-                      norm_type: float = 2.0) -> Tensor:
+def embedding_renorm_(
+    weight: Tensor, input: Tensor, max_norm: float, norm_type: float = 2.0
+) -> Tensor:
     """In-place renormalize embeddings.
 
     Args:
@@ -2642,7 +2881,7 @@ def embedding_renorm_(weight: Tensor, input: Tensor, max_norm: float,
             norm = sum(x * x for x in row) ** 0.5
         elif norm_type == 1.0:
             norm = sum(abs(x) for x in row)
-        elif norm_type == float('inf'):
+        elif norm_type == float("inf"):
             norm = max(abs(x) for x in row)
         else:
             norm = sum(abs(x) ** norm_type for x in row) ** (1.0 / norm_type)
@@ -2662,8 +2901,9 @@ def feature_dropout_(input: Tensor, p: float = 0.5, training: bool = True) -> Te
     return input
 
 
-def from_file(filename: str, shared: bool = False, size: int = 0,
-              dtype=None, device=None) -> Tensor:
+def from_file(
+    filename: str, shared: bool = False, size: int = 0, dtype=None, device=None
+) -> Tensor:
     """Create tensor from file.
 
     Note: MLX doesn't support memory-mapped files, so this loads the entire file.
@@ -2674,20 +2914,20 @@ def from_file(filename: str, shared: bool = False, size: int = 0,
 
     if dtype is None:
         dtype = mx.float32
-    elif hasattr(dtype, '_mlx_dtype'):
+    elif hasattr(dtype, "_mlx_dtype"):
         dtype = dtype._mlx_dtype
 
     # Map MLX dtype to struct format
     dtype_info = {
-        mx.float32: ('f', 4),
-        mx.float16: ('e', 2),
-        mx.int32: ('i', 4),
-        mx.int64: ('q', 8),
+        mx.float32: ("f", 4),
+        mx.float16: ("e", 2),
+        mx.int32: ("i", 4),
+        mx.int64: ("q", 8),
     }
-    fmt, itemsize = dtype_info.get(dtype, ('f', 4))
+    fmt, itemsize = dtype_info.get(dtype, ("f", 4))
 
     # Read binary file
-    with open(filename, 'rb') as f:
+    with open(filename, "rb") as f:
         data = f.read()
 
     # Calculate number of elements
@@ -2697,13 +2937,18 @@ def from_file(filename: str, shared: bool = False, size: int = 0,
         count = len(data) // itemsize
 
     # Unpack binary data
-    values = struct.unpack(f'<{count}{fmt}', data[:count * itemsize])
+    values = struct.unpack(f"<{count}{fmt}", data[: count * itemsize])
     return Tensor._from_mlx_array(mx.array(list(values), dtype=dtype))
 
 
-def max_pool1d_with_indices(input: Tensor, kernel_size: int, stride: int = None,
-                            padding: int = 0, dilation: int = 1,
-                            ceil_mode: bool = False) -> Tuple[Tensor, Tensor]:
+def max_pool1d_with_indices(
+    input: Tensor,
+    kernel_size: int,
+    stride: int = None,
+    padding: int = 0,
+    dilation: int = 1,
+    ceil_mode: bool = False,
+) -> Tuple[Tensor, Tensor]:
     """Max pool 1D returning both values and indices.
 
     Pure MLX implementation.
@@ -2726,7 +2971,7 @@ def max_pool1d_with_indices(input: Tensor, kernel_size: int, stride: int = None,
     # Pad if needed
     if padding > 0:
         # Pad with -inf for max pooling
-        neg_inf = mx.array(float('-inf'), dtype=arr.dtype)
+        neg_inf = mx.array(float("-inf"), dtype=arr.dtype)
         pad_left = mx.full((N, C, padding), neg_inf)
         pad_right = mx.full((N, C, padding), neg_inf)
         arr = mx.concatenate([pad_left, arr, pad_right], axis=2)
@@ -2738,7 +2983,9 @@ def max_pool1d_with_indices(input: Tensor, kernel_size: int, stride: int = None,
         start = i * stride
         # Gather window elements with dilation
         window_indices = [start + j * dilation for j in range(kernel_size)]
-        window = mx.stack([arr[:, :, idx] for idx in window_indices], axis=-1)  # (N, C, kernel_size)
+        window = mx.stack(
+            [arr[:, :, idx] for idx in window_indices], axis=-1
+        )  # (N, C, kernel_size)
 
         # Max and argmax
         max_vals = mx.max(window, axis=-1)
@@ -2755,9 +3002,15 @@ def max_pool1d_with_indices(input: Tensor, kernel_size: int, stride: int = None,
     return (Tensor._from_mlx_array(output), Tensor._from_mlx_array(indices))
 
 
-def ctc_loss(log_probs: Tensor, targets: Tensor, input_lengths: Tensor,
-             target_lengths: Tensor, blank: int = 0, reduction: str = 'mean',
-             zero_infinity: bool = False) -> Tensor:
+def ctc_loss(
+    log_probs: Tensor,
+    targets: Tensor,
+    input_lengths: Tensor,
+    target_lengths: Tensor,
+    blank: int = 0,
+    reduction: str = "mean",
+    zero_infinity: bool = False,
+) -> Tensor:
     """Connectionist Temporal Classification loss.
 
     Pure MLX implementation of CTC forward algorithm.
@@ -2790,7 +3043,7 @@ def ctc_loss(log_probs: Tensor, targets: Tensor, input_lengths: Tensor,
             extended[2 * i + 1] = t
 
         # Forward algorithm using MLX
-        neg_inf = float('-inf')
+        neg_inf = float("-inf")
         alpha = mx.full((T_curr, S), neg_inf, dtype=mx.float32)
 
         # Initialize
@@ -2818,27 +3071,27 @@ def ctc_loss(log_probs: Tensor, targets: Tensor, input_lengths: Tensor,
 
         for t in range(1, T_curr):
             for s in range(S):
-                val = alpha_list[t-1][s]
+                val = alpha_list[t - 1][s]
                 if s > 0:
-                    val = logaddexp(val, alpha_list[t-1][s-1])
+                    val = logaddexp(val, alpha_list[t - 1][s - 1])
                 # Can skip from s-2 to s if different labels
-                if s > 1 and s % 2 == 1 and extended[s] != extended[s-2]:
-                    val = logaddexp(val, alpha_list[t-1][s-2])
+                if s > 1 and s % 2 == 1 and extended[s] != extended[s - 2]:
+                    val = logaddexp(val, alpha_list[t - 1][s - 2])
                 alpha_list[t][s] = val + float(log_prob[t, extended[s]].item())
 
         # Final loss
         loss = -logaddexp(alpha_list[-1][-1], alpha_list[-1][-2])
-        if zero_infinity and loss == float('inf'):
+        if zero_infinity and loss == float("inf"):
             loss = 0.0
         losses.append(loss)
 
     losses_arr = mx.array(losses, dtype=mx.float32)
     tgt_lens_float = tgt_lens.astype(mx.float32)
 
-    if reduction == 'mean':
+    if reduction == "mean":
         normalized_losses = losses_arr / tgt_lens_float
         result = mx.mean(normalized_losses)
-    elif reduction == 'sum':
+    elif reduction == "sum":
         result = mx.sum(losses_arr)
     else:
         result = losses_arr
@@ -2849,6 +3102,7 @@ def ctc_loss(log_probs: Tensor, targets: Tensor, input_lengths: Tensor,
 # ============================================================================
 # Additional In-place Operations
 # ============================================================================
+
 
 def relu_(input: Tensor) -> Tensor:
     """In-place ReLU."""
@@ -2862,6 +3116,7 @@ def sinc_(input: Tensor) -> Tensor:
     Pure MLX implementation.
     """
     import math
+
     pi = math.pi
     arr = input._mlx_array.astype(mx.float32)
 
@@ -2895,6 +3150,7 @@ def xlogy_(input: Tensor, other: Tensor) -> Tensor:
 # ============================================================================
 # Additional Linear Algebra
 # ============================================================================
+
 
 def pinverse(input: Tensor, rcond: float = 1e-15) -> Tensor:
     """Compute pseudo-inverse of a matrix using SVD.
@@ -2935,8 +3191,9 @@ def pinverse(input: Tensor, rcond: float = 1e-15) -> Tensor:
     return Tensor._from_mlx_array(result.astype(input._mlx_array.dtype))
 
 
-def triangular_solve(b: Tensor, A: Tensor, upper: bool = True,
-                     transpose: bool = False, unitriangular: bool = False) -> Tuple[Tensor, Tensor]:
+def triangular_solve(
+    b: Tensor, A: Tensor, upper: bool = True, transpose: bool = False, unitriangular: bool = False
+) -> Tuple[Tensor, Tensor]:
     """Solve triangular system of equations A @ X = b.
 
     Pure MLX implementation using the triangular structure.
@@ -2957,8 +3214,10 @@ def triangular_solve(b: Tensor, A: Tensor, upper: bool = True,
     # Use MLX solve which handles both triangular and general matrices
     result = mx.linalg.solve(A_arr, b_arr)
 
-    return (Tensor._from_mlx_array(result.astype(b._mlx_array.dtype)),
-            Tensor._from_mlx_array(A_arr.astype(A._mlx_array.dtype)))
+    return (
+        Tensor._from_mlx_array(result.astype(b._mlx_array.dtype)),
+        Tensor._from_mlx_array(A_arr.astype(A._mlx_array.dtype)),
+    )
 
 
 def nuclear_norm(input: Tensor, dim: Tuple[int, int] = None, keepdim: bool = False) -> Tensor:
@@ -3050,7 +3309,7 @@ def renorm(input: Tensor, p: float, dim: int, maxnorm: float) -> Tensor:
             norms = mx.sqrt(mx.sum(arr * arr, axis=axes, keepdims=True))
         elif p == 1:
             norms = mx.sum(mx.abs(arr), axis=axes, keepdims=True)
-        elif p == float('inf'):
+        elif p == float("inf"):
             norms = mx.max(mx.abs(arr), axis=axes, keepdims=True)
         else:
             norms = mx.power(mx.sum(mx.power(mx.abs(arr), p), axis=axes, keepdims=True), 1.0 / p)
@@ -3090,8 +3349,8 @@ def norm_except_dim(v: Tensor, pow: int = 2, dim: int = 0) -> Tensor:
 # Range and View Operations
 # ============================================================================
 
-def range_func(start: float, end: float = None, step: float = 1,
-               dtype=None, device=None) -> Tensor:
+
+def range_func(start: float, end: float = None, step: float = 1, dtype=None, device=None) -> Tensor:
     """Create range tensor (deprecated, use arange)."""
     if end is None:
         end = start
@@ -3099,7 +3358,7 @@ def range_func(start: float, end: float = None, step: float = 1,
 
     if dtype is None:
         dtype = mx.float32
-    elif hasattr(dtype, '_mlx_dtype'):
+    elif hasattr(dtype, "_mlx_dtype"):
         dtype = dtype._mlx_dtype
 
     arr = mx.arange(start, end + step * 0.5, step, dtype=dtype)  # Include endpoint
@@ -3118,7 +3377,9 @@ def view_as_complex(input: Tensor) -> Tensor:
     imag_part = arr[..., 1]
 
     # MLX supports complex64 type
-    result = real_part.astype(mx.complex64) + mx.array(1j, dtype=mx.complex64) * imag_part.astype(mx.complex64)
+    result = real_part.astype(mx.complex64) + mx.array(1j, dtype=mx.complex64) * imag_part.astype(
+        mx.complex64
+    )
     return Tensor._from_mlx_array(result)
 
 
@@ -3138,11 +3399,10 @@ def view_as_real(input: Tensor) -> Tensor:
     return Tensor._from_mlx_array(result)
 
 
-def rms_norm(input: Tensor, normalized_shape, weight: Tensor = None,
-             eps: float = 1e-5) -> Tensor:
+def rms_norm(input: Tensor, normalized_shape, weight: Tensor = None, eps: float = 1e-5) -> Tensor:
     """Apply Root Mean Square Layer Normalization."""
     # Calculate RMS
-    rms = mx.sqrt(mx.mean(input._mlx_array ** 2, axis=-1, keepdims=True) + eps)
+    rms = mx.sqrt(mx.mean(input._mlx_array**2, axis=-1, keepdims=True) + eps)
     result = input._mlx_array / rms
 
     if weight is not None:
@@ -3176,15 +3436,23 @@ def _rnn_cell(input_arr, h_arr, weight_ih, weight_hh, bias_ih, bias_hh, has_bias
     else:
         result = igates + hgates
 
-    if nonlinearity == 'tanh':
+    if nonlinearity == "tanh":
         return mx.tanh(result)
     else:  # relu
         return mx.maximum(result, 0)
 
 
-def rnn_tanh(input: Tensor, hx: Tensor, params: List[Tensor],
-             has_biases: bool, num_layers: int, dropout: float,
-             training: bool, bidirectional: bool, batch_first: bool) -> Tuple[Tensor, Tensor]:
+def rnn_tanh(
+    input: Tensor,
+    hx: Tensor,
+    params: List[Tensor],
+    has_biases: bool,
+    num_layers: int,
+    dropout: float,
+    training: bool,
+    bidirectional: bool,
+    batch_first: bool,
+) -> Tuple[Tensor, Tensor]:
     """Apply multi-layer RNN with tanh nonlinearity.
 
     Args:
@@ -3207,13 +3475,31 @@ def rnn_tanh(input: Tensor, hx: Tensor, params: List[Tensor],
                   (batch, seq_len, hidden_size * num_directions) if batch_first
         - h_n: Shape (num_layers * num_directions, batch, hidden_size)
     """
-    return _rnn_impl(input, hx, params, has_biases, num_layers, dropout,
-                     training, bidirectional, batch_first, 'tanh')
+    return _rnn_impl(
+        input,
+        hx,
+        params,
+        has_biases,
+        num_layers,
+        dropout,
+        training,
+        bidirectional,
+        batch_first,
+        "tanh",
+    )
 
 
-def rnn_relu(input: Tensor, hx: Tensor, params: List[Tensor],
-             has_biases: bool, num_layers: int, dropout: float,
-             training: bool, bidirectional: bool, batch_first: bool) -> Tuple[Tensor, Tensor]:
+def rnn_relu(
+    input: Tensor,
+    hx: Tensor,
+    params: List[Tensor],
+    has_biases: bool,
+    num_layers: int,
+    dropout: float,
+    training: bool,
+    bidirectional: bool,
+    batch_first: bool,
+) -> Tuple[Tensor, Tensor]:
     """Apply multi-layer RNN with ReLU nonlinearity.
 
     Args:
@@ -3236,14 +3522,32 @@ def rnn_relu(input: Tensor, hx: Tensor, params: List[Tensor],
                   (batch, seq_len, hidden_size * num_directions) if batch_first
         - h_n: Shape (num_layers * num_directions, batch, hidden_size)
     """
-    return _rnn_impl(input, hx, params, has_biases, num_layers, dropout,
-                     training, bidirectional, batch_first, 'relu')
+    return _rnn_impl(
+        input,
+        hx,
+        params,
+        has_biases,
+        num_layers,
+        dropout,
+        training,
+        bidirectional,
+        batch_first,
+        "relu",
+    )
 
 
-def _rnn_impl(input: Tensor, hx: Tensor, params: List[Tensor],
-              has_biases: bool, num_layers: int, dropout: float,
-              training: bool, bidirectional: bool, batch_first: bool,
-              nonlinearity: str) -> Tuple[Tensor, Tensor]:
+def _rnn_impl(
+    input: Tensor,
+    hx: Tensor,
+    params: List[Tensor],
+    has_biases: bool,
+    num_layers: int,
+    dropout: float,
+    training: bool,
+    bidirectional: bool,
+    batch_first: bool,
+    nonlinearity: str,
+) -> Tuple[Tensor, Tensor]:
     """Internal implementation for RNN with configurable nonlinearity."""
     num_directions = 2 if bidirectional else 1
 
@@ -3289,15 +3593,31 @@ def _rnn_impl(input: Tensor, hx: Tensor, params: List[Tensor],
             # First layer: use input data
             for t in range(seq_len):
                 x_t = input_arr[t]
-                h_f = _rnn_cell(x_t, h_f, weight_ih_f, weight_hh_f,
-                                bias_ih_f, bias_hh_f, has_biases, nonlinearity)
+                h_f = _rnn_cell(
+                    x_t,
+                    h_f,
+                    weight_ih_f,
+                    weight_hh_f,
+                    bias_ih_f,
+                    bias_hh_f,
+                    has_biases,
+                    nonlinearity,
+                )
                 layer_output.append(h_f)
         else:
             # Later layers: use previous layer output
             for t in range(seq_len):
                 x_t = prev_layer_output[t]
-                h_f = _rnn_cell(x_t, h_f, weight_ih_f, weight_hh_f,
-                                bias_ih_f, bias_hh_f, has_biases, nonlinearity)
+                h_f = _rnn_cell(
+                    x_t,
+                    h_f,
+                    weight_ih_f,
+                    weight_hh_f,
+                    bias_ih_f,
+                    bias_hh_f,
+                    has_biases,
+                    nonlinearity,
+                )
                 layer_output.append(h_f)
 
         h_list[layer * num_directions] = h_f
@@ -3322,21 +3642,38 @@ def _rnn_impl(input: Tensor, hx: Tensor, params: List[Tensor],
             if layer == 0:
                 for t in range(seq_len - 1, -1, -1):
                     x_t = input_arr[t]
-                    h_b = _rnn_cell(x_t, h_b, weight_ih_b, weight_hh_b,
-                                    bias_ih_b, bias_hh_b, has_biases, nonlinearity)
+                    h_b = _rnn_cell(
+                        x_t,
+                        h_b,
+                        weight_ih_b,
+                        weight_hh_b,
+                        bias_ih_b,
+                        bias_hh_b,
+                        has_biases,
+                        nonlinearity,
+                    )
                     layer_output_b.insert(0, h_b)
             else:
                 for t in range(seq_len - 1, -1, -1):
                     x_t = prev_layer_output[t]
-                    h_b = _rnn_cell(x_t, h_b, weight_ih_b, weight_hh_b,
-                                    bias_ih_b, bias_hh_b, has_biases, nonlinearity)
+                    h_b = _rnn_cell(
+                        x_t,
+                        h_b,
+                        weight_ih_b,
+                        weight_hh_b,
+                        bias_ih_b,
+                        bias_hh_b,
+                        has_biases,
+                        nonlinearity,
+                    )
                     layer_output_b.insert(0, h_b)
 
             h_list[layer * num_directions + 1] = h_b
 
             # Concatenate forward and backward outputs
-            layer_output = [mx.concatenate([f, b], axis=-1)
-                           for f, b in zip(layer_output, layer_output_b)]
+            layer_output = [
+                mx.concatenate([f, b], axis=-1) for f, b in zip(layer_output, layer_output_b)
+            ]
 
         prev_layer_output = mx.stack(layer_output, axis=0)
 
@@ -3356,8 +3693,9 @@ def _rnn_impl(input: Tensor, hx: Tensor, params: List[Tensor],
     return Tensor._from_mlx_array(output), Tensor._from_mlx_array(h_n)
 
 
-def slice_inverse(input: Tensor, src: Tensor, dim: int = 0,
-                  start: int = None, end: int = None, step: int = 1) -> Tensor:
+def slice_inverse(
+    input: Tensor, src: Tensor, dim: int = 0, start: int = None, end: int = None, step: int = 1
+) -> Tensor:
     """Extract a slice from input with output shape matching src.
 
     This performs input[start:end:step] along dim, returning a tensor
@@ -3441,9 +3779,16 @@ def orgqr(input: Tensor, tau: Tensor = None, *, input2: Tensor = None) -> Tensor
     return Tensor._from_mlx_array(Q_arr)
 
 
-def ormqr(input: Tensor, tau: Tensor = None, other: Tensor = None,
-          left: bool = True, transpose: bool = False, *,
-          input2: Tensor = None, input3: Tensor = None) -> Tensor:
+def ormqr(
+    input: Tensor,
+    tau: Tensor = None,
+    other: Tensor = None,
+    left: bool = True,
+    transpose: bool = False,
+    *,
+    input2: Tensor = None,
+    input3: Tensor = None,
+) -> Tensor:
     """Multiply matrix by orthogonal matrix Q from QR.
 
     Applies the orthogonal matrix Q (from the Householder representation)
@@ -3553,11 +3898,22 @@ def ormqr(input: Tensor, tau: Tensor = None, other: Tensor = None,
     return Tensor._from_mlx_array(result)
 
 
-def lobpcg(A: Tensor, k: int = None, B: Tensor = None, X: Tensor = None,
-           n: int = None, iK: Tensor = None, niter: int = None,
-           tol: float = None, largest: bool = None,
-           method: str = None, tracker=None, ortho_iparams=None,
-           ortho_fparams=None, ortho_bparams=None) -> Tuple[Tensor, Tensor]:
+def lobpcg(
+    A: Tensor,
+    k: int = None,
+    B: Tensor = None,
+    X: Tensor = None,
+    n: int = None,
+    iK: Tensor = None,
+    niter: int = None,
+    tol: float = None,
+    largest: bool = None,
+    method: str = None,
+    tracker=None,
+    ortho_iparams=None,
+    ortho_fparams=None,
+    ortho_bparams=None,
+) -> Tuple[Tensor, Tensor]:
     """Locally Optimal Block Preconditioned Conjugate Gradient for eigenvalues.
 
     Native MLX implementation of the LOBPCG algorithm for computing a few
@@ -3802,12 +4158,11 @@ def lobpcg(A: Tensor, k: int = None, B: Tensor = None, X: Tensor = None,
     for i in range(k):
         if B_arr is not None:
             # B-norm: sqrt(x^T B x)
-            Bx = mx.matmul(B_arr, X_arr[:, i:i+1])
-            norm = mx.sqrt(mx.sum(X_arr[:, i:i+1] * Bx))
+            Bx = mx.matmul(B_arr, X_arr[:, i : i + 1])
+            norm = mx.sqrt(mx.sum(X_arr[:, i : i + 1] * Bx))
         else:
             norm = mx.sqrt(mx.sum(X_arr[:, i] * X_arr[:, i]))
         norm = mx.maximum(norm, mx.array(CF_TINY))
         X_arr = X_arr.at[:, i].multiply(1.0 / norm)
 
-    return (Tensor._from_mlx_array(eigenvalues[:k]),
-            Tensor._from_mlx_array(X_arr))
+    return (Tensor._from_mlx_array(eigenvalues[:k]), Tensor._from_mlx_array(X_arr))

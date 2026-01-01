@@ -2,22 +2,28 @@
 
 import math
 from typing import Optional, Tuple, Union
+
 import mlx.core as mx
 
 from ..tensor import Tensor
-from .distribution import Distribution
 from . import constraints
-from ._constants import UNIFORM_LOW, UNIFORM_HIGH
+from ._constants import UNIFORM_HIGH, UNIFORM_LOW
+from .distribution import Distribution
 
 
 class Gumbel(Distribution):
     """Gumbel distribution."""
 
-    arg_constraints = {'loc': constraints.real, 'scale': constraints.positive}
+    arg_constraints = {"loc": constraints.real, "scale": constraints.positive}
     support = constraints.real
     has_rsample = True
 
-    def __init__(self, loc: Union[Tensor, float], scale: Union[Tensor, float], validate_args: Optional[bool] = None):
+    def __init__(
+        self,
+        loc: Union[Tensor, float],
+        scale: Union[Tensor, float],
+        validate_args: Optional[bool] = None,
+    ):
         self.loc = loc._mlx_array if isinstance(loc, Tensor) else mx.array(loc)
         self.scale = scale._mlx_array if isinstance(scale, Tensor) else mx.array(scale)
         batch_shape = mx.broadcast_shapes(self.loc.shape, self.scale.shape)
@@ -34,7 +40,7 @@ class Gumbel(Distribution):
 
     @property
     def variance(self) -> Tensor:
-        return Tensor((math.pi ** 2 / 6) * self.scale ** 2)
+        return Tensor((math.pi**2 / 6) * self.scale**2)
 
     @property
     def stddev(self) -> Tensor:
@@ -63,4 +69,4 @@ class Gumbel(Distribution):
         return Tensor(mx.log(self.scale) + 1 + euler_gamma)
 
 
-__all__ = ['Gumbel']
+__all__ = ["Gumbel"]

@@ -4,8 +4,9 @@ Neural Network Module Base Class
 Implements PyTorch-compatible nn.Module for building neural networks.
 """
 
-from typing import Iterator, Set, Optional, Callable, Union, Dict, Any
 from collections import OrderedDict
+from typing import Any, Callable, Dict, Iterator, Optional, Set, Union
+
 import mlx.core as mx
 
 
@@ -46,9 +47,9 @@ class Module:
     def __init__(self, *args, **kwargs):
         """Initialize the module."""
         # Use OrderedDict to maintain parameter/module order
-        self._parameters: OrderedDict[str, 'Parameter'] = OrderedDict()
-        self._modules: OrderedDict[str, 'Module'] = OrderedDict()
-        self._buffers: OrderedDict[str, 'Tensor'] = OrderedDict()
+        self._parameters: OrderedDict[str, "Parameter"] = OrderedDict()
+        self._modules: OrderedDict[str, "Module"] = OrderedDict()
+        self._buffers: OrderedDict[str, "Tensor"] = OrderedDict()
         self.training: bool = True
         # Hook registries
         self._forward_hooks: OrderedDict[int, Callable] = OrderedDict()
@@ -68,7 +69,9 @@ class Module:
         Returns:
             Output tensor(s)
         """
-        raise NotImplementedError(f"Module {self.__class__.__name__} is missing the required 'forward' method")
+        raise NotImplementedError(
+            f"Module {self.__class__.__name__} is missing the required 'forward' method"
+        )
 
     def __call__(self, *args, **kwargs):
         """
@@ -104,19 +107,26 @@ class Module:
         registered with the parent module.
         """
         # Avoid recursion for internal attributes
-        if name in ('_parameters', '_modules', '_buffers', 'training',
-                    '_forward_hooks', '_forward_pre_hooks', '_hook_id_counter'):
+        if name in (
+            "_parameters",
+            "_modules",
+            "_buffers",
+            "training",
+            "_forward_hooks",
+            "_forward_pre_hooks",
+            "_hook_id_counter",
+        ):
             object.__setattr__(self, name, value)
             return
 
         # Check if we're initialized (have _parameters dict)
-        if not hasattr(self, '_parameters'):
+        if not hasattr(self, "_parameters"):
             object.__setattr__(self, name, value)
             return
 
         # Import here to avoid circular dependency
-        from .parameter import Parameter
         from ..tensor import Tensor
+        from .parameter import Parameter
 
         # Remove from old location if it exists
         if name in self._parameters:
@@ -131,7 +141,7 @@ class Module:
             self._parameters[name] = value
         elif isinstance(value, Module):
             self._modules[name] = value
-        elif isinstance(value, Tensor) and name != 'grad':
+        elif isinstance(value, Tensor) and name != "grad":
             # Tensors that aren't parameters are registered as buffers
             # (e.g., running mean/var in BatchNorm)
             self._buffers[name] = value
@@ -142,18 +152,18 @@ class Module:
         """
         Get attribute, checking parameters and modules first.
         """
-        if '_parameters' in self.__dict__:
-            parameters = self.__dict__['_parameters']
+        if "_parameters" in self.__dict__:
+            parameters = self.__dict__["_parameters"]
             if name in parameters:
                 return parameters[name]
 
-        if '_modules' in self.__dict__:
-            modules = self.__dict__['_modules']
+        if "_modules" in self.__dict__:
+            modules = self.__dict__["_modules"]
             if name in modules:
                 return modules[name]
 
-        if '_buffers' in self.__dict__:
-            buffers = self.__dict__['_buffers']
+        if "_buffers" in self.__dict__:
+            buffers = self.__dict__["_buffers"]
             if name in buffers:
                 return buffers[name]
 
@@ -170,7 +180,7 @@ class Module:
         else:
             object.__delattr__(self, name)
 
-    def add_module(self, name: str, module: Optional['Module']) -> None:
+    def add_module(self, name: str, module: Optional["Module"]) -> None:
         """
         Add a child module to the current module.
 
@@ -186,7 +196,7 @@ class Module:
             raise KeyError(f"attribute '{name}' already exists")
         self._modules[name] = module
 
-    def register_buffer(self, name: str, tensor: Optional['Tensor']) -> None:
+    def register_buffer(self, name: str, tensor: Optional["Tensor"]) -> None:
         """
         Add a buffer to the module.
 
@@ -201,7 +211,7 @@ class Module:
             raise KeyError(f"attribute '{name}' already exists")
         self._buffers[name] = tensor
 
-    def register_parameter(self, name: str, param: Optional['Parameter']) -> None:
+    def register_parameter(self, name: str, param: Optional["Parameter"]) -> None:
         """
         Add a parameter to the module.
 
@@ -259,7 +269,7 @@ class Module:
         self._hook_id_counter += 1
         return handle
 
-    def parameters(self, recurse: bool = True) -> Iterator['Parameter']:
+    def parameters(self, recurse: bool = True) -> Iterator["Parameter"]:
         """
         Return an iterator over module parameters.
 
@@ -277,7 +287,9 @@ class Module:
         for name, param in self.named_parameters(recurse=recurse):
             yield param
 
-    def named_parameters(self, prefix: str = '', recurse: bool = True) -> Iterator[tuple[str, 'Parameter']]:
+    def named_parameters(
+        self, prefix: str = "", recurse: bool = True
+    ) -> Iterator[tuple[str, "Parameter"]]:
         """
         Return an iterator over module parameters, yielding both name and parameter.
 
@@ -289,14 +301,14 @@ class Module:
             (str, Parameter): Tuple of parameter name and parameter
         """
         for name, param in self._parameters.items():
-            yield (prefix + ('.' if prefix else '') + name, param)
+            yield (prefix + ("." if prefix else "") + name, param)
 
         if recurse:
             for name, module in self._modules.items():
-                submodule_prefix = prefix + ('.' if prefix else '') + name
+                submodule_prefix = prefix + ("." if prefix else "") + name
                 yield from module.named_parameters(prefix=submodule_prefix, recurse=recurse)
 
-    def children(self) -> Iterator['Module']:
+    def children(self) -> Iterator["Module"]:
         """
         Return an iterator over immediate child modules.
 
@@ -306,7 +318,7 @@ class Module:
         for name, module in self.named_children():
             yield module
 
-    def named_children(self) -> Iterator[tuple[str, 'Module']]:
+    def named_children(self) -> Iterator[tuple[str, "Module"]]:
         """
         Return an iterator over immediate child modules, yielding name and module.
 
@@ -316,7 +328,7 @@ class Module:
         for name, module in self._modules.items():
             yield name, module
 
-    def modules(self) -> Iterator['Module']:
+    def modules(self) -> Iterator["Module"]:
         """
         Return an iterator over all modules in the network.
 
@@ -329,7 +341,9 @@ class Module:
         for name, module in self.named_modules():
             yield module
 
-    def named_modules(self, memo: Optional[Set[int]] = None, prefix: str = '') -> Iterator[tuple[str, 'Module']]:
+    def named_modules(
+        self, memo: Optional[Set[int]] = None, prefix: str = ""
+    ) -> Iterator[tuple[str, "Module"]]:
         """
         Return an iterator over all modules in the network, yielding name and module.
 
@@ -350,10 +364,10 @@ class Module:
             for name, module in self._modules.items():
                 if module is None:
                     continue
-                submodule_prefix = prefix + ('.' if prefix else '') + name
+                submodule_prefix = prefix + ("." if prefix else "") + name
                 yield from module.named_modules(memo, submodule_prefix)
 
-    def train(self, mode: bool = True) -> 'Module':
+    def train(self, mode: bool = True) -> "Module":
         """
         Set the module in training mode.
 
@@ -370,7 +384,7 @@ class Module:
             module.train(mode)
         return self
 
-    def eval(self) -> 'Module':
+    def eval(self) -> "Module":
         """
         Set the module in evaluation mode.
 
@@ -381,7 +395,7 @@ class Module:
         """
         return self.train(False)
 
-    def requires_grad_(self, requires_grad: bool = True) -> 'Module':
+    def requires_grad_(self, requires_grad: bool = True) -> "Module":
         """
         Change if autograd should record operations on parameters.
 
@@ -410,7 +424,7 @@ class Module:
                 else:
                     param.grad.zero_()
 
-    def apply(self, fn: Callable[['Module'], None]) -> 'Module':
+    def apply(self, fn: Callable[["Module"], None]) -> "Module":
         """
         Apply a function to every submodule (as returned by .children())
         as well as self.
@@ -428,7 +442,7 @@ class Module:
         fn(self)
         return self
 
-    def to(self, *args, **kwargs) -> 'Module':
+    def to(self, *args, **kwargs) -> "Module":
         """
         Move and/or cast the parameters and buffers.
 
@@ -442,12 +456,12 @@ class Module:
         # Extract dtype if provided
         dtype = None
         for arg in args:
-            if hasattr(arg, '_mlx_dtype'):  # It's a DType
+            if hasattr(arg, "_mlx_dtype"):  # It's a DType
                 dtype = arg
                 break
 
-        if 'dtype' in kwargs:
-            dtype = kwargs['dtype']
+        if "dtype" in kwargs:
+            dtype = kwargs["dtype"]
 
         # Convert all parameters and buffers
         if dtype is not None:
@@ -459,7 +473,9 @@ class Module:
 
         return self
 
-    def state_dict(self, destination: Optional[Dict[str, Any]] = None, prefix: str = '') -> Dict[str, Any]:
+    def state_dict(
+        self, destination: Optional[Dict[str, Any]] = None, prefix: str = ""
+    ) -> Dict[str, Any]:
         """
         Return a dictionary containing the module's state.
 
@@ -483,7 +499,7 @@ class Module:
 
         # Recursively save child modules
         for name, module in self._modules.items():
-            module.state_dict(destination, prefix + name + '.')
+            module.state_dict(destination, prefix + name + ".")
 
         return destination
 
@@ -520,11 +536,9 @@ class Module:
         # Recursively load child modules
         for name, module in self._modules.items():
             # Filter state dict for this module
-            prefix = name + '.'
+            prefix = name + "."
             module_state = {
-                k[len(prefix):]: v
-                for k, v in state_dict.items()
-                if k.startswith(prefix)
+                k[len(prefix) :]: v for k, v in state_dict.items() if k.startswith(prefix)
             }
             if module_state or not strict:
                 module.load_state_dict(module_state, strict=strict)
@@ -535,20 +549,20 @@ class Module:
         extra_lines = []
         extra_repr = self.extra_repr()
         if extra_repr:
-            extra_lines = extra_repr.split('\n')
+            extra_lines = extra_repr.split("\n")
 
         child_lines = []
         for key, module in self._modules.items():
             mod_str = repr(module)
             mod_str = self._add_indent(mod_str, 2)
-            child_lines.append(f'({key}): {mod_str}')
+            child_lines.append(f"({key}): {mod_str}")
 
         lines = extra_lines + child_lines
 
-        main_str = self.__class__.__name__ + '('
+        main_str = self.__class__.__name__ + "("
         if lines:
-            main_str += '\n  ' + '\n  '.join(lines) + '\n'
-        main_str += ')'
+            main_str += "\n  " + "\n  ".join(lines) + "\n"
+        main_str += ")"
         return main_str
 
     def extra_repr(self) -> str:
@@ -560,17 +574,17 @@ class Module:
         Returns:
             str: Extra information string
         """
-        return ''
+        return ""
 
     @staticmethod
     def _add_indent(s: str, num_spaces: int) -> str:
         """Add indentation to a string."""
-        lines = s.split('\n')
+        lines = s.split("\n")
         if len(lines) == 1:
             return s
         first = lines[0]
-        rest = [' ' * num_spaces + line for line in lines[1:]]
-        return '\n'.join([first] + rest)
+        rest = [" " * num_spaces + line for line in lines[1:]]
+        return "\n".join([first] + rest)
 
 
-__all__ = ['Module']
+__all__ = ["Module"]

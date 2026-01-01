@@ -2,19 +2,20 @@
 
 import math
 from typing import Optional, Tuple, Union
+
 import mlx.core as mx
 
-from ..tensor import Tensor
-from .distribution import Distribution
-from . import constraints
 from ..ops.special import i0, i1
+from ..tensor import Tensor
+from . import constraints
 from ._constants import PROB_EPSILON
+from .distribution import Distribution
 
 
 class VonMises(Distribution):
     """Von Mises distribution (circular distribution on angles)."""
 
-    arg_constraints = {'loc': constraints.real, 'concentration': constraints.nonnegative}
+    arg_constraints = {"loc": constraints.real, "concentration": constraints.nonnegative}
     support = constraints.interval(-math.pi, math.pi)
     has_rsample = True
 
@@ -25,7 +26,11 @@ class VonMises(Distribution):
         validate_args: Optional[bool] = None,
     ):
         self.loc = loc._mlx_array if isinstance(loc, Tensor) else mx.array(loc)
-        self.concentration = concentration._mlx_array if isinstance(concentration, Tensor) else mx.array(concentration)
+        self.concentration = (
+            concentration._mlx_array
+            if isinstance(concentration, Tensor)
+            else mx.array(concentration)
+        )
         batch_shape = mx.broadcast_shapes(self.loc.shape, self.concentration.shape)
         super().__init__(batch_shape, validate_args=validate_args)
 
@@ -131,4 +136,4 @@ class VonMises(Distribution):
         return Tensor(log_prob)
 
 
-__all__ = ['VonMises']
+__all__ = ["VonMises"]

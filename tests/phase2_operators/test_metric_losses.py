@@ -3,9 +3,11 @@ Test metric learning loss functions (triplet_margin_loss, margin_ranking_loss, e
 """
 
 import sys
-sys.path.insert(0, '../..')
+
+sys.path.insert(0, "../..")
 
 import unittest
+
 import numpy as np
 
 from tests.common_utils import TestCase, skipIfNoMLX
@@ -13,6 +15,7 @@ from tests.common_utils import TestCase, skipIfNoMLX
 try:
     import flashlight
     import flashlight.nn.functional as F
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -20,6 +23,7 @@ except ImportError:
 try:
     import torch
     import torch.nn.functional as torch_F
+
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
@@ -31,9 +35,9 @@ class TestTripletMarginLoss(TestCase):
 
     def test_triplet_loss_zero(self):
         """Test triplet loss when anchor=positive and negative is far."""
-        anchor = flashlight.tensor([[0., 0.]])
-        positive = flashlight.tensor([[0., 0.]])  # Same as anchor
-        negative = flashlight.tensor([[10., 10.]])  # Far away
+        anchor = flashlight.tensor([[0.0, 0.0]])
+        positive = flashlight.tensor([[0.0, 0.0]])  # Same as anchor
+        negative = flashlight.tensor([[10.0, 10.0]])  # Far away
 
         loss = F.triplet_margin_loss(anchor, positive, negative, margin=1.0)
         # d(a,p) = 0, d(a,n) >> margin, so loss should be 0
@@ -41,9 +45,9 @@ class TestTripletMarginLoss(TestCase):
 
     def test_triplet_loss_positive(self):
         """Test triplet loss when positive is far and negative is close."""
-        anchor = flashlight.tensor([[0., 0.]])
-        positive = flashlight.tensor([[10., 0.]])  # Far from anchor
-        negative = flashlight.tensor([[1., 0.]])   # Close to anchor
+        anchor = flashlight.tensor([[0.0, 0.0]])
+        positive = flashlight.tensor([[10.0, 0.0]])  # Far from anchor
+        negative = flashlight.tensor([[1.0, 0.0]])  # Close to anchor
 
         loss = F.triplet_margin_loss(anchor, positive, negative, margin=1.0)
         # d(a,p) = 10, d(a,n) = 1, loss = max(10 - 1 + 1, 0) = 10
@@ -77,11 +81,11 @@ class TestTripletMarginLoss(TestCase):
         torch_negative = torch.tensor(negative_data)
 
         mlx_result = F.triplet_margin_loss(mlx_anchor, mlx_positive, mlx_negative, margin=1.0)
-        torch_result = torch_F.triplet_margin_loss(torch_anchor, torch_positive, torch_negative, margin=1.0)
-
-        np.testing.assert_allclose(
-            mlx_result.numpy(), torch_result.numpy(), rtol=1e-4, atol=1e-5
+        torch_result = torch_F.triplet_margin_loss(
+            torch_anchor, torch_positive, torch_negative, margin=1.0
         )
+
+        np.testing.assert_allclose(mlx_result.numpy(), torch_result.numpy(), rtol=1e-4, atol=1e-5)
 
 
 @skipIfNoMLX
@@ -128,9 +132,7 @@ class TestMarginRankingLoss(TestCase):
         mlx_result = F.margin_ranking_loss(mlx_x1, mlx_x2, mlx_target, margin=0.5)
         torch_result = torch_F.margin_ranking_loss(torch_x1, torch_x2, torch_target, margin=0.5)
 
-        np.testing.assert_allclose(
-            mlx_result.numpy(), torch_result.numpy(), rtol=1e-4, atol=1e-4
-        )
+        np.testing.assert_allclose(mlx_result.numpy(), torch_result.numpy(), rtol=1e-4, atol=1e-4)
 
 
 @skipIfNoMLX
@@ -181,10 +183,8 @@ class TestHingeEmbeddingLoss(TestCase):
         mlx_result = F.hinge_embedding_loss(mlx_x, mlx_target, margin=1.0)
         torch_result = torch_F.hinge_embedding_loss(torch_x, torch_target, margin=1.0)
 
-        np.testing.assert_allclose(
-            mlx_result.numpy(), torch_result.numpy(), rtol=1e-4, atol=1e-4
-        )
+        np.testing.assert_allclose(mlx_result.numpy(), torch_result.numpy(), rtol=1e-4, atol=1e-4)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

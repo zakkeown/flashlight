@@ -5,12 +5,12 @@ Implements fully-connected (linear) layers.
 """
 
 import math
-from typing import Optional, Any
+from typing import Any, Optional
 
+from ... import ops
 from ...tensor import Tensor
 from ..module import Module
 from ..parameter import Parameter
-from ... import ops
 
 
 class Linear(Module):
@@ -44,7 +44,7 @@ class Linear(Module):
         out_features: int,
         bias: bool = True,
         device: Optional[Any] = None,
-        dtype: Optional[Any] = None
+        dtype: Optional[Any] = None,
     ):
         """
         Initialize Linear layer.
@@ -65,6 +65,7 @@ class Linear(Module):
         # Initialize weight parameter
         # Shape is (out_features, in_features) to match PyTorch
         from ... import randn
+
         self.weight = Parameter(randn(out_features, in_features))
 
         # Initialize bias if requested
@@ -86,8 +87,9 @@ class Linear(Module):
 
         This follows PyTorch's default initialization for Linear layers.
         """
-        from ... import empty
         import mlx.core as mx
+
+        from ... import empty
 
         # Kaiming uniform initialization
         # bound = sqrt(1 / in_features)
@@ -96,19 +98,13 @@ class Linear(Module):
         # Initialize weight
         # Create uniform random values in [-bound, bound]
         weight_data = mx.random.uniform(
-            low=-bound,
-            high=bound,
-            shape=(self.out_features, self.in_features)
+            low=-bound, high=bound, shape=(self.out_features, self.in_features)
         )
         self.weight.data = Tensor._from_mlx_array(weight_data)
 
         # Initialize bias if it exists
         if self.bias is not None:
-            bias_data = mx.random.uniform(
-                low=-bound,
-                high=bound,
-                shape=(self.out_features,)
-            )
+            bias_data = mx.random.uniform(low=-bound, high=bound, shape=(self.out_features,))
             self.bias.data = Tensor._from_mlx_array(bias_data)
 
     def _get_weight_t(self):
@@ -116,13 +112,14 @@ class Linear(Module):
         weight_id = id(self.weight._mlx_array)
         cache = self._weight_cache
 
-        if cache.get('weight_id') != weight_id:
+        if cache.get("weight_id") != weight_id:
             # Cache invalidated - recompute using Tensor ops to maintain autograd
             from ... import transpose
-            cache['weight_t'] = transpose(self.weight, 0, 1)
-            cache['weight_id'] = weight_id
 
-        return cache['weight_t']
+            cache["weight_t"] = transpose(self.weight, 0, 1)
+            cache["weight_id"] = weight_id
+
+        return cache["weight_t"]
 
     def forward(self, input: Tensor) -> Tensor:
         """
@@ -151,7 +148,7 @@ class Linear(Module):
 
     def extra_repr(self) -> str:
         """Extra representation string."""
-        return f'in_features={self.in_features}, out_features={self.out_features}, bias={self.bias is not None}'
+        return f"in_features={self.in_features}, out_features={self.out_features}, bias={self.bias is not None}"
 
 
-__all__ = ['Linear']
+__all__ = ["Linear"]

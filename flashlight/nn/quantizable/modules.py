@@ -7,8 +7,9 @@ Directly imports the same classes that are in the parent __init__.py
 
 import warnings
 
-from ..layers.rnn import LSTM as _LSTM, LSTMCell as _LSTMCell
 from ..layers.attention import MultiheadAttention as _MultiheadAttention
+from ..layers.rnn import LSTM as _LSTM
+from ..layers.rnn import LSTMCell as _LSTMCell
 
 
 def _quantizable_not_supported():
@@ -16,7 +17,7 @@ def _quantizable_not_supported():
     warnings.warn(
         "Quantizable modules are not supported in MLX. "
         "Quantizable modules will behave like their non-quantizable counterparts.",
-        UserWarning
+        UserWarning,
     )
 
 
@@ -45,7 +46,7 @@ class MultiheadAttention(_MultiheadAttention):
 
 
 __all__ = [
-    'LSTM',
-    'LSTMCell',
-    'MultiheadAttention',
+    "LSTM",
+    "LSTMCell",
+    "MultiheadAttention",
 ]

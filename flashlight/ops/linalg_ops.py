@@ -5,12 +5,13 @@ Implements PyTorch-compatible linear algebra operations with MLX backend.
 These are the torch.* level ops (einsum, tensordot, diag, etc.)
 """
 
-from typing import Optional, Tuple, Union, Sequence, List
 import re
+from typing import List, Optional, Sequence, Tuple, Union
+
 import mlx.core as mx
 
-from ..tensor import Tensor
 from ..autograd.context import is_grad_enabled
+from ..tensor import Tensor
 
 
 def _parse_transpose_pattern(equation: str) -> Optional[List[int]]:
@@ -24,7 +25,7 @@ def _parse_transpose_pattern(equation: str) -> Optional[List[int]]:
         Permutation list if it's a transpose, None otherwise
     """
     # Match patterns like "ij->ji", "ijk->kji", "abcd->dcba"
-    match = re.match(r'^([a-zA-Z]+)->([a-zA-Z]+)$', equation.replace(' ', ''))
+    match = re.match(r"^([a-zA-Z]+)->([a-zA-Z]+)$", equation.replace(" ", ""))
     if not match:
         return None
 
@@ -95,28 +96,28 @@ def _sublist_to_equation(args) -> Tuple[str, Tuple[Tensor, ...]]:
         if n < 0 or n >= 52:
             raise ValueError(f"Subscript index {n} out of range [0, 52)")
         if n < 26:
-            return chr(ord('a') + n)
+            return chr(ord("a") + n)
         else:
-            return chr(ord('A') + n - 26)
+            return chr(ord("A") + n - 26)
 
     def subscripts_to_str(subscripts) -> str:
         """Convert a subscript list to a string, handling ellipsis."""
         result = []
         for s in subscripts:
             if s is Ellipsis or s is ...:
-                result.append('...')
+                result.append("...")
             elif isinstance(s, int):
                 result.append(int_to_letter(s))
             else:
                 raise ValueError(f"Invalid subscript element: {s}")
-        return ''.join(result)
+        return "".join(result)
 
     # Build equation string
     input_parts = [subscripts_to_str(sl) for sl in subscript_lists]
-    equation = ','.join(input_parts)
+    equation = ",".join(input_parts)
 
     if output_subscripts is not None:
-        equation += '->' + subscripts_to_str(output_subscripts)
+        equation += "->" + subscripts_to_str(output_subscripts)
 
     return equation, tuple(operands)
 
@@ -174,7 +175,12 @@ def einsum(*args) -> Tensor:
     return result
 
 
-def tensordot(a: Tensor, b: Tensor, dims: Union[int, Tuple[Sequence[int], Sequence[int]]] = 2, out: Optional[Tensor] = None) -> Tensor:
+def tensordot(
+    a: Tensor,
+    b: Tensor,
+    dims: Union[int, Tuple[Sequence[int], Sequence[int]]] = 2,
+    out: Optional[Tensor] = None,
+) -> Tensor:
     """
     Computes a generalized contraction between tensors.
 
@@ -462,16 +468,16 @@ def kron(input: Tensor, other: Tensor) -> Tensor:
 
 
 __all__ = [
-    'einsum',
-    'tensordot',
-    'diag',
-    'diagonal',
-    'triu',
-    'tril',
-    'trace',
-    'outer',
-    'inner',
-    'dot',
-    'vdot',
-    'kron',
+    "einsum",
+    "tensordot",
+    "diag",
+    "diagonal",
+    "triu",
+    "tril",
+    "trace",
+    "outer",
+    "inner",
+    "dot",
+    "vdot",
+    "kron",
 ]

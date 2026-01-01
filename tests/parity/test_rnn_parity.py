@@ -4,8 +4,8 @@ RNN Layer Parity Tests
 Tests numerical parity between flashlight RNN layers and PyTorch.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 torch = pytest.importorskip("torch")
 
@@ -18,7 +18,7 @@ def copy_rnn_weights(mlx_layer, torch_layer):
     import mlx.core as mx
 
     # For LSTM/GRU, weight names follow pattern: weight_ih_l0, weight_hh_l0, bias_ih_l0, bias_hh_l0
-    if hasattr(torch_layer, 'weight_ih_l0'):
+    if hasattr(torch_layer, "weight_ih_l0"):
         mlx_layer.weight_ih_l0 = nn.Parameter(
             flashlight.tensor(torch_layer.weight_ih_l0.detach().numpy())
         )
@@ -144,31 +144,19 @@ class TestRNNCellParity:
         mlx_cell = nn.LSTMCell(input_size, hidden_size)
 
         # Copy weights
-        mlx_cell.weight_ih = nn.Parameter(
-            flashlight.tensor(torch_cell.weight_ih.detach().numpy())
-        )
-        mlx_cell.weight_hh = nn.Parameter(
-            flashlight.tensor(torch_cell.weight_hh.detach().numpy())
-        )
-        mlx_cell.bias_ih = nn.Parameter(
-            flashlight.tensor(torch_cell.bias_ih.detach().numpy())
-        )
-        mlx_cell.bias_hh = nn.Parameter(
-            flashlight.tensor(torch_cell.bias_hh.detach().numpy())
-        )
+        mlx_cell.weight_ih = nn.Parameter(flashlight.tensor(torch_cell.weight_ih.detach().numpy()))
+        mlx_cell.weight_hh = nn.Parameter(flashlight.tensor(torch_cell.weight_hh.detach().numpy()))
+        mlx_cell.bias_ih = nn.Parameter(flashlight.tensor(torch_cell.bias_ih.detach().numpy()))
+        mlx_cell.bias_hh = nn.Parameter(flashlight.tensor(torch_cell.bias_hh.detach().numpy()))
 
         np.random.seed(42)
         x_np = np.random.randn(batch, input_size).astype(np.float32)
         h_np = np.random.randn(batch, hidden_size).astype(np.float32)
         c_np = np.random.randn(batch, hidden_size).astype(np.float32)
 
-        torch_h, torch_c = torch_cell(
-            torch.tensor(x_np),
-            (torch.tensor(h_np), torch.tensor(c_np))
-        )
+        torch_h, torch_c = torch_cell(torch.tensor(x_np), (torch.tensor(h_np), torch.tensor(c_np)))
         mlx_h, mlx_c = mlx_cell(
-            flashlight.tensor(x_np),
-            (flashlight.tensor(h_np), flashlight.tensor(c_np))
+            flashlight.tensor(x_np), (flashlight.tensor(h_np), flashlight.tensor(c_np))
         )
 
         h_diff = np.max(np.abs(torch_h.detach().numpy() - np.array(mlx_h.tolist())))
@@ -186,18 +174,10 @@ class TestRNNCellParity:
         mlx_cell = nn.GRUCell(input_size, hidden_size)
 
         # Copy weights
-        mlx_cell.weight_ih = nn.Parameter(
-            flashlight.tensor(torch_cell.weight_ih.detach().numpy())
-        )
-        mlx_cell.weight_hh = nn.Parameter(
-            flashlight.tensor(torch_cell.weight_hh.detach().numpy())
-        )
-        mlx_cell.bias_ih = nn.Parameter(
-            flashlight.tensor(torch_cell.bias_ih.detach().numpy())
-        )
-        mlx_cell.bias_hh = nn.Parameter(
-            flashlight.tensor(torch_cell.bias_hh.detach().numpy())
-        )
+        mlx_cell.weight_ih = nn.Parameter(flashlight.tensor(torch_cell.weight_ih.detach().numpy()))
+        mlx_cell.weight_hh = nn.Parameter(flashlight.tensor(torch_cell.weight_hh.detach().numpy()))
+        mlx_cell.bias_ih = nn.Parameter(flashlight.tensor(torch_cell.bias_ih.detach().numpy()))
+        mlx_cell.bias_hh = nn.Parameter(flashlight.tensor(torch_cell.bias_hh.detach().numpy()))
 
         np.random.seed(42)
         x_np = np.random.randn(batch, input_size).astype(np.float32)

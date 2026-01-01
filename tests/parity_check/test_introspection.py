@@ -4,14 +4,14 @@ Tests for API introspection utilities.
 
 import pytest
 
+from parity_check.introspection.pytorch_api import (
+    classify_api_type,
+    get_public_names,
+)
 from parity_check.introspection.signature import (
     compare_signatures,
     extract_signature,
     get_parameter_summary,
-)
-from parity_check.introspection.pytorch_api import (
-    classify_api_type,
-    get_public_names,
 )
 
 
@@ -174,8 +174,9 @@ class TestCompareSignatures:
 
         result = compare_signatures(sig1, sig2, strict_defaults=True)
         assert result["matches"] is False
-        assert any("missing default" in d.lower() or "default" in d.lower()
-                   for d in result["differences"])
+        assert any(
+            "missing default" in d.lower() or "default" in d.lower() for d in result["differences"]
+        )
 
     def test_none_signatures_handled(self):
         result = compare_signatures(None, None)
@@ -246,6 +247,7 @@ class TestGetPublicNames:
 
 try:
     import torch
+
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False

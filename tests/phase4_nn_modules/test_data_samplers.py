@@ -10,9 +10,11 @@ Comprehensive tests for all sampler classes:
 """
 
 import sys
-sys.path.insert(0, '../..')
+
+sys.path.insert(0, "../..")
 
 import unittest
+
 import numpy as np
 import pytest
 
@@ -21,10 +23,14 @@ from tests.common_utils import TestCase, skipIfNoMLX, skipIfNoTorch
 try:
     import flashlight
     from flashlight.data import (
+        BatchSampler,
+        RandomSampler,
+        SequentialSampler,
+        SubsetRandomSampler,
         TensorDataset,
-        SequentialSampler, RandomSampler, SubsetRandomSampler,
-        WeightedRandomSampler, BatchSampler
+        WeightedRandomSampler,
     )
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -366,6 +372,7 @@ class TestSamplerParity(TestCase):
         np.testing.assert_allclose(torch_freq, expected, atol=0.05)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from tests.common_utils import run_tests
+
     run_tests()

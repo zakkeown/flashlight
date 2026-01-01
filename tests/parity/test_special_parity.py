@@ -4,8 +4,8 @@ Special Functions Parity Tests
 Tests numerical parity between flashlight.special and PyTorch torch.special.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 torch = pytest.importorskip("torch")
 
@@ -74,9 +74,7 @@ class TestIncompleteGammaParity:
         x_np = np.array([0.5, 1.0, 2.0, 3.0], dtype=np.float32)
 
         torch_out = torch.special.gammainc(torch.tensor(a_np), torch.tensor(x_np))
-        mlx_out = flashlight.special.gammainc(
-            flashlight.tensor(a_np), flashlight.tensor(x_np)
-        )
+        mlx_out = flashlight.special.gammainc(flashlight.tensor(a_np), flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-4, f"gammainc mismatch: {max_diff}"
@@ -88,9 +86,7 @@ class TestIncompleteGammaParity:
         x_np = np.array([0.5, 1.0, 2.0, 3.0], dtype=np.float32)
 
         torch_out = torch.special.gammaincc(torch.tensor(a_np), torch.tensor(x_np))
-        mlx_out = flashlight.special.gammaincc(
-            flashlight.tensor(a_np), flashlight.tensor(x_np)
-        )
+        mlx_out = flashlight.special.gammaincc(flashlight.tensor(a_np), flashlight.tensor(x_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-4, f"gammaincc mismatch: {max_diff}"
@@ -239,9 +235,7 @@ class TestPolynomialsParity:
 
         for n_val in [0, 1, 2, 3, 4, 5]:
             n_np = np.full(20, n_val, dtype=np.int64)
-            torch_out = torch.special.chebyshev_polynomial_t(
-                torch.tensor(x_np), torch.tensor(n_np)
-            )
+            torch_out = torch.special.chebyshev_polynomial_t(torch.tensor(x_np), torch.tensor(n_np))
             mlx_out = flashlight.special.chebyshev_polynomial_t(
                 flashlight.tensor(x_np), flashlight.tensor(n_np)
             )
@@ -256,9 +250,7 @@ class TestPolynomialsParity:
 
         for n_val in [0, 1, 2, 3, 4, 5]:
             n_np = np.full(20, n_val, dtype=np.int64)
-            torch_out = torch.special.chebyshev_polynomial_u(
-                torch.tensor(x_np), torch.tensor(n_np)
-            )
+            torch_out = torch.special.chebyshev_polynomial_u(torch.tensor(x_np), torch.tensor(n_np))
             mlx_out = flashlight.special.chebyshev_polynomial_u(
                 flashlight.tensor(x_np), flashlight.tensor(n_np)
             )
@@ -273,9 +265,7 @@ class TestPolynomialsParity:
 
         for n_val in [0, 1, 2, 3, 4, 5]:
             n_np = np.full(20, n_val, dtype=np.int64)
-            torch_out = torch.special.hermite_polynomial_h(
-                torch.tensor(x_np), torch.tensor(n_np)
-            )
+            torch_out = torch.special.hermite_polynomial_h(torch.tensor(x_np), torch.tensor(n_np))
             mlx_out = flashlight.special.hermite_polynomial_h(
                 flashlight.tensor(x_np), flashlight.tensor(n_np)
             )
@@ -290,9 +280,7 @@ class TestPolynomialsParity:
 
         for n_val in [0, 1, 2, 3, 4, 5]:
             n_np = np.full(20, n_val, dtype=np.int64)
-            torch_out = torch.special.hermite_polynomial_he(
-                torch.tensor(x_np), torch.tensor(n_np)
-            )
+            torch_out = torch.special.hermite_polynomial_he(torch.tensor(x_np), torch.tensor(n_np))
             mlx_out = flashlight.special.hermite_polynomial_he(
                 flashlight.tensor(x_np), flashlight.tensor(n_np)
             )
@@ -307,9 +295,7 @@ class TestPolynomialsParity:
 
         for n_val in [0, 1, 2, 3, 4]:
             n_np = np.full(20, n_val, dtype=np.int64)
-            torch_out = torch.special.laguerre_polynomial_l(
-                torch.tensor(x_np), torch.tensor(n_np)
-            )
+            torch_out = torch.special.laguerre_polynomial_l(torch.tensor(x_np), torch.tensor(n_np))
             mlx_out = flashlight.special.laguerre_polynomial_l(
                 flashlight.tensor(x_np), flashlight.tensor(n_np)
             )
@@ -324,9 +310,7 @@ class TestPolynomialsParity:
 
         for n_val in [0, 1, 2, 3, 4, 5]:
             n_np = np.full(20, n_val, dtype=np.int64)
-            torch_out = torch.special.legendre_polynomial_p(
-                torch.tensor(x_np), torch.tensor(n_np)
-            )
+            torch_out = torch.special.legendre_polynomial_p(torch.tensor(x_np), torch.tensor(n_np))
             mlx_out = flashlight.special.legendre_polynomial_p(
                 flashlight.tensor(x_np), flashlight.tensor(n_np)
             )
@@ -437,9 +421,7 @@ class TestSimpleFunctionsParity:
         y_np = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float32)
 
         torch_out = torch.special.xlogy(torch.tensor(x_np), torch.tensor(y_np))
-        mlx_out = flashlight.special.xlogy(
-            flashlight.tensor(x_np), flashlight.tensor(y_np)
-        )
+        mlx_out = flashlight.special.xlogy(flashlight.tensor(x_np), flashlight.tensor(y_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-5, f"xlogy mismatch: {max_diff}"
@@ -451,9 +433,7 @@ class TestSimpleFunctionsParity:
         y_np = np.array([0.5, 1.0, 2.0, 3.0], dtype=np.float32)
 
         torch_out = torch.special.xlog1py(torch.tensor(x_np), torch.tensor(y_np))
-        mlx_out = flashlight.special.xlog1py(
-            flashlight.tensor(x_np), flashlight.tensor(y_np)
-        )
+        mlx_out = flashlight.special.xlog1py(flashlight.tensor(x_np), flashlight.tensor(y_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-5, f"xlog1py mismatch: {max_diff}"

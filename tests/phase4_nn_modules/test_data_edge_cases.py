@@ -5,9 +5,11 @@ Tests for boundary conditions, error cases, and unusual scenarios.
 """
 
 import sys
-sys.path.insert(0, '../..')
+
+sys.path.insert(0, "../..")
 
 import unittest
+
 import numpy as np
 import pytest
 
@@ -16,13 +18,22 @@ from tests.common_utils import TestCase, skipIfNoMLX
 try:
     import flashlight
     from flashlight.data import (
-        Dataset, IterableDataset,
-        TensorDataset, ConcatDataset, Subset, StackDataset,
-        DataLoader, default_collate,
-        SequentialSampler, RandomSampler, SubsetRandomSampler,
-        WeightedRandomSampler, BatchSampler,
-        random_split
+        BatchSampler,
+        ConcatDataset,
+        DataLoader,
+        Dataset,
+        IterableDataset,
+        RandomSampler,
+        SequentialSampler,
+        StackDataset,
+        Subset,
+        SubsetRandomSampler,
+        TensorDataset,
+        WeightedRandomSampler,
+        default_collate,
+        random_split,
     )
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -214,7 +225,7 @@ class TestCollateEdgeCases(TestCase):
         """Test collating namedtuples preserves type."""
         from collections import namedtuple
 
-        Sample = namedtuple('Sample', ['x', 'y'])
+        Sample = namedtuple("Sample", ["x", "y"])
         samples = [
             Sample(x=flashlight.tensor([1.0]), y=flashlight.tensor([0])),
             Sample(x=flashlight.tensor([2.0]), y=flashlight.tensor([1])),
@@ -406,7 +417,7 @@ class TestMLXRandomUtilities(TestCase):
 
     def test_mlx_seeded_key(self):
         """Test seeded key generation."""
-        from flashlight.data._random import mlx_seeded_key, mlx_permutation
+        from flashlight.data._random import mlx_permutation, mlx_seeded_key
 
         key1 = mlx_seeded_key(42, epoch=0)
         key2 = mlx_seeded_key(42, epoch=0)
@@ -532,6 +543,7 @@ class TestSequentialSamplerParity(TestCase):
         self.assertEqual(len(sampler), 50)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from tests.common_utils import run_tests
+
     run_tests()

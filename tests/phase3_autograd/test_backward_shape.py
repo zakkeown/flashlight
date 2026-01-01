@@ -8,15 +8,18 @@ Tests gradient computation for shape operations:
 """
 
 import sys
-sys.path.insert(0, '../..')
+
+sys.path.insert(0, "../..")
 
 import unittest
+
 import numpy as np
 
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
     import flashlight
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -109,7 +112,9 @@ class TestTransposeBackward(TestCase):
 
     def test_transpose_3d(self):
         """Test 3D transpose backward."""
-        x = flashlight.tensor([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]], requires_grad=True)
+        x = flashlight.tensor(
+            [[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]], requires_grad=True
+        )
         y = x.transpose(0, 2)
         loss = flashlight.sum(y)
         loss.backward()
@@ -126,6 +131,7 @@ class TestTransposeBackward(TestCase):
         np.testing.assert_array_almost_equal(x.grad.numpy(), np.ones((3, 2)))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from tests.common_utils import run_tests
+
     run_tests()

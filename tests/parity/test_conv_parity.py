@@ -4,8 +4,8 @@ Convolution Layer Parity Tests
 Tests numerical parity between flashlight conv layers and PyTorch.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 torch = pytest.importorskip("torch")
 
@@ -15,13 +15,9 @@ import flashlight.nn as nn
 
 def copy_conv_weights(mlx_layer, torch_layer):
     """Copy weights from PyTorch conv layer to flashlight."""
-    mlx_layer.weight = nn.Parameter(
-        flashlight.tensor(torch_layer.weight.detach().numpy())
-    )
+    mlx_layer.weight = nn.Parameter(flashlight.tensor(torch_layer.weight.detach().numpy()))
     if torch_layer.bias is not None:
-        mlx_layer.bias = nn.Parameter(
-            flashlight.tensor(torch_layer.bias.detach().numpy())
-        )
+        mlx_layer.bias = nn.Parameter(flashlight.tensor(torch_layer.bias.detach().numpy()))
 
 
 class TestConv1dParity:

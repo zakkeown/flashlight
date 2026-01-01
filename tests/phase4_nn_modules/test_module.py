@@ -10,15 +10,18 @@ Tests the nn.Module system:
 """
 
 import sys
-sys.path.insert(0, '../..')
+
+sys.path.insert(0, "../..")
 
 import unittest
+
 import numpy as np
 
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
     import flashlight
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -30,6 +33,7 @@ class TestModule(TestCase):
 
     def test_module_creation(self):
         """Test basic module creation."""
+
         class SimpleModule(flashlight.nn.Module):
             def __init__(self):
                 super().__init__()
@@ -45,6 +49,7 @@ class TestModule(TestCase):
 
     def test_parameter_registration(self):
         """Test that parameters are automatically registered."""
+
         class SimpleModule(flashlight.nn.Module):
             def __init__(self):
                 super().__init__()
@@ -60,8 +65,8 @@ class TestModule(TestCase):
 
         # Check named parameters
         named_params = dict(module.named_parameters())
-        self.assertIn('weight', named_params)
-        self.assertIn('bias', named_params)
+        self.assertIn("weight", named_params)
+        self.assertIn("bias", named_params)
 
     def test_train_eval_mode(self):
         """Test train/eval mode switching."""
@@ -84,6 +89,7 @@ class TestModule(TestCase):
 
     def test_nested_modules(self):
         """Test that nested modules are tracked."""
+
         class InnerModule(flashlight.nn.Module):
             def __init__(self):
                 super().__init__()
@@ -110,12 +116,13 @@ class TestModule(TestCase):
 
         # Check named parameters include nested
         named_params = dict(module.named_parameters())
-        self.assertIn('weight', named_params)
-        self.assertIn('inner1.weight', named_params)
-        self.assertIn('inner2.weight', named_params)
+        self.assertIn("weight", named_params)
+        self.assertIn("inner1.weight", named_params)
+        self.assertIn("inner2.weight", named_params)
 
     def test_train_mode_propagates(self):
         """Test that train/eval mode propagates to child modules."""
+
         class InnerModule(flashlight.nn.Module):
             def forward(self, x):
                 return x
@@ -142,6 +149,7 @@ class TestModule(TestCase):
 
     def test_zero_grad(self):
         """Test zero_grad clears gradients."""
+
         class SimpleModule(flashlight.nn.Module):
             def __init__(self):
                 super().__init__()
@@ -192,7 +200,7 @@ class TestParameter(TestCase):
         """Test parameter string representation."""
         param = flashlight.nn.Parameter(flashlight.tensor([1.0, 2.0, 3.0]))
         repr_str = repr(param)
-        self.assertIn('Parameter containing:', repr_str)
+        self.assertIn("Parameter containing:", repr_str)
 
 
 @skipIfNoMLX
@@ -281,6 +289,7 @@ class TestLinear(TestCase):
         self.assertGreater(weight_std, expected_std / 3)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from tests.common_utils import run_tests
+
     run_tests()

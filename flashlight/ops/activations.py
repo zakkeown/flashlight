@@ -5,16 +5,23 @@ Implements PyTorch-compatible activation functions with MLX backend.
 """
 
 from typing import Optional
+
 import mlx.core as mx
 import mlx.nn as nn
 
-from ..tensor import Tensor
-from ..autograd.function import (
-    ReLUBackward, SigmoidBackward, TanhBackward,
-    SoftmaxBackward, LogSoftmaxBackward, SiLUBackward,
-    LeakyReLUBackward, ELUBackward, GELUBackward
-)
 from ..autograd.context import is_grad_enabled
+from ..autograd.function import (
+    ELUBackward,
+    GELUBackward,
+    LeakyReLUBackward,
+    LogSoftmaxBackward,
+    ReLUBackward,
+    SigmoidBackward,
+    SiLUBackward,
+    SoftmaxBackward,
+    TanhBackward,
+)
+from ..tensor import Tensor
 
 
 def relu(input: Tensor, inplace: bool = False) -> Tensor:
@@ -36,7 +43,7 @@ def relu(input: Tensor, inplace: bool = False) -> Tensor:
 
     mlx_result = mx.maximum(input._mlx_array, 0)
     # Preserve input layout for element-wise operations
-    result = Tensor._from_mlx_array(mlx_result, layout=getattr(input, '_layout', None))
+    result = Tensor._from_mlx_array(mlx_result, layout=getattr(input, "_layout", None))
 
     # Autograd graph construction
     if is_grad_enabled() and input.requires_grad:
@@ -48,7 +55,7 @@ def relu(input: Tensor, inplace: bool = False) -> Tensor:
     return result
 
 
-def gelu(input: Tensor, approximate: str = 'none') -> Tensor:
+def gelu(input: Tensor, approximate: str = "none") -> Tensor:
     """
     Apply Gaussian Error Linear Unit activation.
 
@@ -64,7 +71,7 @@ def gelu(input: Tensor, approximate: str = 'none') -> Tensor:
     # MLX has a built-in gelu that uses the exact formula
     mlx_result = nn.gelu(input._mlx_array)
     # Preserve input layout for element-wise operations
-    result = Tensor._from_mlx_array(mlx_result, layout=getattr(input, '_layout', None))
+    result = Tensor._from_mlx_array(mlx_result, layout=getattr(input, "_layout", None))
 
     # Autograd graph construction
     if is_grad_enabled() and input.requires_grad:
@@ -90,7 +97,7 @@ def sigmoid(input: Tensor) -> Tensor:
     """
     mlx_result = nn.sigmoid(input._mlx_array)
     # Preserve input layout for element-wise operations
-    result = Tensor._from_mlx_array(mlx_result, layout=getattr(input, '_layout', None))
+    result = Tensor._from_mlx_array(mlx_result, layout=getattr(input, "_layout", None))
 
     # Autograd graph construction
     if is_grad_enabled() and input.requires_grad:
@@ -116,7 +123,7 @@ def tanh(input: Tensor) -> Tensor:
     """
     mlx_result = mx.tanh(input._mlx_array)
     # Preserve input layout for element-wise operations
-    result = Tensor._from_mlx_array(mlx_result, layout=getattr(input, '_layout', None))
+    result = Tensor._from_mlx_array(mlx_result, layout=getattr(input, "_layout", None))
 
     # Autograd graph construction
     if is_grad_enabled() and input.requires_grad:
@@ -151,12 +158,13 @@ def softmax(input: Tensor, dim: Optional[int] = None, _stacklevel: int = 3, dtyp
     if dtype is not None:
         # Convert PyTorch dtype to MLX dtype if needed
         from ..dtype import to_mlx_dtype
+
         mlx_dtype = to_mlx_dtype(dtype)
         input_array = input_array.astype(mlx_dtype)
 
     mlx_result = nn.softmax(input_array, axis=dim)
     # Preserve input layout for element-wise operations
-    result = Tensor._from_mlx_array(mlx_result, layout=getattr(input, '_layout', None))
+    result = Tensor._from_mlx_array(mlx_result, layout=getattr(input, "_layout", None))
 
     # Autograd graph construction
     if is_grad_enabled() and input.requires_grad:
@@ -168,7 +176,9 @@ def softmax(input: Tensor, dim: Optional[int] = None, _stacklevel: int = 3, dtyp
     return result
 
 
-def log_softmax(input: Tensor, dim: Optional[int] = None, _stacklevel: int = 3, dtype=None) -> Tensor:
+def log_softmax(
+    input: Tensor, dim: Optional[int] = None, _stacklevel: int = 3, dtype=None
+) -> Tensor:
     """
     Apply log(softmax(x)) along a dimension.
 
@@ -191,6 +201,7 @@ def log_softmax(input: Tensor, dim: Optional[int] = None, _stacklevel: int = 3, 
     if dtype is not None:
         # Convert PyTorch dtype to MLX dtype if needed
         from ..dtype import to_mlx_dtype
+
         mlx_dtype = to_mlx_dtype(dtype)
         input_array = input_array.astype(mlx_dtype)
 
@@ -200,7 +211,7 @@ def log_softmax(input: Tensor, dim: Optional[int] = None, _stacklevel: int = 3, 
     mlx_result = input_array - mx.logsumexp(input_array, axis=dim, keepdims=True)
 
     # Preserve input layout for element-wise operations
-    result = Tensor._from_mlx_array(mlx_result, layout=getattr(input, '_layout', None))
+    result = Tensor._from_mlx_array(mlx_result, layout=getattr(input, "_layout", None))
 
     # Autograd graph construction
     if is_grad_enabled() and input.requires_grad:
@@ -229,7 +240,7 @@ def silu(input: Tensor, inplace: bool = False) -> Tensor:
     """
     mlx_result = nn.silu(input._mlx_array)
     # Preserve input layout for element-wise operations
-    result = Tensor._from_mlx_array(mlx_result, layout=getattr(input, '_layout', None))
+    result = Tensor._from_mlx_array(mlx_result, layout=getattr(input, "_layout", None))
 
     # Autograd graph construction
     if is_grad_enabled() and input.requires_grad:
@@ -257,7 +268,7 @@ def leaky_relu(input: Tensor, negative_slope: float = 0.01, inplace: bool = Fals
     """
     mlx_result = nn.leaky_relu(input._mlx_array, negative_slope=negative_slope)
     # Preserve input layout for element-wise operations
-    result = Tensor._from_mlx_array(mlx_result, layout=getattr(input, '_layout', None))
+    result = Tensor._from_mlx_array(mlx_result, layout=getattr(input, "_layout", None))
 
     # Autograd graph construction
     if is_grad_enabled() and input.requires_grad:
@@ -285,7 +296,7 @@ def elu(input: Tensor, alpha: float = 1.0, inplace: bool = False) -> Tensor:
     """
     mlx_result = nn.elu(input._mlx_array, alpha=alpha)
     # Preserve input layout for element-wise operations
-    result = Tensor._from_mlx_array(mlx_result, layout=getattr(input, '_layout', None))
+    result = Tensor._from_mlx_array(mlx_result, layout=getattr(input, "_layout", None))
 
     # Autograd graph construction
     if is_grad_enabled() and input.requires_grad:
@@ -314,7 +325,7 @@ def celu(input: Tensor, alpha: float = 1.0, inplace: bool = False) -> Tensor:
     x = input._mlx_array
     mlx_result = mx.maximum(x, 0) + mx.minimum(0, alpha * (mx.exp(x / alpha) - 1))
     # Preserve input layout for element-wise operations
-    result = Tensor._from_mlx_array(mlx_result, layout=getattr(input, '_layout', None))
+    result = Tensor._from_mlx_array(mlx_result, layout=getattr(input, "_layout", None))
 
     if is_grad_enabled() and input.requires_grad:
         result.requires_grad = True
@@ -345,7 +356,7 @@ def selu(input: Tensor, inplace: bool = False) -> Tensor:
     x = input._mlx_array
     mlx_result = scale * mx.where(x > 0, x, alpha * (mx.exp(x) - 1))
     # Preserve input layout for element-wise operations
-    result = Tensor._from_mlx_array(mlx_result, layout=getattr(input, '_layout', None))
+    result = Tensor._from_mlx_array(mlx_result, layout=getattr(input, "_layout", None))
 
     if is_grad_enabled() and input.requires_grad:
         result.requires_grad = True
@@ -353,7 +364,9 @@ def selu(input: Tensor, inplace: bool = False) -> Tensor:
     return result
 
 
-def hardtanh(input: Tensor, min_val: float = -1.0, max_val: float = 1.0, inplace: bool = False) -> Tensor:
+def hardtanh(
+    input: Tensor, min_val: float = -1.0, max_val: float = 1.0, inplace: bool = False
+) -> Tensor:
     """
     Apply HardTanh activation (clipping).
 
@@ -370,7 +383,7 @@ def hardtanh(input: Tensor, min_val: float = -1.0, max_val: float = 1.0, inplace
     """
     mlx_result = mx.clip(input._mlx_array, min_val, max_val)
     # Preserve input layout for element-wise operations
-    result = Tensor._from_mlx_array(mlx_result, layout=getattr(input, '_layout', None))
+    result = Tensor._from_mlx_array(mlx_result, layout=getattr(input, "_layout", None))
 
     if is_grad_enabled() and input.requires_grad:
         result.requires_grad = True
@@ -399,7 +412,7 @@ def hardshrink(input: Tensor, lambd: float = 0.5) -> Tensor:
     x = input._mlx_array
     mlx_result = mx.where(mx.abs(x) > lambd, x, 0)
     # Preserve input layout for element-wise operations
-    result = Tensor._from_mlx_array(mlx_result, layout=getattr(input, '_layout', None))
+    result = Tensor._from_mlx_array(mlx_result, layout=getattr(input, "_layout", None))
 
     if is_grad_enabled() and input.requires_grad:
         result.requires_grad = True
@@ -423,11 +436,7 @@ def softshrink(input: Tensor, lambd: float = 0.5) -> Tensor:
         Result tensor
     """
     x = input._mlx_array
-    mlx_result = mx.where(
-        x > lambd,
-        x - lambd,
-        mx.where(x < -lambd, x + lambd, 0)
-    )
+    mlx_result = mx.where(x > lambd, x - lambd, mx.where(x < -lambd, x + lambd, 0))
     result = Tensor._from_mlx_array(mlx_result)
 
     if is_grad_enabled() and input.requires_grad:
@@ -624,8 +633,13 @@ def softmin(input: Tensor, dim: Optional[int] = None, _stacklevel: int = 3, dtyp
     return softmax(neg_input, dim=dim, _stacklevel=_stacklevel, dtype=dtype)
 
 
-def rrelu(input: Tensor, lower: float = 1.0/8, upper: float = 1.0/3,
-          training: bool = False, inplace: bool = False) -> Tensor:
+def rrelu(
+    input: Tensor,
+    lower: float = 1.0 / 8,
+    upper: float = 1.0 / 3,
+    training: bool = False,
+    inplace: bool = False,
+) -> Tensor:
     """
     Apply Randomized Leaky ReLU activation.
 
@@ -661,7 +675,9 @@ def rrelu(input: Tensor, lower: float = 1.0/8, upper: float = 1.0/3,
     return result
 
 
-def rrelu_(input: Tensor, lower: float = 1.0/8, upper: float = 1.0/3, training: bool = False) -> Tensor:
+def rrelu_(
+    input: Tensor, lower: float = 1.0 / 8, upper: float = 1.0 / 3, training: bool = False
+) -> Tensor:
     """In-place rrelu (returns new tensor in MLX)."""
     return rrelu(input, lower, upper, training, inplace=True)
 

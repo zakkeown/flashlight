@@ -4,22 +4,25 @@ PyTorch Parity Tests
 Tests numerical parity between flashlight and PyTorch implementations.
 """
 
-import sys
 import os
+import sys
+
 # Add parent directory to path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 import unittest
+
 import numpy as np
 
 # Import test utilities
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from common_utils import TestCase, skipIfNoMLX
 
 try:
     import flashlight
     import flashlight.nn as nn
     import flashlight.optim as optim
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -28,6 +31,7 @@ try:
     import torch
     import torch.nn as torch_nn
     import torch.optim as torch_optim
+
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
@@ -63,12 +67,7 @@ class TestLinearParity(TestCase):
         y_mlx = mlx_linear(x_mlx)
 
         # Check parity
-        np.testing.assert_allclose(
-            y_mlx.numpy(),
-            y_torch.detach().numpy(),
-            rtol=1e-5,
-            atol=1e-6
-        )
+        np.testing.assert_allclose(y_mlx.numpy(), y_torch.detach().numpy(), rtol=1e-5, atol=1e-6)
 
 
 @skipIfNoMLX
@@ -85,12 +84,7 @@ class TestActivationParity(TestCase):
         y_torch = torch.relu(x_torch)
         y_mlx = flashlight.relu(x_mlx)
 
-        np.testing.assert_allclose(
-            y_mlx.numpy(),
-            y_torch.detach().numpy(),
-            rtol=1e-5,
-            atol=1e-6
-        )
+        np.testing.assert_allclose(y_mlx.numpy(), y_torch.detach().numpy(), rtol=1e-5, atol=1e-6)
 
     def test_gelu_forward(self):
         """Test GELU matches PyTorch."""
@@ -101,12 +95,7 @@ class TestActivationParity(TestCase):
         y_torch = torch.nn.functional.gelu(x_torch)
         y_mlx = flashlight.gelu(x_mlx)
 
-        np.testing.assert_allclose(
-            y_mlx.numpy(),
-            y_torch.detach().numpy(),
-            rtol=1e-4,
-            atol=1e-5
-        )
+        np.testing.assert_allclose(y_mlx.numpy(), y_torch.detach().numpy(), rtol=1e-4, atol=1e-5)
 
 
 @skipIfNoMLX
@@ -135,12 +124,7 @@ class TestConvParity(TestCase):
         y_mlx = mlx_conv(x_mlx)
 
         # Check parity (conv can have slightly larger tolerance)
-        np.testing.assert_allclose(
-            y_mlx.numpy(),
-            y_torch.detach().numpy(),
-            rtol=1e-4,
-            atol=1e-5
-        )
+        np.testing.assert_allclose(y_mlx.numpy(), y_torch.detach().numpy(), rtol=1e-4, atol=1e-5)
 
 
 @skipIfNoMLX
@@ -162,10 +146,7 @@ class TestLossParity(TestCase):
         loss_mlx = nn.MSELoss()(pred_mlx, target_mlx)
 
         np.testing.assert_allclose(
-            loss_mlx.numpy(),
-            loss_torch.detach().numpy(),
-            rtol=1e-5,
-            atol=1e-6
+            loss_mlx.numpy(), loss_torch.detach().numpy(), rtol=1e-5, atol=1e-6
         )
 
     def test_cross_entropy_loss(self):
@@ -182,10 +163,7 @@ class TestLossParity(TestCase):
         loss_mlx = nn.CrossEntropyLoss()(logits_mlx, target_mlx)
 
         np.testing.assert_allclose(
-            loss_mlx.numpy(),
-            loss_torch.detach().numpy(),
-            rtol=1e-5,
-            atol=1e-5
+            loss_mlx.numpy(), loss_torch.detach().numpy(), rtol=1e-5, atol=1e-5
         )
 
 
@@ -214,10 +192,7 @@ class TestOptimizerParity(TestCase):
 
         # Check parity
         np.testing.assert_allclose(
-            param_mlx.numpy(),
-            param_torch.detach().numpy(),
-            rtol=1e-5,
-            atol=1e-6
+            param_mlx.numpy(), param_torch.detach().numpy(), rtol=1e-5, atol=1e-6
         )
 
     def test_adam_step(self):
@@ -240,10 +215,7 @@ class TestOptimizerParity(TestCase):
 
         # Check parity
         np.testing.assert_allclose(
-            param_mlx.numpy(),
-            param_torch.detach().numpy(),
-            rtol=1e-5,
-            atol=1e-5
+            param_mlx.numpy(), param_torch.detach().numpy(), rtol=1e-5, atol=1e-5
         )
 
 
@@ -256,16 +228,10 @@ class TestModelParity(TestCase):
         """Test simple MLP forward pass matches PyTorch."""
         # Create models
         torch_model = torch_nn.Sequential(
-            torch_nn.Linear(784, 128),
-            torch_nn.ReLU(),
-            torch_nn.Linear(128, 10)
+            torch_nn.Linear(784, 128), torch_nn.ReLU(), torch_nn.Linear(128, 10)
         )
 
-        mlx_model = nn.Sequential(
-            nn.Linear(784, 128),
-            nn.ReLU(),
-            nn.Linear(128, 10)
-        )
+        mlx_model = nn.Sequential(nn.Linear(784, 128), nn.ReLU(), nn.Linear(128, 10))
 
         # Copy weights
         mlx_model[0].weight._mlx_array[:] = torch_model[0].weight.detach().numpy()
@@ -283,14 +249,10 @@ class TestModelParity(TestCase):
         y_mlx = mlx_model(x_mlx)
 
         # Check parity
-        np.testing.assert_allclose(
-            y_mlx.numpy(),
-            y_torch.detach().numpy(),
-            rtol=1e-5,
-            atol=1e-5
-        )
+        np.testing.assert_allclose(y_mlx.numpy(), y_torch.detach().numpy(), rtol=1e-5, atol=1e-5)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from common_utils import run_tests
+
     run_tests()

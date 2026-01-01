@@ -9,12 +9,12 @@ provides stub implementations for API compatibility.
 import warnings
 
 __all__ = [
-    'LSTM',
-    'GRU',
-    'LSTMCell',
-    'GRUCell',
-    'MultiheadAttention',
-    'modules',
+    "LSTM",
+    "GRU",
+    "LSTMCell",
+    "GRUCell",
+    "MultiheadAttention",
+    "modules",
 ]
 
 
@@ -23,13 +23,17 @@ def _quantizable_not_supported():
     warnings.warn(
         "Quantizable modules are not supported in MLX. "
         "Quantizable modules will behave like their non-quantizable counterparts.",
-        UserWarning
+        UserWarning,
     )
 
 
-# Import regular layers as quantizable versions
-from ..layers.rnn import LSTM as _LSTM, GRU as _GRU, LSTMCell as _LSTMCell, GRUCell as _GRUCell
 from ..layers.attention import MultiheadAttention as _MultiheadAttention
+
+# Import regular layers as quantizable versions
+from ..layers.rnn import GRU as _GRU
+from ..layers.rnn import LSTM as _LSTM
+from ..layers.rnn import GRUCell as _GRUCell
+from ..layers.rnn import LSTMCell as _LSTMCell
 
 
 class LSTM(_LSTM):

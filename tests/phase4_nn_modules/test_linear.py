@@ -8,9 +8,11 @@ Tests the linear modules:
 """
 
 import sys
-sys.path.insert(0, '../..')
+
+sys.path.insert(0, "../..")
 
 import unittest
+
 import numpy as np
 import pytest
 
@@ -18,12 +20,14 @@ from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
     import flashlight
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
 
 try:
     import torch
+
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
@@ -100,8 +104,7 @@ class TestLinear(TestCase):
         out_mlx = linear_mlx(flashlight.tensor(x_np))
 
         np.testing.assert_allclose(
-            out_torch.detach().numpy(), out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
+            out_torch.detach().numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6
         )
 
 
@@ -168,8 +171,7 @@ class TestBilinear(TestCase):
         out_mlx = bilinear_mlx(flashlight.tensor(x1_np), flashlight.tensor(x2_np))
 
         np.testing.assert_allclose(
-            out_torch.detach().numpy(), out_mlx.numpy(),
-            rtol=1e-4, atol=1e-5
+            out_torch.detach().numpy(), out_mlx.numpy(), rtol=1e-4, atol=1e-5
         )
 
 
@@ -204,5 +206,5 @@ class TestIdentity(TestCase):
         np.testing.assert_array_equal(x.numpy(), output.numpy())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

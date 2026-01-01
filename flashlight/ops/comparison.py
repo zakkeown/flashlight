@@ -5,8 +5,9 @@ Implements PyTorch-compatible comparison operations with MLX backend.
 """
 
 import mlx.core as mx
-from ..tensor import Tensor
+
 from ..autograd.context import is_grad_enabled
+from ..tensor import Tensor
 
 
 def eq(input: Tensor, other) -> Tensor:
@@ -201,7 +202,9 @@ def maximum(input: Tensor, other) -> Tensor:
     result_array = mx.maximum(input._mlx_array, other_array)
     result = Tensor._from_mlx_array(result_array)
 
-    if is_grad_enabled() and (input.requires_grad or (isinstance(other, Tensor) and other.requires_grad)):
+    if is_grad_enabled() and (
+        input.requires_grad or (isinstance(other, Tensor) and other.requires_grad)
+    ):
         result.requires_grad = True
 
     return result
@@ -226,7 +229,9 @@ def minimum(input: Tensor, other) -> Tensor:
     result_array = mx.minimum(input._mlx_array, other_array)
     result = Tensor._from_mlx_array(result_array)
 
-    if is_grad_enabled() and (input.requires_grad or (isinstance(other, Tensor) and other.requires_grad)):
+    if is_grad_enabled() and (
+        input.requires_grad or (isinstance(other, Tensor) and other.requires_grad)
+    ):
         result.requires_grad = True
 
     return result
@@ -241,9 +246,21 @@ not_equal = ne
 
 
 __all__ = [
-    'eq', 'ne', 'lt', 'le', 'gt', 'ge',
-    'equal', 'allclose', 'isclose',
-    'maximum', 'minimum',
+    "eq",
+    "ne",
+    "lt",
+    "le",
+    "gt",
+    "ge",
+    "equal",
+    "allclose",
+    "isclose",
+    "maximum",
+    "minimum",
     # Aliases
-    'greater', 'greater_equal', 'less', 'less_equal', 'not_equal',
+    "greater",
+    "greater_equal",
+    "less",
+    "less_equal",
+    "not_equal",
 ]

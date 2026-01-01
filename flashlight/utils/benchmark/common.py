@@ -8,8 +8,7 @@ import collections
 import dataclasses
 import math
 import statistics
-from typing import Any, List, Dict, Optional, Iterable, Tuple
-
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 __all__ = [
     "TaskSpec",
@@ -146,9 +145,7 @@ class Measurement:
             self._mean = statistics.mean(self._sorted_times)
             n = len(self._sorted_times)
             self._p25 = self._sorted_times[n // 4] if n >= 4 else self._sorted_times[0]
-            self._p75 = (
-                self._sorted_times[3 * n // 4] if n >= 4 else self._sorted_times[-1]
-            )
+            self._p75 = self._sorted_times[3 * n // 4] if n >= 4 else self._sorted_times[-1]
 
             if not self.meets_confidence(_IQR_GROSS_WARN_THRESHOLD):
                 self._warnings += ("High variance in measurements",)

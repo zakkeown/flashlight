@@ -4,11 +4,13 @@ Stochastic Gradient Descent (SGD) Optimizer
 Implements SGD with optional momentum, weight decay, and Nesterov momentum.
 """
 
-from typing import Iterable, Dict, Any, Optional, Union
+from typing import Any, Dict, Iterable, Optional, Union
+
 import mlx.core as mx
-from .optimizer import Optimizer
+
 from ..nn.parameter import Parameter
 from ..tensor import Tensor
+from .optimizer import Optimizer
 
 
 class SGD(Optimizer):
@@ -44,24 +46,27 @@ class SGD(Optimizer):
         maximize: bool = False,
         foreach: Optional[bool] = None,
         differentiable: bool = False,
-        fused: Optional[bool] = None
+        fused: Optional[bool] = None,
     ):
         # foreach, differentiable, fused are accepted for PyTorch compatibility
         # but are either not applicable or ignored in MLX.
         # maximize is now supported.
         if foreach is not None:
             import warnings
+
             warnings.warn(
                 "foreach parameter is ignored in MLX. MLX uses a different "
                 "computational model (lazy evaluation with unified memory) that "
                 "doesn't benefit from the same batched update optimizations as CUDA.",
-                UserWarning
+                UserWarning,
             )
         if differentiable:
             import warnings
+
             warnings.warn("differentiable=True is not supported in MLX, will be ignored")
         if fused:
             import warnings
+
             warnings.warn("fused=True is not supported in MLX, will be ignored")
 
         if lr < 0.0:
@@ -80,7 +85,7 @@ class SGD(Optimizer):
             maximize=maximize,
             foreach=foreach,
             differentiable=differentiable,
-            fused=fused
+            fused=fused,
         )
 
         if nesterov and (momentum <= 0 or dampening != 0):
@@ -106,14 +111,14 @@ class SGD(Optimizer):
             loss = closure()
 
         for group in self.param_groups:
-            lr = group['lr']
-            momentum = group['momentum']
-            dampening = group['dampening']
-            weight_decay = group['weight_decay']
-            nesterov = group['nesterov']
-            maximize = group.get('maximize', False)
+            lr = group["lr"]
+            momentum = group["momentum"]
+            dampening = group["dampening"]
+            weight_decay = group["weight_decay"]
+            nesterov = group["nesterov"]
+            maximize = group.get("maximize", False)
 
-            for p in group['params']:
+            for p in group["params"]:
                 if p.grad is None:
                     continue
 
@@ -133,16 +138,16 @@ class SGD(Optimizer):
                 if momentum != 0:
                     param_state = self.state[id(p)]
 
-                    if 'momentum_buffer' not in param_state:
+                    if "momentum_buffer" not in param_state:
                         # First step: initialize momentum buffer to gradient (no dampening)
                         # This matches PyTorch behavior
                         buf = mx.array(grad)  # Clone the gradient
-                        param_state['momentum_buffer'] = buf
+                        param_state["momentum_buffer"] = buf
                     else:
-                        buf = param_state['momentum_buffer']
+                        buf = param_state["momentum_buffer"]
                         # Update momentum buffer: v = momentum * v + (1 - dampening) * grad
                         buf = momentum * buf + (1 - dampening) * grad
-                        param_state['momentum_buffer'] = buf
+                        param_state["momentum_buffer"] = buf
 
                     if nesterov:
                         # Nesterov momentum: grad = grad + momentum * buf
@@ -158,8 +163,10 @@ class SGD(Optimizer):
 
     def __repr__(self) -> str:
         """String representation of the optimizer."""
-        return f"SGD (lr={self.defaults['lr']}, momentum={self.defaults['momentum']}, " \
-               f"weight_decay={self.defaults['weight_decay']}, nesterov={self.defaults['nesterov']})"
+        return (
+            f"SGD (lr={self.defaults['lr']}, momentum={self.defaults['momentum']}, "
+            f"weight_decay={self.defaults['weight_decay']}, nesterov={self.defaults['nesterov']})"
+        )
 
 
-__all__ = ['SGD']
+__all__ = ["SGD"]

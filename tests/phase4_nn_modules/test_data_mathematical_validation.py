@@ -7,18 +7,21 @@ numerical parity with PyTorch.
 """
 
 import sys
-sys.path.insert(0, '../..')
+
+sys.path.insert(0, "../..")
 
 import unittest
+from collections import Counter
+
 import numpy as np
 import pytest
-from collections import Counter
 
 from tests.common_utils import TestCase, skipIfNoMLX, skipIfNoTorch
 
 # Statistical test utilities
 try:
     from scipy import stats
+
     SCIPY_AVAILABLE = True
 except ImportError:
     SCIPY_AVAILABLE = False
@@ -26,15 +29,26 @@ except ImportError:
 try:
     import flashlight
     from flashlight.data import (
-        TensorDataset, DataLoader,
-        SequentialSampler, RandomSampler, SubsetRandomSampler,
-        WeightedRandomSampler, BatchSampler, DistributedSampler,
-        ChainDataset, StackDataset, random_split
+        BatchSampler,
+        ChainDataset,
+        DataLoader,
+        DistributedSampler,
+        RandomSampler,
+        SequentialSampler,
+        StackDataset,
+        SubsetRandomSampler,
+        TensorDataset,
+        WeightedRandomSampler,
+        random_split,
     )
     from flashlight.data._random import (
-        mlx_permutation, mlx_shuffle_list, mlx_randint,
-        mlx_weighted_sample, mlx_seeded_key
+        mlx_permutation,
+        mlx_randint,
+        mlx_seeded_key,
+        mlx_shuffle_list,
+        mlx_weighted_sample,
     )
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -50,6 +64,7 @@ def skipIfNoScipy(func):
 # =============================================================================
 # CRITICAL: Weighted Sampling Distribution Validation
 # =============================================================================
+
 
 @skipIfNoMLX
 class TestWeightedSampleDistribution(TestCase):
@@ -69,8 +84,11 @@ class TestWeightedSampleDistribution(TestCase):
 
         # Chi-square test (p > 0.01 means we cannot reject uniform hypothesis)
         chi2, p_value = stats.chisquare(counts, expected)
-        self.assertGreater(p_value, 0.01,
-            f"Chi-square test failed: counts={counts}, expected={expected}, p={p_value}")
+        self.assertGreater(
+            p_value,
+            0.01,
+            f"Chi-square test failed: counts={counts}, expected={expected}, p={p_value}",
+        )
 
     @skipIfNoScipy
     def test_weighted_sample_chi_square_skewed(self):
@@ -86,8 +104,11 @@ class TestWeightedSampleDistribution(TestCase):
         expected = np.array(weights) / total_weight * num_samples
 
         chi2, p_value = stats.chisquare(counts, expected)
-        self.assertGreater(p_value, 0.01,
-            f"Chi-square test failed: counts={counts}, expected={expected}, p={p_value}")
+        self.assertGreater(
+            p_value,
+            0.01,
+            f"Chi-square test failed: counts={counts}, expected={expected}, p={p_value}",
+        )
 
     @skipIfNoScipy
     def test_weighted_sample_extreme_weights(self):
@@ -99,14 +120,20 @@ class TestWeightedSampleDistribution(TestCase):
         counts = np.bincount(samples, minlength=len(weights))
 
         # First element should dominate
-        ratio = counts[0] / counts[1] if counts[1] > 0 else float('inf')
+        ratio = counts[0] / counts[1] if counts[1] > 0 else float("inf")
 
         # Expected ratio is 99:1, allow tolerance
         expected_ratio = 99
-        self.assertGreater(ratio, expected_ratio * 0.5,
-            f"Extreme weights not respected: ratio={ratio}, expected~{expected_ratio}")
-        self.assertLess(ratio, expected_ratio * 2.0,
-            f"Extreme weights not respected: ratio={ratio}, expected~{expected_ratio}")
+        self.assertGreater(
+            ratio,
+            expected_ratio * 0.5,
+            f"Extreme weights not respected: ratio={ratio}, expected~{expected_ratio}",
+        )
+        self.assertLess(
+            ratio,
+            expected_ratio * 2.0,
+            f"Extreme weights not respected: ratio={ratio}, expected~{expected_ratio}",
+        )
 
     @skipIfNoScipy
     def test_weighted_sample_near_zero_weights(self):
@@ -118,8 +145,9 @@ class TestWeightedSampleDistribution(TestCase):
         counts = np.bincount(samples, minlength=len(weights))
 
         # Middle element should dominate (almost all samples)
-        self.assertGreater(counts[1] / num_samples, 0.99,
-            f"Near-zero weights failed: counts={counts}")
+        self.assertGreater(
+            counts[1] / num_samples, 0.99, f"Near-zero weights failed: counts={counts}"
+        )
 
     def test_weighted_sample_single_nonzero(self):
         """Test with only one non-zero weight."""
@@ -130,8 +158,9 @@ class TestWeightedSampleDistribution(TestCase):
         counts = np.bincount(samples, minlength=len(weights))
 
         # All samples should be index 1
-        self.assertGreater(counts[1] / num_samples, 0.95,
-            f"Single nonzero weight failed: counts={counts}")
+        self.assertGreater(
+            counts[1] / num_samples, 0.95, f"Single nonzero weight failed: counts={counts}"
+        )
 
     @skipIfNoScipy
     def test_weighted_sample_without_replacement_correctness(self):
@@ -159,14 +188,24 @@ class TestWeightedSampleDistribution(TestCase):
 
         # Higher weight items should be selected first more often
         # Verify ordering is preserved: P(idx=2) > P(idx=1) > P(idx=0)
-        self.assertGreater(empirical_first_probs[2], empirical_first_probs[1],
-            "Higher weight should be selected first more often")
-        self.assertGreater(empirical_first_probs[1], empirical_first_probs[0],
-            "Higher weight should be selected first more often")
+        self.assertGreater(
+            empirical_first_probs[2],
+            empirical_first_probs[1],
+            "Higher weight should be selected first more often",
+        )
+        self.assertGreater(
+            empirical_first_probs[1],
+            empirical_first_probs[0],
+            "Higher weight should be selected first more often",
+        )
 
         # Allow reasonable tolerance for statistical variation
-        np.testing.assert_allclose(empirical_first_probs, expected_probs, atol=0.05,
-            err_msg=f"First selection probs: empirical={empirical_first_probs}, expected={expected_probs}")
+        np.testing.assert_allclose(
+            empirical_first_probs,
+            expected_probs,
+            atol=0.05,
+            err_msg=f"First selection probs: empirical={empirical_first_probs}, expected={expected_probs}",
+        )
 
     def test_weighted_sample_without_replacement_uniqueness(self):
         """Verify no duplicate indices in without-replacement sampling."""
@@ -175,13 +214,17 @@ class TestWeightedSampleDistribution(TestCase):
         for num_samples in [2, 3, 4]:
             for _ in range(100):
                 samples = mlx_weighted_sample(weights, num_samples, replacement=False)
-                self.assertEqual(len(set(samples)), num_samples,
-                    f"Duplicates found in without-replacement: {samples}")
+                self.assertEqual(
+                    len(set(samples)),
+                    num_samples,
+                    f"Duplicates found in without-replacement: {samples}",
+                )
 
 
 # =============================================================================
 # CRITICAL: Seeded Reproducibility Validation
 # =============================================================================
+
 
 @skipIfNoMLX
 class TestSeededReproducibility(TestCase):
@@ -196,8 +239,7 @@ class TestSeededReproducibility(TestCase):
             perm1 = mlx_permutation(100, key=key1)
             perm2 = mlx_permutation(100, key=key2)
 
-            self.assertEqual(perm1, perm2,
-                f"Reproducibility failed for seed={seed}")
+            self.assertEqual(perm1, perm2, f"Reproducibility failed for seed={seed}")
 
     def test_different_seeds_produce_different_sequences(self):
         """Different seeds produce different sequences."""
@@ -211,8 +253,9 @@ class TestSeededReproducibility(TestCase):
 
         # All should be unique
         unique_perms = set(permutations)
-        self.assertEqual(len(unique_perms), len(seeds),
-            f"Different seeds produced identical sequences")
+        self.assertEqual(
+            len(unique_perms), len(seeds), f"Different seeds produced identical sequences"
+        )
 
     def test_different_epochs_produce_different_sequences(self):
         """Different epochs produce different sequences."""
@@ -227,8 +270,9 @@ class TestSeededReproducibility(TestCase):
 
         # All should be unique
         unique_perms = set(permutations)
-        self.assertEqual(len(unique_perms), len(epochs),
-            f"Different epochs produced identical sequences")
+        self.assertEqual(
+            len(unique_perms), len(epochs), f"Different epochs produced identical sequences"
+        )
 
     def test_seed_epoch_collision_awareness(self):
         """Check that seed+epoch collision is documented behavior."""
@@ -267,13 +311,13 @@ class TestSeededReproducibility(TestCase):
         corr, p_value = stats.spearmanr(perm0, perm1)
 
         # Should have low correlation (random shuffles are ~uncorrelated)
-        self.assertLess(abs(corr), 0.3,
-            f"Epoch sequences correlated: r={corr}")
+        self.assertLess(abs(corr), 0.3, f"Epoch sequences correlated: r={corr}")
 
 
 # =============================================================================
 # MAJOR: Random Sampler Distribution Validation
 # =============================================================================
+
 
 @skipIfNoMLX
 class TestRandomSamplerDistribution(TestCase):
@@ -298,10 +342,8 @@ class TestRandomSamplerDistribution(TestCase):
         expected = num_trials / 10
 
         for pos in range(10):
-            chi2, p_value = stats.chisquare(position_counts[pos],
-                                             [expected] * 10)
-            self.assertGreater(p_value, 0.001,
-                f"Position {pos} not uniform: p={p_value}")
+            chi2, p_value = stats.chisquare(position_counts[pos], [expected] * 10)
+            self.assertGreater(p_value, 0.001, f"Position {pos} not uniform: p={p_value}")
 
     def test_replacement_produces_repeats(self):
         """Sampling with replacement should produce repeated indices."""
@@ -312,8 +354,9 @@ class TestRandomSamplerDistribution(TestCase):
         indices = list(sampler)
 
         # Should have repeats
-        self.assertLess(len(set(indices)), len(indices),
-            "Sampling with replacement produced no repeats")
+        self.assertLess(
+            len(set(indices)), len(indices), "Sampling with replacement produced no repeats"
+        )
 
     @skipIfNoScipy
     def test_replacement_uniform_distribution(self):
@@ -328,13 +371,15 @@ class TestRandomSamplerDistribution(TestCase):
         expected = num_samples / 5
         chi2, p_value = stats.chisquare(counts, [expected] * 5)
 
-        self.assertGreater(p_value, 0.01,
-            f"Replacement sampling not uniform: counts={counts}, p={p_value}")
+        self.assertGreater(
+            p_value, 0.01, f"Replacement sampling not uniform: counts={counts}, p={p_value}"
+        )
 
 
 # =============================================================================
 # MAJOR: SubsetRandomSampler Parity Tests
 # =============================================================================
+
 
 @skipIfNoMLX
 @skipIfNoTorch
@@ -379,13 +424,13 @@ class TestSubsetRandomSamplerParity(TestCase):
         expected = num_trials / 10
         chi2, p_value = stats.chisquare(counts, [expected] * 10)
 
-        self.assertGreater(p_value, 0.01,
-            f"SubsetRandomSampler not uniform: p={p_value}")
+        self.assertGreater(p_value, 0.01, f"SubsetRandomSampler not uniform: p={p_value}")
 
 
 # =============================================================================
 # MAJOR: BatchSampler Parity Tests
 # =============================================================================
+
 
 @skipIfNoMLX
 @skipIfNoTorch
@@ -396,10 +441,8 @@ class TestBatchSamplerParity(TestCase):
     def test_batch_sampler_structure_parity(self):
         """Verify BatchSampler produces same structure as PyTorch."""
         import torch
-        from torch.utils.data import (
-            SequentialSampler as TorchSequentialSampler,
-            BatchSampler as TorchBatchSampler
-        )
+        from torch.utils.data import BatchSampler as TorchBatchSampler
+        from torch.utils.data import SequentialSampler as TorchSequentialSampler
 
         data = list(range(25))
         batch_size = 7
@@ -420,8 +463,9 @@ class TestBatchSamplerParity(TestCase):
 
             # Same batch contents (for sequential sampler)
             for i, (mlx_b, torch_b) in enumerate(zip(mlx_batches, torch_batches)):
-                self.assertEqual(mlx_b, list(torch_b),
-                    f"Batch {i} mismatch: MLX={mlx_b}, PyTorch={torch_b}")
+                self.assertEqual(
+                    mlx_b, list(torch_b), f"Batch {i} mismatch: MLX={mlx_b}, PyTorch={torch_b}"
+                )
 
     def test_batch_sampler_with_random_preserves_coverage(self):
         """BatchSampler with RandomSampler should cover all indices."""
@@ -443,6 +487,7 @@ class TestBatchSamplerParity(TestCase):
 # MODERATE: ChainDataset and StackDataset Parity
 # =============================================================================
 
+
 @skipIfNoMLX
 @skipIfNoTorch
 @pytest.mark.parity
@@ -460,6 +505,7 @@ class TestChainDatasetParity(TestCase):
             def __init__(self, start, end):
                 self.start = start
                 self.end = end
+
             def __iter__(self):
                 return iter(range(self.start, self.end))
 
@@ -470,6 +516,7 @@ class TestChainDatasetParity(TestCase):
             def __init__(self, start, end):
                 self.start = start
                 self.end = end
+
             def __iter__(self):
                 return iter(range(self.start, self.end))
 
@@ -512,15 +559,16 @@ class TestStackDatasetParity(TestCase):
         # Check structure
         sample = stacked[0]
         self.assertIsInstance(sample, dict)
-        self.assertEqual(set(sample.keys()), {'features', 'labels'})
+        self.assertEqual(set(sample.keys()), {"features", "labels"})
 
         # Check values
-        np.testing.assert_allclose(sample['features'][0].numpy(), np_x[0])
+        np.testing.assert_allclose(sample["features"][0].numpy(), np_x[0])
 
 
 # =============================================================================
 # MODERATE: DataLoader Shuffle Statistical Validation
 # =============================================================================
+
 
 @skipIfNoMLX
 class TestDataLoaderShuffleStatistics(TestCase):
@@ -540,8 +588,11 @@ class TestDataLoaderShuffleStatistics(TestCase):
 
         unique_orders = set(orders)
         # Should see many different orders
-        self.assertGreater(len(unique_orders), 10,
-            f"Shuffle produced too few unique orders: {len(unique_orders)}/20")
+        self.assertGreater(
+            len(unique_orders),
+            10,
+            f"Shuffle produced too few unique orders: {len(unique_orders)}/20",
+        )
 
     @skipIfNoScipy
     def test_shuffle_first_element_uniform(self):
@@ -560,13 +611,15 @@ class TestDataLoaderShuffleStatistics(TestCase):
         expected = 100  # 1000 / 10
 
         chi2, p_value = stats.chisquare(counts, [expected] * 10)
-        self.assertGreater(p_value, 0.01,
-            f"First element not uniform: counts={counts}, p={p_value}")
+        self.assertGreater(
+            p_value, 0.01, f"First element not uniform: counts={counts}, p={p_value}"
+        )
 
 
 # =============================================================================
 # MODERATE: DistributedSampler Distribution Validation
 # =============================================================================
+
 
 @skipIfNoMLX
 class TestDistributedSamplerDistribution(TestCase):
@@ -587,8 +640,7 @@ class TestDistributedSamplerDistribution(TestCase):
             rank_sizes.append(len(list(sampler)))
 
         # All ranks should have same size
-        self.assertEqual(len(set(rank_sizes)), 1,
-            f"Unequal rank sizes: {rank_sizes}")
+        self.assertEqual(len(set(rank_sizes)), 1, f"Unequal rank sizes: {rank_sizes}")
 
     @skipIfNoScipy
     def test_shuffle_distribution_across_epochs(self):
@@ -596,9 +648,7 @@ class TestDistributedSamplerDistribution(TestCase):
         x = flashlight.arange(40).reshape(40, 1)
         dataset = TensorDataset(x)
 
-        sampler = DistributedSampler(
-            dataset, num_replicas=1, rank=0, shuffle=True, seed=42
-        )
+        sampler = DistributedSampler(dataset, num_replicas=1, rank=0, shuffle=True, seed=42)
 
         # Count first-element occurrences across epochs
         first_elements = []
@@ -611,15 +661,14 @@ class TestDistributedSamplerDistribution(TestCase):
 
         # Should be roughly uniform (each element ~2.5 times in 100 epochs)
         # Just check no element is completely absent or overly dominant
-        self.assertTrue(all(c > 0 for c in counts if c != 0),
-            "Some elements never appear first")
-        self.assertTrue(max(counts) < 10,
-            f"Element appears too often as first: max={max(counts)}")
+        self.assertTrue(all(c > 0 for c in counts if c != 0), "Some elements never appear first")
+        self.assertTrue(max(counts) < 10, f"Element appears too often as first: max={max(counts)}")
 
 
 # =============================================================================
 # MODERATE: Collate NumPy Array Handling
 # =============================================================================
+
 
 @skipIfNoMLX
 @skipIfNoTorch
@@ -630,8 +679,9 @@ class TestCollateNumpyParity(TestCase):
     def test_collate_numpy_arrays(self):
         """Verify NumPy array collation produces correct tensor."""
         import torch
-        from flashlight.data.dataloader import default_collate as mlx_collate
         from torch.utils.data._utils.collate import default_collate as torch_collate
+
+        from flashlight.data.dataloader import default_collate as mlx_collate
 
         # Create numpy arrays
         np_samples = [
@@ -650,11 +700,7 @@ class TestCollateNumpyParity(TestCase):
         self.assertEqual(mlx_result.shape, tuple(torch_result.shape))
 
         # Compare values
-        np.testing.assert_allclose(
-            mlx_result.numpy(),
-            torch_result.numpy(),
-            rtol=1e-5
-        )
+        np.testing.assert_allclose(mlx_result.numpy(), torch_result.numpy(), rtol=1e-5)
 
     def test_collate_numpy_preserves_dtype(self):
         """Verify NumPy dtype is reasonably preserved."""
@@ -667,6 +713,7 @@ class TestCollateNumpyParity(TestCase):
         self.assertEqual(result.numpy().dtype, np.float32)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from tests.common_utils import run_tests
+
     run_tests()

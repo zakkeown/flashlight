@@ -9,9 +9,11 @@ Tests the nn.layers.attention and nn.layers.transformer modules:
 """
 
 import sys
-sys.path.insert(0, '../..')
+
+sys.path.insert(0, "../..")
 
 import unittest
+
 import numpy as np
 import pytest
 
@@ -19,12 +21,14 @@ from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
     import flashlight
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
 
 try:
     import torch
+
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
@@ -50,7 +54,7 @@ class TestMultiheadAttention(TestCase):
         """Test MultiheadAttention forward pass output shape."""
         mha = flashlight.nn.MultiheadAttention(embed_dim=64, num_heads=8)
         query = flashlight.randn(10, 5, 64)  # seq=10, batch=5, embed=64
-        key = flashlight.randn(20, 5, 64)    # seq=20, batch=5, embed=64
+        key = flashlight.randn(20, 5, 64)  # seq=20, batch=5, embed=64
         value = flashlight.randn(20, 5, 64)
         output, attn_weights = mha(query, key, value)
         self.assertEqual(output.shape, (10, 5, 64))
@@ -192,5 +196,5 @@ class TestTransformer(TestCase):
         self.assertEqual(output.shape, (20, 5, 64))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -4,21 +4,18 @@ DataLoader
 Implements PyTorch-compatible DataLoader for MLX.
 """
 
-from typing import (
-    Any, Callable, Iterator, List, Optional, Sequence, TypeVar, Union
-)
-
-from .dataset import Dataset, IterableDataset
-from .sampler import (
-    Sampler, SequentialSampler, RandomSampler, BatchSampler
-)
+from typing import Any, Callable, Iterator, List, Optional, Sequence, TypeVar, Union
 
 # Module-level imports for performance (avoid repeated imports per batch)
 import flashlight as _flashlight
+
 from ..tensor import Tensor as _MLXTensor
+from .dataset import Dataset, IterableDataset
+from .sampler import BatchSampler, RandomSampler, Sampler, SequentialSampler
 
 try:
     import mlx.core as _mx
+
     _MLX_AVAILABLE = True
 except ImportError:
     _mx = None
@@ -26,12 +23,13 @@ except ImportError:
 
 try:
     import numpy as _np
+
     _NUMPY_AVAILABLE = True
 except ImportError:
     _np = None
     _NUMPY_AVAILABLE = False
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 # Type dispatch cache for faster collation
 _COLLATE_TYPE_HANDLERS = {}
@@ -89,37 +87,45 @@ def default_collate(batch: List[Any]) -> Any:
 
     # Handle MLX arrays directly - use module-level import
     if _MLX_AVAILABLE and isinstance(elem, _mx.array):
+
         def _handle_mx_array(b, e, t):
             tensors = [_flashlight.tensor(x) for x in b]
             return _flashlight.stack(tensors, dim=0)
+
         _register_type_handler(elem_type, _handle_mx_array)
         return _handle_mx_array(batch, elem, elem_type)
 
     # Handle numpy arrays - use module-level import
     if _NUMPY_AVAILABLE and isinstance(elem, _np.ndarray):
+
         def _handle_numpy(b, e, t):
             # Batch convert: stack numpy arrays first, then convert once
             stacked = _np.stack(b, axis=0)
             return _flashlight.tensor(stacked)
+
         _register_type_handler(elem_type, _handle_numpy)
         return _handle_numpy(batch, elem, elem_type)
 
     # Handle tuples - collate each element position separately
     if isinstance(elem, tuple):
+
         def _handle_tuple(b, e, t):
             transposed = list(zip(*b))
             # Check if it's a namedtuple
-            if hasattr(e, '_fields'):
+            if hasattr(e, "_fields"):
                 return t(*(default_collate(list(samples)) for samples in transposed))
             return tuple(default_collate(list(samples)) for samples in transposed)
+
         _register_type_handler(elem_type, _handle_tuple)
         return _handle_tuple(batch, elem, elem_type)
 
     # Handle lists - collate each element position separately
     if isinstance(elem, list):
+
         def _handle_list(b, e, t):
             transposed = list(zip(*b))
             return [default_collate(list(samples)) for samples in transposed]
+
         _register_type_handler(elem_type, _handle_list)
         return _handle_list(batch, elem, elem_type)
 
@@ -251,28 +257,18 @@ class DataLoader:
         if batch_sampler is not None:
             # batch_sampler is mutually exclusive with batch_size, shuffle, sampler, drop_last
             if batch_size != 1:
-                raise ValueError(
-                    "batch_size must be 1 when batch_sampler is provided"
-                )
+                raise ValueError("batch_size must be 1 when batch_sampler is provided")
             if shuffle:
-                raise ValueError(
-                    "shuffle must be False when batch_sampler is provided"
-                )
+                raise ValueError("shuffle must be False when batch_sampler is provided")
             if sampler is not None:
-                raise ValueError(
-                    "sampler must be None when batch_sampler is provided"
-                )
+                raise ValueError("sampler must be None when batch_sampler is provided")
             if drop_last:
-                raise ValueError(
-                    "drop_last must be False when batch_sampler is provided"
-                )
+                raise ValueError("drop_last must be False when batch_sampler is provided")
             self.batch_sampler = batch_sampler
             self.batch_size = None
         else:
             if sampler is not None and shuffle:
-                raise ValueError(
-                    "sampler and shuffle are mutually exclusive"
-                )
+                raise ValueError("sampler and shuffle are mutually exclusive")
 
             if batch_size is None or batch_size <= 0:
                 raise ValueError(f"batch_size must be a positive integer, got {batch_size}")
@@ -378,11 +374,11 @@ class _DataLoaderIter:
         else:
             raise StopIteration
 
-    def __iter__(self) -> '_DataLoaderIter':
+    def __iter__(self) -> "_DataLoaderIter":
         return self
 
 
 __all__ = [
-    'DataLoader',
-    'default_collate',
+    "DataLoader",
+    "default_collate",
 ]

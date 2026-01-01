@@ -6,24 +6,28 @@ Includes numerical parity tests against PyTorch.
 """
 
 import sys
-sys.path.insert(0, '../..')
 
-import unittest
+sys.path.insert(0, "../..")
+
 import math
+import unittest
 
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
     import torch
     import torch.distributions as td
+
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
 
 try:
+    import mlx.core as mx
+
     import flashlight
     from flashlight import distributions as dist
-    import mlx.core as mx
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -166,7 +170,7 @@ class TestBeta(TestCase):
         beta = dist.Beta(a, b)
 
         expected_mean = a / (a + b)
-        expected_var = a * b / ((a + b)**2 * (a + b + 1))
+        expected_var = a * b / ((a + b) ** 2 * (a + b + 1))
 
         self.assertAlmostEqual(float(beta.mean.numpy()), expected_mean, places=5)
         self.assertAlmostEqual(float(beta.variance.numpy()), expected_var, places=5)
@@ -321,8 +325,9 @@ class TestSpecialFunctions(TestCase):
 
     def test_lgamma(self):
         """Test lgamma function."""
-        from flashlight.ops.special import lgamma
         from scipy import special as sp
+
+        from flashlight.ops.special import lgamma
 
         test_vals = [0.5, 1.0, 2.0, 5.0, 10.0]
         for v in test_vals:
@@ -332,8 +337,9 @@ class TestSpecialFunctions(TestCase):
 
     def test_digamma(self):
         """Test digamma function."""
-        from flashlight.ops.special import digamma
         from scipy import special as sp
+
+        from flashlight.ops.special import digamma
 
         test_vals = [0.5, 1.0, 2.0, 5.0, 10.0]
         for v in test_vals:
@@ -343,8 +349,9 @@ class TestSpecialFunctions(TestCase):
 
     def test_betaln(self):
         """Test betaln function."""
-        from flashlight.ops.special import betaln
         from scipy import special as sp
+
+        from flashlight.ops.special import betaln
 
         test_pairs = [(1.0, 1.0), (2.0, 3.0), (0.5, 0.5), (5.0, 2.0)]
         for a, b in test_pairs:
@@ -354,8 +361,9 @@ class TestSpecialFunctions(TestCase):
 
     def test_gammainc(self):
         """Test gammainc function."""
-        from flashlight.ops.special import gammainc
         from scipy import special as sp
+
+        from flashlight.ops.special import gammainc
 
         test_pairs = [(1.0, 1.0), (2.0, 3.0), (0.5, 0.5), (5.0, 2.0)]
         for a, x in test_pairs:
@@ -365,8 +373,9 @@ class TestSpecialFunctions(TestCase):
 
     def test_i0(self):
         """Test Bessel I0 function."""
-        from flashlight.ops.special import i0
         from scipy import special as sp
+
+        from flashlight.ops.special import i0
 
         test_vals = [0.0, 0.5, 1.0, 2.0, 5.0]
         for v in test_vals:
@@ -377,8 +386,9 @@ class TestSpecialFunctions(TestCase):
 
     def test_i1(self):
         """Test Bessel I1 function."""
-        from flashlight.ops.special import i1
         from scipy import special as sp
+
+        from flashlight.ops.special import i1
 
         test_vals = [0.5, 1.0, 2.0, 5.0]
         for v in test_vals:
@@ -397,12 +407,13 @@ class TestNoScipyDependency(TestCase):
         import sys
 
         # Remove scipy from modules if present
-        scipy_modules = [k for k in sys.modules.keys() if k.startswith('scipy')]
+        scipy_modules = [k for k in sys.modules.keys() if k.startswith("scipy")]
         for m in scipy_modules:
             del sys.modules[m]
 
         # Reload distributions
         import importlib
+
         importlib.reload(dist)
 
         # Create and use distributions
@@ -420,9 +431,9 @@ class TestNoScipyDependency(TestCase):
         _ = b.log_prob(flashlight.tensor(0.5))
 
         # Check scipy was not imported
-        scipy_loaded = any(k.startswith('scipy') for k in sys.modules.keys())
+        scipy_loaded = any(k.startswith("scipy") for k in sys.modules.keys())
         self.assertFalse(scipy_loaded, "scipy was imported by distributions")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

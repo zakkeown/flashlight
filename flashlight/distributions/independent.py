@@ -1,11 +1,12 @@
 """Independent Distribution Wrapper"""
 
 from typing import Optional, Tuple
+
 import mlx.core as mx
 
 from ..tensor import Tensor
-from .distribution import Distribution
 from . import constraints
+from .distribution import Distribution
 
 
 class Independent(Distribution):
@@ -36,8 +37,10 @@ class Independent(Distribution):
         if reinterpreted_batch_ndims > len(base_batch_shape):
             raise ValueError("reinterpreted_batch_ndims is too large")
 
-        batch_shape = base_batch_shape[:len(base_batch_shape) - reinterpreted_batch_ndims]
-        event_shape = base_batch_shape[len(base_batch_shape) - reinterpreted_batch_ndims:] + base_event_shape
+        batch_shape = base_batch_shape[: len(base_batch_shape) - reinterpreted_batch_ndims]
+        event_shape = (
+            base_batch_shape[len(base_batch_shape) - reinterpreted_batch_ndims :] + base_event_shape
+        )
 
         super().__init__(batch_shape, event_shape, validate_args=validate_args)
 
@@ -90,4 +93,4 @@ class Independent(Distribution):
         return self.base_dist.enumerate_support(expand=expand)
 
 
-__all__ = ['Independent']
+__all__ = ["Independent"]

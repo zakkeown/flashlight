@@ -149,9 +149,7 @@ class TestBehavioralParityValidator:
 
     def test_validate_multiple_categories(self):
         """Test validating multiple categories."""
-        validator = BehavioralParityValidator(
-            categories=["edge_cases", "distribution"]
-        )
+        validator = BehavioralParityValidator(categories=["edge_cases", "distribution"])
         result = validator.validate()
 
         categories = result.by_category()

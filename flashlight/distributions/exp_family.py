@@ -5,6 +5,7 @@ PyTorch-compatible exponential family base class.
 """
 
 from typing import Tuple
+
 import mlx.core as mx
 
 from ..tensor import Tensor
@@ -97,4 +98,4 @@ class ExponentialFamily(Distribution):
             return log_norm
 
 
-__all__ = ['ExponentialFamily']
+__all__ = ["ExponentialFamily"]

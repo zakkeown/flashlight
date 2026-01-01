@@ -9,10 +9,10 @@ import unittest
 import weakref
 
 from flashlight.utils.weak import (
-    WeakRef,
     TensorWeakRef,
-    WeakIdRef,
     WeakIdKeyDictionary,
+    WeakIdRef,
+    WeakRef,
     WeakTensorKeyDictionary,
     ref,
 )

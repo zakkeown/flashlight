@@ -7,9 +7,11 @@ Tests the distance modules:
 """
 
 import sys
-sys.path.insert(0, '../..')
+
+sys.path.insert(0, "../..")
 
 import unittest
+
 import numpy as np
 import pytest
 
@@ -17,12 +19,14 @@ from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
     import flashlight
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
 
 try:
     import torch
+
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
@@ -100,10 +104,7 @@ class TestCosineSimilarity(TestCase):
         out_torch = cosine_torch(torch.tensor(x1_np), torch.tensor(x2_np))
         out_mlx = cosine_mlx(flashlight.tensor(x1_np), flashlight.tensor(x2_np))
 
-        np.testing.assert_allclose(
-            out_torch.numpy(), out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
 
 @skipIfNoMLX
@@ -188,10 +189,7 @@ class TestPairwiseDistance(TestCase):
         out_torch = dist_torch(torch.tensor(x1_np), torch.tensor(x2_np))
         out_mlx = dist_mlx(flashlight.tensor(x1_np), flashlight.tensor(x2_np))
 
-        np.testing.assert_allclose(
-            out_torch.numpy(), out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
     @pytest.mark.skipif(not TORCH_AVAILABLE, reason="PyTorch required")
     @pytest.mark.parity
@@ -207,11 +205,8 @@ class TestPairwiseDistance(TestCase):
         out_torch = dist_torch(torch.tensor(x1_np), torch.tensor(x2_np))
         out_mlx = dist_mlx(flashlight.tensor(x1_np), flashlight.tensor(x2_np))
 
-        np.testing.assert_allclose(
-            out_torch.numpy(), out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

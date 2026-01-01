@@ -13,6 +13,10 @@ concurrency:
   group: parity-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   parity-check:
     name: API Parity Check

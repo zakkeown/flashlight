@@ -8,15 +8,18 @@ Tests additional optimizer implementations:
 """
 
 import sys
-sys.path.insert(0, '../..')
+
+sys.path.insert(0, "../..")
 
 import unittest
+
 import numpy as np
 
 from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
     import flashlight
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -36,7 +39,7 @@ class TestRMSprop(TestCase):
         """Test RMSprop creation with custom learning rate."""
         param = flashlight.nn.Parameter(flashlight.randn(3, 3))
         optimizer = flashlight.optim.RMSprop([param], lr=0.001)
-        self.assertEqual(optimizer.defaults['lr'], 0.001)
+        self.assertEqual(optimizer.defaults["lr"], 0.001)
 
     def test_rmsprop_step(self):
         """Test RMSprop step updates parameters."""
@@ -103,7 +106,7 @@ class TestAdadelta(TestCase):
         """Test Adadelta creation with custom parameters."""
         param = flashlight.nn.Parameter(flashlight.randn(3, 3))
         optimizer = flashlight.optim.Adadelta([param], lr=1.0, rho=0.95, eps=1e-8)
-        self.assertEqual(optimizer.defaults['rho'], 0.95)
+        self.assertEqual(optimizer.defaults["rho"], 0.95)
 
     def test_adadelta_step(self):
         """Test Adadelta step updates parameters."""
@@ -150,7 +153,7 @@ class TestAdagrad(TestCase):
         """Test Adagrad creation with custom learning rate."""
         param = flashlight.nn.Parameter(flashlight.randn(3, 3))
         optimizer = flashlight.optim.Adagrad([param], lr=0.1)
-        self.assertEqual(optimizer.defaults['lr'], 0.1)
+        self.assertEqual(optimizer.defaults["lr"], 0.1)
 
     def test_adagrad_step(self):
         """Test Adagrad step updates parameters."""
@@ -208,6 +211,7 @@ class TestAdagrad(TestCase):
         self.assertFalse(np.allclose(values[1], values[2]))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from tests.common_utils import run_tests
+
     run_tests()

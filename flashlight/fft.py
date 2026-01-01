@@ -6,6 +6,7 @@ Provides Fast Fourier Transform operations.
 """
 
 from typing import Optional, Sequence, Union
+
 import mlx.core as mx
 import mlx.core.fft as mlx_fft
 
@@ -585,27 +586,27 @@ def ihfftn(
 
 
 __all__ = [
-    'Tensor',
-    'fft',
-    'ifft',
-    'fft2',
-    'ifft2',
-    'fftn',
-    'ifftn',
-    'rfft',
-    'irfft',
-    'rfft2',
-    'irfft2',
-    'rfftn',
-    'irfftn',
-    'fftshift',
-    'ifftshift',
-    'fftfreq',
-    'rfftfreq',
-    'hfft',
-    'ihfft',
-    'hfft2',
-    'ihfft2',
-    'hfftn',
-    'ihfftn',
+    "Tensor",
+    "fft",
+    "ifft",
+    "fft2",
+    "ifft2",
+    "fftn",
+    "ifftn",
+    "rfft",
+    "irfft",
+    "rfft2",
+    "irfft2",
+    "rfftn",
+    "irfftn",
+    "fftshift",
+    "ifftshift",
+    "fftfreq",
+    "rfftfreq",
+    "hfft",
+    "ihfft",
+    "hfft2",
+    "ihfft2",
+    "hfftn",
+    "ihfftn",
 ]

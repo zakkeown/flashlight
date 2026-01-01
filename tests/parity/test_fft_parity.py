@@ -4,8 +4,8 @@ FFT Parity Tests
 Tests numerical parity between flashlight.fft and PyTorch torch.fft.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 torch = pytest.importorskip("torch")
 
@@ -104,7 +104,9 @@ class Test2DFFTParity:
     def test_ifft2_parity(self):
         """Test ifft2 matches PyTorch."""
         np.random.seed(42)
-        x_np = np.random.randn(16, 16).astype(np.float32) + 1j * np.random.randn(16, 16).astype(np.float32)
+        x_np = np.random.randn(16, 16).astype(np.float32) + 1j * np.random.randn(16, 16).astype(
+            np.float32
+        )
         x_np = x_np.astype(np.complex64)
 
         torch_out = torch.fft.ifft2(torch.tensor(x_np))
@@ -145,7 +147,9 @@ class TestNDFFTParity:
     def test_ifftn_parity(self):
         """Test ifftn matches PyTorch."""
         np.random.seed(42)
-        x_np = np.random.randn(8, 8, 8).astype(np.float32) + 1j * np.random.randn(8, 8, 8).astype(np.float32)
+        x_np = np.random.randn(8, 8, 8).astype(np.float32) + 1j * np.random.randn(8, 8, 8).astype(
+            np.float32
+        )
         x_np = x_np.astype(np.complex64)
 
         torch_out = torch.fft.ifftn(torch.tensor(x_np))

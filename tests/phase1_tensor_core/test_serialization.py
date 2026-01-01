@@ -4,10 +4,11 @@ Serialization Tests
 Tests for flashlight.save() and flashlight.load() functions.
 """
 
-import pytest
-import numpy as np
-import tempfile
 import os
+import tempfile
+
+import numpy as np
+import pytest
 
 import flashlight
 
@@ -264,8 +265,16 @@ class TestModelStateDict:
                 orig_val = state_dict[key]
                 new_val = new_model.state_dict()[key]
                 # Handle both Tensor and raw array
-                orig_arr = np.array(orig_val._mlx_array) if hasattr(orig_val, '_mlx_array') else np.array(orig_val)
-                new_arr = np.array(new_val._mlx_array) if hasattr(new_val, '_mlx_array') else np.array(new_val)
+                orig_arr = (
+                    np.array(orig_val._mlx_array)
+                    if hasattr(orig_val, "_mlx_array")
+                    else np.array(orig_val)
+                )
+                new_arr = (
+                    np.array(new_val._mlx_array)
+                    if hasattr(new_val, "_mlx_array")
+                    else np.array(new_val)
+                )
                 np.testing.assert_allclose(new_arr, orig_arr, rtol=1e-5)
         finally:
             os.unlink(path)
@@ -341,9 +350,7 @@ class TestFileObjects:
             path = f.name
         try:
             loaded = flashlight.load(path)
-            np.testing.assert_allclose(
-                np.array(loaded._mlx_array), [1.0, 2.0, 3.0], rtol=1e-5
-            )
+            np.testing.assert_allclose(np.array(loaded._mlx_array), [1.0, 2.0, 3.0], rtol=1e-5)
         finally:
             os.unlink(path)
 
@@ -356,9 +363,7 @@ class TestFileObjects:
             flashlight.save(x, path)
             with open(path, "rb") as f:
                 loaded = flashlight.load(f)
-            np.testing.assert_allclose(
-                np.array(loaded._mlx_array), [1.0, 2.0, 3.0], rtol=1e-5
-            )
+            np.testing.assert_allclose(np.array(loaded._mlx_array), [1.0, 2.0, 3.0], rtol=1e-5)
         finally:
             os.unlink(path)
 

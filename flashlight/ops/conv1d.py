@@ -4,9 +4,11 @@
 Implements 1D convolution operations with PyTorch-compatible API.
 """
 
+from typing import Tuple, Union
+
 import mlx.core as mx
+
 from ..tensor import Tensor
-from typing import Union, Tuple
 
 
 def _single(x):
@@ -23,7 +25,7 @@ def conv1d(
     stride: Union[int, Tuple[int]] = 1,
     padding: Union[int, Tuple[int]] = 0,
     dilation: Union[int, Tuple[int]] = 1,
-    groups: int = 1
+    groups: int = 1,
 ) -> Tensor:
     """
     1D convolution operation.
@@ -74,7 +76,7 @@ def conv1d(
         stride=(1, stride),
         padding=(0, padding),
         dilation=(1, dilation),
-        groups=groups
+        groups=groups,
     )
 
     # Remove H dimension: [N, 1, L_out, C_out] -> [N, L_out, C_out]
@@ -92,11 +94,13 @@ def conv1d(
 
     # Handle autograd
     from ..autograd.context import is_grad_enabled
-    if is_grad_enabled() and (input.requires_grad or weight.requires_grad or
-                               (bias is not None and bias.requires_grad)):
+
+    if is_grad_enabled() and (
+        input.requires_grad or weight.requires_grad or (bias is not None and bias.requires_grad)
+    ):
         result.requires_grad = True
 
     return result
 
 
-__all__ = ['conv1d']
+__all__ = ["conv1d"]

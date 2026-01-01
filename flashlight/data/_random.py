@@ -12,8 +12,9 @@ Performance optimizations:
   MLX for large sizes (faster due to parallel computation)
 """
 
-from typing import List, Optional, Any, Union, Iterator
 import random
+from typing import Any, Iterator, List, Optional, Union
+
 import mlx.core as mx
 
 # Threshold for switching between Python and MLX implementations
@@ -235,10 +236,7 @@ def _normalize_weights(weights: WeightsType) -> mx.array:
 
 
 def mlx_weighted_sample(
-    weights: WeightsType,
-    num_samples: int,
-    replacement: bool = True,
-    key: Optional[mx.array] = None
+    weights: WeightsType, num_samples: int, replacement: bool = True, key: Optional[mx.array] = None
 ) -> List[int]:
     """
     Weighted random sampling.
@@ -345,12 +343,12 @@ def mlx_seeded_key(seed: int, epoch: int = 0) -> mx.array:
 
 
 __all__ = [
-    'mlx_permutation',
-    'mlx_permutation_array',
-    'mlx_shuffle_list',
-    'mlx_shuffle_iterator',
-    'mlx_randint',
-    'mlx_randint_array',
-    'mlx_weighted_sample',
-    'mlx_seeded_key',
+    "mlx_permutation",
+    "mlx_permutation_array",
+    "mlx_shuffle_list",
+    "mlx_shuffle_iterator",
+    "mlx_randint",
+    "mlx_randint_array",
+    "mlx_weighted_sample",
+    "mlx_seeded_key",
 ]

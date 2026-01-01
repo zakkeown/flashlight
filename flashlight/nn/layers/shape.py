@@ -4,10 +4,12 @@ Shape Manipulation Layers
 Implements shape manipulation layers for neural networks.
 """
 
+from typing import Tuple, Union
+
 import mlx.core as mx
-from ..module import Module
+
 from ...tensor import Tensor
-from typing import Union, Tuple
+from ..module import Module
 
 
 class Flatten(Module):
@@ -43,9 +45,13 @@ class Flatten(Module):
         end = self.end_dim if self.end_dim >= 0 else ndim + self.end_dim
 
         if start < 0 or start >= ndim:
-            raise IndexError(f"start_dim {self.start_dim} out of range for tensor with {ndim} dimensions")
+            raise IndexError(
+                f"start_dim {self.start_dim} out of range for tensor with {ndim} dimensions"
+            )
         if end < 0 or end >= ndim:
-            raise IndexError(f"end_dim {self.end_dim} out of range for tensor with {ndim} dimensions")
+            raise IndexError(
+                f"end_dim {self.end_dim} out of range for tensor with {ndim} dimensions"
+            )
         if start > end:
             raise ValueError(f"start_dim ({start}) cannot be greater than end_dim ({end})")
 
@@ -56,13 +62,13 @@ class Flatten(Module):
         for i in range(start, end + 1):
             flattened_size *= shape[i]
         new_shape.append(flattened_size)
-        new_shape.extend(shape[end + 1:])
+        new_shape.extend(shape[end + 1 :])
 
         result = mx.reshape(x, new_shape)
         return Tensor._from_mlx_array(result)
 
     def extra_repr(self) -> str:
-        return f'start_dim={self.start_dim}, end_dim={self.end_dim}'
+        return f"start_dim={self.start_dim}, end_dim={self.end_dim}"
 
 
 class Unflatten(Module):
@@ -111,13 +117,13 @@ class Unflatten(Module):
             )
 
         # Build new shape
-        new_shape = list(shape[:dim]) + list(self.unflattened_size) + list(shape[dim + 1:])
+        new_shape = list(shape[:dim]) + list(self.unflattened_size) + list(shape[dim + 1 :])
 
         result = mx.reshape(x, new_shape)
         return Tensor._from_mlx_array(result)
 
     def extra_repr(self) -> str:
-        return f'dim={self.dim}, unflattened_size={self.unflattened_size}'
+        return f"dim={self.dim}, unflattened_size={self.unflattened_size}"
 
 
 class Identity(Module):
@@ -149,7 +155,7 @@ class Identity(Module):
         return input
 
     def extra_repr(self) -> str:
-        return ''
+        return ""
 
 
-__all__ = ['Flatten', 'Unflatten', 'Identity']
+__all__ = ["Flatten", "Unflatten", "Identity"]

@@ -5,25 +5,25 @@ These tests use AST-based parsing of the reference PyTorch source to extract
 signatures, bypassing the limitation that C++ builtins can't be introspected.
 """
 
-import pytest
 from pathlib import Path
 
+import pytest
+
+from parity_check.introspection.signature import (
+    compare_signatures,
+    extract_signature,
+    get_parameter_summary,
+)
 from parity_check.introspection.source_parser import (
     PYTORCH_REFERENCE_ROOT,
+    extract_module_signatures,
     extract_signatures_from_file,
     get_source_signature,
-    extract_module_signatures,
-)
-from parity_check.introspection.signature import (
-    extract_signature,
-    compare_signatures,
-    get_parameter_summary,
 )
 
 # Skip tests if reference source not available
 pytestmark = pytest.mark.skipif(
-    not PYTORCH_REFERENCE_ROOT.exists(),
-    reason="PyTorch reference source not available"
+    not PYTORCH_REFERENCE_ROOT.exists(), reason="PyTorch reference source not available"
 )
 
 
@@ -77,6 +77,7 @@ class TestOptimizerSignatureParity:
     def mlx_optim(self):
         """Import flashlight.optim."""
         import flashlight.optim as optim
+
         return optim
 
     def test_sgd_signature_parity(self, mlx_optim):
@@ -177,6 +178,7 @@ class TestNNModuleSignatureParity:
     def mlx_nn(self):
         """Import flashlight.nn."""
         import flashlight.nn as nn
+
         return nn
 
     def _test_nn_signature(self, mlx_nn, class_name, source_file):
@@ -256,6 +258,7 @@ class TestDataModuleSignatureParity:
     def mlx_data(self):
         """Import flashlight data modules."""
         import flashlight.data as data
+
         return data
 
     def test_dataloader_signature_parity(self, mlx_data):
@@ -342,6 +345,7 @@ class TestSignatureValidatorWithSource:
 
         # Get actual flashlight Adam signature
         import flashlight.optim as optim
+
         mlx_sig = extract_signature(optim.Adam)
 
         mlx_apis = {
@@ -353,10 +357,7 @@ class TestSignatureValidatorWithSource:
             }
         }
 
-        validator = SignatureValidator(
-            pytorch_apis, mlx_apis,
-            use_source_fallback=True
-        )
+        validator = SignatureValidator(pytorch_apis, mlx_apis, use_source_fallback=True)
         result = validator.validate()
 
         # With source fallback, should be able to compare
@@ -392,7 +393,10 @@ class TestFullSignatureAudit:
 
             mlx_sig = extract_signature(getattr(optim, opt_name))
             if mlx_sig is None or not mlx_sig.get("extractable"):
-                results[opt_name] = {"status": "skipped", "reason": "Not extractable from flashlight"}
+                results[opt_name] = {
+                    "status": "skipped",
+                    "reason": "Not extractable from flashlight",
+                }
                 continue
 
             comparison = compare_signatures(ref_sig, mlx_sig, strict_defaults=True)

@@ -6,9 +6,9 @@ Implements nn.CosineSimilarity and nn.PairwiseDistance.
 
 from typing import Optional
 
-from ..module import Module
 from ...tensor import Tensor
 from ..functional import cosine_similarity, pairwise_distance
+from ..module import Module
 
 
 class CosineSimilarity(Module):
@@ -42,7 +42,7 @@ class CosineSimilarity(Module):
         return cosine_similarity(x1, x2, dim=self.dim, eps=self.eps)
 
     def extra_repr(self) -> str:
-        return f'dim={self.dim}, eps={self.eps}'
+        return f"dim={self.dim}, eps={self.eps}"
 
 
 class PairwiseDistance(Module):
@@ -81,7 +81,7 @@ class PairwiseDistance(Module):
         return pairwise_distance(x1, x2, p=self.p, eps=self.eps, keepdim=self.keepdim)
 
     def extra_repr(self) -> str:
-        return f'p={self.p}, eps={self.eps}, keepdim={self.keepdim}'
+        return f"p={self.p}, eps={self.eps}, keepdim={self.keepdim}"
 
 
-__all__ = ['CosineSimilarity', 'PairwiseDistance']
+__all__ = ["CosineSimilarity", "PairwiseDistance"]

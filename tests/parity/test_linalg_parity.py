@@ -4,8 +4,8 @@ Linear Algebra Parity Tests
 Tests numerical parity between flashlight.linalg and PyTorch torch.linalg.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 torch = pytest.importorskip("torch")
 
@@ -181,9 +181,7 @@ class TestSVDParity:
         mlx_Vh_k = mlx_Vh[:k, :] if mlx_Vh.shape[0] > k else mlx_Vh
         mlx_recon = mlx_U_k @ flashlight.diag(mlx_S) @ mlx_Vh_k
 
-        max_diff_recon = np.max(
-            np.abs(torch_recon.numpy() - np.array(mlx_recon._mlx_array))
-        )
+        max_diff_recon = np.max(np.abs(torch_recon.numpy() - np.array(mlx_recon._mlx_array)))
         assert max_diff_recon < 1e-4, f"SVD reconstruction mismatch: {max_diff_recon}"
 
 
@@ -247,9 +245,7 @@ class TestCrossParity:
         b_np = np.random.randn(3).astype(np.float32)
 
         torch_out = torch.linalg.cross(torch.tensor(a_np), torch.tensor(b_np))
-        mlx_out = flashlight.linalg.cross(
-            flashlight.tensor(a_np), flashlight.tensor(b_np)
-        )
+        mlx_out = flashlight.linalg.cross(flashlight.tensor(a_np), flashlight.tensor(b_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-5, f"cross 3D mismatch: {max_diff}"
@@ -262,9 +258,7 @@ class TestCrossParity:
         b_np = np.random.randn(10, 3).astype(np.float32)
 
         torch_out = torch.linalg.cross(torch.tensor(a_np), torch.tensor(b_np))
-        mlx_out = flashlight.linalg.cross(
-            flashlight.tensor(a_np), flashlight.tensor(b_np)
-        )
+        mlx_out = flashlight.linalg.cross(flashlight.tensor(a_np), flashlight.tensor(b_np))
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out._mlx_array)))
         assert max_diff < 1e-5, f"cross batched mismatch: {max_diff}"

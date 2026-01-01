@@ -2,21 +2,27 @@
 
 import math
 from typing import Optional, Tuple, Union
+
 import mlx.core as mx
 
 from ..tensor import Tensor
-from .distribution import Distribution
 from . import constraints
+from .distribution import Distribution
 
 
 class Cauchy(Distribution):
     """Cauchy distribution."""
 
-    arg_constraints = {'loc': constraints.real, 'scale': constraints.positive}
+    arg_constraints = {"loc": constraints.real, "scale": constraints.positive}
     support = constraints.real
     has_rsample = True
 
-    def __init__(self, loc: Union[Tensor, float], scale: Union[Tensor, float], validate_args: Optional[bool] = None):
+    def __init__(
+        self,
+        loc: Union[Tensor, float],
+        scale: Union[Tensor, float],
+        validate_args: Optional[bool] = None,
+    ):
         self.loc = loc._mlx_array if isinstance(loc, Tensor) else mx.array(loc)
         self.scale = scale._mlx_array if isinstance(scale, Tensor) else mx.array(scale)
         batch_shape = mx.broadcast_shapes(self.loc.shape, self.scale.shape)
@@ -25,7 +31,7 @@ class Cauchy(Distribution):
     @property
     def mean(self) -> Tensor:
         # Use mx.full instead of mx.full_like (MLX doesn't have full_like)
-        return Tensor(mx.full(self.loc.shape, float('nan'), dtype=self.loc.dtype))
+        return Tensor(mx.full(self.loc.shape, float("nan"), dtype=self.loc.dtype))
 
     @property
     def mode(self) -> Tensor:
@@ -34,7 +40,7 @@ class Cauchy(Distribution):
     @property
     def variance(self) -> Tensor:
         # Use mx.full instead of mx.full_like (MLX doesn't have full_like)
-        return Tensor(mx.full(self.loc.shape, float('inf'), dtype=self.loc.dtype))
+        return Tensor(mx.full(self.loc.shape, float("inf"), dtype=self.loc.dtype))
 
     def sample(self, sample_shape: Tuple[int, ...] = ()) -> Tensor:
         shape = sample_shape + self._batch_shape
@@ -60,4 +66,4 @@ class Cauchy(Distribution):
         return Tensor(mx.log(4 * math.pi * self.scale))
 
 
-__all__ = ['Cauchy']
+__all__ = ["Cauchy"]

@@ -2,21 +2,27 @@
 
 import math
 from typing import Optional, Tuple, Union
+
 import mlx.core as mx
 
 from ..tensor import Tensor
-from .distribution import Distribution
 from . import constraints
+from .distribution import Distribution
 
 
 class LogNormal(Distribution):
     """Log-Normal distribution."""
 
-    arg_constraints = {'loc': constraints.real, 'scale': constraints.positive}
+    arg_constraints = {"loc": constraints.real, "scale": constraints.positive}
     support = constraints.positive
     has_rsample = True
 
-    def __init__(self, loc: Union[Tensor, float], scale: Union[Tensor, float], validate_args: Optional[bool] = None):
+    def __init__(
+        self,
+        loc: Union[Tensor, float],
+        scale: Union[Tensor, float],
+        validate_args: Optional[bool] = None,
+    ):
         self.loc = loc._mlx_array if isinstance(loc, Tensor) else mx.array(loc)
         self.scale = scale._mlx_array if isinstance(scale, Tensor) else mx.array(scale)
         batch_shape = mx.broadcast_shapes(self.loc.shape, self.scale.shape)
@@ -24,15 +30,15 @@ class LogNormal(Distribution):
 
     @property
     def mean(self) -> Tensor:
-        return Tensor(mx.exp(self.loc + self.scale ** 2 / 2))
+        return Tensor(mx.exp(self.loc + self.scale**2 / 2))
 
     @property
     def mode(self) -> Tensor:
-        return Tensor(mx.exp(self.loc - self.scale ** 2))
+        return Tensor(mx.exp(self.loc - self.scale**2))
 
     @property
     def variance(self) -> Tensor:
-        return Tensor((mx.exp(self.scale ** 2) - 1) * mx.exp(2 * self.loc + self.scale ** 2))
+        return Tensor((mx.exp(self.scale**2) - 1) * mx.exp(2 * self.loc + self.scale**2))
 
     def sample(self, sample_shape: Tuple[int, ...] = ()) -> Tensor:
         shape = sample_shape + self._batch_shape
@@ -43,9 +49,13 @@ class LogNormal(Distribution):
 
     def log_prob(self, value: Tensor) -> Tensor:
         data = value._mlx_array if isinstance(value, Tensor) else value
-        var = self.scale ** 2
+        var = self.scale**2
         log_value = mx.log(data)
-        return Tensor(-((log_value - self.loc) ** 2) / (2 * var) - mx.log(self.scale * data) - 0.5 * math.log(2 * math.pi))
+        return Tensor(
+            -((log_value - self.loc) ** 2) / (2 * var)
+            - mx.log(self.scale * data)
+            - 0.5 * math.log(2 * math.pi)
+        )
 
     def cdf(self, value: Tensor) -> Tensor:
         data = value._mlx_array if isinstance(value, Tensor) else value
@@ -59,4 +69,4 @@ class LogNormal(Distribution):
         return Tensor(0.5 + 0.5 * math.log(2 * math.pi) + mx.log(self.scale) + self.loc)
 
 
-__all__ = ['LogNormal']
+__all__ = ["LogNormal"]

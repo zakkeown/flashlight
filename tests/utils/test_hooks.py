@@ -9,8 +9,8 @@ import warnings
 from collections import OrderedDict
 
 from flashlight.utils.hooks import (
-    RemovableHandle,
     BackwardHook,
+    RemovableHandle,
     unserializable_hook,
     warn_if_has_hooks,
 )
@@ -127,6 +127,7 @@ class TestUnserializableHook(unittest.TestCase):
 
     def test_decorator_marks_function(self):
         """Test that decorator adds the marker attribute."""
+
         @unserializable_hook
         def my_hook(grad):
             return grad * 2
@@ -136,6 +137,7 @@ class TestUnserializableHook(unittest.TestCase):
 
     def test_function_still_callable(self):
         """Test that decorated function still works."""
+
         @unserializable_hook
         def my_hook(x):
             return x * 2
@@ -144,6 +146,7 @@ class TestUnserializableHook(unittest.TestCase):
 
     def test_preserves_function_identity(self):
         """Test that decorator returns the same function."""
+
         def my_hook(x):
             return x
 
@@ -156,6 +159,7 @@ class TestWarnIfHasHooks(unittest.TestCase):
 
     def test_no_warning_without_hooks(self):
         """Test no warning when tensor has no hooks."""
+
         class MockTensor:
             pass
 
@@ -168,6 +172,7 @@ class TestWarnIfHasHooks(unittest.TestCase):
 
     def test_no_warning_empty_hooks(self):
         """Test no warning when hooks dict is empty."""
+
         class MockTensor:
             _backward_hooks = {}
 
@@ -180,6 +185,7 @@ class TestWarnIfHasHooks(unittest.TestCase):
 
     def test_warning_with_serializable_hook(self):
         """Test warning for hooks without unserializable marker."""
+
         def my_hook(grad):
             return grad
 
@@ -196,6 +202,7 @@ class TestWarnIfHasHooks(unittest.TestCase):
 
     def test_no_warning_with_unserializable_hook(self):
         """Test no warning for hooks with unserializable marker."""
+
         @unserializable_hook
         def my_hook(grad):
             return grad

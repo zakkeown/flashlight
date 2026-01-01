@@ -4,8 +4,8 @@ Normalization Layer Parity Tests
 Tests numerical parity between flashlight normalization layers and PyTorch.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 torch = pytest.importorskip("torch")
 
@@ -15,18 +15,14 @@ import flashlight.nn as nn
 
 def copy_norm_weights(mlx_layer, torch_layer):
     """Copy weights from PyTorch normalization layer to flashlight."""
-    if hasattr(torch_layer, 'weight') and torch_layer.weight is not None:
-        mlx_layer.weight = nn.Parameter(
-            flashlight.tensor(torch_layer.weight.detach().numpy())
-        )
-    if hasattr(torch_layer, 'bias') and torch_layer.bias is not None:
-        mlx_layer.bias = nn.Parameter(
-            flashlight.tensor(torch_layer.bias.detach().numpy())
-        )
+    if hasattr(torch_layer, "weight") and torch_layer.weight is not None:
+        mlx_layer.weight = nn.Parameter(flashlight.tensor(torch_layer.weight.detach().numpy()))
+    if hasattr(torch_layer, "bias") and torch_layer.bias is not None:
+        mlx_layer.bias = nn.Parameter(flashlight.tensor(torch_layer.bias.detach().numpy()))
     # Copy running stats for BatchNorm
-    if hasattr(torch_layer, 'running_mean') and torch_layer.running_mean is not None:
+    if hasattr(torch_layer, "running_mean") and torch_layer.running_mean is not None:
         mlx_layer.running_mean = flashlight.tensor(torch_layer.running_mean.detach().numpy())
-    if hasattr(torch_layer, 'running_var') and torch_layer.running_var is not None:
+    if hasattr(torch_layer, "running_var") and torch_layer.running_var is not None:
         mlx_layer.running_var = flashlight.tensor(torch_layer.running_var.detach().numpy())
 
 
@@ -270,7 +266,7 @@ class TestRMSNormParity:
 
         # Manual RMSNorm in PyTorch
         x_torch = torch.tensor(x_np)
-        rms = torch.sqrt(torch.mean(x_torch ** 2, dim=-1, keepdim=True) + 1e-5)
+        rms = torch.sqrt(torch.mean(x_torch**2, dim=-1, keepdim=True) + 1e-5)
         torch_out = x_torch / rms
 
         mlx_out = mlx_rms(flashlight.tensor(x_np))

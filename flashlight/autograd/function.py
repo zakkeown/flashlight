@@ -7,7 +7,8 @@ This module implements:
 3. Specific gradient functions for all 55 operators
 """
 
-from typing import Any, Tuple, Optional
+from typing import Any, Optional, Tuple
+
 import mlx.core as mx
 
 
@@ -153,10 +154,7 @@ class Function:
             output = output_data
 
         # Attach gradient function if any input requires grad
-        requires_grad = any(
-            isinstance(arg, Tensor) and arg.requires_grad
-            for arg in args
-        )
+        requires_grad = any(isinstance(arg, Tensor) and arg.requires_grad for arg in args)
 
         if requires_grad:
             output.requires_grad = True
@@ -173,6 +171,7 @@ class CustomFunctionBackward(GradientFunction):
 
     def __init__(self, function_cls, ctx, inputs):
         from ..tensor import Tensor
+
         # Only pass Tensor inputs to the base class
         tensor_inputs = [arg for arg in inputs if isinstance(arg, Tensor)]
         super().__init__(*tensor_inputs)
@@ -199,6 +198,7 @@ class CustomFunctionBackward(GradientFunction):
 # Gradient Functions for Arithmetic Operators
 # ============================================================================
 
+
 class AddBackward(GradientFunction):
     """Gradient for addition: d(a+b)/da = 1, d(a+b)/db = 1"""
 
@@ -210,6 +210,7 @@ class AddBackward(GradientFunction):
 
     def apply(self, grad_output):
         import mlx.core as mx
+
         from ..tensor import Tensor
 
         grad_a = None
@@ -292,7 +293,9 @@ class DivBackward(GradientFunction):
 
         if self.inputs[1].requires_grad:
             grad_b = Tensor._from_mlx_array(
-                -grad_output._mlx_array * self.inputs[0]._mlx_array / (self.inputs[1]._mlx_array ** 2)
+                -grad_output._mlx_array
+                * self.inputs[0]._mlx_array
+                / (self.inputs[1]._mlx_array ** 2)
             )
 
         return grad_a, grad_b
@@ -338,7 +341,10 @@ class PowBackward(GradientFunction):
         if self.inputs[0].requires_grad:
             # d/da = b * a^(b-1) = b * result / a
             grad_a = Tensor._from_mlx_array(
-                grad_output._mlx_array * self.inputs[1]._mlx_array * self.result._mlx_array / self.inputs[0]._mlx_array
+                grad_output._mlx_array
+                * self.inputs[1]._mlx_array
+                * self.result._mlx_array
+                / self.inputs[0]._mlx_array
             )
 
         if self.inputs[1].requires_grad:
@@ -432,6 +438,7 @@ class NegBackward(GradientFunction):
 # Gradient Functions for Activation Functions
 # ============================================================================
 
+
 class ReLUBackward(GradientFunction):
     """Gradient for ReLU: d(relu(x))/dx = 1 if x > 0 else 0"""
 
@@ -481,9 +488,7 @@ class TanhBackward(GradientFunction):
             return (None,)
 
         # d/dx = 1 - tanh^2(x) = 1 - result^2
-        grad = Tensor._from_mlx_array(
-            grad_output._mlx_array * (1 - self.result._mlx_array ** 2)
-        )
+        grad = Tensor._from_mlx_array(grad_output._mlx_array * (1 - self.result._mlx_array**2))
         return (grad,)
 
 
@@ -640,6 +645,7 @@ class GELUBackward(GradientFunction):
 # Gradient Functions for Reduction Operators
 # ============================================================================
 
+
 class SumBackward(GradientFunction):
     """Gradient for sum: broadcasts gradient back to input shape"""
 
@@ -783,8 +789,10 @@ class MaxBackward(GradientFunction):
 # Placeholder backward functions for other operators
 # These will need full implementations
 
+
 class CatBackward(GradientFunction):
     """Gradient for concatenation: split gradient back to inputs"""
+
     def __init__(self, tensors, dim):
         super().__init__(*tensors)
         self.dim = dim
@@ -792,6 +800,7 @@ class CatBackward(GradientFunction):
 
     def apply(self, grad_output):
         from ..tensor import Tensor
+
         # Split gradient along concat dimension
         grads = []
         start = 0
@@ -800,19 +809,25 @@ class CatBackward(GradientFunction):
             indices = [slice(None)] * grad_output.ndim
             indices[self.dim] = slice(start, start + size)
             grad_slice = grad_output._mlx_array[tuple(indices)]
-            grads.append(Tensor._from_mlx_array(grad_slice) if self.inputs[len(grads)].requires_grad else None)
+            grads.append(
+                Tensor._from_mlx_array(grad_slice)
+                if self.inputs[len(grads)].requires_grad
+                else None
+            )
             start += size
         return tuple(grads)
 
 
 class ViewBackward(GradientFunction):
     """Gradient for view/reshape: reshape gradient back to input shape"""
+
     def __init__(self, input_tensor):
         super().__init__(input_tensor)
         self.input_shape = input_tensor.shape
 
     def apply(self, grad_output):
         from ..tensor import Tensor
+
         if not self.inputs[0].requires_grad:
             return (None,)
         grad = Tensor._from_mlx_array(grad_output._mlx_array.reshape(self.input_shape))
@@ -821,6 +836,7 @@ class ViewBackward(GradientFunction):
 
 class TransposeBackward(GradientFunction):
     """Gradient for transpose: transpose gradient back"""
+
     def __init__(self, input_tensor, dim0, dim1):
         super().__init__(input_tensor)
         self.dim0 = dim0
@@ -828,6 +844,7 @@ class TransposeBackward(GradientFunction):
 
     def apply(self, grad_output):
         import mlx.core as mx
+
         from ..tensor import Tensor
 
         if not self.inputs[0].requires_grad:
@@ -845,6 +862,7 @@ class TransposeBackward(GradientFunction):
 # ============================================================================
 # Gradient Functions for Trigonometric Functions
 # ============================================================================
+
 
 class SinBackward(GradientFunction):
     """Gradient for sin: d(sin(x))/dx = cos(x)"""
@@ -878,6 +896,7 @@ class CosBackward(GradientFunction):
 # Gradient Functions for Convolution Operations
 # ============================================================================
 
+
 class Conv2dBackward(GradientFunction):
     """
     Gradient for conv2d.
@@ -902,8 +921,8 @@ class Conv2dBackward(GradientFunction):
         self.weight_shape = weight.shape
 
     def apply(self, grad_output):
-        from ..tensor import Tensor
         from ..layout import Layout
+        from ..tensor import Tensor
 
         input_tensor = self.inputs[0]
         weight = self.inputs[1]
@@ -920,7 +939,11 @@ class Conv2dBackward(GradientFunction):
             grad_nhwc = mx.transpose(grad_output._mlx_array, [0, 2, 3, 1])
 
         # Get input in NHWC format
-        if self.nhwc_native and hasattr(input_tensor, '_layout') and input_tensor._layout == Layout.NHWC:
+        if (
+            self.nhwc_native
+            and hasattr(input_tensor, "_layout")
+            and input_tensor._layout == Layout.NHWC
+        ):
             input_nhwc = input_tensor._mlx_array
         else:
             input_nhwc = mx.transpose(input_tensor._mlx_array, [0, 2, 3, 1])
@@ -932,8 +955,14 @@ class Conv2dBackward(GradientFunction):
             # Use MLX's vector-Jacobian product for correct gradient computation
             # Define the forward function in NHWC format
             def conv_fn(x):
-                return mx.conv2d(x, weight_mlx, stride=self.stride, padding=self.padding,
-                                dilation=self.dilation, groups=self.groups)
+                return mx.conv2d(
+                    x,
+                    weight_mlx,
+                    stride=self.stride,
+                    padding=self.padding,
+                    dilation=self.dilation,
+                    groups=self.groups,
+                )
 
             # Compute gradient using MLX's vjp (vector-Jacobian product)
             # vjp returns (primals, vjps) where vjps = cotangents @ jacobian
@@ -950,8 +979,14 @@ class Conv2dBackward(GradientFunction):
         if weight.requires_grad:
             # Compute weight gradient using MLX's vjp
             def conv_wrt_weight(w):
-                return mx.conv2d(input_nhwc, w, stride=self.stride, padding=self.padding,
-                                dilation=self.dilation, groups=self.groups)
+                return mx.conv2d(
+                    input_nhwc,
+                    w,
+                    stride=self.stride,
+                    padding=self.padding,
+                    dilation=self.dilation,
+                    groups=self.groups,
+                )
 
             _, grad_weight_list = mx.vjp(conv_wrt_weight, [weight_mlx], [grad_nhwc])
             grad_weight_mlx = grad_weight_list[0]
@@ -976,6 +1011,7 @@ class Conv2dBackward(GradientFunction):
 # Gradient Functions for Pooling Operations
 # ============================================================================
 
+
 class MaxPool2dBackward(GradientFunction):
     """
     Gradient for max_pool2d.
@@ -985,7 +1021,9 @@ class MaxPool2dBackward(GradientFunction):
     implementing a manual backward pass.
     """
 
-    def __init__(self, input_tensor, kernel_size, stride, padding, nhwc_native, input_nhwc, output_nhwc):
+    def __init__(
+        self, input_tensor, kernel_size, stride, padding, nhwc_native, input_nhwc, output_nhwc
+    ):
         super().__init__(input_tensor)
         self.kernel_size = kernel_size
         self.stride = stride
@@ -996,9 +1034,10 @@ class MaxPool2dBackward(GradientFunction):
         self.input_shape = input_tensor.shape
 
     def apply(self, grad_output):
-        from ..tensor import Tensor
-        from ..layout import Layout
         import mlx.nn as mxnn
+
+        from ..layout import Layout
+        from ..tensor import Tensor
 
         if not self.inputs[0].requires_grad:
             return (None,)
@@ -1011,9 +1050,7 @@ class MaxPool2dBackward(GradientFunction):
 
         # Create the MLX pooling layer with same parameters
         pool = mxnn.MaxPool2d(
-            kernel_size=self.kernel_size,
-            stride=self.stride,
-            padding=self.padding
+            kernel_size=self.kernel_size, stride=self.stride, padding=self.padding
         )
 
         # Use MLX's native vjp (vector-Jacobian product) to compute gradients
@@ -1040,7 +1077,17 @@ class AvgPool2dBackward(GradientFunction):
     implementing a manual backward pass.
     """
 
-    def __init__(self, input_tensor, kernel_size, stride, padding, nhwc_native, divisor_override=None, count_include_pad=True, input_nhwc=None):
+    def __init__(
+        self,
+        input_tensor,
+        kernel_size,
+        stride,
+        padding,
+        nhwc_native,
+        divisor_override=None,
+        count_include_pad=True,
+        input_nhwc=None,
+    ):
         super().__init__(input_tensor)
         self.kernel_size = kernel_size
         self.stride = stride
@@ -1053,9 +1100,10 @@ class AvgPool2dBackward(GradientFunction):
         self.input_nhwc = input_nhwc
 
     def apply(self, grad_output):
-        from ..tensor import Tensor
-        from ..layout import Layout
         import mlx.nn as mxnn
+
+        from ..layout import Layout
+        from ..tensor import Tensor
 
         if not self.inputs[0].requires_grad:
             return (None,)
@@ -1076,9 +1124,7 @@ class AvgPool2dBackward(GradientFunction):
 
         # Create the MLX pooling layer with same parameters
         pool = mxnn.AvgPool2d(
-            kernel_size=self.kernel_size,
-            stride=self.stride,
-            padding=self.padding
+            kernel_size=self.kernel_size, stride=self.stride, padding=self.padding
         )
 
         # Use MLX's native vjp (vector-Jacobian product) to compute gradients
@@ -1112,7 +1158,9 @@ class EmbeddingBackward(GradientFunction):
     is still a dense tensor, but the computation is more memory-efficient.
     """
 
-    def __init__(self, weight, indices, num_embeddings, embedding_dim, padding_idx=None, sparse=False):
+    def __init__(
+        self, weight, indices, num_embeddings, embedding_dim, padding_idx=None, sparse=False
+    ):
         super().__init__(weight)
         self.indices = indices  # Store indices for backward (as MLX array)
         self.num_embeddings = num_embeddings
@@ -1145,7 +1193,9 @@ class EmbeddingBackward(GradientFunction):
             num_unique = unique_indices.size
 
             # Initialize gradient weight matrix
-            grad_weight = mx.zeros((self.num_embeddings, self.embedding_dim), dtype=grad_out_arr.dtype)
+            grad_weight = mx.zeros(
+                (self.num_embeddings, self.embedding_dim), dtype=grad_out_arr.dtype
+            )
 
             # Accumulate gradients for each unique index
             # Using scatter_add style operation
@@ -1169,9 +1219,7 @@ class EmbeddingBackward(GradientFunction):
 
         # Zero out gradient for padding_idx if specified
         if self.padding_idx is not None:
-            grad_weight = grad_weight.at[self.padding_idx, :].add(
-                -grad_weight[self.padding_idx, :]
-            )
+            grad_weight = grad_weight.at[self.padding_idx, :].add(-grad_weight[self.padding_idx, :])
 
         return (Tensor._from_mlx_array(grad_weight),)
 
@@ -1189,9 +1237,21 @@ class EmbeddingBagBackward(GradientFunction):
     creating a full gradient matrix for the entire vocabulary.
     """
 
-    def __init__(self, weight, indices, offsets, num_embeddings, embedding_dim,
-                 mode='mean', padding_idx=None, sparse=False, per_sample_weights=None,
-                 include_last_offset=False, is_2d_input=False, bag_size=None):
+    def __init__(
+        self,
+        weight,
+        indices,
+        offsets,
+        num_embeddings,
+        embedding_dim,
+        mode="mean",
+        padding_idx=None,
+        sparse=False,
+        per_sample_weights=None,
+        include_last_offset=False,
+        is_2d_input=False,
+        bag_size=None,
+    ):
         super().__init__(weight)
         self.indices = indices  # MLX array of indices
         self.offsets = offsets  # MLX array of offsets (or None for 2D input)
@@ -1221,8 +1281,7 @@ class EmbeddingBagBackward(GradientFunction):
             # Expand grad_output to match bag structure
             # grad_out_arr: (num_bags, embedding_dim) -> (num_bags, bag_size, embedding_dim)
             grad_expanded = mx.broadcast_to(
-                mx.expand_dims(grad_out_arr, axis=1),
-                (num_bags, bag_size, self.embedding_dim)
+                mx.expand_dims(grad_out_arr, axis=1), (num_bags, bag_size, self.embedding_dim)
             )
 
             # Apply per_sample_weights scaling if present
@@ -1231,7 +1290,7 @@ class EmbeddingBagBackward(GradientFunction):
                 grad_expanded = grad_expanded * psw
 
             # For mean mode, divide by bag size (or count of non-padding)
-            if self.mode == 'mean':
+            if self.mode == "mean":
                 if self.padding_idx is not None:
                     # Count non-padding elements per bag
                     mask = (indices_arr != self.padding_idx).astype(mx.float32)
@@ -1261,10 +1320,7 @@ class EmbeddingBagBackward(GradientFunction):
                 bag_boundaries = offsets_arr
                 num_bags = len(offsets_arr) - 1
             else:
-                bag_boundaries = mx.concatenate([
-                    offsets_arr,
-                    mx.array([indices_arr.size])
-                ])
+                bag_boundaries = mx.concatenate([offsets_arr, mx.array([indices_arr.size])])
                 num_bags = len(offsets_arr)
 
             # Build gradient for each index
@@ -1282,8 +1338,7 @@ class EmbeddingBagBackward(GradientFunction):
 
                 # Expand to match bag size
                 bag_grad_expanded = mx.broadcast_to(
-                    mx.expand_dims(bag_grad, axis=0),
-                    (bag_len, self.embedding_dim)
+                    mx.expand_dims(bag_grad, axis=0), (bag_len, self.embedding_dim)
                 )
 
                 # Apply per_sample_weights scaling if present
@@ -1293,7 +1348,7 @@ class EmbeddingBagBackward(GradientFunction):
                     bag_grad_expanded = bag_grad_expanded * psw
 
                 # For mean mode, divide by bag size
-                if self.mode == 'mean':
+                if self.mode == "mean":
                     if self.padding_idx is not None:
                         bag_indices = indices_arr[start:end]
                         mask = (bag_indices != self.padding_idx).astype(mx.float32)
@@ -1315,7 +1370,9 @@ class EmbeddingBagBackward(GradientFunction):
 
             if len(grad_list) == 0:
                 # No non-empty bags, return zero gradient
-                grad_weight = mx.zeros((self.num_embeddings, self.embedding_dim), dtype=grad_out_arr.dtype)
+                grad_weight = mx.zeros(
+                    (self.num_embeddings, self.embedding_dim), dtype=grad_out_arr.dtype
+                )
                 return (Tensor._from_mlx_array(grad_weight),)
 
             grad_flat = mx.concatenate(grad_list, axis=0)
@@ -1330,7 +1387,9 @@ class EmbeddingBagBackward(GradientFunction):
 
             # Create mapping from unique indices to their positions
             # and accumulate gradients for each unique index
-            grad_weight = mx.zeros((self.num_embeddings, self.embedding_dim), dtype=grad_out_arr.dtype)
+            grad_weight = mx.zeros(
+                (self.num_embeddings, self.embedding_dim), dtype=grad_out_arr.dtype
+            )
 
             # For each unique index, sum up all gradients that go to it
             for idx in range(num_unique):
@@ -1347,8 +1406,6 @@ class EmbeddingBagBackward(GradientFunction):
 
         # Zero out gradient for padding_idx
         if self.padding_idx is not None:
-            grad_weight = grad_weight.at[self.padding_idx, :].add(
-                -grad_weight[self.padding_idx, :]
-            )
+            grad_weight = grad_weight.at[self.padding_idx, :].add(-grad_weight[self.padding_idx, :])
 
         return (Tensor._from_mlx_array(grad_weight),)

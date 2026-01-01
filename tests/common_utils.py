@@ -7,13 +7,14 @@ Provides utilities for numerical parity testing between MLX and PyTorch.
 
 import sys
 import unittest
-from typing import Union, Optional
+from typing import Optional, Union
 
 import numpy as np
 
 # Optional imports - may not be available in all environments
 try:
     import torch
+
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
@@ -22,6 +23,7 @@ except ImportError:
 # Will be available after Phase 1
 try:
     import mlx.core as mx
+
     MLX_AVAILABLE = True
 except ImportError:
     MLX_AVAILABLE = False
@@ -55,10 +57,10 @@ class TestCase(unittest.TestCase):
             msg: Optional error message
         """
         # Convert to numpy for comparison
-        if hasattr(actual, '_mlx_array'):
+        if hasattr(actual, "_mlx_array"):
             # MLX Tensor wrapper (will exist after Phase 1)
             actual_np = np.array(actual._mlx_array)
-        elif hasattr(actual, 'numpy'):
+        elif hasattr(actual, "numpy"):
             # Already a numpy-convertible object
             actual_np = actual.numpy() if callable(actual.numpy) else np.array(actual)
         else:
@@ -133,6 +135,7 @@ class ToleranceTier:
         # Or use the helper function:
         assert_close(actual, expected, tier='STANDARD')
     """
+
     # Simple element-wise operations - highest precision expected
     STRICT = {"rtol": 1e-5, "atol": 1e-8}
 
@@ -158,12 +161,12 @@ class ToleranceTier:
     def get(cls, name: str) -> dict:
         """Get tolerance tier by name."""
         tiers = {
-            'STRICT': cls.STRICT,
-            'STANDARD': cls.STANDARD,
-            'RELAXED': cls.RELAXED,
-            'LOOSE': cls.LOOSE,
-            'IMPL_DIFF': cls.IMPL_DIFF,
-            'GRADIENT': cls.GRADIENT,
+            "STRICT": cls.STRICT,
+            "STANDARD": cls.STANDARD,
+            "RELAXED": cls.RELAXED,
+            "LOOSE": cls.LOOSE,
+            "IMPL_DIFF": cls.IMPL_DIFF,
+            "GRADIENT": cls.GRADIENT,
         }
         if name not in tiers:
             raise ValueError(f"Unknown tolerance tier: {name}. Valid: {list(tiers.keys())}")
@@ -173,10 +176,10 @@ class ToleranceTier:
 def assert_close(
     actual,
     expected,
-    tier: str = 'STANDARD',
+    tier: str = "STANDARD",
     rtol: Optional[float] = None,
     atol: Optional[float] = None,
-    msg: Optional[str] = None
+    msg: Optional[str] = None,
 ):
     """
     Assert arrays are close with named tolerance tier.
@@ -194,24 +197,24 @@ def assert_close(
         assert_close(gradient, expected_grad, tier='GRADIENT')
     """
     tol = ToleranceTier.get(tier)
-    final_rtol = rtol if rtol is not None else tol['rtol']
-    final_atol = atol if atol is not None else tol['atol']
+    final_rtol = rtol if rtol is not None else tol["rtol"]
+    final_atol = atol if atol is not None else tol["atol"]
 
     # Convert to numpy arrays
-    if hasattr(actual, '_mlx_array'):
+    if hasattr(actual, "_mlx_array"):
         actual_np = np.array(actual._mlx_array)
-    elif hasattr(actual, 'numpy'):
+    elif hasattr(actual, "numpy"):
         actual_np = actual.numpy() if callable(actual.numpy) else np.array(actual)
-    elif hasattr(actual, 'detach'):
+    elif hasattr(actual, "detach"):
         actual_np = actual.detach().cpu().numpy()
     else:
         actual_np = np.array(actual)
 
-    if hasattr(expected, '_mlx_array'):
+    if hasattr(expected, "_mlx_array"):
         expected_np = np.array(expected._mlx_array)
-    elif hasattr(expected, 'numpy'):
+    elif hasattr(expected, "numpy"):
         expected_np = expected.numpy() if callable(expected.numpy) else np.array(expected)
-    elif hasattr(expected, 'detach'):
+    elif hasattr(expected, "detach"):
         expected_np = expected.detach().cpu().numpy()
     else:
         expected_np = np.array(expected)
@@ -232,7 +235,7 @@ def run_tests():
     # Discover and run tests
     loader = unittest.TestLoader()
     # Get the calling module
-    caller_module = sys._getframe(1).f_globals['__name__']
+    caller_module = sys._getframe(1).f_globals["__name__"]
     suite = loader.loadTestsFromName(caller_module)
 
     runner = unittest.TextTestRunner(verbosity=2)
@@ -247,7 +250,7 @@ def make_tensor(
     dtype=None,
     device=None,
     requires_grad: bool = False,
-    backend: str = 'torch',
+    backend: str = "torch",
 ):
     """
     Create a tensor for testing.
@@ -262,11 +265,11 @@ def make_tensor(
     Returns:
         PyTorch tensor or MLX tensor
     """
-    if backend == 'torch':
+    if backend == "torch":
         if not TORCH_AVAILABLE:
             raise RuntimeError("PyTorch not available")
         return torch.randn(*shape, dtype=dtype, device=device, requires_grad=requires_grad)
-    elif backend == 'mlx':
+    elif backend == "mlx":
         # Will implement in Phase 1
         # import flashlight
         # return flashlight.randn(*shape, dtype=dtype, requires_grad=requires_grad)
@@ -326,6 +329,7 @@ def skipIfNoTorch(func):
 def onlyOnAppleSilicon(func):
     """Only run test on Apple Silicon (M1/M2/M3)."""
     import platform
-    if platform.system() != 'Darwin' or platform.processor() != 'arm':
+
+    if platform.system() != "Darwin" or platform.processor() != "arm":
         return unittest.skip("Test only runs on Apple Silicon")(func)
     return func

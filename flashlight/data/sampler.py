@@ -5,9 +5,9 @@ Implements PyTorch-compatible sampling strategies for DataLoader.
 """
 
 from abc import ABC, abstractmethod
-from typing import Iterator, List, Optional, Sized, Any
+from typing import Any, Iterator, List, Optional, Sized
 
-from ._random import mlx_permutation, mlx_shuffle_list, mlx_randint, mlx_weighted_sample
+from ._random import mlx_permutation, mlx_randint, mlx_shuffle_list, mlx_weighted_sample
 
 
 class Sampler(ABC):
@@ -89,7 +89,7 @@ class RandomSampler(Sampler):
         data_source: Sized,
         replacement: bool = False,
         num_samples: Optional[int] = None,
-        generator: Optional[Any] = None
+        generator: Optional[Any] = None,
     ) -> None:
         super().__init__(data_source)
         self.data_source = data_source
@@ -123,7 +123,7 @@ class RandomSampler(Sampler):
             # Sample without replacement (shuffle) using MLX random
             indices = mlx_permutation(n)
             if self._num_samples is not None:
-                indices = indices[:self._num_samples]
+                indices = indices[: self._num_samples]
             yield from indices
 
     def __len__(self) -> int:
@@ -144,11 +144,7 @@ class SubsetRandomSampler(Sampler):
         >>> list(sampler)  # Some permutation of [0, 2, 4, 6, 8]
     """
 
-    def __init__(
-        self,
-        indices: List[int],
-        generator: Optional[Any] = None
-    ) -> None:
+    def __init__(self, indices: List[int], generator: Optional[Any] = None) -> None:
         super().__init__()
         self.indices = list(indices)
         self.generator = generator
@@ -183,7 +179,7 @@ class WeightedRandomSampler(Sampler):
         weights: List[float],
         num_samples: int,
         replacement: bool = True,
-        generator: Optional[Any] = None
+        generator: Optional[Any] = None,
     ) -> None:
         super().__init__()
         if not replacement and num_samples > len(weights):
@@ -200,11 +196,7 @@ class WeightedRandomSampler(Sampler):
     def __iter__(self) -> Iterator[int]:
         """Return weighted random indices."""
         # Use MLX-based weighted sampling (with Gumbel-top-k for without replacement)
-        indices = mlx_weighted_sample(
-            self.weights,
-            self.num_samples,
-            replacement=self.replacement
-        )
+        indices = mlx_weighted_sample(self.weights, self.num_samples, replacement=self.replacement)
         yield from indices
 
     def __len__(self) -> int:
@@ -229,12 +221,7 @@ class BatchSampler(Sampler):
         [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9]]
     """
 
-    def __init__(
-        self,
-        sampler: Sampler,
-        batch_size: int,
-        drop_last: bool = False
-    ) -> None:
+    def __init__(self, sampler: Sampler, batch_size: int, drop_last: bool = False) -> None:
         if batch_size <= 0:
             raise ValueError(f"batch_size should be a positive integer, got {batch_size}")
 
@@ -264,10 +251,10 @@ class BatchSampler(Sampler):
 
 
 __all__ = [
-    'Sampler',
-    'SequentialSampler',
-    'RandomSampler',
-    'SubsetRandomSampler',
-    'WeightedRandomSampler',
-    'BatchSampler',
+    "Sampler",
+    "SequentialSampler",
+    "RandomSampler",
+    "SubsetRandomSampler",
+    "WeightedRandomSampler",
+    "BatchSampler",
 ]

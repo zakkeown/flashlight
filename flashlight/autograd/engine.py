@@ -8,8 +8,9 @@ Implements the core autograd engine that:
 4. Accumulates gradients for tensors used multiple times
 """
 
-from typing import Optional, Set, List, Dict
 from collections import defaultdict
+from typing import Dict, List, Optional, Set
+
 import mlx.core as mx
 
 
@@ -34,7 +35,7 @@ def topological_sort(root_grad_fn):
 
         # Visit dependencies first (inputs' gradient functions)
         for input_tensor in grad_fn.inputs:
-            if hasattr(input_tensor, '_grad_fn') and input_tensor._grad_fn is not None:
+            if hasattr(input_tensor, "_grad_fn") and input_tensor._grad_fn is not None:
                 dfs(input_tensor._grad_fn)
 
         # Add current node after dependencies
@@ -159,10 +160,12 @@ def backward(tensor, gradient=None, retain_graph=False, create_graph=False):
         for input_tensor in grad_fn.inputs:
             # Only assign to leaf tensors (those without grad_fn)
             tensor_id = id(input_tensor)
-            if (input_tensor._grad_fn is None and
-                input_tensor.requires_grad and
-                tensor_id not in assigned and
-                tensor_id in grads):
+            if (
+                input_tensor._grad_fn is None
+                and input_tensor.requires_grad
+                and tensor_id not in assigned
+                and tensor_id in grads
+            ):
 
                 assigned.add(tensor_id)
                 # Wrap only at final assignment to tensor.grad

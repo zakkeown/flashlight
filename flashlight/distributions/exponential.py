@@ -1,17 +1,18 @@
 """Exponential Distribution"""
 
 from typing import Optional, Tuple, Union
+
 import mlx.core as mx
 
 from ..tensor import Tensor
-from .exp_family import ExponentialFamily
 from . import constraints
+from .exp_family import ExponentialFamily
 
 
 class Exponential(ExponentialFamily):
     """Exponential distribution with rate parameter."""
 
-    arg_constraints = {'rate': constraints.positive}
+    arg_constraints = {"rate": constraints.positive}
     support = constraints.nonnegative
     has_rsample = True
 
@@ -29,7 +30,7 @@ class Exponential(ExponentialFamily):
 
     @property
     def variance(self) -> Tensor:
-        return Tensor(1 / self.rate ** 2)
+        return Tensor(1 / self.rate**2)
 
     def sample(self, sample_shape: Tuple[int, ...] = ()) -> Tensor:
         shape = sample_shape + self._batch_shape
@@ -62,4 +63,4 @@ class Exponential(ExponentialFamily):
         return Tensor(-mx.log(-x_data))
 
 
-__all__ = ['Exponential']
+__all__ = ["Exponential"]

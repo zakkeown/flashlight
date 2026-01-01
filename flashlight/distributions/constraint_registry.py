@@ -1,15 +1,22 @@
 """Constraint Registry"""
 
 from typing import Callable, Dict, Type
+
 import mlx.core as mx
 
 from . import constraints
 from .transforms import (
-    Transform, ExpTransform, SigmoidTransform, AffineTransform,
-    SoftmaxTransform, LowerCholeskyTransform, StickBreakingTransform,
-    ComposeTransform, AbsTransform, PowerTransform
+    AbsTransform,
+    AffineTransform,
+    ComposeTransform,
+    ExpTransform,
+    LowerCholeskyTransform,
+    PowerTransform,
+    SigmoidTransform,
+    SoftmaxTransform,
+    StickBreakingTransform,
+    Transform,
 )
-
 
 # Registry for constraint -> transform mappings
 _BIJECT_TO_REGISTRY: Dict[type, Callable] = {}
@@ -80,10 +87,9 @@ def _register_transforms():
     def _biject_interval(c):
         if c.lower_bound == 0 and c.upper_bound == 1:
             return SigmoidTransform()
-        return ComposeTransform([
-            SigmoidTransform(),
-            AffineTransform(c.lower_bound, c.upper_bound - c.lower_bound)
-        ])
+        return ComposeTransform(
+            [SigmoidTransform(), AffineTransform(c.lower_bound, c.upper_bound - c.lower_bound)]
+        )
 
     # Greater than: shift + exp
     @_register_biject(constraints._GreaterThan)
@@ -93,7 +99,9 @@ def _register_transforms():
     # Less than: negate + shift + exp
     @_register_biject(constraints._LessThan)
     def _biject_less_than(c):
-        return ComposeTransform([ExpTransform(), AffineTransform(0, -1), AffineTransform(c.upper_bound, 1)])
+        return ComposeTransform(
+            [ExpTransform(), AffineTransform(0, -1), AffineTransform(c.upper_bound, 1)]
+        )
 
     # Simplex: stick breaking
     @_register_biject(constraints._Simplex)
@@ -108,10 +116,12 @@ def _register_transforms():
 
 def _register_biject(constraint_type: type):
     """Decorator to register a biject_to transform."""
+
     def decorator(fn: Callable):
         _BIJECT_TO_REGISTRY[constraint_type] = fn
         _TRANSFORM_TO_REGISTRY[constraint_type] = fn
         return fn
+
     return decorator
 
 
@@ -119,4 +129,4 @@ def _register_biject(constraint_type: type):
 _register_transforms()
 
 
-__all__ = ['biject_to', 'transform_to']
+__all__ = ["biject_to", "transform_to"]

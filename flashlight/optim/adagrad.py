@@ -4,11 +4,13 @@ Adagrad Optimizer
 Implements Adagrad algorithm (Adaptive Gradient).
 """
 
-from typing import Iterable, Dict, Any, Union, Optional
+from typing import Any, Dict, Iterable, Optional, Union
+
 import mlx.core as mx
-from .optimizer import Optimizer
+
 from ..nn.parameter import Parameter
 from ..tensor import Tensor
+from .optimizer import Optimizer
 
 
 class Adagrad(Optimizer):
@@ -45,7 +47,7 @@ class Adagrad(Optimizer):
         *,
         maximize: bool = False,
         differentiable: bool = False,
-        fused: Optional[bool] = None
+        fused: Optional[bool] = None,
     ):
         if lr < 0.0:
             raise ValueError(f"Invalid learning rate: {lr}")
@@ -63,7 +65,7 @@ class Adagrad(Optimizer):
             lr_decay=lr_decay,
             weight_decay=weight_decay,
             initial_accumulator_value=initial_accumulator_value,
-            eps=eps
+            eps=eps,
         )
 
         super().__init__(params, defaults)
@@ -83,13 +85,13 @@ class Adagrad(Optimizer):
             loss = closure()
 
         for group in self.param_groups:
-            lr = group['lr']
-            lr_decay = group['lr_decay']
-            weight_decay = group['weight_decay']
-            initial_accumulator_value = group['initial_accumulator_value']
-            eps = group['eps']
+            lr = group["lr"]
+            lr_decay = group["lr_decay"]
+            weight_decay = group["weight_decay"]
+            initial_accumulator_value = group["initial_accumulator_value"]
+            eps = group["eps"]
 
-            for p in group['params']:
+            for p in group["params"]:
                 if p.grad is None:
                     continue
 
@@ -98,30 +100,28 @@ class Adagrad(Optimizer):
                 param_state = self.state[id(p)]
 
                 # Initialize state
-                if 'step' not in param_state:
-                    param_state['step'] = 0
+                if "step" not in param_state:
+                    param_state["step"] = 0
                     # Sum of squared gradients
-                    param_state['sum'] = Tensor._from_mlx_array(
+                    param_state["sum"] = Tensor._from_mlx_array(
                         mx.full(p._mlx_array.shape, initial_accumulator_value)
                     )
 
-                param_state['step'] += 1
-                step = param_state['step']
+                param_state["step"] += 1
+                step = param_state["step"]
 
                 # Apply weight decay
                 if weight_decay != 0:
-                    grad = Tensor._from_mlx_array(
-                        grad._mlx_array + weight_decay * p._mlx_array
-                    )
+                    grad = Tensor._from_mlx_array(grad._mlx_array + weight_decay * p._mlx_array)
 
                 # Apply learning rate decay
                 clr = lr / (1 + (step - 1) * lr_decay)
 
                 # Update sum of squared gradients
-                sum_sq = param_state['sum']
-                sum_sq_mlx = sum_sq._mlx_array + grad._mlx_array ** 2
+                sum_sq = param_state["sum"]
+                sum_sq_mlx = sum_sq._mlx_array + grad._mlx_array**2
                 sum_sq = Tensor._from_mlx_array(sum_sq_mlx)
-                param_state['sum'] = sum_sq
+                param_state["sum"] = sum_sq
 
                 # Compute step: p = p - clr * g / sqrt(sum + eps)
                 std = mx.sqrt(sum_sq._mlx_array) + eps
@@ -131,8 +131,10 @@ class Adagrad(Optimizer):
 
     def __repr__(self) -> str:
         """String representation of the optimizer."""
-        return f"Adagrad (lr={self.defaults['lr']}, lr_decay={self.defaults['lr_decay']}, " \
-               f"weight_decay={self.defaults['weight_decay']}, eps={self.defaults['eps']})"
+        return (
+            f"Adagrad (lr={self.defaults['lr']}, lr_decay={self.defaults['lr_decay']}, "
+            f"weight_decay={self.defaults['weight_decay']}, eps={self.defaults['eps']})"
+        )
 
 
-__all__ = ['Adagrad']
+__all__ = ["Adagrad"]

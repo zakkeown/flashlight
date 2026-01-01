@@ -5,8 +5,8 @@ Provides weak reference containers for memory-efficient tensor caching.
 """
 
 import weakref
-from collections.abc import MutableMapping, Mapping
-from typing import Any, Callable, Dict, Iterator, Optional, TypeVar, Generic
+from collections.abc import Mapping, MutableMapping
+from typing import Any, Callable, Dict, Generic, Iterator, Optional, TypeVar
 
 # Type variables
 K = TypeVar("K")

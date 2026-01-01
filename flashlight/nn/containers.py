@@ -7,27 +7,51 @@ Implements PyTorch-compatible container modules:
 - ModuleDict: Dictionary of modules
 """
 
-from typing import Iterator, Optional, Union, Dict, Iterable
 from collections import OrderedDict
-from .module import Module
+from typing import Dict, Iterable, Iterator, Optional, Union
+
 from ..tensor import Tensor
+from .module import Module
 
 # Module types that benefit from NHWC layout (spatial operations)
-_SPATIAL_LAYER_NAMES = frozenset({
-    'Conv1d', 'Conv2d', 'Conv3d',
-    'ConvTranspose1d', 'ConvTranspose2d', 'ConvTranspose3d',
-    'BatchNorm1d', 'BatchNorm2d', 'BatchNorm3d',
-    'InstanceNorm1d', 'InstanceNorm2d', 'InstanceNorm3d',
-    'GroupNorm',
-    'MaxPool1d', 'MaxPool2d', 'MaxPool3d',
-    'AvgPool1d', 'AvgPool2d', 'AvgPool3d',
-    'AdaptiveMaxPool1d', 'AdaptiveMaxPool2d', 'AdaptiveMaxPool3d',
-    'AdaptiveAvgPool1d', 'AdaptiveAvgPool2d', 'AdaptiveAvgPool3d',
-    'ZeroPad1d', 'ZeroPad2d',
-    'ReflectionPad1d', 'ReflectionPad2d',
-    'ReplicationPad1d', 'ReplicationPad2d',
-    'ConstantPad1d', 'ConstantPad2d', 'ConstantPad3d',
-})
+_SPATIAL_LAYER_NAMES = frozenset(
+    {
+        "Conv1d",
+        "Conv2d",
+        "Conv3d",
+        "ConvTranspose1d",
+        "ConvTranspose2d",
+        "ConvTranspose3d",
+        "BatchNorm1d",
+        "BatchNorm2d",
+        "BatchNorm3d",
+        "InstanceNorm1d",
+        "InstanceNorm2d",
+        "InstanceNorm3d",
+        "GroupNorm",
+        "MaxPool1d",
+        "MaxPool2d",
+        "MaxPool3d",
+        "AvgPool1d",
+        "AvgPool2d",
+        "AvgPool3d",
+        "AdaptiveMaxPool1d",
+        "AdaptiveMaxPool2d",
+        "AdaptiveMaxPool3d",
+        "AdaptiveAvgPool1d",
+        "AdaptiveAvgPool2d",
+        "AdaptiveAvgPool3d",
+        "ZeroPad1d",
+        "ZeroPad2d",
+        "ReflectionPad1d",
+        "ReflectionPad2d",
+        "ReplicationPad1d",
+        "ReplicationPad2d",
+        "ConstantPad1d",
+        "ConstantPad2d",
+        "ConstantPad3d",
+    }
+)
 
 
 def _is_spatial_layer(module: Module) -> bool:
@@ -53,10 +77,21 @@ def _has_consecutive_spatial_layers(modules) -> bool:
             # because they're layout-agnostic
             layer_name = type(module).__name__
             layout_agnostic = layer_name in {
-                'ReLU', 'LeakyReLU', 'PReLU', 'ELU', 'SELU', 'GELU',
-                'Sigmoid', 'Tanh', 'Softmax', 'LogSoftmax',
-                'Dropout', 'Dropout2d', 'Dropout3d',
-                'Identity', 'Flatten',
+                "ReLU",
+                "LeakyReLU",
+                "PReLU",
+                "ELU",
+                "SELU",
+                "GELU",
+                "Sigmoid",
+                "Tanh",
+                "Softmax",
+                "LogSoftmax",
+                "Dropout",
+                "Dropout2d",
+                "Dropout3d",
+                "Identity",
+                "Flatten",
             }
             if not layout_agnostic:
                 consecutive = 0
@@ -110,7 +145,7 @@ class Sequential(Module):
         size = len(self._modules)
         idx = idx.__index__()
         if not -size <= idx < size:
-            raise IndexError(f'index {idx} is out of range')
+            raise IndexError(f"index {idx} is out of range")
         idx %= size
         return list(iterator.values())[idx]
 
@@ -125,7 +160,7 @@ class Sequential(Module):
         size = len(self._modules)
         idx = idx.__index__()
         if not -size <= idx < size:
-            raise IndexError(f'index {idx} is out of range')
+            raise IndexError(f"index {idx} is out of range")
         idx %= size
         return list(self._modules.keys())[idx]
 
@@ -150,16 +185,15 @@ class Sequential(Module):
     def _should_use_nhwc(self) -> bool:
         """Check if this Sequential should use NHWC optimization."""
         if self._use_nhwc_optimization is None:
-            self._use_nhwc_optimization = _has_consecutive_spatial_layers(
-                self._modules.values()
-            )
+            self._use_nhwc_optimization = _has_consecutive_spatial_layers(self._modules.values())
         return self._use_nhwc_optimization
 
     def forward(self, input: Tensor) -> Tensor:
         # Use NHWC optimization for sequences with consecutive spatial layers
         # and 4D input (spatial data)
         if input.ndim == 4 and self._should_use_nhwc():
-            from ..layout import nhwc_mode, ensure_nchw, is_nhwc_mode
+            from ..layout import ensure_nchw, is_nhwc_mode, nhwc_mode
+
             # Only apply optimization if we're not already in NHWC mode
             if not is_nhwc_mode():
                 with nhwc_mode():
@@ -173,7 +207,7 @@ class Sequential(Module):
             input = module(input)
         return input
 
-    def append(self, module: Module) -> 'Sequential':
+    def append(self, module: Module) -> "Sequential":
         """
         Append a module to the end of the Sequential.
 
@@ -187,7 +221,7 @@ class Sequential(Module):
         self._use_nhwc_optimization = None  # Invalidate cache
         return self
 
-    def extend(self, modules: Iterable[Module]) -> 'Sequential':
+    def extend(self, modules: Iterable[Module]) -> "Sequential":
         """
         Append modules from an iterable to the end of the Sequential.
 
@@ -237,7 +271,7 @@ class ModuleList(Module):
         """Get the absolute index for the list of modules"""
         idx = idx.__index__()
         if not (-len(self) <= idx < len(self)):
-            raise IndexError(f'index {idx} is out of range')
+            raise IndexError(f"index {idx} is out of range")
         if idx < 0:
             idx += len(self)
         return str(idx)
@@ -268,7 +302,7 @@ class ModuleList(Module):
     def __iter__(self):
         return iter(self._modules.values())
 
-    def append(self, module: Module) -> 'ModuleList':
+    def append(self, module: Module) -> "ModuleList":
         """
         Append a module to the end of the list.
 
@@ -278,7 +312,7 @@ class ModuleList(Module):
         self.add_module(str(len(self)), module)
         return self
 
-    def extend(self, modules: Iterable[Module]) -> 'ModuleList':
+    def extend(self, modules: Iterable[Module]) -> "ModuleList":
         """
         Append modules from a Python iterable to the end of the list.
 
@@ -428,7 +462,7 @@ class ParameterList(Module):
         ...         return x
     """
 
-    def __init__(self, values: Optional[Iterable['Parameter']] = None):
+    def __init__(self, values: Optional[Iterable["Parameter"]] = None):
         super().__init__()
         if values is not None:
             self.extend(values)
@@ -437,7 +471,7 @@ class ParameterList(Module):
         """Get the absolute index for the list of parameters"""
         idx = idx.__index__()
         if not (-len(self) <= idx < len(self)):
-            raise IndexError(f'index {idx} is out of range')
+            raise IndexError(f"index {idx} is out of range")
         if idx < 0:
             idx += len(self)
         return str(idx)
@@ -459,7 +493,7 @@ class ParameterList(Module):
     def __iter__(self):
         return iter(self._parameters.values())
 
-    def append(self, parameter: 'Parameter') -> 'ParameterList':
+    def append(self, parameter: "Parameter") -> "ParameterList":
         """
         Append a parameter to the end of the list.
 
@@ -469,7 +503,7 @@ class ParameterList(Module):
         setattr(self, str(len(self)), parameter)
         return self
 
-    def extend(self, parameters: Iterable['Parameter']) -> 'ParameterList':
+    def extend(self, parameters: Iterable["Parameter"]) -> "ParameterList":
         """
         Append parameters from a Python iterable to the end of the list.
 
@@ -508,15 +542,15 @@ class ParameterDict(Module):
         ...         return x @ self.params[choice]
     """
 
-    def __init__(self, parameters: Optional[Union[Dict[str, 'Parameter'], Iterable]] = None):
+    def __init__(self, parameters: Optional[Union[Dict[str, "Parameter"], Iterable]] = None):
         super().__init__()
         if parameters is not None:
             self.update(parameters)
 
-    def __getitem__(self, key: str) -> 'Parameter':
+    def __getitem__(self, key: str) -> "Parameter":
         return self._parameters[key]
 
-    def __setitem__(self, key: str, parameter: 'Parameter') -> None:
+    def __setitem__(self, key: str, parameter: "Parameter") -> None:
         setattr(self, key, parameter)
 
     def __delitem__(self, key: str) -> None:
@@ -561,7 +595,7 @@ class ParameterDict(Module):
             for key, param in parameters:
                 setattr(self, key, param)
 
-    def pop(self, key: str) -> 'Parameter':
+    def pop(self, key: str) -> "Parameter":
         """
         Remove and return the parameter with the given key.
 
@@ -589,14 +623,13 @@ class Container(Module):
 
     def __init__(self, **kwargs):
         import warnings
+
         warnings.warn(
-            "nn.Container is deprecated. Use nn.Module instead.",
-            DeprecationWarning,
-            stacklevel=2
+            "nn.Container is deprecated. Use nn.Module instead.", DeprecationWarning, stacklevel=2
         )
         super().__init__()
         for key, value in kwargs.items():
             setattr(self, key, value)
 
 
-__all__ = ['Sequential', 'ModuleList', 'ModuleDict', 'ParameterList', 'ParameterDict', 'Container']
+__all__ = ["Sequential", "ModuleList", "ModuleDict", "ParameterList", "ParameterDict", "Container"]

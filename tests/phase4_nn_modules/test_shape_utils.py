@@ -10,9 +10,11 @@ Tests the shape utility modules:
 """
 
 import sys
-sys.path.insert(0, '../..')
+
+sys.path.insert(0, "../..")
 
 import unittest
+
 import numpy as np
 import pytest
 
@@ -20,12 +22,14 @@ from tests.common_utils import TestCase, skipIfNoMLX
 
 try:
     import flashlight
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
 
 try:
     import torch
+
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
@@ -81,10 +85,7 @@ class TestFlatten(TestCase):
         out_torch = flatten_torch(torch.tensor(x_np))
         out_mlx = flatten_mlx(flashlight.tensor(x_np))
 
-        np.testing.assert_allclose(
-            out_torch.numpy(), out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
 
 @skipIfNoMLX
@@ -210,21 +211,21 @@ class TestUpsample(TestCase):
 
     def test_forward_with_scale_factor(self):
         """Test Upsample forward with scale_factor."""
-        upsample = flashlight.nn.Upsample(scale_factor=2, mode='nearest')
+        upsample = flashlight.nn.Upsample(scale_factor=2, mode="nearest")
         x = flashlight.randn(1, 3, 4, 4)
         output = upsample(x)
         self.assertEqual(output.shape, (1, 3, 8, 8))
 
     def test_forward_with_size(self):
         """Test Upsample forward with size."""
-        upsample = flashlight.nn.Upsample(size=(8, 8), mode='nearest')
+        upsample = flashlight.nn.Upsample(size=(8, 8), mode="nearest")
         x = flashlight.randn(1, 3, 4, 4)
         output = upsample(x)
         self.assertEqual(output.shape, (1, 3, 8, 8))
 
     def test_bilinear_mode(self):
         """Test Upsample with bilinear mode."""
-        upsample = flashlight.nn.Upsample(scale_factor=2, mode='bilinear')
+        upsample = flashlight.nn.Upsample(scale_factor=2, mode="bilinear")
         x = flashlight.randn(1, 3, 4, 4)
         output = upsample(x)
         self.assertEqual(output.shape, (1, 3, 8, 8))
@@ -294,10 +295,7 @@ class TestPixelShuffle(TestCase):
         out_torch = shuffle_torch(torch.tensor(x_np))
         out_mlx = shuffle_mlx(flashlight.tensor(x_np))
 
-        np.testing.assert_allclose(
-            out_torch.numpy(), out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
 
 @skipIfNoMLX
@@ -326,11 +324,8 @@ class TestPixelUnshuffle(TestCase):
         shuffled = shuffle(x)
         unshuffled = unshuffle(shuffled)
 
-        np.testing.assert_allclose(
-            x.numpy(), unshuffled.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(x.numpy(), unshuffled.numpy(), rtol=1e-5, atol=1e-6)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

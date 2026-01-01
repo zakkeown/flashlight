@@ -4,11 +4,13 @@ Adam Optimizer
 Implements Adam algorithm (Adaptive Moment Estimation).
 """
 
-from typing import Iterable, Dict, Any, Union, Tuple, Optional
+from typing import Any, Dict, Iterable, Optional, Tuple, Union
+
 import mlx.core as mx
-from .optimizer import Optimizer
+
 from ..nn.parameter import Parameter
 from ..tensor import Tensor
+from .optimizer import Optimizer
 
 
 class Adam(Optimizer):
@@ -47,27 +49,31 @@ class Adam(Optimizer):
         capturable: bool = False,
         differentiable: bool = False,
         fused: Optional[bool] = None,
-        decoupled_weight_decay: bool = False
+        decoupled_weight_decay: bool = False,
     ):
         # foreach, capturable, differentiable, fused are accepted for PyTorch
         # compatibility but are either not applicable or ignored in MLX.
         # maximize is now supported.
         if foreach is not None:
             import warnings
+
             warnings.warn(
                 "foreach parameter is ignored in MLX. MLX uses a different "
                 "computational model (lazy evaluation with unified memory) that "
                 "doesn't benefit from the same batched update optimizations as CUDA.",
-                UserWarning
+                UserWarning,
             )
         if capturable:
             import warnings
+
             warnings.warn("capturable=True is not supported in MLX, will be ignored")
         if differentiable:
             import warnings
+
             warnings.warn("differentiable=True is not supported in MLX, will be ignored")
         if fused:
             import warnings
+
             warnings.warn("fused=True is not supported in MLX, will be ignored")
 
         if lr < 0.0:
@@ -91,7 +97,7 @@ class Adam(Optimizer):
             maximize=maximize,
             capturable=capturable,
             differentiable=differentiable,
-            fused=fused
+            fused=fused,
         )
 
         super().__init__(params, defaults)
@@ -114,14 +120,14 @@ class Adam(Optimizer):
             loss = closure()
 
         for group in self.param_groups:
-            lr = group['lr']
-            beta1, beta2 = group['betas']
-            eps = group['eps']
-            weight_decay = group['weight_decay']
-            amsgrad = group['amsgrad']
-            maximize = group.get('maximize', False)
+            lr = group["lr"]
+            beta1, beta2 = group["betas"]
+            eps = group["eps"]
+            weight_decay = group["weight_decay"]
+            amsgrad = group["amsgrad"]
+            maximize = group.get("maximize", False)
 
-            for p in group['params']:
+            for p in group["params"]:
                 if p.grad is None:
                     continue
 
@@ -140,43 +146,43 @@ class Adam(Optimizer):
                 param_state = self.state[id(p)]
 
                 # Initialize state with raw MLX arrays (not Tensor wrappers)
-                if 'step' not in param_state:
-                    param_state['step'] = 0
+                if "step" not in param_state:
+                    param_state["step"] = 0
                     # Store raw MLX arrays for state
-                    param_state['exp_avg'] = mx.zeros_like(param)
-                    param_state['exp_avg_sq'] = mx.zeros_like(param)
+                    param_state["exp_avg"] = mx.zeros_like(param)
+                    param_state["exp_avg_sq"] = mx.zeros_like(param)
                     if amsgrad:
-                        param_state['max_exp_avg_sq'] = mx.zeros_like(param)
+                        param_state["max_exp_avg_sq"] = mx.zeros_like(param)
 
-                param_state['step'] += 1
-                step = param_state['step']
+                param_state["step"] += 1
+                step = param_state["step"]
 
                 # Get raw state arrays
-                exp_avg = param_state['exp_avg']
-                exp_avg_sq = param_state['exp_avg_sq']
+                exp_avg = param_state["exp_avg"]
+                exp_avg_sq = param_state["exp_avg_sq"]
 
                 # Decay the first and second moment running average coefficient
                 # m_t = beta1 * m_{t-1} + (1 - beta1) * g_t
                 exp_avg = beta1 * exp_avg + (1 - beta1) * grad
-                param_state['exp_avg'] = exp_avg
+                param_state["exp_avg"] = exp_avg
 
                 # v_t = beta2 * v_{t-1} + (1 - beta2) * g_t^2
-                exp_avg_sq = beta2 * exp_avg_sq + (1 - beta2) * (grad ** 2)
-                param_state['exp_avg_sq'] = exp_avg_sq
+                exp_avg_sq = beta2 * exp_avg_sq + (1 - beta2) * (grad**2)
+                param_state["exp_avg_sq"] = exp_avg_sq
 
                 # Bias correction
-                bias_correction1 = 1 - beta1 ** step
-                bias_correction2 = 1 - beta2 ** step
-                bias_correction2_sqrt = bias_correction2 ** 0.5
+                bias_correction1 = 1 - beta1**step
+                bias_correction2 = 1 - beta2**step
+                bias_correction2_sqrt = bias_correction2**0.5
 
                 # Compute step size with bias correction
                 step_size = lr / bias_correction1
 
                 if amsgrad:
-                    max_exp_avg_sq = param_state['max_exp_avg_sq']
+                    max_exp_avg_sq = param_state["max_exp_avg_sq"]
                     # max_v_t = max(max_v_{t-1}, v_t)
                     max_exp_avg_sq = mx.maximum(max_exp_avg_sq, exp_avg_sq)
-                    param_state['max_exp_avg_sq'] = max_exp_avg_sq
+                    param_state["max_exp_avg_sq"] = max_exp_avg_sq
                     # denom = sqrt(max_v_t) / sqrt(bias_correction2) + eps
                     denom = mx.sqrt(max_exp_avg_sq) / bias_correction2_sqrt + eps
                 else:
@@ -190,8 +196,10 @@ class Adam(Optimizer):
 
     def __repr__(self) -> str:
         """String representation of the optimizer."""
-        return f"Adam (lr={self.defaults['lr']}, betas={self.defaults['betas']}, " \
-               f"eps={self.defaults['eps']}, weight_decay={self.defaults['weight_decay']})"
+        return (
+            f"Adam (lr={self.defaults['lr']}, betas={self.defaults['betas']}, "
+            f"eps={self.defaults['eps']}, weight_decay={self.defaults['weight_decay']})"
+        )
 
 
-__all__ = ['Adam']
+__all__ = ["Adam"]

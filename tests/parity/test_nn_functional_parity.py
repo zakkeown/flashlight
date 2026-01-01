@@ -4,13 +4,14 @@ Parity tests for nn.functional APIs.
 Tests that flashlight.nn.functional produces identical outputs to torch.nn.functional.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 # Check if PyTorch is available
 try:
     import torch
     import torch.nn.functional as F_torch
+
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
@@ -32,11 +33,7 @@ class TestActivationParity:
         out_torch = F_torch.relu(x_torch)
         out_mlx = F_mlx.relu(x_mlx)
 
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
     def test_relu_negative_values(self):
         """Test relu correctly zeros negative values."""
@@ -47,11 +44,7 @@ class TestActivationParity:
         out_torch = F_torch.relu(x_torch)
         out_mlx = F_mlx.relu(x_mlx)
 
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
     def test_gelu_parity(self):
         """Test gelu produces matching outputs."""
@@ -63,11 +56,7 @@ class TestActivationParity:
         out_mlx = F_mlx.gelu(x_mlx)
 
         # GELU has slight numerical differences, use looser tolerance
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-4, atol=1e-5
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-4, atol=1e-5)
 
     def test_sigmoid_parity(self):
         """Test sigmoid produces matching outputs."""
@@ -78,11 +67,7 @@ class TestActivationParity:
         out_torch = F_torch.sigmoid(x_torch)
         out_mlx = F_mlx.sigmoid(x_mlx)
 
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
     def test_tanh_parity(self):
         """Test tanh produces matching outputs."""
@@ -93,11 +78,7 @@ class TestActivationParity:
         out_torch = F_torch.tanh(x_torch)
         out_mlx = F_mlx.tanh(x_mlx)
 
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
     def test_softmax_parity(self):
         """Test softmax produces matching outputs."""
@@ -108,11 +89,7 @@ class TestActivationParity:
         out_torch = F_torch.softmax(x_torch, dim=-1)
         out_mlx = F_mlx.softmax(x_mlx, dim=-1)
 
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
     def test_softmax_sums_to_one(self):
         """Test softmax outputs sum to 1."""
@@ -133,11 +110,7 @@ class TestActivationParity:
         out_torch = F_torch.log_softmax(x_torch, dim=-1)
         out_mlx = F_mlx.log_softmax(x_mlx, dim=-1)
 
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
     def test_silu_parity(self):
         """Test silu (swish) produces matching outputs."""
@@ -148,11 +121,7 @@ class TestActivationParity:
         out_torch = F_torch.silu(x_torch)
         out_mlx = F_mlx.silu(x_mlx)
 
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
     def test_leaky_relu_parity(self):
         """Test leaky_relu produces matching outputs."""
@@ -164,11 +133,7 @@ class TestActivationParity:
             out_torch = F_torch.leaky_relu(x_torch, negative_slope=negative_slope)
             out_mlx = F_mlx.leaky_relu(x_mlx, negative_slope=negative_slope)
 
-            np.testing.assert_allclose(
-                out_torch.numpy(),
-                out_mlx.numpy(),
-                rtol=1e-5, atol=1e-6
-            )
+            np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
     def test_elu_parity(self):
         """Test elu produces matching outputs."""
@@ -180,11 +145,7 @@ class TestActivationParity:
             out_torch = F_torch.elu(x_torch, alpha=alpha)
             out_mlx = F_mlx.elu(x_mlx, alpha=alpha)
 
-            np.testing.assert_allclose(
-                out_torch.numpy(),
-                out_mlx.numpy(),
-                rtol=1e-5, atol=1e-5
-            )
+            np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-5)
 
 
 @pytest.mark.skipif(not TORCH_AVAILABLE, reason="PyTorch required for parity tests")
@@ -208,11 +169,7 @@ class TestLinearParity:
         out_torch = F_torch.linear(x_torch, w_torch, b_torch)
         out_mlx = F_mlx.linear(x_mlx, w_mlx, b_mlx)
 
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-5
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-5)
 
     def test_linear_no_bias_parity(self):
         """Test linear without bias produces matching outputs."""
@@ -228,11 +185,7 @@ class TestLinearParity:
         out_torch = F_torch.linear(x_torch, w_torch)
         out_mlx = F_mlx.linear(x_mlx, w_mlx)
 
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-5
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-5)
 
 
 @pytest.mark.skipif(not TORCH_AVAILABLE, reason="PyTorch required for parity tests")
@@ -256,11 +209,7 @@ class TestNormalizationParity:
         out_torch = F_torch.layer_norm(x_torch, [10], weight=w_torch, bias=b_torch)
         out_mlx = F_mlx.layer_norm(x_mlx, [10], weight=w_mlx, bias=b_mlx)
 
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-4, atol=1e-5
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-4, atol=1e-5)
 
     def test_layer_norm_no_affine_parity(self):
         """Test layer_norm without affine parameters."""
@@ -272,11 +221,7 @@ class TestNormalizationParity:
         out_torch = F_torch.layer_norm(x_torch, [10])
         out_mlx = F_mlx.layer_norm(x_mlx, [10])
 
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-4, atol=1e-5
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-4, atol=1e-5)
 
 
 @pytest.mark.skipif(not TORCH_AVAILABLE, reason="PyTorch required for parity tests")
@@ -294,15 +239,11 @@ class TestLossFunctionParity:
         pred_mlx = flashlight.tensor(pred_np)
         target_mlx = flashlight.tensor(target_np)
 
-        for reduction in ['mean', 'sum', 'none']:
+        for reduction in ["mean", "sum", "none"]:
             out_torch = F_torch.mse_loss(pred_torch, target_torch, reduction=reduction)
             out_mlx = F_mlx.mse_loss(pred_mlx, target_mlx, reduction=reduction)
 
-            np.testing.assert_allclose(
-                out_torch.numpy(),
-                out_mlx.numpy(),
-                rtol=1e-5, atol=1e-6
-            )
+            np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
     def test_l1_loss_parity(self):
         """Test l1_loss produces matching outputs."""
@@ -315,15 +256,11 @@ class TestLossFunctionParity:
         pred_mlx = flashlight.tensor(pred_np)
         target_mlx = flashlight.tensor(target_np)
 
-        for reduction in ['mean', 'sum', 'none']:
+        for reduction in ["mean", "sum", "none"]:
             out_torch = F_torch.l1_loss(pred_torch, target_torch, reduction=reduction)
             out_mlx = F_mlx.l1_loss(pred_mlx, target_mlx, reduction=reduction)
 
-            np.testing.assert_allclose(
-                out_torch.numpy(),
-                out_mlx.numpy(),
-                rtol=1e-5, atol=1e-6
-            )
+            np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
     def test_cross_entropy_parity(self):
         """Test cross_entropy produces matching outputs."""
@@ -339,11 +276,7 @@ class TestLossFunctionParity:
         out_torch = F_torch.cross_entropy(logits_torch, target_torch)
         out_mlx = F_mlx.cross_entropy(logits_mlx, target_mlx)
 
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-4, atol=1e-5
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-4, atol=1e-5)
 
     def test_binary_cross_entropy_with_logits_parity(self):
         """Test binary_cross_entropy_with_logits produces matching outputs."""
@@ -359,11 +292,7 @@ class TestLossFunctionParity:
         out_torch = F_torch.binary_cross_entropy_with_logits(logits_torch, target_torch)
         out_mlx = F_mlx.binary_cross_entropy_with_logits(logits_mlx, target_mlx)
 
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
     def test_smooth_l1_loss_parity(self):
         """Test smooth_l1_loss produces matching outputs."""
@@ -380,11 +309,7 @@ class TestLossFunctionParity:
             out_torch = F_torch.smooth_l1_loss(pred_torch, target_torch, beta=beta)
             out_mlx = F_mlx.smooth_l1_loss(pred_mlx, target_mlx, beta=beta)
 
-            np.testing.assert_allclose(
-                out_torch.numpy(),
-                out_mlx.numpy(),
-                rtol=1e-5, atol=1e-6
-            )
+            np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
 
 @pytest.mark.skipif(not TORCH_AVAILABLE, reason="PyTorch required for parity tests")
@@ -401,11 +326,7 @@ class TestPoolingParity:
         out_torch = F_torch.max_pool2d(x_torch, kernel_size=2, stride=2)
         out_mlx = F_mlx.max_pool2d(x_mlx, kernel_size=2, stride=2)
 
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
     def test_avg_pool2d_parity(self):
         """Test avg_pool2d produces matching outputs."""
@@ -417,11 +338,7 @@ class TestPoolingParity:
         out_torch = F_torch.avg_pool2d(x_torch, kernel_size=2, stride=2)
         out_mlx = F_mlx.avg_pool2d(x_mlx, kernel_size=2, stride=2)
 
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
     def test_adaptive_avg_pool2d_global_parity(self):
         """Test adaptive_avg_pool2d with global pooling."""
@@ -433,11 +350,7 @@ class TestPoolingParity:
         out_torch = F_torch.adaptive_avg_pool2d(x_torch, (1, 1))
         out_mlx = F_mlx.adaptive_avg_pool2d(x_mlx, (1, 1))
 
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
 
 @pytest.mark.skipif(not TORCH_AVAILABLE, reason="PyTorch required for parity tests")
@@ -461,11 +374,7 @@ class TestEmbeddingParity:
         out_torch = F_torch.embedding(indices_torch, weight_torch)
         out_mlx = F_mlx.embedding(indices_mlx, weight_mlx)
 
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
 
 @pytest.mark.skipif(not TORCH_AVAILABLE, reason="PyTorch required for parity tests")
@@ -480,14 +389,10 @@ class TestPaddingParity:
         x_mlx = flashlight.tensor(x_np)
 
         # Pad last two dimensions: (left, right, top, bottom)
-        out_torch = F_torch.pad(x_torch, (1, 2, 3, 4), mode='constant', value=0.0)
-        out_mlx = F_mlx.pad(x_mlx, (1, 2, 3, 4), mode='constant', value=0.0)
+        out_torch = F_torch.pad(x_torch, (1, 2, 3, 4), mode="constant", value=0.0)
+        out_mlx = F_mlx.pad(x_mlx, (1, 2, 3, 4), mode="constant", value=0.0)
 
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
 
 @pytest.mark.skipif(not TORCH_AVAILABLE, reason="PyTorch required for parity tests")
@@ -504,11 +409,7 @@ class TestNormalizeParity:
         out_torch = F_torch.normalize(x_torch, p=2, dim=1)
         out_mlx = F_mlx.normalize(x_mlx, p=2, dim=1)
 
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
 
 @pytest.mark.skipif(not TORCH_AVAILABLE, reason="PyTorch required for parity tests")
@@ -528,7 +429,7 @@ class TestSignatureCompatibility:
             loss = F_mlx.mse_loss(pred_mlx, target_mlx, size_average=True)
 
         # size_average=True should be equivalent to reduction='mean'
-        expected = F_mlx.mse_loss(pred_mlx, target_mlx, reduction='mean')
+        expected = F_mlx.mse_loss(pred_mlx, target_mlx, reduction="mean")
         np.testing.assert_allclose(loss.numpy(), expected.numpy())
 
     def test_mse_loss_deprecated_reduce(self):
@@ -543,7 +444,7 @@ class TestSignatureCompatibility:
         with pytest.warns(DeprecationWarning):
             loss = F_mlx.mse_loss(pred_mlx, target_mlx, reduce=False)
 
-        expected = F_mlx.mse_loss(pred_mlx, target_mlx, reduction='none')
+        expected = F_mlx.mse_loss(pred_mlx, target_mlx, reduction="none")
         np.testing.assert_allclose(loss.numpy(), expected.numpy())
 
     def test_cross_entropy_deprecated_params(self):
@@ -557,7 +458,7 @@ class TestSignatureCompatibility:
         with pytest.warns(DeprecationWarning):
             loss = F_mlx.cross_entropy(logits_mlx, target_mlx, size_average=True)
 
-        expected = F_mlx.cross_entropy(logits_mlx, target_mlx, reduction='mean')
+        expected = F_mlx.cross_entropy(logits_mlx, target_mlx, reduction="mean")
         np.testing.assert_allclose(loss.numpy(), expected.numpy(), rtol=1e-5)
 
     def test_softmax_dtype_param(self):
@@ -615,7 +516,7 @@ class TestSignatureCompatibility:
         x_mlx = flashlight.tensor(x_np)
 
         # value=None should default to 0.0
-        out = F_mlx.pad(x_mlx, (1, 1, 1, 1), mode='constant', value=None)
+        out = F_mlx.pad(x_mlx, (1, 1, 1, 1), mode="constant", value=None)
         assert out.shape == (2, 3, 10, 10)
 
     def test_triplet_margin_loss_deprecated_params(self):
@@ -625,13 +526,9 @@ class TestSignatureCompatibility:
         negative = flashlight.randn(10, 128)
 
         with pytest.warns(DeprecationWarning):
-            loss = F_mlx.triplet_margin_loss(
-                anchor, positive, negative, size_average=True
-            )
+            loss = F_mlx.triplet_margin_loss(anchor, positive, negative, size_average=True)
 
-        expected = F_mlx.triplet_margin_loss(
-            anchor, positive, negative, reduction='mean'
-        )
+        expected = F_mlx.triplet_margin_loss(anchor, positive, negative, reduction="mean")
         np.testing.assert_allclose(loss.numpy(), expected.numpy(), rtol=1e-5)
 
     def test_margin_ranking_loss_deprecated_params(self):
@@ -643,7 +540,7 @@ class TestSignatureCompatibility:
         with pytest.warns(DeprecationWarning):
             loss = F_mlx.margin_ranking_loss(x1, x2, target, size_average=True)
 
-        expected = F_mlx.margin_ranking_loss(x1, x2, target, reduction='mean')
+        expected = F_mlx.margin_ranking_loss(x1, x2, target, reduction="mean")
         np.testing.assert_allclose(loss.numpy(), expected.numpy(), rtol=1e-5)
 
 
@@ -668,17 +565,13 @@ class TestGridSample3DParity:
         grid_mlx = flashlight.tensor(grid_np)
 
         out_torch = F_torch.grid_sample(
-            x_torch, grid_torch, mode='bilinear', padding_mode='zeros', align_corners=False
+            x_torch, grid_torch, mode="bilinear", padding_mode="zeros", align_corners=False
         )
         out_mlx = F_mlx.grid_sample(
-            x_mlx, grid_mlx, mode='bilinear', padding_mode='zeros', align_corners=False
+            x_mlx, grid_mlx, mode="bilinear", padding_mode="zeros", align_corners=False
         )
 
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-4, atol=1e-5
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-4, atol=1e-5)
 
     def test_grid_sample_3d_bilinear_zeros_align_corners(self):
         """Test 3D grid_sample with align_corners=True."""
@@ -695,17 +588,13 @@ class TestGridSample3DParity:
         grid_mlx = flashlight.tensor(grid_np)
 
         out_torch = F_torch.grid_sample(
-            x_torch, grid_torch, mode='bilinear', padding_mode='zeros', align_corners=True
+            x_torch, grid_torch, mode="bilinear", padding_mode="zeros", align_corners=True
         )
         out_mlx = F_mlx.grid_sample(
-            x_mlx, grid_mlx, mode='bilinear', padding_mode='zeros', align_corners=True
+            x_mlx, grid_mlx, mode="bilinear", padding_mode="zeros", align_corners=True
         )
 
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-4, atol=1e-5
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-4, atol=1e-5)
 
     def test_grid_sample_3d_bilinear_border(self):
         """Test 3D grid_sample with border padding mode."""
@@ -723,17 +612,13 @@ class TestGridSample3DParity:
         grid_mlx = flashlight.tensor(grid_np)
 
         out_torch = F_torch.grid_sample(
-            x_torch, grid_torch, mode='bilinear', padding_mode='border', align_corners=False
+            x_torch, grid_torch, mode="bilinear", padding_mode="border", align_corners=False
         )
         out_mlx = F_mlx.grid_sample(
-            x_mlx, grid_mlx, mode='bilinear', padding_mode='border', align_corners=False
+            x_mlx, grid_mlx, mode="bilinear", padding_mode="border", align_corners=False
         )
 
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-4, atol=1e-5
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-4, atol=1e-5)
 
     def test_grid_sample_3d_bilinear_reflection(self):
         """Test 3D grid_sample with reflection padding mode."""
@@ -751,17 +636,13 @@ class TestGridSample3DParity:
         grid_mlx = flashlight.tensor(grid_np)
 
         out_torch = F_torch.grid_sample(
-            x_torch, grid_torch, mode='bilinear', padding_mode='reflection', align_corners=False
+            x_torch, grid_torch, mode="bilinear", padding_mode="reflection", align_corners=False
         )
         out_mlx = F_mlx.grid_sample(
-            x_mlx, grid_mlx, mode='bilinear', padding_mode='reflection', align_corners=False
+            x_mlx, grid_mlx, mode="bilinear", padding_mode="reflection", align_corners=False
         )
 
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-4, atol=1e-4
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-4, atol=1e-4)
 
     def test_grid_sample_3d_nearest_zeros(self):
         """Test 3D grid_sample with nearest neighbor interpolation."""
@@ -778,17 +659,13 @@ class TestGridSample3DParity:
         grid_mlx = flashlight.tensor(grid_np)
 
         out_torch = F_torch.grid_sample(
-            x_torch, grid_torch, mode='nearest', padding_mode='zeros', align_corners=False
+            x_torch, grid_torch, mode="nearest", padding_mode="zeros", align_corners=False
         )
         out_mlx = F_mlx.grid_sample(
-            x_mlx, grid_mlx, mode='nearest', padding_mode='zeros', align_corners=False
+            x_mlx, grid_mlx, mode="nearest", padding_mode="zeros", align_corners=False
         )
 
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
     def test_grid_sample_3d_nearest_border(self):
         """Test 3D grid_sample with nearest neighbor and border padding."""
@@ -805,17 +682,13 @@ class TestGridSample3DParity:
         grid_mlx = flashlight.tensor(grid_np)
 
         out_torch = F_torch.grid_sample(
-            x_torch, grid_torch, mode='nearest', padding_mode='border', align_corners=False
+            x_torch, grid_torch, mode="nearest", padding_mode="border", align_corners=False
         )
         out_mlx = F_mlx.grid_sample(
-            x_mlx, grid_mlx, mode='nearest', padding_mode='border', align_corners=False
+            x_mlx, grid_mlx, mode="nearest", padding_mode="border", align_corners=False
         )
 
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
     def test_grid_sample_3d_identity_grid(self):
         """Test 3D grid_sample with an identity grid (should reproduce input)."""
@@ -827,7 +700,7 @@ class TestGridSample3DParity:
         d_coords = np.linspace(-1, 1, D)
         h_coords = np.linspace(-1, 1, H)
         w_coords = np.linspace(-1, 1, W)
-        ww, hh, dd = np.meshgrid(w_coords, h_coords, d_coords, indexing='xy')
+        ww, hh, dd = np.meshgrid(w_coords, h_coords, d_coords, indexing="xy")
         # Note: PyTorch expects (x, y, z) = (w, h, d)
         grid_np = np.stack([ww, hh, dd], axis=-1).transpose(2, 0, 1, 3).astype(np.float32)
         grid_np = np.expand_dims(grid_np, axis=0)  # (1, D, H, W, 3)
@@ -839,24 +712,16 @@ class TestGridSample3DParity:
         grid_mlx = flashlight.tensor(grid_np)
 
         out_torch = F_torch.grid_sample(
-            x_torch, grid_torch, mode='bilinear', padding_mode='zeros', align_corners=True
+            x_torch, grid_torch, mode="bilinear", padding_mode="zeros", align_corners=True
         )
         out_mlx = F_mlx.grid_sample(
-            x_mlx, grid_mlx, mode='bilinear', padding_mode='zeros', align_corners=True
+            x_mlx, grid_mlx, mode="bilinear", padding_mode="zeros", align_corners=True
         )
 
         # With identity grid and align_corners=True, output should match input
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-4, atol=1e-5
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-4, atol=1e-5)
         # Also check that PyTorch output matches input (sanity check)
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            x_np,
-            rtol=1e-4, atol=1e-5
-        )
+        np.testing.assert_allclose(out_torch.numpy(), x_np, rtol=1e-4, atol=1e-5)
 
     def test_grid_sample_3d_out_of_bounds_zeros(self):
         """Test 3D grid_sample with out-of-bounds coordinates and zeros padding."""
@@ -874,18 +739,14 @@ class TestGridSample3DParity:
         grid_mlx = flashlight.tensor(grid_np)
 
         out_torch = F_torch.grid_sample(
-            x_torch, grid_torch, mode='bilinear', padding_mode='zeros', align_corners=False
+            x_torch, grid_torch, mode="bilinear", padding_mode="zeros", align_corners=False
         )
         out_mlx = F_mlx.grid_sample(
-            x_mlx, grid_mlx, mode='bilinear', padding_mode='zeros', align_corners=False
+            x_mlx, grid_mlx, mode="bilinear", padding_mode="zeros", align_corners=False
         )
 
         # With zeros padding and out-of-bounds, output should be all zeros
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
         np.testing.assert_allclose(out_torch.numpy(), 0.0, atol=1e-6)
 
 
@@ -903,15 +764,11 @@ class TestInterpolateParity:
         x_torch = torch.tensor(x_np)
         x_mlx = flashlight.tensor(x_np)
 
-        out_torch = F_torch.interpolate(x_torch, size=(16,), mode='nearest')
-        out_mlx = F_mlx.interpolate(x_mlx, size=(16,), mode='nearest')
+        out_torch = F_torch.interpolate(x_torch, size=(16,), mode="nearest")
+        out_mlx = F_mlx.interpolate(x_mlx, size=(16,), mode="nearest")
 
         assert out_mlx.shape == (2, 3, 16)
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
     def test_nearest_3d_downsample(self):
         """Test nearest interpolation downsampling for 3D input (NCL)."""
@@ -919,15 +776,11 @@ class TestInterpolateParity:
         x_torch = torch.tensor(x_np)
         x_mlx = flashlight.tensor(x_np)
 
-        out_torch = F_torch.interpolate(x_torch, size=(8,), mode='nearest')
-        out_mlx = F_mlx.interpolate(x_mlx, size=(8,), mode='nearest')
+        out_torch = F_torch.interpolate(x_torch, size=(8,), mode="nearest")
+        out_mlx = F_mlx.interpolate(x_mlx, size=(8,), mode="nearest")
 
         assert out_mlx.shape == (2, 3, 8)
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
     def test_nearest_4d_upsample(self):
         """Test nearest interpolation upsampling for 4D input (NCHW)."""
@@ -935,15 +788,11 @@ class TestInterpolateParity:
         x_torch = torch.tensor(x_np)
         x_mlx = flashlight.tensor(x_np)
 
-        out_torch = F_torch.interpolate(x_torch, size=(16, 16), mode='nearest')
-        out_mlx = F_mlx.interpolate(x_mlx, size=(16, 16), mode='nearest')
+        out_torch = F_torch.interpolate(x_torch, size=(16, 16), mode="nearest")
+        out_mlx = F_mlx.interpolate(x_mlx, size=(16, 16), mode="nearest")
 
         assert out_mlx.shape == (2, 3, 16, 16)
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
     def test_nearest_4d_downsample(self):
         """Test nearest interpolation downsampling for 4D input (NCHW)."""
@@ -951,15 +800,11 @@ class TestInterpolateParity:
         x_torch = torch.tensor(x_np)
         x_mlx = flashlight.tensor(x_np)
 
-        out_torch = F_torch.interpolate(x_torch, size=(8, 8), mode='nearest')
-        out_mlx = F_mlx.interpolate(x_mlx, size=(8, 8), mode='nearest')
+        out_torch = F_torch.interpolate(x_torch, size=(8, 8), mode="nearest")
+        out_mlx = F_mlx.interpolate(x_mlx, size=(8, 8), mode="nearest")
 
         assert out_mlx.shape == (2, 3, 8, 8)
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
     def test_nearest_5d_upsample(self):
         """Test nearest interpolation upsampling for 5D input (NCDHW)."""
@@ -967,15 +812,11 @@ class TestInterpolateParity:
         x_torch = torch.tensor(x_np)
         x_mlx = flashlight.tensor(x_np)
 
-        out_torch = F_torch.interpolate(x_torch, size=(8, 16, 16), mode='nearest')
-        out_mlx = F_mlx.interpolate(x_mlx, size=(8, 16, 16), mode='nearest')
+        out_torch = F_torch.interpolate(x_torch, size=(8, 16, 16), mode="nearest")
+        out_mlx = F_mlx.interpolate(x_mlx, size=(8, 16, 16), mode="nearest")
 
         assert out_mlx.shape == (2, 3, 8, 16, 16)
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
     def test_nearest_5d_downsample(self):
         """Test nearest interpolation downsampling for 5D input (NCDHW)."""
@@ -983,15 +824,11 @@ class TestInterpolateParity:
         x_torch = torch.tensor(x_np)
         x_mlx = flashlight.tensor(x_np)
 
-        out_torch = F_torch.interpolate(x_torch, size=(4, 8, 8), mode='nearest')
-        out_mlx = F_mlx.interpolate(x_mlx, size=(4, 8, 8), mode='nearest')
+        out_torch = F_torch.interpolate(x_torch, size=(4, 8, 8), mode="nearest")
+        out_mlx = F_mlx.interpolate(x_mlx, size=(4, 8, 8), mode="nearest")
 
         assert out_mlx.shape == (2, 3, 4, 8, 8)
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
     # =====================================================
     # Nearest-Exact Interpolation Tests (3D, 4D, 5D)
@@ -1003,15 +840,11 @@ class TestInterpolateParity:
         x_torch = torch.tensor(x_np)
         x_mlx = flashlight.tensor(x_np)
 
-        out_torch = F_torch.interpolate(x_torch, size=(16,), mode='nearest-exact')
-        out_mlx = F_mlx.interpolate(x_mlx, size=(16,), mode='nearest-exact')
+        out_torch = F_torch.interpolate(x_torch, size=(16,), mode="nearest-exact")
+        out_mlx = F_mlx.interpolate(x_mlx, size=(16,), mode="nearest-exact")
 
         assert out_mlx.shape == (2, 3, 16)
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
     def test_nearest_exact_3d_downsample(self):
         """Test nearest-exact interpolation downsampling for 3D input (NCL)."""
@@ -1019,15 +852,11 @@ class TestInterpolateParity:
         x_torch = torch.tensor(x_np)
         x_mlx = flashlight.tensor(x_np)
 
-        out_torch = F_torch.interpolate(x_torch, size=(8,), mode='nearest-exact')
-        out_mlx = F_mlx.interpolate(x_mlx, size=(8,), mode='nearest-exact')
+        out_torch = F_torch.interpolate(x_torch, size=(8,), mode="nearest-exact")
+        out_mlx = F_mlx.interpolate(x_mlx, size=(8,), mode="nearest-exact")
 
         assert out_mlx.shape == (2, 3, 8)
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
     def test_nearest_exact_4d_upsample(self):
         """Test nearest-exact interpolation upsampling for 4D input (NCHW)."""
@@ -1035,15 +864,11 @@ class TestInterpolateParity:
         x_torch = torch.tensor(x_np)
         x_mlx = flashlight.tensor(x_np)
 
-        out_torch = F_torch.interpolate(x_torch, size=(16, 16), mode='nearest-exact')
-        out_mlx = F_mlx.interpolate(x_mlx, size=(16, 16), mode='nearest-exact')
+        out_torch = F_torch.interpolate(x_torch, size=(16, 16), mode="nearest-exact")
+        out_mlx = F_mlx.interpolate(x_mlx, size=(16, 16), mode="nearest-exact")
 
         assert out_mlx.shape == (2, 3, 16, 16)
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
     def test_nearest_exact_4d_downsample(self):
         """Test nearest-exact interpolation downsampling for 4D input (NCHW)."""
@@ -1051,15 +876,11 @@ class TestInterpolateParity:
         x_torch = torch.tensor(x_np)
         x_mlx = flashlight.tensor(x_np)
 
-        out_torch = F_torch.interpolate(x_torch, size=(8, 8), mode='nearest-exact')
-        out_mlx = F_mlx.interpolate(x_mlx, size=(8, 8), mode='nearest-exact')
+        out_torch = F_torch.interpolate(x_torch, size=(8, 8), mode="nearest-exact")
+        out_mlx = F_mlx.interpolate(x_mlx, size=(8, 8), mode="nearest-exact")
 
         assert out_mlx.shape == (2, 3, 8, 8)
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
     def test_nearest_exact_5d_upsample(self):
         """Test nearest-exact interpolation upsampling for 5D input (NCDHW)."""
@@ -1067,15 +888,11 @@ class TestInterpolateParity:
         x_torch = torch.tensor(x_np)
         x_mlx = flashlight.tensor(x_np)
 
-        out_torch = F_torch.interpolate(x_torch, size=(8, 16, 16), mode='nearest-exact')
-        out_mlx = F_mlx.interpolate(x_mlx, size=(8, 16, 16), mode='nearest-exact')
+        out_torch = F_torch.interpolate(x_torch, size=(8, 16, 16), mode="nearest-exact")
+        out_mlx = F_mlx.interpolate(x_mlx, size=(8, 16, 16), mode="nearest-exact")
 
         assert out_mlx.shape == (2, 3, 8, 16, 16)
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
     def test_nearest_exact_5d_downsample(self):
         """Test nearest-exact interpolation downsampling for 5D input (NCDHW)."""
@@ -1083,15 +900,11 @@ class TestInterpolateParity:
         x_torch = torch.tensor(x_np)
         x_mlx = flashlight.tensor(x_np)
 
-        out_torch = F_torch.interpolate(x_torch, size=(4, 8, 8), mode='nearest-exact')
-        out_mlx = F_mlx.interpolate(x_mlx, size=(4, 8, 8), mode='nearest-exact')
+        out_torch = F_torch.interpolate(x_torch, size=(4, 8, 8), mode="nearest-exact")
+        out_mlx = F_mlx.interpolate(x_mlx, size=(4, 8, 8), mode="nearest-exact")
 
         assert out_mlx.shape == (2, 3, 4, 8, 8)
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
     # =====================================================
     # Linear Interpolation Tests (3D only)
@@ -1103,15 +916,11 @@ class TestInterpolateParity:
         x_torch = torch.tensor(x_np)
         x_mlx = flashlight.tensor(x_np)
 
-        out_torch = F_torch.interpolate(x_torch, size=(16,), mode='linear', align_corners=False)
-        out_mlx = F_mlx.interpolate(x_mlx, size=(16,), mode='linear', align_corners=False)
+        out_torch = F_torch.interpolate(x_torch, size=(16,), mode="linear", align_corners=False)
+        out_mlx = F_mlx.interpolate(x_mlx, size=(16,), mode="linear", align_corners=False)
 
         assert out_mlx.shape == (2, 3, 16)
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-5
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-5)
 
     def test_linear_3d_align_corners(self):
         """Test linear interpolation with align_corners=True for 3D input."""
@@ -1119,15 +928,11 @@ class TestInterpolateParity:
         x_torch = torch.tensor(x_np)
         x_mlx = flashlight.tensor(x_np)
 
-        out_torch = F_torch.interpolate(x_torch, size=(16,), mode='linear', align_corners=True)
-        out_mlx = F_mlx.interpolate(x_mlx, size=(16,), mode='linear', align_corners=True)
+        out_torch = F_torch.interpolate(x_torch, size=(16,), mode="linear", align_corners=True)
+        out_mlx = F_mlx.interpolate(x_mlx, size=(16,), mode="linear", align_corners=True)
 
         assert out_mlx.shape == (2, 3, 16)
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-5
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-5)
 
     def test_linear_3d_downsample(self):
         """Test linear interpolation downsampling for 3D input (NCL)."""
@@ -1135,15 +940,11 @@ class TestInterpolateParity:
         x_torch = torch.tensor(x_np)
         x_mlx = flashlight.tensor(x_np)
 
-        out_torch = F_torch.interpolate(x_torch, size=(8,), mode='linear', align_corners=False)
-        out_mlx = F_mlx.interpolate(x_mlx, size=(8,), mode='linear', align_corners=False)
+        out_torch = F_torch.interpolate(x_torch, size=(8,), mode="linear", align_corners=False)
+        out_mlx = F_mlx.interpolate(x_mlx, size=(8,), mode="linear", align_corners=False)
 
         assert out_mlx.shape == (2, 3, 8)
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-5
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-5)
 
     # =====================================================
     # Bilinear Interpolation Tests (4D only)
@@ -1155,15 +956,13 @@ class TestInterpolateParity:
         x_torch = torch.tensor(x_np)
         x_mlx = flashlight.tensor(x_np)
 
-        out_torch = F_torch.interpolate(x_torch, size=(16, 16), mode='bilinear', align_corners=False)
-        out_mlx = F_mlx.interpolate(x_mlx, size=(16, 16), mode='bilinear', align_corners=False)
+        out_torch = F_torch.interpolate(
+            x_torch, size=(16, 16), mode="bilinear", align_corners=False
+        )
+        out_mlx = F_mlx.interpolate(x_mlx, size=(16, 16), mode="bilinear", align_corners=False)
 
         assert out_mlx.shape == (2, 3, 16, 16)
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-5
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-5)
 
     def test_bilinear_4d_align_corners(self):
         """Test bilinear interpolation with align_corners=True for 4D input."""
@@ -1171,15 +970,11 @@ class TestInterpolateParity:
         x_torch = torch.tensor(x_np)
         x_mlx = flashlight.tensor(x_np)
 
-        out_torch = F_torch.interpolate(x_torch, size=(16, 16), mode='bilinear', align_corners=True)
-        out_mlx = F_mlx.interpolate(x_mlx, size=(16, 16), mode='bilinear', align_corners=True)
+        out_torch = F_torch.interpolate(x_torch, size=(16, 16), mode="bilinear", align_corners=True)
+        out_mlx = F_mlx.interpolate(x_mlx, size=(16, 16), mode="bilinear", align_corners=True)
 
         assert out_mlx.shape == (2, 3, 16, 16)
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-5
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-5)
 
     def test_bilinear_4d_downsample(self):
         """Test bilinear interpolation downsampling for 4D input (NCHW)."""
@@ -1187,15 +982,11 @@ class TestInterpolateParity:
         x_torch = torch.tensor(x_np)
         x_mlx = flashlight.tensor(x_np)
 
-        out_torch = F_torch.interpolate(x_torch, size=(8, 8), mode='bilinear', align_corners=False)
-        out_mlx = F_mlx.interpolate(x_mlx, size=(8, 8), mode='bilinear', align_corners=False)
+        out_torch = F_torch.interpolate(x_torch, size=(8, 8), mode="bilinear", align_corners=False)
+        out_mlx = F_mlx.interpolate(x_mlx, size=(8, 8), mode="bilinear", align_corners=False)
 
         assert out_mlx.shape == (2, 3, 8, 8)
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-5
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-5)
 
     # =====================================================
     # Bicubic Interpolation Tests (4D only)
@@ -1207,15 +998,11 @@ class TestInterpolateParity:
         x_torch = torch.tensor(x_np)
         x_mlx = flashlight.tensor(x_np)
 
-        out_torch = F_torch.interpolate(x_torch, size=(16, 16), mode='bicubic', align_corners=False)
-        out_mlx = F_mlx.interpolate(x_mlx, size=(16, 16), mode='bicubic', align_corners=False)
+        out_torch = F_torch.interpolate(x_torch, size=(16, 16), mode="bicubic", align_corners=False)
+        out_mlx = F_mlx.interpolate(x_mlx, size=(16, 16), mode="bicubic", align_corners=False)
 
         assert out_mlx.shape == (2, 3, 16, 16)
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-4, atol=1e-4
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-4, atol=1e-4)
 
     def test_bicubic_4d_align_corners(self):
         """Test bicubic interpolation with align_corners=True for 4D input."""
@@ -1223,15 +1010,11 @@ class TestInterpolateParity:
         x_torch = torch.tensor(x_np)
         x_mlx = flashlight.tensor(x_np)
 
-        out_torch = F_torch.interpolate(x_torch, size=(16, 16), mode='bicubic', align_corners=True)
-        out_mlx = F_mlx.interpolate(x_mlx, size=(16, 16), mode='bicubic', align_corners=True)
+        out_torch = F_torch.interpolate(x_torch, size=(16, 16), mode="bicubic", align_corners=True)
+        out_mlx = F_mlx.interpolate(x_mlx, size=(16, 16), mode="bicubic", align_corners=True)
 
         assert out_mlx.shape == (2, 3, 16, 16)
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-4, atol=1e-4
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-4, atol=1e-4)
 
     def test_bicubic_4d_downsample(self):
         """Test bicubic interpolation downsampling for 4D input (NCHW)."""
@@ -1239,15 +1022,11 @@ class TestInterpolateParity:
         x_torch = torch.tensor(x_np)
         x_mlx = flashlight.tensor(x_np)
 
-        out_torch = F_torch.interpolate(x_torch, size=(8, 8), mode='bicubic', align_corners=False)
-        out_mlx = F_mlx.interpolate(x_mlx, size=(8, 8), mode='bicubic', align_corners=False)
+        out_torch = F_torch.interpolate(x_torch, size=(8, 8), mode="bicubic", align_corners=False)
+        out_mlx = F_mlx.interpolate(x_mlx, size=(8, 8), mode="bicubic", align_corners=False)
 
         assert out_mlx.shape == (2, 3, 8, 8)
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-4, atol=1e-4
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-4, atol=1e-4)
 
     # =====================================================
     # Trilinear Interpolation Tests (5D only)
@@ -1259,15 +1038,13 @@ class TestInterpolateParity:
         x_torch = torch.tensor(x_np)
         x_mlx = flashlight.tensor(x_np)
 
-        out_torch = F_torch.interpolate(x_torch, size=(8, 16, 16), mode='trilinear', align_corners=False)
-        out_mlx = F_mlx.interpolate(x_mlx, size=(8, 16, 16), mode='trilinear', align_corners=False)
+        out_torch = F_torch.interpolate(
+            x_torch, size=(8, 16, 16), mode="trilinear", align_corners=False
+        )
+        out_mlx = F_mlx.interpolate(x_mlx, size=(8, 16, 16), mode="trilinear", align_corners=False)
 
         assert out_mlx.shape == (2, 3, 8, 16, 16)
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-5
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-5)
 
     def test_trilinear_5d_align_corners(self):
         """Test trilinear interpolation with align_corners=True for 5D input."""
@@ -1275,15 +1052,13 @@ class TestInterpolateParity:
         x_torch = torch.tensor(x_np)
         x_mlx = flashlight.tensor(x_np)
 
-        out_torch = F_torch.interpolate(x_torch, size=(8, 16, 16), mode='trilinear', align_corners=True)
-        out_mlx = F_mlx.interpolate(x_mlx, size=(8, 16, 16), mode='trilinear', align_corners=True)
+        out_torch = F_torch.interpolate(
+            x_torch, size=(8, 16, 16), mode="trilinear", align_corners=True
+        )
+        out_mlx = F_mlx.interpolate(x_mlx, size=(8, 16, 16), mode="trilinear", align_corners=True)
 
         assert out_mlx.shape == (2, 3, 8, 16, 16)
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-5
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-5)
 
     def test_trilinear_5d_downsample(self):
         """Test trilinear interpolation downsampling for 5D input (NCDHW)."""
@@ -1291,15 +1066,13 @@ class TestInterpolateParity:
         x_torch = torch.tensor(x_np)
         x_mlx = flashlight.tensor(x_np)
 
-        out_torch = F_torch.interpolate(x_torch, size=(4, 8, 8), mode='trilinear', align_corners=False)
-        out_mlx = F_mlx.interpolate(x_mlx, size=(4, 8, 8), mode='trilinear', align_corners=False)
+        out_torch = F_torch.interpolate(
+            x_torch, size=(4, 8, 8), mode="trilinear", align_corners=False
+        )
+        out_mlx = F_mlx.interpolate(x_mlx, size=(4, 8, 8), mode="trilinear", align_corners=False)
 
         assert out_mlx.shape == (2, 3, 4, 8, 8)
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-5
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-5)
 
     # =====================================================
     # Area Interpolation Tests (3D, 4D, 5D)
@@ -1311,15 +1084,11 @@ class TestInterpolateParity:
         x_torch = torch.tensor(x_np)
         x_mlx = flashlight.tensor(x_np)
 
-        out_torch = F_torch.interpolate(x_torch, size=(8,), mode='area')
-        out_mlx = F_mlx.interpolate(x_mlx, size=(8,), mode='area')
+        out_torch = F_torch.interpolate(x_torch, size=(8,), mode="area")
+        out_mlx = F_mlx.interpolate(x_mlx, size=(8,), mode="area")
 
         assert out_mlx.shape == (2, 3, 8)
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-5
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-5)
 
     def test_area_4d_downsample(self):
         """Test area interpolation downsampling for 4D input (NCHW)."""
@@ -1327,15 +1096,11 @@ class TestInterpolateParity:
         x_torch = torch.tensor(x_np)
         x_mlx = flashlight.tensor(x_np)
 
-        out_torch = F_torch.interpolate(x_torch, size=(8, 8), mode='area')
-        out_mlx = F_mlx.interpolate(x_mlx, size=(8, 8), mode='area')
+        out_torch = F_torch.interpolate(x_torch, size=(8, 8), mode="area")
+        out_mlx = F_mlx.interpolate(x_mlx, size=(8, 8), mode="area")
 
         assert out_mlx.shape == (2, 3, 8, 8)
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-5
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-5)
 
     def test_area_5d_downsample(self):
         """Test area interpolation downsampling for 5D input (NCDHW)."""
@@ -1343,15 +1108,11 @@ class TestInterpolateParity:
         x_torch = torch.tensor(x_np)
         x_mlx = flashlight.tensor(x_np)
 
-        out_torch = F_torch.interpolate(x_torch, size=(4, 8, 8), mode='area')
-        out_mlx = F_mlx.interpolate(x_mlx, size=(4, 8, 8), mode='area')
+        out_torch = F_torch.interpolate(x_torch, size=(4, 8, 8), mode="area")
+        out_mlx = F_mlx.interpolate(x_mlx, size=(4, 8, 8), mode="area")
 
         assert out_mlx.shape == (2, 3, 4, 8, 8)
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-5
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-5)
 
     # =====================================================
     # Scale Factor Tests
@@ -1363,15 +1124,11 @@ class TestInterpolateParity:
         x_torch = torch.tensor(x_np)
         x_mlx = flashlight.tensor(x_np)
 
-        out_torch = F_torch.interpolate(x_torch, scale_factor=2.0, mode='nearest')
-        out_mlx = F_mlx.interpolate(x_mlx, scale_factor=2.0, mode='nearest')
+        out_torch = F_torch.interpolate(x_torch, scale_factor=2.0, mode="nearest")
+        out_mlx = F_mlx.interpolate(x_mlx, scale_factor=2.0, mode="nearest")
 
         assert out_mlx.shape == (2, 3, 16)
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
     def test_interpolate_scale_factor_4d(self):
         """Test interpolation with scale_factor for 4D input."""
@@ -1379,15 +1136,11 @@ class TestInterpolateParity:
         x_torch = torch.tensor(x_np)
         x_mlx = flashlight.tensor(x_np)
 
-        out_torch = F_torch.interpolate(x_torch, scale_factor=2.0, mode='nearest')
-        out_mlx = F_mlx.interpolate(x_mlx, scale_factor=2.0, mode='nearest')
+        out_torch = F_torch.interpolate(x_torch, scale_factor=2.0, mode="nearest")
+        out_mlx = F_mlx.interpolate(x_mlx, scale_factor=2.0, mode="nearest")
 
         assert out_mlx.shape == (2, 3, 16, 16)
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
     def test_interpolate_scale_factor_5d(self):
         """Test interpolation with scale_factor for 5D input."""
@@ -1395,16 +1148,12 @@ class TestInterpolateParity:
         x_torch = torch.tensor(x_np)
         x_mlx = flashlight.tensor(x_np)
 
-        out_torch = F_torch.interpolate(x_torch, scale_factor=2.0, mode='nearest')
-        out_mlx = F_mlx.interpolate(x_mlx, scale_factor=2.0, mode='nearest')
+        out_torch = F_torch.interpolate(x_torch, scale_factor=2.0, mode="nearest")
+        out_mlx = F_mlx.interpolate(x_mlx, scale_factor=2.0, mode="nearest")
 
         assert out_mlx.shape == (2, 3, 8, 16, 16)
-        np.testing.assert_allclose(
-            out_torch.numpy(),
-            out_mlx.numpy(),
-            rtol=1e-5, atol=1e-6
-        )
+        np.testing.assert_allclose(out_torch.numpy(), out_mlx.numpy(), rtol=1e-5, atol=1e-6)
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

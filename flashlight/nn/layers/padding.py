@@ -4,10 +4,12 @@ Padding Layers
 Implements padding layers for neural networks.
 """
 
+from typing import Tuple, Union
+
 import mlx.core as mx
-from ..module import Module
+
 from ...tensor import Tensor
-from typing import Union, Tuple
+from ..module import Module
 
 
 def _flip_axis(arr, axis):
@@ -51,7 +53,7 @@ class ZeroPad1d(Module):
         return Tensor._from_mlx_array(result)
 
     def extra_repr(self) -> str:
-        return f'{self.padding}'
+        return f"{self.padding}"
 
 
 class ZeroPad2d(Module):
@@ -83,7 +85,7 @@ class ZeroPad2d(Module):
         return Tensor._from_mlx_array(result)
 
     def extra_repr(self) -> str:
-        return f'{self.padding}'
+        return f"{self.padding}"
 
 
 class ZeroPad3d(Module):
@@ -115,7 +117,7 @@ class ZeroPad3d(Module):
         return Tensor._from_mlx_array(result)
 
     def extra_repr(self) -> str:
-        return f'{self.padding}'
+        return f"{self.padding}"
 
 
 class ConstantPad1d(Module):
@@ -147,7 +149,7 @@ class ConstantPad1d(Module):
         return Tensor._from_mlx_array(result)
 
     def extra_repr(self) -> str:
-        return f'padding={self.padding}, value={self.value}'
+        return f"padding={self.padding}, value={self.value}"
 
 
 class ConstantPad2d(Module):
@@ -180,7 +182,7 @@ class ConstantPad2d(Module):
         return Tensor._from_mlx_array(result)
 
     def extra_repr(self) -> str:
-        return f'padding={self.padding}, value={self.value}'
+        return f"padding={self.padding}, value={self.value}"
 
 
 class ConstantPad3d(Module):
@@ -213,7 +215,7 @@ class ConstantPad3d(Module):
         return Tensor._from_mlx_array(result)
 
     def extra_repr(self) -> str:
-        return f'padding={self.padding}, value={self.value}'
+        return f"padding={self.padding}, value={self.value}"
 
 
 class ReflectionPad1d(Module):
@@ -244,19 +246,19 @@ class ReflectionPad1d(Module):
         parts = []
         if left > 0:
             # Reflect left: x[:, :, 1:left+1] reversed
-            left_pad = _flip_axis(x[:, :, 1:left + 1], axis=2)
+            left_pad = _flip_axis(x[:, :, 1 : left + 1], axis=2)
             parts.append(left_pad)
         parts.append(x)
         if right > 0:
             # Reflect right: x[:, :, -(right+1):-1] reversed
-            right_pad = _flip_axis(x[:, :, -(right + 1):-1], axis=2)
+            right_pad = _flip_axis(x[:, :, -(right + 1) : -1], axis=2)
             parts.append(right_pad)
 
         result = mx.concatenate(parts, axis=2)
         return Tensor._from_mlx_array(result)
 
     def extra_repr(self) -> str:
-        return f'{self.padding}'
+        return f"{self.padding}"
 
 
 class ReflectionPad2d(Module):
@@ -287,11 +289,11 @@ class ReflectionPad2d(Module):
         if left > 0 or right > 0:
             parts_w = []
             if left > 0:
-                left_pad = _flip_axis(x[:, :, :, 1:left + 1], axis=3)
+                left_pad = _flip_axis(x[:, :, :, 1 : left + 1], axis=3)
                 parts_w.append(left_pad)
             parts_w.append(x)
             if right > 0:
-                right_pad = _flip_axis(x[:, :, :, -(right + 1):-1], axis=3)
+                right_pad = _flip_axis(x[:, :, :, -(right + 1) : -1], axis=3)
                 parts_w.append(right_pad)
             x = mx.concatenate(parts_w, axis=3)
 
@@ -299,18 +301,18 @@ class ReflectionPad2d(Module):
         if top > 0 or bottom > 0:
             parts_h = []
             if top > 0:
-                top_pad = _flip_axis(x[:, :, 1:top + 1, :], axis=2)
+                top_pad = _flip_axis(x[:, :, 1 : top + 1, :], axis=2)
                 parts_h.append(top_pad)
             parts_h.append(x)
             if bottom > 0:
-                bottom_pad = _flip_axis(x[:, :, -(bottom + 1):-1, :], axis=2)
+                bottom_pad = _flip_axis(x[:, :, -(bottom + 1) : -1, :], axis=2)
                 parts_h.append(bottom_pad)
             x = mx.concatenate(parts_h, axis=2)
 
         return Tensor._from_mlx_array(x)
 
     def extra_repr(self) -> str:
-        return f'{self.padding}'
+        return f"{self.padding}"
 
 
 class ReplicationPad1d(Module):
@@ -352,7 +354,7 @@ class ReplicationPad1d(Module):
         return Tensor._from_mlx_array(result)
 
     def extra_repr(self) -> str:
-        return f'{self.padding}'
+        return f"{self.padding}"
 
 
 class ReplicationPad2d(Module):
@@ -410,7 +412,7 @@ class ReplicationPad2d(Module):
         return Tensor._from_mlx_array(x)
 
     def extra_repr(self) -> str:
-        return f'{self.padding}'
+        return f"{self.padding}"
 
 
 class ReplicationPad3d(Module):
@@ -463,16 +465,20 @@ class ReplicationPad3d(Module):
         if front > 0 or back > 0:
             parts = []
             if front > 0:
-                parts.append(mx.broadcast_to(x[:, :, :1, :, :], (N, C, front, x.shape[3], x.shape[4])))
+                parts.append(
+                    mx.broadcast_to(x[:, :, :1, :, :], (N, C, front, x.shape[3], x.shape[4]))
+                )
             parts.append(x)
             if back > 0:
-                parts.append(mx.broadcast_to(x[:, :, -1:, :, :], (N, C, back, x.shape[3], x.shape[4])))
+                parts.append(
+                    mx.broadcast_to(x[:, :, -1:, :, :], (N, C, back, x.shape[3], x.shape[4]))
+                )
             x = mx.concatenate(parts, axis=2)
 
         return Tensor._from_mlx_array(x)
 
     def extra_repr(self) -> str:
-        return f'{self.padding}'
+        return f"{self.padding}"
 
 
 class CircularPad1d(Module):
@@ -510,7 +516,7 @@ class CircularPad1d(Module):
         return Tensor._from_mlx_array(result)
 
     def extra_repr(self) -> str:
-        return f'{self.padding}'
+        return f"{self.padding}"
 
 
 class CircularPad2d(Module):
@@ -560,7 +566,7 @@ class CircularPad2d(Module):
         return Tensor._from_mlx_array(x)
 
     def extra_repr(self) -> str:
-        return f'{self.padding}'
+        return f"{self.padding}"
 
 
 class CircularPad3d(Module):
@@ -620,7 +626,7 @@ class CircularPad3d(Module):
         return Tensor._from_mlx_array(x)
 
     def extra_repr(self) -> str:
-        return f'{self.padding}'
+        return f"{self.padding}"
 
 
 class ReflectionPad3d(Module):
@@ -651,11 +657,11 @@ class ReflectionPad3d(Module):
         if left > 0 or right > 0:
             parts_w = []
             if left > 0:
-                left_pad = _flip_axis(x[:, :, :, :, 1:left + 1], axis=4)
+                left_pad = _flip_axis(x[:, :, :, :, 1 : left + 1], axis=4)
                 parts_w.append(left_pad)
             parts_w.append(x)
             if right > 0:
-                right_pad = _flip_axis(x[:, :, :, :, -(right + 1):-1], axis=4)
+                right_pad = _flip_axis(x[:, :, :, :, -(right + 1) : -1], axis=4)
                 parts_w.append(right_pad)
             x = mx.concatenate(parts_w, axis=4)
 
@@ -663,11 +669,11 @@ class ReflectionPad3d(Module):
         if top > 0 or bottom > 0:
             parts_h = []
             if top > 0:
-                top_pad = _flip_axis(x[:, :, :, 1:top + 1, :], axis=3)
+                top_pad = _flip_axis(x[:, :, :, 1 : top + 1, :], axis=3)
                 parts_h.append(top_pad)
             parts_h.append(x)
             if bottom > 0:
-                bottom_pad = _flip_axis(x[:, :, :, -(bottom + 1):-1, :], axis=3)
+                bottom_pad = _flip_axis(x[:, :, :, -(bottom + 1) : -1, :], axis=3)
                 parts_h.append(bottom_pad)
             x = mx.concatenate(parts_h, axis=3)
 
@@ -675,24 +681,34 @@ class ReflectionPad3d(Module):
         if front > 0 or back > 0:
             parts_d = []
             if front > 0:
-                front_pad = _flip_axis(x[:, :, 1:front + 1, :, :], axis=2)
+                front_pad = _flip_axis(x[:, :, 1 : front + 1, :, :], axis=2)
                 parts_d.append(front_pad)
             parts_d.append(x)
             if back > 0:
-                back_pad = _flip_axis(x[:, :, -(back + 1):-1, :, :], axis=2)
+                back_pad = _flip_axis(x[:, :, -(back + 1) : -1, :, :], axis=2)
                 parts_d.append(back_pad)
             x = mx.concatenate(parts_d, axis=2)
 
         return Tensor._from_mlx_array(x)
 
     def extra_repr(self) -> str:
-        return f'{self.padding}'
+        return f"{self.padding}"
 
 
 __all__ = [
-    'ZeroPad1d', 'ZeroPad2d', 'ZeroPad3d',
-    'ConstantPad1d', 'ConstantPad2d', 'ConstantPad3d',
-    'ReflectionPad1d', 'ReflectionPad2d', 'ReflectionPad3d',
-    'ReplicationPad1d', 'ReplicationPad2d', 'ReplicationPad3d',
-    'CircularPad1d', 'CircularPad2d', 'CircularPad3d',
+    "ZeroPad1d",
+    "ZeroPad2d",
+    "ZeroPad3d",
+    "ConstantPad1d",
+    "ConstantPad2d",
+    "ConstantPad3d",
+    "ReflectionPad1d",
+    "ReflectionPad2d",
+    "ReflectionPad3d",
+    "ReplicationPad1d",
+    "ReplicationPad2d",
+    "ReplicationPad3d",
+    "CircularPad1d",
+    "CircularPad2d",
+    "CircularPad3d",
 ]

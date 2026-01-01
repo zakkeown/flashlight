@@ -10,7 +10,6 @@ Implements PyTorch-compatible context managers for controlling gradient tracking
 import threading
 from typing import Optional
 
-
 # Thread-local storage for gradient tracking state
 _grad_enabled = threading.local()
 
@@ -22,7 +21,7 @@ def is_grad_enabled() -> bool:
     Returns:
         bool: Whether gradients are being tracked
     """
-    if not hasattr(_grad_enabled, 'enabled'):
+    if not hasattr(_grad_enabled, "enabled"):
         _grad_enabled.enabled = True  # Enabled by default
     return _grad_enabled.enabled
 
@@ -69,9 +68,11 @@ class no_grad:
 
     def __call__(self, func):
         """Allow using as a decorator."""
+
         def wrapper(*args, **kwargs):
             with self:
                 return func(*args, **kwargs)
+
         return wrapper
 
 
@@ -103,9 +104,11 @@ class enable_grad:
 
     def __call__(self, func):
         """Allow using as a decorator."""
+
         def wrapper(*args, **kwargs):
             with self:
                 return func(*args, **kwargs)
+
         return wrapper
 
 
@@ -137,7 +140,9 @@ class set_grad_enabled:
 
     def __call__(self, func):
         """Allow using as a decorator."""
+
         def wrapper(*args, **kwargs):
             with self:
                 return func(*args, **kwargs)
+
         return wrapper

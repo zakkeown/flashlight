@@ -9,9 +9,11 @@ Tests optimizer functionality:
 """
 
 import sys
-sys.path.insert(0, '../..')
+
+sys.path.insert(0, "../..")
 
 import unittest
+
 import numpy as np
 
 from tests.common_utils import TestCase, skipIfNoMLX
@@ -20,6 +22,7 @@ try:
     import flashlight
     import flashlight.nn as nn
     import flashlight.optim as optim
+
     MLX_COMPAT_AVAILABLE = True
 except ImportError:
     MLX_COMPAT_AVAILABLE = False
@@ -200,11 +203,7 @@ class TestWithModel(TestCase):
     def test_full_training_step(self):
         """Test complete training step with model, loss, and optimizer."""
         # Create model
-        model = nn.Sequential(
-            nn.Linear(10, 20),
-            nn.ReLU(),
-            nn.Linear(20, 2)
-        )
+        model = nn.Sequential(nn.Linear(10, 20), nn.ReLU(), nn.Linear(20, 2))
 
         # Create optimizer and loss
         optimizer = optim.Adam(model.parameters(), lr=0.01)
@@ -236,15 +235,15 @@ class TestLRSchedulers(TestCase):
         scheduler = optim.StepLR(optimizer, step_size=2, gamma=0.1)
 
         # Initial LR
-        self.assertAlmostEqual(optimizer.param_groups[0]['lr'], 0.1)
+        self.assertAlmostEqual(optimizer.param_groups[0]["lr"], 0.1)
 
         # Step 1: no change
         scheduler.step()
-        self.assertAlmostEqual(optimizer.param_groups[0]['lr'], 0.1)
+        self.assertAlmostEqual(optimizer.param_groups[0]["lr"], 0.1)
 
         # Step 2: decay
         scheduler.step()
-        self.assertAlmostEqual(optimizer.param_groups[0]['lr'], 0.01, places=5)
+        self.assertAlmostEqual(optimizer.param_groups[0]["lr"], 0.01, places=5)
 
     def test_exponential_lr(self):
         """Test ExponentialLR scheduler."""
@@ -252,13 +251,13 @@ class TestLRSchedulers(TestCase):
         optimizer = optim.SGD([param], lr=1.0)
         scheduler = optim.ExponentialLR(optimizer, gamma=0.9)
 
-        self.assertAlmostEqual(optimizer.param_groups[0]['lr'], 1.0)
+        self.assertAlmostEqual(optimizer.param_groups[0]["lr"], 1.0)
 
         scheduler.step()
-        self.assertAlmostEqual(optimizer.param_groups[0]['lr'], 0.9, places=5)
+        self.assertAlmostEqual(optimizer.param_groups[0]["lr"], 0.9, places=5)
 
         scheduler.step()
-        self.assertAlmostEqual(optimizer.param_groups[0]['lr'], 0.81, places=5)
+        self.assertAlmostEqual(optimizer.param_groups[0]["lr"], 0.81, places=5)
 
     def test_cosine_annealing_lr(self):
         """Test CosineAnnealingLR scheduler."""
@@ -267,23 +266,23 @@ class TestLRSchedulers(TestCase):
         scheduler = optim.CosineAnnealingLR(optimizer, T_max=10)
 
         # At T=0, lr = initial
-        self.assertAlmostEqual(optimizer.param_groups[0]['lr'], 1.0)
+        self.assertAlmostEqual(optimizer.param_groups[0]["lr"], 1.0)
 
         # At T=T_max/2, lr should be around eta_min
         for _ in range(5):
             scheduler.step()
 
         # LR should have decreased
-        self.assertLess(optimizer.param_groups[0]['lr'], 1.0)
+        self.assertLess(optimizer.param_groups[0]["lr"], 1.0)
 
     def test_reduce_lr_on_plateau(self):
         """Test ReduceLROnPlateau scheduler."""
         param = flashlight.nn.Parameter(flashlight.randn(3, 3))
         optimizer = optim.SGD([param], lr=1.0)
-        scheduler = optim.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=2)
+        scheduler = optim.ReduceLROnPlateau(optimizer, mode="min", factor=0.1, patience=2)
 
         # Initial LR
-        self.assertAlmostEqual(optimizer.param_groups[0]['lr'], 1.0)
+        self.assertAlmostEqual(optimizer.param_groups[0]["lr"], 1.0)
 
         # Metrics not improving
         scheduler.step(1.0)  # epoch 1
@@ -292,9 +291,10 @@ class TestLRSchedulers(TestCase):
         scheduler.step(1.0)  # epoch 4 - should reduce after patience
 
         # LR should have been reduced
-        self.assertLess(optimizer.param_groups[0]['lr'], 1.0)
+        self.assertLess(optimizer.param_groups[0]["lr"], 1.0)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from tests.common_utils import run_tests
+
     run_tests()

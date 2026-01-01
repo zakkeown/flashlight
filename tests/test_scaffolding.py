@@ -4,11 +4,11 @@ Test Phase 0: Project Scaffolding
 Verifies that the project structure is set up correctly.
 """
 
-import unittest
 import sys
+import unittest
 
 # Add parent directory to path for imports
-sys.path.insert(0, '..')
+sys.path.insert(0, "..")
 
 import flashlight
 from tests.common_utils import TestCase
@@ -28,9 +28,9 @@ class TestScaffolding(TestCase):
     def test_submodules_exist(self):
         """Test that all submodules can be imported."""
         # These should all import without errors (even if empty)
-        import flashlight.ops
         import flashlight.autograd
         import flashlight.nn
+        import flashlight.ops
         import flashlight.optim
         import flashlight.utils
 
@@ -95,6 +95,7 @@ class TestCommonUtils(TestCase):
             self.assert_shape_equal((3, 4), (3, 5))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from tests.common_utils import run_tests
+
     run_tests()

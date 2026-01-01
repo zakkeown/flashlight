@@ -4,8 +4,8 @@ Attention Layer Parity Tests
 Tests numerical parity between flashlight attention layers and PyTorch.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 torch = pytest.importorskip("torch")
 
@@ -76,9 +76,7 @@ class TestMultiheadAttentionParity:
         np.random.seed(42)
         x_np = np.random.randn(batch, seq_len, embed_dim).astype(np.float32)
 
-        torch_out, _ = torch_mha(
-            torch.tensor(x_np), torch.tensor(x_np), torch.tensor(x_np)
-        )
+        torch_out, _ = torch_mha(torch.tensor(x_np), torch.tensor(x_np), torch.tensor(x_np))
         mlx_out, _ = mlx_mha(
             flashlight.tensor(x_np), flashlight.tensor(x_np), flashlight.tensor(x_np)
         )
@@ -101,9 +99,7 @@ class TestMultiheadAttentionParity:
         k_np = np.random.randn(batch, kv_len, embed_dim).astype(np.float32)
         v_np = np.random.randn(batch, kv_len, embed_dim).astype(np.float32)
 
-        torch_out, _ = torch_mha(
-            torch.tensor(q_np), torch.tensor(k_np), torch.tensor(v_np)
-        )
+        torch_out, _ = torch_mha(torch.tensor(q_np), torch.tensor(k_np), torch.tensor(v_np))
         mlx_out, _ = mlx_mha(
             flashlight.tensor(q_np), flashlight.tensor(k_np), flashlight.tensor(v_np)
         )
@@ -124,9 +120,7 @@ class TestMultiheadAttentionParity:
         np.random.seed(42)
         x_np = np.random.randn(batch, seq_len, embed_dim).astype(np.float32)
 
-        torch_out, _ = torch_mha(
-            torch.tensor(x_np), torch.tensor(x_np), torch.tensor(x_np)
-        )
+        torch_out, _ = torch_mha(torch.tensor(x_np), torch.tensor(x_np), torch.tensor(x_np))
         mlx_out, _ = mlx_mha(
             flashlight.tensor(x_np), flashlight.tensor(x_np), flashlight.tensor(x_np)
         )
@@ -174,12 +168,10 @@ class TestScaledDotProductAttentionParity:
         v_np = np.random.randn(batch, heads, seq_len, head_dim).astype(np.float32)
 
         torch_out = torch.nn.functional.scaled_dot_product_attention(
-            torch.tensor(q_np), torch.tensor(k_np), torch.tensor(v_np),
-            scale=scale
+            torch.tensor(q_np), torch.tensor(k_np), torch.tensor(v_np), scale=scale
         )
         mlx_out = scaled_dot_product_attention(
-            flashlight.tensor(q_np), flashlight.tensor(k_np), flashlight.tensor(v_np),
-            scale=scale
+            flashlight.tensor(q_np), flashlight.tensor(k_np), flashlight.tensor(v_np), scale=scale
         )
 
         max_diff = np.max(np.abs(torch_out.numpy() - np.array(mlx_out.tolist())))
@@ -198,9 +190,7 @@ class TestTransformerLayerParity:
         torch_layer = torch.nn.TransformerEncoderLayer(
             d_model, nhead, dim_feedforward, batch_first=True
         )
-        mlx_layer = nn.TransformerEncoderLayer(
-            d_model, nhead, dim_feedforward, batch_first=True
-        )
+        mlx_layer = nn.TransformerEncoderLayer(d_model, nhead, dim_feedforward, batch_first=True)
 
         np.random.seed(42)
         x_np = np.random.randn(batch, seq_len, d_model).astype(np.float32)
@@ -219,9 +209,7 @@ class TestTransformerLayerParity:
         torch_layer = torch.nn.TransformerDecoderLayer(
             d_model, nhead, dim_feedforward, batch_first=True
         )
-        mlx_layer = nn.TransformerDecoderLayer(
-            d_model, nhead, dim_feedforward, batch_first=True
-        )
+        mlx_layer = nn.TransformerDecoderLayer(d_model, nhead, dim_feedforward, batch_first=True)
 
         np.random.seed(42)
         tgt_np = np.random.randn(batch, tgt_len, d_model).astype(np.float32)

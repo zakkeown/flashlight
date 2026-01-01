@@ -1,19 +1,20 @@
 """Multinomial Distribution"""
 
 from typing import Optional, Tuple, Union
+
 import mlx.core as mx
 
-from ..tensor import Tensor
 from ..ops.special import lgamma
-from .distribution import Distribution
+from ..tensor import Tensor
 from . import constraints
-from ._constants import UNIFORM_LOW, UNIFORM_HIGH, xlogy
+from ._constants import UNIFORM_HIGH, UNIFORM_LOW, xlogy
+from .distribution import Distribution
 
 
 class Multinomial(Distribution):
     """Multinomial distribution."""
 
-    arg_constraints = {'probs': constraints.simplex, 'logits': constraints.real_vector}
+    arg_constraints = {"probs": constraints.simplex, "logits": constraints.real_vector}
 
     def __init__(
         self,
@@ -80,7 +81,7 @@ class Multinomial(Distribution):
             # Create one-hot using scatter-like operation
             # For each position, set 1 at the sampled index
             for cat_idx in range(num_categories):
-                mask = (indices == cat_idx)
+                mask = indices == cat_idx
                 one_hot = one_hot.at[..., cat_idx].add(mx.squeeze(mask.astype(mx.float32), axis=-1))
 
             counts = counts + one_hot
@@ -98,4 +99,4 @@ class Multinomial(Distribution):
         return Tensor(log_coeff + log_probs)
 
 
-__all__ = ['Multinomial']
+__all__ = ["Multinomial"]
