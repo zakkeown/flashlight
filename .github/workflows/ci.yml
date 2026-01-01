@@ -112,7 +112,7 @@ jobs:
         env:
           PYTHONPATH: .
         run: |
-          pytest tests/integration/ -v --tb=short -m integration
+          pytest tests/integration/ -v --tb=short
 
       - name: Upload coverage
         uses: codecov/codecov-action@v4
