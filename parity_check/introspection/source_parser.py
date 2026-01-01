@@ -146,19 +146,36 @@ def _get_default_str(default: ast.AST) -> str:
         return repr(default)
 
 
-def parse_class_init(node: ast.ClassDef) -> Optional[Dict[str, Any]]:
+def parse_class_init(node: ast.ClassDef, all_classes: Dict[str, ast.ClassDef] = None) -> Optional[Dict[str, Any]]:
     """
     Parse a class definition to extract __init__ signature.
 
     Args:
         node: AST ClassDef node
+        all_classes: Dictionary of all class definitions for inheritance lookup
 
     Returns:
         Dictionary with __init__ signature, or None if no __init__
     """
+    # Check for __init__ in this class
     for item in node.body:
         if isinstance(item, ast.FunctionDef) and item.name == "__init__":
             return parse_function_signature(item)
+
+    # If not found and we have class definitions, check parent classes
+    if all_classes:
+        for base in node.bases:
+            base_name = None
+            if isinstance(base, ast.Name):
+                base_name = base.id
+            elif isinstance(base, ast.Attribute):
+                base_name = base.attr
+
+            if base_name and base_name in all_classes:
+                parent_init = parse_class_init(all_classes[base_name], all_classes)
+                if parent_init:
+                    return parent_init
+
     return None
 
 
@@ -182,6 +199,13 @@ def extract_signatures_from_file(filepath: Path) -> Dict[str, Dict[str, Any]]:
     except Exception as e:
         return signatures
 
+    # First pass: collect all class definitions for inheritance lookup
+    all_classes: Dict[str, ast.ClassDef] = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ClassDef):
+            all_classes[node.name] = node
+
+    # Second pass: extract signatures
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef):
             # Top-level functions
@@ -189,9 +213,9 @@ def extract_signatures_from_file(filepath: Path) -> Dict[str, Dict[str, Any]]:
                 signatures[node.name] = parse_function_signature(node)
 
         elif isinstance(node, ast.ClassDef):
-            # Classes - extract __init__ signature
+            # Classes - extract __init__ signature (with inheritance support)
             if not node.name.startswith('_'):
-                init_sig = parse_class_init(node)
+                init_sig = parse_class_init(node, all_classes)
                 if init_sig:
                     signatures[node.name] = init_sig
 

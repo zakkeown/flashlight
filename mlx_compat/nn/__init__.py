@@ -126,6 +126,15 @@ from .layers.transformer import (
     Transformer,
 )
 
+# Lazy layers
+from .layers.lazy import (
+    LazyLinear,
+    LazyConv1d, LazyConv2d, LazyConv3d,
+    LazyConvTranspose1d, LazyConvTranspose2d, LazyConvTranspose3d,
+    LazyBatchNorm1d, LazyBatchNorm2d, LazyBatchNorm3d,
+    LazyInstanceNorm1d, LazyInstanceNorm2d, LazyInstanceNorm3d,
+)
+
 # Utility function
 def factory_kwargs(kwargs):
     """
@@ -216,4 +225,10 @@ __all__ = [
     'TransformerEncoderLayer', 'TransformerDecoderLayer',
     'TransformerEncoder', 'TransformerDecoder',
     'Transformer',
+    # Lazy
+    'LazyLinear',
+    'LazyConv1d', 'LazyConv2d', 'LazyConv3d',
+    'LazyConvTranspose1d', 'LazyConvTranspose2d', 'LazyConvTranspose3d',
+    'LazyBatchNorm1d', 'LazyBatchNorm2d', 'LazyBatchNorm3d',
+    'LazyInstanceNorm1d', 'LazyInstanceNorm2d', 'LazyInstanceNorm3d',
 ]

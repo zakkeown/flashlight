@@ -85,11 +85,11 @@ class ComposeTransform(Transform):
         return y
 
     def log_abs_det_jacobian(self, x, y):
-        data = x._data if isinstance(x, Tensor) else x
+        data = x._mlx_array if isinstance(x, Tensor) else x
         result = mx.zeros_like(data)
         for part in self.parts:
             y_tmp = part(x)
-            result = result + part.log_abs_det_jacobian(x, y_tmp)._data
+            result = result + part.log_abs_det_jacobian(x, y_tmp)._mlx_array
             x = y_tmp
         return Tensor(result)
 
@@ -101,15 +101,15 @@ class ExpTransform(Transform):
     codomain = constraints.positive
 
     def _call(self, x):
-        data = x._data if isinstance(x, Tensor) else x
+        data = x._mlx_array if isinstance(x, Tensor) else x
         return Tensor(mx.exp(data))
 
     def _inverse(self, y):
-        data = y._data if isinstance(y, Tensor) else y
+        data = y._mlx_array if isinstance(y, Tensor) else y
         return Tensor(mx.log(data))
 
     def log_abs_det_jacobian(self, x, y):
-        data = x._data if isinstance(x, Tensor) else x
+        data = x._mlx_array if isinstance(x, Tensor) else x
         return Tensor(data)
 
     @property
@@ -128,15 +128,15 @@ class PowerTransform(Transform):
         self.exponent = exponent
 
     def _call(self, x):
-        data = x._data if isinstance(x, Tensor) else x
+        data = x._mlx_array if isinstance(x, Tensor) else x
         return Tensor(mx.power(data, self.exponent))
 
     def _inverse(self, y):
-        data = y._data if isinstance(y, Tensor) else y
+        data = y._mlx_array if isinstance(y, Tensor) else y
         return Tensor(mx.power(data, 1.0 / self.exponent))
 
     def log_abs_det_jacobian(self, x, y):
-        data = x._data if isinstance(x, Tensor) else x
+        data = x._mlx_array if isinstance(x, Tensor) else x
         return Tensor(mx.log(mx.abs(self.exponent * mx.power(data, self.exponent - 1))))
 
     @property
@@ -151,15 +151,15 @@ class SigmoidTransform(Transform):
     codomain = constraints.unit_interval
 
     def _call(self, x):
-        data = x._data if isinstance(x, Tensor) else x
+        data = x._mlx_array if isinstance(x, Tensor) else x
         return Tensor(mx.sigmoid(data))
 
     def _inverse(self, y):
-        data = y._data if isinstance(y, Tensor) else y
+        data = y._mlx_array if isinstance(y, Tensor) else y
         return Tensor(mx.log(data) - mx.log(1 - data))
 
     def log_abs_det_jacobian(self, x, y):
-        data = x._data if isinstance(x, Tensor) else x
+        data = x._mlx_array if isinstance(x, Tensor) else x
         # log(sigmoid(x) * (1 - sigmoid(x))) = x - 2*softplus(x)
         return Tensor(data - 2 * mx.logaddexp(mx.array(0.0), data))
 
@@ -175,15 +175,15 @@ class TanhTransform(Transform):
     codomain = constraints.interval(-1, 1)
 
     def _call(self, x):
-        data = x._data if isinstance(x, Tensor) else x
+        data = x._mlx_array if isinstance(x, Tensor) else x
         return Tensor(mx.tanh(data))
 
     def _inverse(self, y):
-        data = y._data if isinstance(y, Tensor) else y
+        data = y._mlx_array if isinstance(y, Tensor) else y
         return Tensor(0.5 * (mx.log1p(data) - mx.log1p(-data)))
 
     def log_abs_det_jacobian(self, x, y):
-        data = x._data if isinstance(x, Tensor) else x
+        data = x._mlx_array if isinstance(x, Tensor) else x
         # log(1 - tanh^2(x)) = 2 * (log(2) - x - softplus(-2x))
         return Tensor(2 * (math.log(2) - data - mx.logaddexp(mx.array(0.0), -2 * data)))
 
@@ -200,7 +200,7 @@ class AbsTransform(Transform):
     bijective = False
 
     def _call(self, x):
-        data = x._data if isinstance(x, Tensor) else x
+        data = x._mlx_array if isinstance(x, Tensor) else x
         return Tensor(mx.abs(data))
 
     def _inverse(self, y):
@@ -213,8 +213,8 @@ class AffineTransform(Transform):
 
     def __init__(self, loc, scale, event_dim=0, cache_size=0):
         super().__init__(cache_size)
-        self.loc = loc._data if isinstance(loc, Tensor) else loc
-        self.scale = scale._data if isinstance(scale, Tensor) else scale
+        self.loc = loc._mlx_array if isinstance(loc, Tensor) else loc
+        self.scale = scale._mlx_array if isinstance(scale, Tensor) else scale
         self.event_dim = event_dim
 
     @property
@@ -228,15 +228,15 @@ class AffineTransform(Transform):
         return constraints.real
 
     def _call(self, x):
-        data = x._data if isinstance(x, Tensor) else x
+        data = x._mlx_array if isinstance(x, Tensor) else x
         return Tensor(self.loc + self.scale * data)
 
     def _inverse(self, y):
-        data = y._data if isinstance(y, Tensor) else y
+        data = y._mlx_array if isinstance(y, Tensor) else y
         return Tensor((data - self.loc) / self.scale)
 
     def log_abs_det_jacobian(self, x, y):
-        data = x._data if isinstance(x, Tensor) else x
+        data = x._mlx_array if isinstance(x, Tensor) else x
         shape = data.shape
         scale = self.scale
         if isinstance(scale, (int, float)):
@@ -260,11 +260,11 @@ class SoftmaxTransform(Transform):
     codomain = constraints.simplex
 
     def _call(self, x):
-        data = x._data if isinstance(x, Tensor) else x
+        data = x._mlx_array if isinstance(x, Tensor) else x
         return Tensor(mx.softmax(data, axis=-1))
 
     def _inverse(self, y):
-        data = y._data if isinstance(y, Tensor) else y
+        data = y._mlx_array if isinstance(y, Tensor) else y
         return Tensor(mx.log(data))
 
 
@@ -275,15 +275,15 @@ class SoftplusTransform(Transform):
     codomain = constraints.positive
 
     def _call(self, x):
-        data = x._data if isinstance(x, Tensor) else x
+        data = x._mlx_array if isinstance(x, Tensor) else x
         return Tensor(mx.logaddexp(mx.array(0.0), data))
 
     def _inverse(self, y):
-        data = y._data if isinstance(y, Tensor) else y
+        data = y._mlx_array if isinstance(y, Tensor) else y
         return Tensor(data + mx.log(-mx.expm1(-data)))
 
     def log_abs_det_jacobian(self, x, y):
-        data = x._data if isinstance(x, Tensor) else x
+        data = x._mlx_array if isinstance(x, Tensor) else x
         return Tensor(-mx.logaddexp(mx.array(0.0), -data))
 
 
@@ -294,14 +294,14 @@ class LowerCholeskyTransform(Transform):
     codomain = constraints.lower_cholesky
 
     def _call(self, x):
-        data = x._data if isinstance(x, Tensor) else x
+        data = x._mlx_array if isinstance(x, Tensor) else x
         # Apply exp to diagonal
         diag = mx.diagonal(data, axis1=-2, axis2=-1)
         result = mx.tril(data, -1) + mx.diag(mx.exp(diag))
         return Tensor(result)
 
     def _inverse(self, y):
-        data = y._data if isinstance(y, Tensor) else y
+        data = y._mlx_array if isinstance(y, Tensor) else y
         diag = mx.diagonal(data, axis1=-2, axis2=-1)
         result = mx.tril(data, -1) + mx.diag(mx.log(diag))
         return Tensor(result)
@@ -314,7 +314,7 @@ class PositiveDefiniteTransform(Transform):
     codomain = constraints.positive_definite
 
     def _call(self, x):
-        data = x._data if isinstance(x, Tensor) else x
+        data = x._mlx_array if isinstance(x, Tensor) else x
         # L L^T where L is lower Cholesky
         L = mx.tril(data)
         diag = mx.diagonal(L, axis1=-2, axis2=-1)
@@ -330,7 +330,7 @@ class CorrCholeskyTransform(Transform):
     codomain = constraints.corr_cholesky
 
     def _call(self, x):
-        data = x._data if isinstance(x, Tensor) else x
+        data = x._mlx_array if isinstance(x, Tensor) else x
         # Construct correlation Cholesky from unconstrained
         z = mx.tanh(data)
         L = mx.tril(mx.ones_like(data))
@@ -347,7 +347,7 @@ class StickBreakingTransform(Transform):
     codomain = constraints.simplex
 
     def _call(self, x):
-        data = x._data if isinstance(x, Tensor) else x
+        data = x._mlx_array if isinstance(x, Tensor) else x
         z = mx.sigmoid(data)
         # Stick breaking: x_i = z_i * prod(1 - z_j for j < i)
         z1m_cumprod = mx.cumprod(1 - z, axis=-1)
@@ -371,7 +371,7 @@ class CatTransform(Transform):
 
     def _call(self, x):
         # Split and apply
-        data = x._data if isinstance(x, Tensor) else x
+        data = x._mlx_array if isinstance(x, Tensor) else x
         if self.lengths is None:
             n = len(self.tseq)
             split_size = data.shape[self.dim] // n
@@ -389,7 +389,7 @@ class CatTransform(Transform):
             start += length
 
         # Apply transforms
-        results = [t(Tensor(s))._data for t, s in zip(self.tseq, splits)]
+        results = [t(Tensor(s))._mlx_array for t, s in zip(self.tseq, splits)]
         result = mx.concatenate(results, axis=self.dim)
         return Tensor(result)
 
@@ -403,11 +403,11 @@ class StackTransform(Transform):
         self.dim = dim
 
     def _call(self, x):
-        data = x._data if isinstance(x, Tensor) else x
+        data = x._mlx_array if isinstance(x, Tensor) else x
         # Split along stacked dim
         n = len(self.tseq)
         splits = [data[i] for i in range(n)]
-        results = [t(Tensor(s))._data for t, s in zip(self.tseq, splits)]
+        results = [t(Tensor(s))._mlx_array for t, s in zip(self.tseq, splits)]
         result = mx.stack(results, axis=self.dim)
         return Tensor(result)
 
@@ -428,7 +428,7 @@ class IndependentTransform(Transform):
 
     def log_abs_det_jacobian(self, x, y):
         result = self.base_transform.log_abs_det_jacobian(x, y)
-        data = result._data if isinstance(result, Tensor) else result
+        data = result._mlx_array if isinstance(result, Tensor) else result
         for _ in range(self.reinterpreted_batch_ndims):
             data = mx.sum(data, axis=-1)
         return Tensor(data)
@@ -443,17 +443,17 @@ class ReshapeTransform(Transform):
         self.out_shape = out_shape
 
     def _call(self, x):
-        data = x._data if isinstance(x, Tensor) else x
+        data = x._mlx_array if isinstance(x, Tensor) else x
         batch_shape = data.shape[:-len(self.in_shape)]
         return Tensor(mx.reshape(data, batch_shape + tuple(self.out_shape)))
 
     def _inverse(self, y):
-        data = y._data if isinstance(y, Tensor) else y
+        data = y._mlx_array if isinstance(y, Tensor) else y
         batch_shape = data.shape[:-len(self.out_shape)]
         return Tensor(mx.reshape(data, batch_shape + tuple(self.in_shape)))
 
     def log_abs_det_jacobian(self, x, y):
-        data = x._data if isinstance(x, Tensor) else x
+        data = x._mlx_array if isinstance(x, Tensor) else x
         return Tensor(mx.zeros(data.shape[:-len(self.in_shape)]))
 
 

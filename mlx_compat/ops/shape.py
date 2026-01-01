@@ -21,6 +21,8 @@ def cat(tensors: Union[Tuple[Tensor, ...], List[Tensor]], dim: int = 0) -> Tenso
     Returns:
         Concatenated tensor
     """
+    from ..autograd.context import is_grad_enabled
+
     if not tensors:
         raise ValueError("cat expects at least one tensor")
 
@@ -28,9 +30,13 @@ def cat(tensors: Union[Tuple[Tensor, ...], List[Tensor]], dim: int = 0) -> Tenso
     mlx_result = mx.concatenate(mlx_arrays, axis=dim)
     result = Tensor._from_mlx_array(mlx_result)
 
-    # Propagate requires_grad if any tensor requires grad
-    if any(t.requires_grad for t in tensors):
+    # Attach gradient function if any tensor requires grad
+    if is_grad_enabled() and any(t.requires_grad for t in tensors):
         result.requires_grad = True
+        from ..autograd.function import CatBackward
+        grad_fn = CatBackward(list(tensors), dim=dim)
+        grad_fn.output_tensor = result
+        result._grad_fn = grad_fn
 
     return result
 

@@ -4,6 +4,7 @@ from typing import Optional, Tuple, Union
 import mlx.core as mx
 
 from ..tensor import Tensor
+from ..ops.special import lgamma
 from .distribution import Distribution
 from . import constraints
 
@@ -25,10 +26,10 @@ class Multinomial(Distribution):
 
         self.total_count = total_count
         if probs is not None:
-            self.probs = probs._data if isinstance(probs, Tensor) else mx.array(probs)
+            self.probs = probs._mlx_array if isinstance(probs, Tensor) else mx.array(probs)
             self.logits = mx.log(self.probs)
         else:
-            self.logits = logits._data if isinstance(logits, Tensor) else mx.array(logits)
+            self.logits = logits._mlx_array if isinstance(logits, Tensor) else mx.array(logits)
             self.probs = mx.softmax(self.logits, axis=-1)
 
         batch_shape = self.probs.shape[:-1]
@@ -48,19 +49,47 @@ class Multinomial(Distribution):
         return Tensor(self.total_count * self.probs * (1 - self.probs))
 
     def sample(self, sample_shape: Tuple[int, ...] = ()) -> Tensor:
+        # Multinomial sampling using repeated categorical sampling
         shape = sample_shape + self._batch_shape
-        import numpy as np
-        samples = np.random.multinomial(self.total_count, np.array(self.probs), shape)
-        return Tensor(mx.array(samples.astype(np.float32)))
+        num_categories = self.probs.shape[-1]
+
+        # Initialize counts to zero
+        if len(shape) > 0:
+            full_shape = shape + (num_categories,)
+        else:
+            full_shape = (num_categories,)
+
+        counts = mx.zeros(full_shape, dtype=mx.float32)
+
+        # Sample total_count times and accumulate counts
+        # For each sample, draw from categorical and increment the count
+        probs_expanded = mx.broadcast_to(self.probs, full_shape)
+
+        for _ in range(self.total_count):
+            # Sample from categorical distribution using Gumbel-max trick
+            u = mx.random.uniform(shape=full_shape)
+            gumbel = -mx.log(-mx.log(u + 1e-10) + 1e-10)
+            logits = mx.log(probs_expanded + 1e-10) + gumbel
+
+            # One-hot encode the selected category
+            indices = mx.argmax(logits, axis=-1, keepdims=True)
+            one_hot = mx.zeros(full_shape)
+            # Create one-hot using scatter-like operation
+            # For each position, set 1 at the sampled index
+            for cat_idx in range(num_categories):
+                mask = (indices == cat_idx)
+                one_hot = one_hot.at[..., cat_idx].add(mx.squeeze(mask.astype(mx.float32), axis=-1))
+
+            counts = counts + one_hot
+
+        return Tensor(counts)
 
     def log_prob(self, value: Tensor) -> Tensor:
-        data = value._data if isinstance(value, Tensor) else value
-        import numpy as np
-        from scipy import special as sp
+        data = value._mlx_array if isinstance(value, Tensor) else value
         # Log multinomial coefficient + sum of log probs
-        log_factorial_n = sp.gammaln(self.total_count + 1)
-        log_factorial_k = sp.gammaln(np.array(data) + 1)
-        log_coeff = log_factorial_n - mx.sum(mx.array(log_factorial_k.astype(np.float32)), axis=-1)
+        log_factorial_n = lgamma(mx.array(self.total_count + 1, dtype=mx.float32))
+        log_factorial_k = lgamma(data + 1)
+        log_coeff = log_factorial_n - mx.sum(log_factorial_k, axis=-1)
         log_probs = mx.sum(data * mx.log(self.probs + 1e-10), axis=-1)
         return Tensor(log_coeff + log_probs)
 

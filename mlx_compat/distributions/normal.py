@@ -30,8 +30,8 @@ class Normal(ExponentialFamily):
         scale: Union[Tensor, float],
         validate_args: Optional[bool] = None,
     ):
-        self.loc = loc._data if isinstance(loc, Tensor) else mx.array(loc)
-        self.scale = scale._data if isinstance(scale, Tensor) else mx.array(scale)
+        self.loc = loc._mlx_array if isinstance(loc, Tensor) else mx.array(loc)
+        self.scale = scale._mlx_array if isinstance(scale, Tensor) else mx.array(scale)
 
         batch_shape = mx.broadcast_shapes(self.loc.shape, self.scale.shape)
         super().__init__(batch_shape, validate_args=validate_args)
@@ -61,18 +61,18 @@ class Normal(ExponentialFamily):
         return self.sample(sample_shape)
 
     def log_prob(self, value: Tensor) -> Tensor:
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         var = self.scale ** 2
         log_scale = mx.log(self.scale)
         log_prob = -((data - self.loc) ** 2) / (2 * var) - log_scale - 0.5 * math.log(2 * math.pi)
         return Tensor(log_prob)
 
     def cdf(self, value: Tensor) -> Tensor:
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         return Tensor(0.5 * (1 + mx.erf((data - self.loc) / (self.scale * math.sqrt(2)))))
 
     def icdf(self, value: Tensor) -> Tensor:
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         return Tensor(self.loc + self.scale * mx.erfinv(2 * data - 1) * math.sqrt(2))
 
     def entropy(self) -> Tensor:
@@ -83,8 +83,8 @@ class Normal(ExponentialFamily):
         return (Tensor(self.loc / self.scale ** 2), Tensor(-0.5 / self.scale ** 2))
 
     def _log_normalizer(self, x, y) -> Tensor:
-        x_data = x._data if isinstance(x, Tensor) else x
-        y_data = y._data if isinstance(y, Tensor) else y
+        x_data = x._mlx_array if isinstance(x, Tensor) else x
+        y_data = y._mlx_array if isinstance(y, Tensor) else y
         return Tensor(-0.25 * x_data ** 2 / y_data + 0.5 * mx.log(-math.pi / y_data))
 
 

@@ -999,9 +999,7 @@ class LPPool3d(Module):
 
     def forward(self, input: Tensor) -> Tensor:
         """Apply 3D LP pooling."""
-        import numpy as np
-
-        x = np.array(input._mlx_array)
+        x = input._mlx_array
         N, C, D, H, W = x.shape
         kD, kH, kW = self.kernel_size
         sD, sH, sW = self.stride
@@ -1012,21 +1010,42 @@ class LPPool3d(Module):
         W_out = (W - kW) // sW + 1
 
         # Take absolute value and raise to power p
-        x_p = np.power(np.abs(x), self.norm_type)
+        x_p = mx.power(mx.abs(x), self.norm_type)
 
-        # Manual 3D pooling
-        output = np.zeros((N, C, D_out, H_out, W_out), dtype=x.dtype)
+        # 3D LP pooling using slice-based approach with MLX
+        # Process each depth slice and combine
+        output_slices = []
         for d in range(D_out):
-            for h in range(H_out):
-                for w in range(W_out):
-                    d_start = d * sD
-                    h_start = h * sH
-                    w_start = w * sW
-                    window = x_p[:, :, d_start:d_start+kD, h_start:h_start+kH, w_start:w_start+kW]
-                    pool_sum = np.sum(window, axis=(2, 3, 4))
-                    output[:, :, d, h, w] = np.power(pool_sum, 1.0 / self.norm_type)
+            d_start = d * sD
+            # Extract a 2D+depth slice: shape (N, C, kD, H, W)
+            depth_slice = x_p[:, :, d_start:d_start + kD, :, :]
 
-        return Tensor._from_mlx_array(mx.array(output, dtype=input._mlx_array.dtype))
+            # Sum over the depth kernel dimension
+            depth_sum = mx.sum(depth_slice, axis=2)  # Shape: (N, C, H, W)
+
+            # Convert to NHWC for 2D pooling
+            depth_sum_nhwc = mx.transpose(depth_sum, [0, 2, 3, 1])
+
+            # Apply 2D avg pooling and scale
+            pool = mxnn.AvgPool2d(kernel_size=(kH, kW), stride=(sH, sW), padding=0)
+            pooled = pool(depth_sum_nhwc)  # Shape: (N, H_out, W_out, C)
+
+            # Multiply by 2D kernel area to get sum (depth already summed)
+            kernel_area_2d = kH * kW
+            pooled = pooled * kernel_area_2d
+
+            # Convert back to NCHW
+            pooled = mx.transpose(pooled, [0, 3, 1, 2])  # Shape: (N, C, H_out, W_out)
+
+            output_slices.append(mx.expand_dims(pooled, axis=2))
+
+        # Stack along depth dimension
+        output = mx.concatenate(output_slices, axis=2)  # Shape: (N, C, D_out, H_out, W_out)
+
+        # Take p-th root
+        result = mx.power(output, 1.0 / self.norm_type)
+
+        return Tensor._from_mlx_array(result)
 
     def extra_repr(self) -> str:
         return f'norm_type={self.norm_type}, kernel_size={self.kernel_size}, stride={self.stride}'
@@ -1076,9 +1095,7 @@ class FractionalMaxPool2d(Module):
 
     def forward(self, input: Tensor):
         """Apply fractional max pooling."""
-        import numpy as np
-
-        x = np.array(input._mlx_array)
+        x = input._mlx_array
         N, C, H, W = x.shape
         kH, kW = self.kernel_size
 
@@ -1089,36 +1106,68 @@ class FractionalMaxPool2d(Module):
             H_out = int(H * self.output_ratio[0])
             W_out = int(W * self.output_ratio[1])
 
-        # Generate random pooling regions
-        # This is a simplified implementation
-        h_regions = np.sort(np.random.choice(range(1, H - kH + 1), H_out - 1, replace=False))
-        h_regions = np.concatenate([[0], h_regions, [H - kH + 1]])
-        w_regions = np.sort(np.random.choice(range(1, W - kW + 1), W_out - 1, replace=False))
-        w_regions = np.concatenate([[0], w_regions, [W - kW + 1]])
+        # Generate random pooling regions using MLX random
+        # Use uniform distribution and sort for region boundaries
+        if H_out > 1 and H - kH > 0:
+            h_random = mx.random.uniform(shape=(H_out - 1,))
+            h_boundaries = mx.sort(h_random * (H - kH))
+            h_regions = mx.concatenate([mx.array([0.0]), h_boundaries, mx.array([float(H - kH + 1)])])
+        else:
+            h_regions = mx.array([0.0, float(H - kH + 1)])
 
-        output = np.zeros((N, C, H_out, W_out), dtype=x.dtype)
-        indices = np.zeros((N, C, H_out, W_out), dtype=np.int64)
+        if W_out > 1 and W - kW > 0:
+            w_random = mx.random.uniform(shape=(W_out - 1,))
+            w_boundaries = mx.sort(w_random * (W - kW))
+            w_regions = mx.concatenate([mx.array([0.0]), w_boundaries, mx.array([float(W - kW + 1)])])
+        else:
+            w_regions = mx.array([0.0, float(W - kW + 1)])
+
+        # Convert regions to Python for indexing
+        h_regions_list = [int(v) for v in h_regions.tolist()]
+        w_regions_list = [int(v) for v in w_regions.tolist()]
+
+        # Build output using MLX operations
+        output_rows = []
+        indices_rows = [] if self.return_indices else None
 
         for i in range(H_out):
-            for j in range(W_out):
-                h_start = int(h_regions[i])
-                h_end = int(h_regions[i + 1]) + kH - 1
-                w_start = int(w_regions[j])
-                w_end = int(w_regions[j + 1]) + kW - 1
+            output_cols = []
+            indices_cols = [] if self.return_indices else None
 
-                h_end = min(h_end, H)
-                w_end = min(w_end, W)
+            h_start = h_regions_list[i]
+            h_end = min(h_regions_list[i + 1] + kH - 1, H)
+
+            for j in range(W_out):
+                w_start = w_regions_list[j]
+                w_end = min(w_regions_list[j + 1] + kW - 1, W)
 
                 window = x[:, :, h_start:h_end, w_start:w_end]
-                output[:, :, i, j] = np.max(window, axis=(2, 3))
-                if self.return_indices:
-                    flat_idx = np.argmax(window.reshape(N, C, -1), axis=2)
-                    indices[:, :, i, j] = flat_idx + h_start * W + w_start
+                # Max over spatial dimensions
+                max_val = mx.max(window, axis=(2, 3), keepdims=True)
+                output_cols.append(max_val)
 
-        result = Tensor._from_mlx_array(mx.array(output, dtype=input._mlx_array.dtype))
+                if self.return_indices:
+                    # Flatten window and find argmax
+                    window_flat = mx.reshape(window, (N, C, -1))
+                    flat_idx = mx.argmax(window_flat, axis=2, keepdims=True)
+                    # Convert to global index
+                    global_idx = flat_idx + h_start * W + w_start
+                    indices_cols.append(global_idx)
+
+            # Concatenate columns
+            row_output = mx.concatenate(output_cols, axis=3)
+            output_rows.append(row_output)
+            if self.return_indices:
+                row_indices = mx.concatenate(indices_cols, axis=2)
+                indices_rows.append(mx.expand_dims(row_indices, axis=2))
+
+        # Concatenate rows
+        output = mx.concatenate(output_rows, axis=2)
+        result = Tensor._from_mlx_array(output)
 
         if self.return_indices:
-            idx_tensor = Tensor._from_mlx_array(mx.array(indices))
+            indices = mx.concatenate(indices_rows, axis=2)
+            idx_tensor = Tensor._from_mlx_array(indices)
             return result, idx_tensor
         return result
 
@@ -1164,9 +1213,7 @@ class FractionalMaxPool3d(Module):
 
     def forward(self, input: Tensor):
         """Apply fractional max pooling 3D."""
-        import numpy as np
-
-        x = np.array(input._mlx_array)
+        x = input._mlx_array
         N, C, D, H, W = x.shape
         kD, kH, kW = self.kernel_size
 
@@ -1177,27 +1224,44 @@ class FractionalMaxPool3d(Module):
             H_out = int(H * self.output_ratio[1])
             W_out = int(W * self.output_ratio[2])
 
-        output = np.zeros((N, C, D_out, H_out, W_out), dtype=x.dtype)
-
-        # Simplified implementation - uniform grid
+        # Compute uniform grid step sizes
         d_step = D / D_out
         h_step = H / H_out
         w_step = W / W_out
 
+        # Build output using MLX operations slice by slice
+        output_depth = []
         for di in range(D_out):
+            output_height = []
+            d_start = int(di * d_step)
+            d_end = min(int((di + 1) * d_step) + kD - 1, D)
+
             for hi in range(H_out):
+                output_width = []
+                h_start = int(hi * h_step)
+                h_end = min(int((hi + 1) * h_step) + kH - 1, H)
+
                 for wi in range(W_out):
-                    d_start = int(di * d_step)
-                    d_end = min(int((di + 1) * d_step) + kD - 1, D)
-                    h_start = int(hi * h_step)
-                    h_end = min(int((hi + 1) * h_step) + kH - 1, H)
                     w_start = int(wi * w_step)
                     w_end = min(int((wi + 1) * w_step) + kW - 1, W)
 
                     window = x[:, :, d_start:d_end, h_start:h_end, w_start:w_end]
-                    output[:, :, di, hi, wi] = np.max(window, axis=(2, 3, 4))
+                    # Max over all spatial dimensions, keep dims for concatenation
+                    max_val = mx.max(window, axis=(2, 3, 4), keepdims=True)
+                    output_width.append(max_val)
 
-        return Tensor._from_mlx_array(mx.array(output, dtype=input._mlx_array.dtype))
+                # Concatenate along W dimension
+                row_output = mx.concatenate(output_width, axis=4)
+                output_height.append(row_output)
+
+            # Concatenate along H dimension
+            height_output = mx.concatenate(output_height, axis=3)
+            output_depth.append(height_output)
+
+        # Concatenate along D dimension
+        output = mx.concatenate(output_depth, axis=2)
+
+        return Tensor._from_mlx_array(output)
 
     def extra_repr(self) -> str:
         return f'kernel_size={self.kernel_size}, output_size={self.output_size}, output_ratio={self.output_ratio}'
@@ -1234,10 +1298,8 @@ class MaxUnpool1d(Module):
 
     def forward(self, input: Tensor, indices: Tensor, output_size=None):
         """Apply max unpooling."""
-        import numpy as np
-
-        x = np.array(input._mlx_array)
-        idx = np.array(indices._mlx_array).astype(np.int64)
+        x = input._mlx_array
+        idx = indices._mlx_array.astype(mx.int32)
         N, C, L_in = x.shape
 
         if output_size is not None:
@@ -1245,14 +1307,30 @@ class MaxUnpool1d(Module):
         else:
             L_out = (L_in - 1) * self.stride - 2 * self.padding + self.kernel_size
 
-        output = np.zeros((N, C, L_out), dtype=x.dtype)
+        # Use one-hot scatter approach
+        # Reshape to (N*C, L_in)
+        x_flat = mx.reshape(x, (N * C, L_in))
+        idx_flat = mx.reshape(idx, (N * C, L_in))
 
-        for n in range(N):
-            for c in range(C):
-                for l in range(L_in):
-                    output[n, c, idx[n, c, l]] = x[n, c, l]
+        # For each position in the flattened input, create one-hot vector
+        # and multiply by value, then sum
+        # one_hot shape: (N*C, L_in, L_out)
+        # We can use broadcasting: indices (N*C, L_in, 1) == arange (L_out,)
+        arange = mx.arange(L_out)  # (L_out,)
+        idx_expanded = mx.expand_dims(idx_flat, axis=2)  # (N*C, L_in, 1)
 
-        return Tensor._from_mlx_array(mx.array(output, dtype=input._mlx_array.dtype))
+        # Create mask where each position matches its target index
+        one_hot = (idx_expanded == arange).astype(x.dtype)  # (N*C, L_in, L_out)
+
+        # Multiply by values and sum over L_in dimension
+        x_expanded = mx.expand_dims(x_flat, axis=2)  # (N*C, L_in, 1)
+        scattered = one_hot * x_expanded  # (N*C, L_in, L_out)
+        output_flat = mx.sum(scattered, axis=1)  # (N*C, L_out)
+
+        # Reshape back to (N, C, L_out)
+        output = mx.reshape(output_flat, (N, C, L_out))
+
+        return Tensor._from_mlx_array(output)
 
     def extra_repr(self) -> str:
         return f'kernel_size={self.kernel_size}, stride={self.stride}, padding={self.padding}'
@@ -1285,10 +1363,8 @@ class MaxUnpool2d(Module):
 
     def forward(self, input: Tensor, indices: Tensor, output_size=None):
         """Apply max unpooling 2D."""
-        import numpy as np
-
-        x = np.array(input._mlx_array)
-        idx = np.array(indices._mlx_array).astype(np.int64)
+        x = input._mlx_array
+        idx = indices._mlx_array.astype(mx.int32)
         N, C, H_in, W_in = x.shape
 
         if output_size is not None:
@@ -1297,19 +1373,29 @@ class MaxUnpool2d(Module):
             H_out = (H_in - 1) * self.stride[0] - 2 * self.padding[0] + self.kernel_size[0]
             W_out = (W_in - 1) * self.stride[1] - 2 * self.padding[1] + self.kernel_size[1]
 
-        output = np.zeros((N, C, H_out, W_out), dtype=x.dtype)
+        spatial_out = H_out * W_out
+        spatial_in = H_in * W_in
 
-        for n in range(N):
-            for c in range(C):
-                for h in range(H_in):
-                    for w in range(W_in):
-                        flat_idx = idx[n, c, h, w]
-                        h_idx = flat_idx // W_out
-                        w_idx = flat_idx % W_out
-                        if 0 <= h_idx < H_out and 0 <= w_idx < W_out:
-                            output[n, c, h_idx, w_idx] = x[n, c, h, w]
+        # Flatten spatial dimensions: (N, C, H_in, W_in) -> (N*C, H_in*W_in)
+        x_flat = mx.reshape(x, (N * C, spatial_in))
+        idx_flat = mx.reshape(idx, (N * C, spatial_in))
 
-        return Tensor._from_mlx_array(mx.array(output, dtype=input._mlx_array.dtype))
+        # Use one-hot scatter approach
+        arange = mx.arange(spatial_out)  # (H_out * W_out,)
+        idx_expanded = mx.expand_dims(idx_flat, axis=2)  # (N*C, spatial_in, 1)
+
+        # Create mask where each position matches its target index
+        one_hot = (idx_expanded == arange).astype(x.dtype)  # (N*C, spatial_in, spatial_out)
+
+        # Multiply by values and sum over spatial_in dimension
+        x_expanded = mx.expand_dims(x_flat, axis=2)  # (N*C, spatial_in, 1)
+        scattered = one_hot * x_expanded  # (N*C, spatial_in, spatial_out)
+        output_flat = mx.sum(scattered, axis=1)  # (N*C, spatial_out)
+
+        # Reshape back to (N, C, H_out, W_out)
+        output = mx.reshape(output_flat, (N, C, H_out, W_out))
+
+        return Tensor._from_mlx_array(output)
 
     def extra_repr(self) -> str:
         return f'kernel_size={self.kernel_size}, stride={self.stride}, padding={self.padding}'
@@ -1342,10 +1428,8 @@ class MaxUnpool3d(Module):
 
     def forward(self, input: Tensor, indices: Tensor, output_size=None):
         """Apply max unpooling 3D."""
-        import numpy as np
-
-        x = np.array(input._mlx_array)
-        idx = np.array(indices._mlx_array).astype(np.int64)
+        x = input._mlx_array
+        idx = indices._mlx_array.astype(mx.int32)
         N, C, D_in, H_in, W_in = x.shape
 
         if output_size is not None:
@@ -1355,22 +1439,29 @@ class MaxUnpool3d(Module):
             H_out = (H_in - 1) * self.stride[1] - 2 * self.padding[1] + self.kernel_size[1]
             W_out = (W_in - 1) * self.stride[2] - 2 * self.padding[2] + self.kernel_size[2]
 
-        output = np.zeros((N, C, D_out, H_out, W_out), dtype=x.dtype)
+        spatial_out = D_out * H_out * W_out
+        spatial_in = D_in * H_in * W_in
 
-        for n in range(N):
-            for c in range(C):
-                for d in range(D_in):
-                    for h in range(H_in):
-                        for w in range(W_in):
-                            flat_idx = idx[n, c, d, h, w]
-                            d_idx = flat_idx // (H_out * W_out)
-                            rem = flat_idx % (H_out * W_out)
-                            h_idx = rem // W_out
-                            w_idx = rem % W_out
-                            if 0 <= d_idx < D_out and 0 <= h_idx < H_out and 0 <= w_idx < W_out:
-                                output[n, c, d_idx, h_idx, w_idx] = x[n, c, d, h, w]
+        # Flatten spatial dimensions: (N, C, D_in, H_in, W_in) -> (N*C, spatial_in)
+        x_flat = mx.reshape(x, (N * C, spatial_in))
+        idx_flat = mx.reshape(idx, (N * C, spatial_in))
 
-        return Tensor._from_mlx_array(mx.array(output, dtype=input._mlx_array.dtype))
+        # Use one-hot scatter approach
+        arange = mx.arange(spatial_out)  # (D_out * H_out * W_out,)
+        idx_expanded = mx.expand_dims(idx_flat, axis=2)  # (N*C, spatial_in, 1)
+
+        # Create mask where each position matches its target index
+        one_hot = (idx_expanded == arange).astype(x.dtype)  # (N*C, spatial_in, spatial_out)
+
+        # Multiply by values and sum over spatial_in dimension
+        x_expanded = mx.expand_dims(x_flat, axis=2)  # (N*C, spatial_in, 1)
+        scattered = one_hot * x_expanded  # (N*C, spatial_in, spatial_out)
+        output_flat = mx.sum(scattered, axis=1)  # (N*C, spatial_out)
+
+        # Reshape back to (N, C, D_out, H_out, W_out)
+        output = mx.reshape(output_flat, (N, C, D_out, H_out, W_out))
+
+        return Tensor._from_mlx_array(output)
 
     def extra_repr(self) -> str:
         return f'kernel_size={self.kernel_size}, stride={self.stride}, padding={self.padding}'

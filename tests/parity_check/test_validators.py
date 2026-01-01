@@ -312,7 +312,9 @@ class TestSignatureValidator:
             }
         }
 
-        validator = SignatureValidator(pytorch_apis, mlx_apis)
+        # Disable source fallback to test the skip behavior for non-extractable signatures
+        # (otherwise the source parser finds the real torch.zeros signature)
+        validator = SignatureValidator(pytorch_apis, mlx_apis, use_source_fallback=False)
         result = validator.validate()
 
         assert len(result.skipped) == 1

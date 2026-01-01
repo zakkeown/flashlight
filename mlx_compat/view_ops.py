@@ -42,11 +42,20 @@ def reshape(input: 'Tensor', shape: Union[Tuple[int, ...], Sequence[int]]) -> 'T
         raise RuntimeError("MLX not available")
 
     mlx_array = mx.reshape(input._mlx_array, shape)
-    result = Tensor._from_mlx_array(mlx_array, requires_grad=input.requires_grad)
+    result = Tensor._from_mlx_array(mlx_array)
 
     # Mark as view
     result._is_view = True
     result._base = input if input._base is None else input._base
+
+    # Attach gradient function if needed
+    from .autograd.context import is_grad_enabled
+    if is_grad_enabled() and input.requires_grad:
+        result.requires_grad = True
+        from .autograd.function import ViewBackward
+        grad_fn = ViewBackward(input)
+        grad_fn.output_tensor = result
+        result._grad_fn = grad_fn
 
     return result
 

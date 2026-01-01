@@ -230,6 +230,11 @@ class Conv2d(Module):
         else:
             self.bias = None
 
+        # Weight transpose caching for performance
+        # MLX uses [out, kH, kW, in] format, PyTorch uses [out, in, kH, kW]
+        self._cached_weight_mlx = None
+        self._cached_weight_id = None
+
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -245,6 +250,19 @@ class Conv2d(Module):
             self.bias._mlx_array = mx.random.uniform(
                 low=-bound, high=bound, shape=self.bias.shape
             )
+        # Invalidate weight cache after reset
+        self._cached_weight_mlx = None
+        self._cached_weight_id = None
+
+    def _get_weight_mlx(self):
+        """Get weight in MLX format [out, kH, kW, in], cached for performance."""
+        # Check if weight has changed by comparing array id
+        current_id = id(self.weight._mlx_array)
+        if self._cached_weight_mlx is None or self._cached_weight_id != current_id:
+            # Convert from [out, in, kH, kW] to [out, kH, kW, in]
+            self._cached_weight_mlx = mx.transpose(self.weight._mlx_array, [0, 2, 3, 1])
+            self._cached_weight_id = current_id
+        return self._cached_weight_mlx
 
     def forward(self, input: Tensor) -> Tensor:
         """
@@ -263,7 +281,8 @@ class Conv2d(Module):
             stride=self.stride,
             padding=self.padding,
             dilation=self.dilation,
-            groups=self.groups
+            groups=self.groups,
+            _cached_weight_mlx=self._get_weight_mlx()
         )
 
     def extra_repr(self) -> str:

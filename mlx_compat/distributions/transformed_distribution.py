@@ -71,15 +71,15 @@ class TransformedDistribution(Distribution):
             x = t.inv(y)
             log_det_jacobian = t.log_abs_det_jacobian(x, y)
             if isinstance(log_det_jacobian, Tensor):
-                log_det_jacobian = log_det_jacobian._data
+                log_det_jacobian = log_det_jacobian._mlx_array
             if isinstance(log_det, Tensor):
-                log_det = log_det._data
+                log_det = log_det._mlx_array
             log_det = log_det - log_det_jacobian
             y = x
 
         log_prob = self.base_dist.log_prob(y)
         if isinstance(log_prob, Tensor):
-            log_prob = log_prob._data
+            log_prob = log_prob._mlx_array
         return Tensor(log_prob + log_det)
 
     @property

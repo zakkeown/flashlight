@@ -16,7 +16,7 @@ class Exponential(ExponentialFamily):
     has_rsample = True
 
     def __init__(self, rate: Union[Tensor, float], validate_args: Optional[bool] = None):
-        self.rate = rate._data if isinstance(rate, Tensor) else mx.array(rate)
+        self.rate = rate._mlx_array if isinstance(rate, Tensor) else mx.array(rate)
         super().__init__(self.rate.shape, validate_args=validate_args)
 
     @property
@@ -39,15 +39,15 @@ class Exponential(ExponentialFamily):
         return self.sample(sample_shape)
 
     def log_prob(self, value: Tensor) -> Tensor:
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         return Tensor(mx.log(self.rate) - self.rate * data)
 
     def cdf(self, value: Tensor) -> Tensor:
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         return Tensor(1 - mx.exp(-self.rate * data))
 
     def icdf(self, value: Tensor) -> Tensor:
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         return Tensor(-mx.log(1 - data) / self.rate)
 
     def entropy(self) -> Tensor:
@@ -58,7 +58,7 @@ class Exponential(ExponentialFamily):
         return (Tensor(-self.rate),)
 
     def _log_normalizer(self, x) -> Tensor:
-        x_data = x._data if isinstance(x, Tensor) else x
+        x_data = x._mlx_array if isinstance(x, Tensor) else x
         return Tensor(-mx.log(-x_data))
 
 

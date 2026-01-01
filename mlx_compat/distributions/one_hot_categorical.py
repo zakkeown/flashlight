@@ -52,10 +52,10 @@ class OneHotCategorical(Distribution):
 
     def sample(self, sample_shape: Tuple[int, ...] = ()) -> Tensor:
         indices = self._categorical.sample(sample_shape)
-        return Tensor(mx.eye(self._event_shape[0])[indices._data.astype(mx.int32)])
+        return Tensor(mx.eye(self._event_shape[0])[indices._mlx_array.astype(mx.int32)])
 
     def log_prob(self, value: Tensor) -> Tensor:
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         indices = mx.argmax(data, axis=-1)
         return self._categorical.log_prob(Tensor(indices))
 
@@ -84,8 +84,8 @@ class OneHotCategoricalStraightThrough(OneHotCategorical):
     def rsample(self, sample_shape: Tuple[int, ...] = ()) -> Tensor:
         samples = self.sample(sample_shape)
         # Straight-through: in forward pass use samples, but backprop through probs
-        probs = mx.broadcast_to(self.probs, samples._data.shape)
-        return Tensor(samples._data + probs - mx.stop_gradient(probs))
+        probs = mx.broadcast_to(self.probs, samples._mlx_array.shape)
+        return Tensor(samples._mlx_array + probs - mx.stop_gradient(probs))
 
 
 __all__ = ['OneHotCategorical', 'OneHotCategoricalStraightThrough']

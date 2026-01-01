@@ -23,7 +23,8 @@ def conv2d(
     stride: Union[int, Tuple[int, int]] = 1,
     padding: Union[int, Tuple[int, int]] = 0,
     dilation: Union[int, Tuple[int, int]] = 1,
-    groups: int = 1
+    groups: int = 1,
+    _cached_weight_mlx=None
 ) -> Tensor:
     """
     2D convolution operation.
@@ -36,6 +37,7 @@ def conv2d(
         padding: Padding to apply
         dilation: Dilation factor
         groups: Number of groups for grouped convolution
+        _cached_weight_mlx: Optional pre-transposed weight for performance (internal use)
 
     Returns:
         Output tensor of shape [N, out_channels, H_out, W_out] or [N, H_out, W_out, out_channels] in nhwc_mode
@@ -58,10 +60,13 @@ def conv2d(
         # input: [N, C, H, W] -> [N, H, W, C]
         input_nhwc = mx.transpose(input._mlx_array, [0, 2, 3, 1])
 
-    # Convert weight from [out, in, kH, kW] to [out, kH, kW, in]
+    # Use cached weight if provided, otherwise transpose
     # MLX expects: [C_out, KH, KW, C_in]
-    # Weight conversion is always needed regardless of layout mode
-    weight_mlx = mx.transpose(weight._mlx_array, [0, 2, 3, 1])
+    if _cached_weight_mlx is not None:
+        weight_mlx = _cached_weight_mlx
+    else:
+        # Convert weight from [out, in, kH, kW] to [out, kH, kW, in]
+        weight_mlx = mx.transpose(weight._mlx_array, [0, 2, 3, 1])
 
     # Convert parameters to tuples
     stride = _pair(stride)
@@ -96,8 +101,15 @@ def conv2d(
     # Handle autograd
     from ..autograd.context import is_grad_enabled
     if is_grad_enabled() and (input.requires_grad or weight.requires_grad or (bias is not None and bias.requires_grad)):
+        from ..autograd.function import Conv2dBackward
         result.requires_grad = True
-        # TODO: Add backward function for conv2d
+        grad_fn = Conv2dBackward(
+            input, weight, bias,
+            stride=stride, padding=padding, dilation=dilation, groups=groups,
+            nhwc_native=nhwc_native
+        )
+        grad_fn.output_tensor = result
+        result._grad_fn = grad_fn
 
     return result
 

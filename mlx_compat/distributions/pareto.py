@@ -15,8 +15,8 @@ class Pareto(Distribution):
     has_rsample = True
 
     def __init__(self, scale: Union[Tensor, float], alpha: Union[Tensor, float], validate_args: Optional[bool] = None):
-        self.scale = scale._data if isinstance(scale, Tensor) else mx.array(scale)
-        self.alpha = alpha._data if isinstance(alpha, Tensor) else mx.array(alpha)
+        self.scale = scale._mlx_array if isinstance(scale, Tensor) else mx.array(scale)
+        self.alpha = alpha._mlx_array if isinstance(alpha, Tensor) else mx.array(alpha)
         batch_shape = mx.broadcast_shapes(self.scale.shape, self.alpha.shape)
         super().__init__(batch_shape, validate_args=validate_args)
 
@@ -47,15 +47,15 @@ class Pareto(Distribution):
         return self.sample(sample_shape)
 
     def log_prob(self, value: Tensor) -> Tensor:
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         return Tensor(mx.log(self.alpha) + self.alpha * mx.log(self.scale) - (self.alpha + 1) * mx.log(data))
 
     def cdf(self, value: Tensor) -> Tensor:
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         return Tensor(1 - mx.power(self.scale / data, self.alpha))
 
     def icdf(self, value: Tensor) -> Tensor:
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         return Tensor(self.scale / mx.power(1 - data, 1 / self.alpha))
 
     def entropy(self) -> Tensor:

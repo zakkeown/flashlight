@@ -244,8 +244,15 @@ class TestGetPublicNames:
         assert "__dunder__" not in names
 
 
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ImportError:
+    TORCH_AVAILABLE = False
+
+
 @pytest.mark.skipif(
-    True,  # Skip by default, enable when torch is available
+    not TORCH_AVAILABLE,
     reason="PyTorch not available",
 )
 class TestPyTorchIntrospection:

@@ -414,6 +414,183 @@ class TestPoissonNLLLoss(TestCase):
         self.assertTrue(criterion.full)
 
 
+@skipIfNoMLX
+class TestMultiMarginLoss(TestCase):
+    """Test nn.MultiMarginLoss."""
+
+    def test_creation(self):
+        """Test MultiMarginLoss creation."""
+        criterion = mlx_compat.nn.MultiMarginLoss()
+        self.assertEqual(criterion.p, 1)
+        self.assertEqual(criterion.margin, 1.0)
+
+    def test_creation_with_p(self):
+        """Test MultiMarginLoss with p=2."""
+        criterion = mlx_compat.nn.MultiMarginLoss(p=2)
+        self.assertEqual(criterion.p, 2)
+
+    def test_forward_shape(self):
+        """Test MultiMarginLoss forward pass."""
+        criterion = mlx_compat.nn.MultiMarginLoss()
+        x = mlx_compat.randn(4, 10)
+        target = mlx_compat.tensor([0, 1, 2, 3], dtype=mlx_compat.int32)
+        loss = criterion(x, target)
+        self.assertEqual(loss.shape, ())
+
+    def test_forward_none(self):
+        """Test MultiMarginLoss with reduction='none'."""
+        criterion = mlx_compat.nn.MultiMarginLoss(reduction='none')
+        x = mlx_compat.randn(4, 10)
+        target = mlx_compat.tensor([0, 1, 2, 3], dtype=mlx_compat.int32)
+        loss = criterion(x, target)
+        self.assertEqual(loss.shape, (4,))
+
+
+@skipIfNoMLX
+class TestMultiLabelMarginLoss(TestCase):
+    """Test nn.MultiLabelMarginLoss."""
+
+    def test_creation(self):
+        """Test MultiLabelMarginLoss creation."""
+        criterion = mlx_compat.nn.MultiLabelMarginLoss()
+        self.assertEqual(criterion.reduction, 'mean')
+
+    def test_forward_shape(self):
+        """Test MultiLabelMarginLoss forward pass."""
+        criterion = mlx_compat.nn.MultiLabelMarginLoss()
+        x = mlx_compat.randn(4, 10)
+        target = mlx_compat.tensor([
+            [0, 1, -1, -1, -1, -1, -1, -1, -1, -1],
+            [2, 3, 4, -1, -1, -1, -1, -1, -1, -1],
+            [5, -1, -1, -1, -1, -1, -1, -1, -1, -1],
+            [6, 7, 8, 9, -1, -1, -1, -1, -1, -1]
+        ], dtype=mlx_compat.int32)
+        loss = criterion(x, target)
+        self.assertEqual(loss.shape, ())
+
+
+@skipIfNoMLX
+class TestMultiLabelSoftMarginLoss(TestCase):
+    """Test nn.MultiLabelSoftMarginLoss."""
+
+    def test_creation(self):
+        """Test MultiLabelSoftMarginLoss creation."""
+        criterion = mlx_compat.nn.MultiLabelSoftMarginLoss()
+        self.assertEqual(criterion.reduction, 'mean')
+
+    def test_forward_shape(self):
+        """Test MultiLabelSoftMarginLoss forward pass."""
+        criterion = mlx_compat.nn.MultiLabelSoftMarginLoss()
+        x = mlx_compat.randn(4, 10)
+        target = mlx_compat.zeros(4, 10)
+        loss = criterion(x, target)
+        self.assertEqual(loss.shape, ())
+
+
+@skipIfNoMLX
+class TestTripletMarginWithDistanceLoss(TestCase):
+    """Test nn.TripletMarginWithDistanceLoss."""
+
+    def test_creation(self):
+        """Test TripletMarginWithDistanceLoss creation."""
+        criterion = mlx_compat.nn.TripletMarginWithDistanceLoss()
+        self.assertEqual(criterion.margin, 1.0)
+
+    def test_forward_shape(self):
+        """Test TripletMarginWithDistanceLoss forward pass."""
+        criterion = mlx_compat.nn.TripletMarginWithDistanceLoss()
+        anchor = mlx_compat.randn(4, 10)
+        positive = mlx_compat.randn(4, 10)
+        negative = mlx_compat.randn(4, 10)
+        loss = criterion(anchor, positive, negative)
+        self.assertEqual(loss.shape, ())
+
+    def test_custom_margin(self):
+        """Test TripletMarginWithDistanceLoss with custom margin."""
+        criterion = mlx_compat.nn.TripletMarginWithDistanceLoss(margin=2.0)
+        self.assertEqual(criterion.margin, 2.0)
+
+
+@skipIfNoMLX
+class TestGaussianNLLLoss(TestCase):
+    """Test nn.GaussianNLLLoss."""
+
+    def test_creation(self):
+        """Test GaussianNLLLoss creation."""
+        criterion = mlx_compat.nn.GaussianNLLLoss()
+        self.assertIsNotNone(criterion)
+
+    def test_forward_shape(self):
+        """Test GaussianNLLLoss forward pass."""
+        criterion = mlx_compat.nn.GaussianNLLLoss()
+        pred = mlx_compat.randn(4, 10)
+        target = mlx_compat.randn(4, 10)
+        var = mlx_compat.ones(4, 10)
+        loss = criterion(pred, target, var)
+        self.assertEqual(loss.shape, ())
+
+    def test_forward_none(self):
+        """Test GaussianNLLLoss with reduction='none'."""
+        criterion = mlx_compat.nn.GaussianNLLLoss(reduction='none')
+        pred = mlx_compat.randn(4, 10)
+        target = mlx_compat.randn(4, 10)
+        var = mlx_compat.ones(4, 10)
+        loss = criterion(pred, target, var)
+        self.assertEqual(loss.shape, (4, 10))
+
+
+@skipIfNoMLX
+class TestCTCLoss(TestCase):
+    """Test nn.CTCLoss."""
+
+    def test_creation(self):
+        """Test CTCLoss creation."""
+        criterion = mlx_compat.nn.CTCLoss()
+        self.assertIsNotNone(criterion)
+
+    def test_creation_with_blank(self):
+        """Test CTCLoss creation with custom blank."""
+        criterion = mlx_compat.nn.CTCLoss(blank=10)
+        self.assertEqual(criterion.blank, 10)
+
+
+@skipIfNoMLX
+class TestAdaptiveLogSoftmaxWithLoss(TestCase):
+    """Test nn.AdaptiveLogSoftmaxWithLoss."""
+
+    def test_creation(self):
+        """Test AdaptiveLogSoftmaxWithLoss creation."""
+        criterion = mlx_compat.nn.AdaptiveLogSoftmaxWithLoss(
+            in_features=64,
+            n_classes=1000,
+            cutoffs=[100, 500]
+        )
+        self.assertEqual(criterion.in_features, 64)
+        self.assertEqual(criterion.n_classes, 1000)
+
+    def test_creation_with_div_value(self):
+        """Test AdaptiveLogSoftmaxWithLoss with custom div_value."""
+        criterion = mlx_compat.nn.AdaptiveLogSoftmaxWithLoss(
+            in_features=64,
+            n_classes=100,
+            cutoffs=[20, 50],
+            div_value=2.0
+        )
+        self.assertEqual(criterion.div_value, 2.0)
+
+    def test_forward(self):
+        """Test AdaptiveLogSoftmaxWithLoss forward pass."""
+        criterion = mlx_compat.nn.AdaptiveLogSoftmaxWithLoss(
+            in_features=64,
+            n_classes=100,
+            cutoffs=[20, 50]
+        )
+        x = mlx_compat.randn(4, 64)
+        target = mlx_compat.tensor([0, 10, 30, 70], dtype=mlx_compat.int32)
+        result = criterion(x, target)
+        self.assertIsNotNone(result)
+
+
 if __name__ == '__main__':
     from tests.common_utils import run_tests
     run_tests()

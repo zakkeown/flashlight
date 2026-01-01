@@ -65,7 +65,7 @@ class Distribution:
     def stddev(self) -> Tensor:
         """Standard deviation of the distribution."""
         var = self.variance
-        return Tensor(mx.sqrt(var._data))
+        return Tensor(mx.sqrt(var._mlx_array))
 
     def sample(self, sample_shape: Tuple[int, ...] = ()) -> Tensor:
         """Generate a sample."""
@@ -114,7 +114,7 @@ class Distribution:
         if self._validate_args:
             if self.support is not None:
                 valid = self.support.check(value)
-                if not mx.all(valid._data):
+                if not mx.all(valid._mlx_array):
                     raise ValueError("Value is not in the support of the distribution")
 
     def __repr__(self):

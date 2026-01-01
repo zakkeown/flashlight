@@ -24,10 +24,10 @@ class Geometric(Distribution):
             raise ValueError("Exactly one of probs or logits must be specified")
 
         if probs is not None:
-            self.probs = probs._data if isinstance(probs, Tensor) else mx.array(probs)
+            self.probs = probs._mlx_array if isinstance(probs, Tensor) else mx.array(probs)
             self.logits = mx.log(self.probs) - mx.log(1 - self.probs)
         else:
-            self.logits = logits._data if isinstance(logits, Tensor) else mx.array(logits)
+            self.logits = logits._mlx_array if isinstance(logits, Tensor) else mx.array(logits)
             self.probs = mx.sigmoid(self.logits)
 
         super().__init__(self.probs.shape, validate_args=validate_args)
@@ -50,7 +50,7 @@ class Geometric(Distribution):
         return Tensor(mx.floor(mx.log(u) / mx.log(1 - self.probs)))
 
     def log_prob(self, value: Tensor) -> Tensor:
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         return Tensor(data * mx.log(1 - self.probs) + mx.log(self.probs))
 
     def entropy(self) -> Tensor:

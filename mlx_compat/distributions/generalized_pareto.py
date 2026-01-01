@@ -21,9 +21,9 @@ class GeneralizedPareto(Distribution):
         concentration: Union[Tensor, float],
         validate_args: Optional[bool] = None,
     ):
-        self.loc = loc._data if isinstance(loc, Tensor) else mx.array(loc)
-        self.scale = scale._data if isinstance(scale, Tensor) else mx.array(scale)
-        self.concentration = concentration._data if isinstance(concentration, Tensor) else mx.array(concentration)
+        self.loc = loc._mlx_array if isinstance(loc, Tensor) else mx.array(loc)
+        self.scale = scale._mlx_array if isinstance(scale, Tensor) else mx.array(scale)
+        self.concentration = concentration._mlx_array if isinstance(concentration, Tensor) else mx.array(concentration)
         batch_shape = mx.broadcast_shapes(self.loc.shape, mx.broadcast_shapes(self.scale.shape, self.concentration.shape))
         super().__init__(batch_shape, validate_args=validate_args)
 
@@ -52,14 +52,14 @@ class GeneralizedPareto(Distribution):
         return self.sample(sample_shape)
 
     def log_prob(self, value: Tensor) -> Tensor:
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         xi = self.concentration
         z = (data - self.loc) / self.scale
         log_prob = -mx.log(self.scale) - (1 + 1/xi) * mx.log(1 + xi * z)
         return Tensor(log_prob)
 
     def cdf(self, value: Tensor) -> Tensor:
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         xi = self.concentration
         z = (data - self.loc) / self.scale
         return Tensor(1 - mx.power(1 + xi * z, -1/xi))

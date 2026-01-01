@@ -246,18 +246,28 @@ class DistributedSampler(Sampler):
         self.total_size = self.num_samples * self.num_replicas
 
     def __iter__(self):
-        import random
-        if self.shuffle:
-            g = random.Random(self.seed + self.epoch)
-            indices = list(range(len(self.dataset)))
-            g.shuffle(indices)
-        else:
-            indices = list(range(len(self.dataset)))
+        from ._random import mlx_permutation, mlx_seeded_key
 
-        # Add extra samples for even distribution
+        dataset_len = len(self.dataset)
+
+        if self.shuffle:
+            # Use MLX random with seeded key for reproducibility
+            key = mlx_seeded_key(self.seed, self.epoch)
+            indices = mlx_permutation(dataset_len, key=key)
+        else:
+            indices = list(range(dataset_len))
+
+        # Add extra samples for even distribution using efficient slicing
         if len(indices) < self.total_size:
             padding_size = self.total_size - len(indices)
-            indices += indices[:padding_size]
+            # Use modular indexing for padding (handles padding > dataset_len)
+            if padding_size <= dataset_len:
+                indices = indices + indices[:padding_size]
+            else:
+                # Rare case: need to repeat indices multiple times
+                full_repeats = padding_size // dataset_len
+                remainder = padding_size % dataset_len
+                indices = indices * (full_repeats + 1) + indices[:remainder]
 
         # Subsample for this replica
         offset = self.rank * self.num_samples

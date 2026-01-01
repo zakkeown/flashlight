@@ -17,8 +17,8 @@ class LogNormal(Distribution):
     has_rsample = True
 
     def __init__(self, loc: Union[Tensor, float], scale: Union[Tensor, float], validate_args: Optional[bool] = None):
-        self.loc = loc._data if isinstance(loc, Tensor) else mx.array(loc)
-        self.scale = scale._data if isinstance(scale, Tensor) else mx.array(scale)
+        self.loc = loc._mlx_array if isinstance(loc, Tensor) else mx.array(loc)
+        self.scale = scale._mlx_array if isinstance(scale, Tensor) else mx.array(scale)
         batch_shape = mx.broadcast_shapes(self.loc.shape, self.scale.shape)
         super().__init__(batch_shape, validate_args=validate_args)
 
@@ -42,17 +42,17 @@ class LogNormal(Distribution):
         return self.sample(sample_shape)
 
     def log_prob(self, value: Tensor) -> Tensor:
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         var = self.scale ** 2
         log_value = mx.log(data)
         return Tensor(-((log_value - self.loc) ** 2) / (2 * var) - mx.log(self.scale * data) - 0.5 * math.log(2 * math.pi))
 
     def cdf(self, value: Tensor) -> Tensor:
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         return Tensor(0.5 * (1 + mx.erf((mx.log(data) - self.loc) / (self.scale * math.sqrt(2)))))
 
     def icdf(self, value: Tensor) -> Tensor:
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         return Tensor(mx.exp(self.loc + self.scale * mx.erfinv(2 * data - 1) * math.sqrt(2)))
 
     def entropy(self) -> Tensor:

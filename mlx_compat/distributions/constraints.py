@@ -82,7 +82,7 @@ class _Boolean(Constraint):
     is_discrete = True
 
     def check(self, value):
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         result = (data == 0) | (data == 1)
         return Tensor(result)
 
@@ -98,7 +98,7 @@ class _IntegerInterval(Constraint):
         super().__init__()
 
     def check(self, value):
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         result = (data >= self.lower_bound) & (data <= self.upper_bound) & (data == mx.floor(data))
         return Tensor(result)
 
@@ -116,7 +116,7 @@ class _IntegerGreaterThan(Constraint):
         super().__init__()
 
     def check(self, value):
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         result = (data > self.lower_bound) & (data == mx.floor(data))
         return Tensor(result)
 
@@ -125,7 +125,7 @@ class _Real(Constraint):
     """Constraint to real values."""
 
     def check(self, value):
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         result = mx.isfinite(data)
         return Tensor(result)
 
@@ -136,7 +136,7 @@ class _RealVector(Constraint):
     event_dim = 1
 
     def check(self, value):
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         result = mx.isfinite(data)
         return Tensor(mx.all(result, axis=-1))
 
@@ -149,7 +149,7 @@ class _GreaterThan(Constraint):
         super().__init__()
 
     def check(self, value):
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         result = data > self.lower_bound
         return Tensor(result)
 
@@ -165,7 +165,7 @@ class _GreaterThanEq(Constraint):
         super().__init__()
 
     def check(self, value):
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         result = data >= self.lower_bound
         return Tensor(result)
 
@@ -181,7 +181,7 @@ class _LessThan(Constraint):
         super().__init__()
 
     def check(self, value):
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         result = data < self.upper_bound
         return Tensor(result)
 
@@ -198,7 +198,7 @@ class _Interval(Constraint):
         super().__init__()
 
     def check(self, value):
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         result = (data > self.lower_bound) & (data < self.upper_bound)
         return Tensor(result)
 
@@ -215,7 +215,7 @@ class _HalfOpenInterval(Constraint):
         super().__init__()
 
     def check(self, value):
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         result = (data >= self.lower_bound) & (data < self.upper_bound)
         return Tensor(result)
 
@@ -224,7 +224,7 @@ class _Positive(Constraint):
     """Constraint to positive values."""
 
     def check(self, value):
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         result = data > 0
         return Tensor(result)
 
@@ -233,7 +233,7 @@ class _Nonnegative(Constraint):
     """Constraint to non-negative values."""
 
     def check(self, value):
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         result = data >= 0
         return Tensor(result)
 
@@ -244,7 +244,7 @@ class _Simplex(Constraint):
     event_dim = 1
 
     def check(self, value):
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         result = mx.all(data >= 0, axis=-1) & mx.isclose(mx.sum(data, axis=-1), mx.array(1.0))
         return Tensor(result)
 
@@ -256,7 +256,7 @@ class _OneHot(Constraint):
     event_dim = 1
 
     def check(self, value):
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         is_boolean = mx.all((data == 0) | (data == 1), axis=-1)
         is_one_hot = mx.sum(data, axis=-1) == 1
         result = is_boolean & is_one_hot
@@ -269,7 +269,7 @@ class _LowerTriangular(Constraint):
     event_dim = 2
 
     def check(self, value):
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         # Check if matrix equals its lower triangular part
         tril = mx.tril(data)
         result = mx.all(mx.isclose(data, tril), axis=(-2, -1))
@@ -282,7 +282,7 @@ class _LowerCholesky(Constraint):
     event_dim = 2
 
     def check(self, value):
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         tril = mx.tril(data)
         is_tril = mx.all(mx.isclose(data, tril), axis=(-2, -1))
         diag = mx.diagonal(data, axis1=-2, axis2=-1)
@@ -297,7 +297,7 @@ class _PositiveDefinite(Constraint):
     event_dim = 2
 
     def check(self, value):
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         # Check if all eigenvalues are positive
         try:
             eigvals = mx.linalg.eigvalsh(data)
@@ -313,7 +313,7 @@ class _PositiveSemidefinite(Constraint):
     event_dim = 2
 
     def check(self, value):
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         try:
             eigvals = mx.linalg.eigvalsh(data)
             result = mx.all(eigvals >= 0, axis=-1)
@@ -328,7 +328,7 @@ class _CorrCholesky(Constraint):
     event_dim = 2
 
     def check(self, value):
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         tril = mx.tril(data)
         is_tril = mx.all(mx.isclose(data, tril), axis=(-2, -1))
         diag = mx.diagonal(data, axis1=-2, axis2=-1)
@@ -346,7 +346,7 @@ class _Square(Constraint):
     event_dim = 2
 
     def check(self, value):
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         result = mx.array(data.shape[-2] == data.shape[-1])
         return Tensor(result)
 
@@ -357,7 +357,7 @@ class _Symmetric(Constraint):
     event_dim = 2
 
     def check(self, value):
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         transpose = mx.swapaxes(data, -2, -1)
         result = mx.all(mx.isclose(data, transpose), axis=(-2, -1))
         return Tensor(result)
@@ -416,7 +416,7 @@ class _Multinomial(Constraint):
         super().__init__()
 
     def check(self, value):
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         # All non-negative integers
         is_nonneg = mx.all(data >= 0, axis=-1)
         is_int = mx.all(data == mx.floor(data), axis=-1)
@@ -507,7 +507,7 @@ class _Independent(Constraint):
 
     def check(self, value):
         result = self.base_constraint.check(value)
-        data = result._data if isinstance(result, Tensor) else result
+        data = result._mlx_array if isinstance(result, Tensor) else result
         for _ in range(self.reinterpreted_batch_ndims):
             data = mx.all(data, axis=-1)
         return Tensor(data)
@@ -543,7 +543,7 @@ class MixtureSameFamilyConstraint(Constraint):
 
     def check(self, value):
         # Add dimension back and check with base constraint
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         expanded = mx.expand_dims(data, axis=-self.base_constraint.event_dim - 1)
         return self.base_constraint.check(Tensor(expanded))
 

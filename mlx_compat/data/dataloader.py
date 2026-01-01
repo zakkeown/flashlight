@@ -13,7 +13,38 @@ from .sampler import (
     Sampler, SequentialSampler, RandomSampler, BatchSampler
 )
 
+# Module-level imports for performance (avoid repeated imports per batch)
+import mlx_compat as _mlx_compat
+from ..tensor import Tensor as _MLXTensor
+
+try:
+    import mlx.core as _mx
+    _MLX_AVAILABLE = True
+except ImportError:
+    _mx = None
+    _MLX_AVAILABLE = False
+
+try:
+    import numpy as _np
+    _NUMPY_AVAILABLE = True
+except ImportError:
+    _np = None
+    _NUMPY_AVAILABLE = False
+
 T = TypeVar('T')
+
+# Type dispatch cache for faster collation
+_COLLATE_TYPE_HANDLERS = {}
+
+
+def _get_type_handler(elem_type):
+    """Get cached type handler for collation."""
+    return _COLLATE_TYPE_HANDLERS.get(elem_type)
+
+
+def _register_type_handler(elem_type, handler):
+    """Register a type handler for collation."""
+    _COLLATE_TYPE_HANDLERS[elem_type] = handler
 
 
 def default_collate(batch: List[Any]) -> Any:
@@ -46,68 +77,77 @@ def default_collate(batch: List[Any]) -> Any:
     elem = batch[0]
     elem_type = type(elem)
 
-    # Handle mlx_compat Tensor using isinstance check
-    from ..tensor import Tensor as MLXTensor
-    if isinstance(elem, MLXTensor):
-        import mlx_compat
-        return mlx_compat.stack(batch, dim=0)
+    # Fast path: check cached type handlers first
+    handler = _get_type_handler(elem_type)
+    if handler is not None:
+        return handler(batch, elem, elem_type)
 
-    # Handle MLX arrays directly
-    try:
-        import mlx.core as mx
-        if isinstance(elem, mx.array):
-            import mlx_compat
-            # Convert to mlx_compat tensors and stack
-            tensors = [mlx_compat.tensor(b) for b in batch]
-            return mlx_compat.stack(tensors, dim=0)
-    except ImportError:
-        pass
+    # Handle mlx_compat Tensor - use module-level import
+    if isinstance(elem, _MLXTensor):
+        _register_type_handler(elem_type, lambda b, e, t: _mlx_compat.stack(b, dim=0))
+        return _mlx_compat.stack(batch, dim=0)
 
-    # Handle numpy arrays
-    try:
-        import numpy as np
-        if isinstance(elem, np.ndarray):
-            import mlx_compat
-            stacked = np.stack(batch, axis=0)
-            return mlx_compat.tensor(stacked)
-    except ImportError:
-        pass
+    # Handle MLX arrays directly - use module-level import
+    if _MLX_AVAILABLE and isinstance(elem, _mx.array):
+        def _handle_mx_array(b, e, t):
+            tensors = [_mlx_compat.tensor(x) for x in b]
+            return _mlx_compat.stack(tensors, dim=0)
+        _register_type_handler(elem_type, _handle_mx_array)
+        return _handle_mx_array(batch, elem, elem_type)
+
+    # Handle numpy arrays - use module-level import
+    if _NUMPY_AVAILABLE and isinstance(elem, _np.ndarray):
+        def _handle_numpy(b, e, t):
+            # Batch convert: stack numpy arrays first, then convert once
+            stacked = _np.stack(b, axis=0)
+            return _mlx_compat.tensor(stacked)
+        _register_type_handler(elem_type, _handle_numpy)
+        return _handle_numpy(batch, elem, elem_type)
 
     # Handle tuples - collate each element position separately
     if isinstance(elem, tuple):
-        # Transpose: list of tuples -> tuple of lists -> tuple of collated
-        transposed = list(zip(*batch))
-        # Check if it's a namedtuple
-        if hasattr(elem, '_fields'):
-            return elem_type(*(default_collate(list(samples)) for samples in transposed))
-        return tuple(default_collate(list(samples)) for samples in transposed)
+        def _handle_tuple(b, e, t):
+            transposed = list(zip(*b))
+            # Check if it's a namedtuple
+            if hasattr(e, '_fields'):
+                return t(*(default_collate(list(samples)) for samples in transposed))
+            return tuple(default_collate(list(samples)) for samples in transposed)
+        _register_type_handler(elem_type, _handle_tuple)
+        return _handle_tuple(batch, elem, elem_type)
 
     # Handle lists - collate each element position separately
     if isinstance(elem, list):
-        transposed = list(zip(*batch))
-        return [default_collate(list(samples)) for samples in transposed]
+        def _handle_list(b, e, t):
+            transposed = list(zip(*b))
+            return [default_collate(list(samples)) for samples in transposed]
+        _register_type_handler(elem_type, _handle_list)
+        return _handle_list(batch, elem, elem_type)
 
     # Handle dicts
     if isinstance(elem, dict):
+        # Don't cache dict handler since keys may vary
         return {key: default_collate([d[key] for d in batch]) for key in elem}
 
     # Handle numbers (int, float)
     if isinstance(elem, (int, float)):
-        import mlx_compat
-        return mlx_compat.tensor(batch)
+        _register_type_handler(elem_type, lambda b, e, t: _mlx_compat.tensor(b))
+        return _mlx_compat.tensor(batch)
 
     # Handle strings - keep as list
     if isinstance(elem, str):
+        _register_type_handler(str, lambda b, e, t: b)
         return batch
 
     # Handle bytes
     if isinstance(elem, bytes):
+        _register_type_handler(bytes, lambda b, e, t: b)
         return batch
 
     # Default: try to convert to tensor
     try:
-        import mlx_compat
-        return mlx_compat.tensor(batch)
+        result = _mlx_compat.tensor(batch)
+        _register_type_handler(elem_type, lambda b, e, t: _mlx_compat.tensor(b))
+        return result
     except Exception:
         # If all else fails, return as-is
         return batch

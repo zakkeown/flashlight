@@ -102,6 +102,9 @@ class Adam(Optimizer):
 
         Returns:
             loss value if closure is provided, otherwise None
+
+        Note:
+            Optimized to use raw MLX arrays internally to reduce Python object overhead.
         """
         loss = None
         if closure is not None:
@@ -118,52 +121,49 @@ class Adam(Optimizer):
                 if p.grad is None:
                     continue
 
-                grad = p.grad
+                # Work directly with raw MLX arrays for performance
+                param = p._mlx_array
+                grad = p.grad._mlx_array
 
                 # Apply weight decay (L2 regularization)
                 if weight_decay != 0:
-                    grad = Tensor._from_mlx_array(
-                        grad._mlx_array + weight_decay * p._mlx_array
-                    )
+                    grad = grad + weight_decay * param
 
                 param_state = self.state[id(p)]
 
-                # Initialize state
+                # Initialize state with raw MLX arrays (not Tensor wrappers)
                 if 'step' not in param_state:
                     param_state['step'] = 0
-                    # Exponential moving average of gradient values
-                    param_state['exp_avg'] = Tensor._from_mlx_array(mx.zeros_like(p._mlx_array))
-                    # Exponential moving average of squared gradient values
-                    param_state['exp_avg_sq'] = Tensor._from_mlx_array(mx.zeros_like(p._mlx_array))
+                    # Store raw MLX arrays for state
+                    param_state['exp_avg'] = mx.zeros_like(param)
+                    param_state['exp_avg_sq'] = mx.zeros_like(param)
                     if amsgrad:
-                        # Max of exp_avg_sq
-                        param_state['max_exp_avg_sq'] = Tensor._from_mlx_array(mx.zeros_like(p._mlx_array))
+                        param_state['max_exp_avg_sq'] = mx.zeros_like(param)
 
-                exp_avg = param_state['exp_avg']
-                exp_avg_sq = param_state['exp_avg_sq']
                 param_state['step'] += 1
                 step = param_state['step']
 
+                # Get raw state arrays
+                exp_avg = param_state['exp_avg']
+                exp_avg_sq = param_state['exp_avg_sq']
+
                 # Decay the first and second moment running average coefficient
                 # m_t = beta1 * m_{t-1} + (1 - beta1) * g_t
-                exp_avg_mlx = beta1 * exp_avg._mlx_array + (1 - beta1) * grad._mlx_array
-                exp_avg = Tensor._from_mlx_array(exp_avg_mlx)
+                exp_avg = beta1 * exp_avg + (1 - beta1) * grad
                 param_state['exp_avg'] = exp_avg
 
                 # v_t = beta2 * v_{t-1} + (1 - beta2) * g_t^2
-                exp_avg_sq_mlx = beta2 * exp_avg_sq._mlx_array + (1 - beta2) * (grad._mlx_array ** 2)
-                exp_avg_sq = Tensor._from_mlx_array(exp_avg_sq_mlx)
+                exp_avg_sq = beta2 * exp_avg_sq + (1 - beta2) * (grad ** 2)
                 param_state['exp_avg_sq'] = exp_avg_sq
 
                 if amsgrad:
                     max_exp_avg_sq = param_state['max_exp_avg_sq']
                     # max_v_t = max(max_v_{t-1}, v_t)
-                    max_exp_avg_sq_mlx = mx.maximum(max_exp_avg_sq._mlx_array, exp_avg_sq._mlx_array)
-                    max_exp_avg_sq = Tensor._from_mlx_array(max_exp_avg_sq_mlx)
+                    max_exp_avg_sq = mx.maximum(max_exp_avg_sq, exp_avg_sq)
                     param_state['max_exp_avg_sq'] = max_exp_avg_sq
-                    denom_mlx = mx.sqrt(max_exp_avg_sq._mlx_array) + eps
+                    denom = mx.sqrt(max_exp_avg_sq) + eps
                 else:
-                    denom_mlx = mx.sqrt(exp_avg_sq._mlx_array) + eps
+                    denom = mx.sqrt(exp_avg_sq) + eps
 
                 # Bias correction
                 bias_correction1 = 1 - beta1 ** step
@@ -175,8 +175,8 @@ class Adam(Optimizer):
                 # Update parameters: θ = θ - step_size * m_t / (sqrt(v_t) + eps)
                 # With bias correction: θ = θ - lr * m_hat_t / (sqrt(v_hat_t) + eps)
                 # where m_hat_t = m_t / (1 - beta1^t), v_hat_t = v_t / (1 - beta2^t)
-                update_mlx = step_size * exp_avg._mlx_array / (mx.sqrt(denom_mlx ** 2 / bias_correction2) + eps)
-                p._mlx_array = p._mlx_array - update_mlx
+                update = step_size * exp_avg / (mx.sqrt(denom ** 2 / bias_correction2) + eps)
+                p._mlx_array = param - update
 
         return loss
 

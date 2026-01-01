@@ -4,6 +4,7 @@ from typing import Optional, Tuple, Union
 import mlx.core as mx
 
 from ..tensor import Tensor
+from ..ops.special import lgamma
 from .distribution import Distribution
 from . import constraints
 
@@ -25,12 +26,12 @@ class Binomial(Distribution):
         if (probs is None) == (logits is None):
             raise ValueError("Exactly one of probs or logits must be specified")
 
-        self.total_count = total_count._data if isinstance(total_count, Tensor) else mx.array(total_count)
+        self.total_count = total_count._mlx_array if isinstance(total_count, Tensor) else mx.array(total_count)
         if probs is not None:
-            self.probs = probs._data if isinstance(probs, Tensor) else mx.array(probs)
+            self.probs = probs._mlx_array if isinstance(probs, Tensor) else mx.array(probs)
             self.logits = mx.log(self.probs) - mx.log(1 - self.probs)
         else:
-            self.logits = logits._data if isinstance(logits, Tensor) else mx.array(logits)
+            self.logits = logits._mlx_array if isinstance(logits, Tensor) else mx.array(logits)
             self.probs = mx.sigmoid(self.logits)
 
         batch_shape = mx.broadcast_shapes(self.total_count.shape, self.probs.shape)
@@ -53,19 +54,36 @@ class Binomial(Distribution):
         return Tensor(self.total_count * self.probs * (1 - self.probs))
 
     def sample(self, sample_shape: Tuple[int, ...] = ()) -> Tensor:
+        # Binomial sampling using n independent Bernoulli trials
         shape = sample_shape + self._batch_shape
-        import numpy as np
-        samples = np.random.binomial(int(mx.max(self.total_count)), np.array(self.probs), shape)
-        return Tensor(mx.array(samples.astype(np.float32)))
+        n = mx.broadcast_to(self.total_count, shape)
+        p = mx.broadcast_to(self.probs, shape)
+
+        # For simplicity, sum n Bernoulli trials
+        # This works well for small n; for large n, consider normal approximation
+        max_n = int(mx.max(n))
+        if max_n <= 100:
+            samples = mx.zeros(shape)
+            for _ in range(max_n):
+                u = mx.random.uniform(shape=shape)
+                samples = samples + (u < p).astype(mx.float32)
+            # Clamp to actual n
+            samples = mx.minimum(samples, n.astype(mx.float32))
+        else:
+            # Use normal approximation for large n
+            mean = n * p
+            std = mx.sqrt(n * p * (1 - p))
+            samples = mx.round(mean + std * mx.random.normal(shape))
+            samples = mx.clip(samples, 0, n)
+
+        return Tensor(samples)
 
     def log_prob(self, value: Tensor) -> Tensor:
-        data = value._data if isinstance(value, Tensor) else value
-        import numpy as np
-        from scipy import special as sp
+        data = value._mlx_array if isinstance(value, Tensor) else value
         n = self.total_count
         k = data
-        log_comb = sp.gammaln(np.array(n) + 1) - sp.gammaln(np.array(k) + 1) - sp.gammaln(np.array(n - k) + 1)
-        log_comb = mx.array(log_comb.astype(np.float32))
+        # log(C(n,k)) = lgamma(n+1) - lgamma(k+1) - lgamma(n-k+1)
+        log_comb = lgamma(n + 1) - lgamma(k + 1) - lgamma(n - k + 1)
         return Tensor(log_comb + k * mx.log(self.probs + 1e-10) + (n - k) * mx.log(1 - self.probs + 1e-10))
 
 

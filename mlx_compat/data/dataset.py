@@ -5,6 +5,7 @@ Implements PyTorch-compatible Dataset classes for MLX.
 """
 
 from abc import ABC, abstractmethod
+from bisect import bisect_right
 from typing import Any, Iterator, List, Tuple, TypeVar, Generic, Optional
 
 T_co = TypeVar('T_co', covariant=True)
@@ -228,12 +229,8 @@ class ConcatDataset(Dataset[T_co]):
         if index >= len(self):
             raise IndexError(f"Index {index} out of range for dataset of size {len(self)}")
 
-        # Find which dataset contains this index
-        dataset_idx = 0
-        for i, cumsum in enumerate(self.cumulative_sizes):
-            if index < cumsum:
-                dataset_idx = i
-                break
+        # Find which dataset contains this index using O(log n) binary search
+        dataset_idx = bisect_right(self.cumulative_sizes, index)
 
         # Calculate index within that dataset
         if dataset_idx == 0:
@@ -387,7 +384,7 @@ def random_split(*args, **kwargs) -> List[Subset]:
         >>> len(train), len(val)
         (80, 20)
     """
-    import random
+    from ._random import mlx_permutation, mlx_seeded_key
 
     # Parse arguments flexibly to match PyTorch's signature
     if len(args) >= 1:
@@ -411,13 +408,15 @@ def random_split(*args, **kwargs) -> List[Subset]:
             f"the dataset length ({len(dataset)})"
         )
 
-    # Generate random permutation
-    indices = list(range(len(dataset)))
+    # Generate random permutation using MLX
+    n = len(dataset)
     if generator is not None:
-        # Use provided generator's shuffle
-        random.shuffle(indices)
+        # If generator has a seed attribute, use it for reproducibility
+        seed = getattr(generator, 'seed', 0) if hasattr(generator, 'seed') else 0
+        key = mlx_seeded_key(seed)
+        indices = mlx_permutation(n, key=key)
     else:
-        random.shuffle(indices)
+        indices = mlx_permutation(n)
 
     # Split indices according to lengths
     subsets = []

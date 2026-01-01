@@ -334,9 +334,6 @@ def conv_transpose2d(
     if isinstance(dilation, int):
         dilation = (dilation, dilation)
 
-    if dilation != (1, 1):
-        raise NotImplementedError("dilation != 1 not supported for conv_transpose2d")
-
     # Convert input from NCHW to NHWC
     input_nhwc = mx.transpose(input._mlx_array, [0, 2, 3, 1])
 
@@ -350,18 +347,10 @@ def conv_transpose2d(
         weight_transposed,
         stride=stride,
         padding=padding,
+        dilation=dilation,
+        output_padding=output_padding,
         groups=groups
     )
-
-    # Add output padding if specified
-    if output_padding[0] > 0 or output_padding[1] > 0:
-        pad_config = [
-            (0, 0),  # N
-            (0, output_padding[0]),  # H
-            (0, output_padding[1]),  # W
-            (0, 0)   # C
-        ]
-        output_nhwc = mx.pad(output_nhwc, pad_config)
 
     # Add bias if provided
     if bias is not None:
@@ -1357,12 +1346,40 @@ def cross_entropy(
     # Apply label smoothing if needed
     if label_smoothing > 0:
         n_classes = input.shape[1]
-        # Create smoothed labels
-        smooth = label_smoothing / n_classes
-        # This is a simplified implementation
-        pass  # TODO: implement label smoothing
+        N = input.shape[0]
 
-    # Use nll_loss on log_softmax output
+        # With label smoothing, the loss becomes:
+        # (1 - label_smoothing) * nll_loss + label_smoothing * uniform_loss
+        # where uniform_loss = -mean(log_probs)
+
+        # Compute standard NLL loss component
+        nll = nll_loss(log_probs, target, weight=weight, ignore_index=ignore_index, reduction='none')
+
+        # Compute smooth loss: -mean of all log probs (KL div to uniform)
+        # This is equivalent to: -sum(log_probs) / n_classes for each sample
+        smooth_loss = -mx.mean(log_probs._mlx_array, axis=1)
+
+        # Handle ignore_index for smooth loss
+        if ignore_index >= 0:
+            mask = target._mlx_array != ignore_index
+            smooth_loss = mx.where(mask, smooth_loss, mx.zeros_like(smooth_loss))
+
+        # Combine: (1 - eps) * nll + eps * smooth_loss
+        combined_loss = (1.0 - label_smoothing) * nll._mlx_array + label_smoothing * smooth_loss
+
+        # Apply reduction
+        if reduction == 'none':
+            return Tensor._from_mlx_array(combined_loss)
+        elif reduction == 'sum':
+            return Tensor._from_mlx_array(mx.sum(combined_loss))
+        else:  # mean
+            if ignore_index >= 0:
+                mask = target._mlx_array != ignore_index
+                return Tensor._from_mlx_array(mx.sum(combined_loss) / mx.sum(mask.astype(combined_loss.dtype)))
+            else:
+                return Tensor._from_mlx_array(mx.mean(combined_loss))
+
+    # Use nll_loss on log_softmax output (no label smoothing)
     return nll_loss(log_probs, target, weight=weight, ignore_index=ignore_index, reduction=reduction)
 
 
@@ -1793,15 +1810,24 @@ def embedding(
     Returns:
         Embedded tensor
     """
-    if sparse:
-        raise NotImplementedError("Sparse embeddings not supported")
-
-    result_array = weight._mlx_array[input._mlx_array.astype(mx.int32)]
+    # sparse=True now supported via simulated sparse gradients
+    indices = input._mlx_array.astype(mx.int32)
+    result_array = weight._mlx_array[indices]
 
     result = Tensor._from_mlx_array(result_array)
 
     if is_grad_enabled() and weight.requires_grad:
+        from ..autograd.function import EmbeddingBackward
+        num_embeddings, embedding_dim = weight.shape
         result.requires_grad = True
+        grad_fn = EmbeddingBackward(
+            weight, indices,
+            num_embeddings, embedding_dim,
+            padding_idx=padding_idx,
+            sparse=sparse
+        )
+        grad_fn.output_tensor = result
+        result._grad_fn = grad_fn
 
     return result
 
@@ -1972,6 +1998,154 @@ def embedding_bag(
 # Padding Operations
 # =============================================================================
 
+def _pad_reflect(x: "mx.array", pad_pairs: list) -> "mx.array":
+    """
+    Apply reflect padding to a tensor.
+
+    Reflect padding mirrors the tensor at the edge, excluding the edge value itself.
+    For example, padding [1,2,3,4] by 2 on left gives [3,2,1,2,3,4].
+    """
+    result = x
+    for dim, (before, after) in enumerate(pad_pairs):
+        if before == 0 and after == 0:
+            continue
+
+        size = result.shape[dim]
+
+        # Build the padded array by concatenating reflected slices
+        parts = []
+
+        # Left/before padding: reflect from index 1 to before+1 (exclusive of edge)
+        if before > 0:
+            # Take slice [1:before+1] and reverse it
+            indices = list(range(1, min(before + 1, size)))[::-1]
+            if indices:
+                # Use gather along the dimension
+                slices = [slice(None)] * result.ndim
+                for idx in indices:
+                    slices[dim] = slice(idx, idx + 1)
+                    parts.append(result[tuple(slices)])
+            # Handle case where before > size - 1 (need to wrap)
+            if before > size - 1:
+                # Repeat the reflection pattern
+                remaining = before - len(indices)
+                full_reflect = list(range(1, size))[::-1] + list(range(1, size))
+                for i in range(remaining):
+                    idx = full_reflect[i % len(full_reflect)]
+                    slices[dim] = slice(idx, idx + 1)
+                    parts.append(result[tuple(slices)])
+
+        # Original tensor
+        parts.append(result)
+
+        # Right/after padding: reflect from index size-2 down
+        if after > 0:
+            indices = list(range(size - 2, max(size - 2 - after, -1), -1))
+            if indices:
+                slices = [slice(None)] * result.ndim
+                for idx in indices:
+                    if idx >= 0:
+                        slices[dim] = slice(idx, idx + 1)
+                        parts.append(result[tuple(slices)])
+
+        result = mx.concatenate(parts, axis=dim)
+
+    return result
+
+
+def _pad_replicate(x: "mx.array", pad_pairs: list) -> "mx.array":
+    """
+    Apply replicate (edge) padding to a tensor.
+
+    Replicate padding copies the edge value.
+    For example, padding [1,2,3,4] by 2 on left gives [1,1,1,2,3,4].
+    """
+    result = x
+    for dim, (before, after) in enumerate(pad_pairs):
+        if before == 0 and after == 0:
+            continue
+
+        parts = []
+
+        # Left/before padding: repeat first element
+        if before > 0:
+            slices = [slice(None)] * result.ndim
+            slices[dim] = slice(0, 1)
+            edge = result[tuple(slices)]
+            # Repeat 'before' times along this dimension
+            repeats = [1] * result.ndim
+            repeats[dim] = before
+            parts.append(mx.tile(edge, repeats))
+
+        # Original tensor
+        parts.append(result)
+
+        # Right/after padding: repeat last element
+        if after > 0:
+            slices = [slice(None)] * result.ndim
+            slices[dim] = slice(-1, None)
+            edge = result[tuple(slices)]
+            repeats = [1] * result.ndim
+            repeats[dim] = after
+            parts.append(mx.tile(edge, repeats))
+
+        result = mx.concatenate(parts, axis=dim)
+
+    return result
+
+
+def _pad_circular(x: "mx.array", pad_pairs: list) -> "mx.array":
+    """
+    Apply circular (wrap) padding to a tensor.
+
+    Circular padding wraps the tensor around.
+    For example, padding [1,2,3,4] by 2 on left gives [3,4,1,2,3,4].
+    """
+    result = x
+    for dim, (before, after) in enumerate(pad_pairs):
+        if before == 0 and after == 0:
+            continue
+
+        size = result.shape[dim]
+        parts = []
+
+        # Left/before padding: take from end of tensor
+        if before > 0:
+            slices = [slice(None)] * result.ndim
+            # Take last 'before' elements
+            start_idx = size - before
+            if start_idx < 0:
+                # Need to wrap multiple times
+                times = (before // size) + 1
+                expanded = mx.concatenate([result] * times, axis=dim)
+                new_size = expanded.shape[dim]
+                slices[dim] = slice(new_size - before, new_size)
+                parts.append(expanded[tuple(slices)])
+            else:
+                slices[dim] = slice(start_idx, size)
+                parts.append(result[tuple(slices)])
+
+        # Original tensor
+        parts.append(result)
+
+        # Right/after padding: take from beginning of tensor
+        if after > 0:
+            slices = [slice(None)] * result.ndim
+            if after > size:
+                # Need to wrap multiple times
+                times = (after // size) + 1
+                expanded = mx.concatenate([result] * times, axis=dim)
+                slices[dim] = slice(0, after)
+                parts.append(expanded[tuple(slices)])
+            else:
+                slices[dim] = slice(0, after)
+                parts.append(result[tuple(slices)])
+
+        result = mx.concatenate(parts, axis=dim)
+
+    return result
+
+
 def pad(
     input: Tensor,
     pad: Tuple[int, ...],
@@ -2009,11 +2183,11 @@ def pad(
     if mode == 'constant':
         result_array = mx.pad(input._mlx_array, pad_pairs, constant_values=value)
     elif mode == 'reflect':
-        raise NotImplementedError("Reflect padding not yet implemented")
+        result_array = _pad_reflect(input._mlx_array, pad_pairs)
     elif mode == 'replicate':
-        raise NotImplementedError("Replicate padding not yet implemented")
+        result_array = _pad_replicate(input._mlx_array, pad_pairs)
     elif mode == 'circular':
-        raise NotImplementedError("Circular padding not yet implemented")
+        result_array = _pad_circular(input._mlx_array, pad_pairs)
     else:
         raise ValueError(f"Invalid padding mode: {mode}")
 
@@ -2216,12 +2390,29 @@ def interpolate(
             align_corners = False
         result_array = _bilinear_interpolate(input._mlx_array, target_size, align_corners)
     elif mode == 'linear':
-        # Linear is just 1D bilinear - need 3D input
+        # Linear is 1D interpolation - need 3D input
         if len(input.shape) != 3:
             raise ValueError("Linear interpolation requires 3D input (N, C, L)")
-        raise NotImplementedError("Linear interpolation not yet implemented")
-    elif mode in ('bicubic', 'trilinear', 'area'):
-        raise NotImplementedError(f"Interpolation mode '{mode}' not yet implemented")
+        if align_corners is None:
+            align_corners = False
+        result_array = _linear_interpolate(input._mlx_array, target_size, align_corners)
+    elif mode == 'bicubic':
+        # Bicubic interpolation for 4D tensors
+        if len(input.shape) != 4:
+            raise ValueError("Bicubic interpolation requires 4D input (N, C, H, W)")
+        if align_corners is None:
+            align_corners = False
+        result_array = _bicubic_interpolate(input._mlx_array, target_size, align_corners)
+    elif mode == 'trilinear':
+        # Trilinear interpolation for 5D tensors
+        if len(input.shape) != 5:
+            raise ValueError("Trilinear interpolation requires 5D input (N, C, D, H, W)")
+        if align_corners is None:
+            align_corners = False
+        result_array = _trilinear_interpolate(input._mlx_array, target_size, align_corners)
+    elif mode == 'area':
+        # Area-based interpolation (adaptive average pooling approach)
+        result_array = _area_interpolate(input._mlx_array, target_size)
     else:
         raise ValueError(f"Unknown interpolation mode '{mode}'")
 
@@ -2316,6 +2507,261 @@ def _bilinear_interpolate(x, target_size, align_corners=False):
               v11 * fy * fx)
 
     return result
+
+
+def _linear_interpolate(x, target_size, align_corners=False):
+    """Helper for 1D linear interpolation."""
+    if len(x.shape) != 3:
+        raise NotImplementedError("Only 3D tensors supported for linear interpolation")
+
+    N, C, L = x.shape
+    target_l = target_size[0]
+
+    # Create coordinate grid
+    coords = mx.arange(target_l, dtype=mx.float32)
+
+    if align_corners:
+        if target_l > 1:
+            src = coords * ((L - 1) / (target_l - 1))
+        else:
+            src = mx.zeros_like(coords)
+    else:
+        scale = L / target_l
+        src = (coords + 0.5) * scale - 0.5
+
+    # Clamp to valid range
+    src = mx.clip(src, 0, L - 1)
+
+    # Get integer and fractional parts
+    idx0 = mx.floor(src).astype(mx.int32)
+    idx1 = mx.minimum(idx0 + 1, L - 1)
+    frac = src - idx0.astype(mx.float32)
+
+    # Reshape for broadcasting
+    frac = mx.reshape(frac, (1, 1, target_l))
+
+    # Gather values
+    v0 = x[:, :, idx0]
+    v1 = x[:, :, idx1]
+
+    # Linear interpolation
+    result = v0 * (1 - frac) + v1 * frac
+    return result
+
+
+def _bicubic_kernel(x):
+    """Compute bicubic interpolation kernel weights (Keys' cubic)."""
+    # Keys' cubic kernel with a=-0.5 (matches PyTorch default)
+    a = -0.5
+    absx = mx.abs(x)
+    absx2 = absx * absx
+    absx3 = absx2 * absx
+
+    # For |x| <= 1
+    w1 = (a + 2) * absx3 - (a + 3) * absx2 + 1
+    # For 1 < |x| < 2
+    w2 = a * absx3 - 5 * a * absx2 + 8 * a * absx - 4 * a
+
+    mask1 = absx <= 1
+    mask2 = (absx > 1) & (absx < 2)
+
+    return mx.where(mask1, w1, mx.where(mask2, w2, mx.zeros_like(x)))
+
+
+def _bicubic_interpolate(x, target_size, align_corners=False):
+    """Helper for bicubic interpolation."""
+    if len(x.shape) != 4:
+        raise NotImplementedError("Only 4D tensors supported for bicubic interpolation")
+
+    N, C, H, W = x.shape
+    target_h, target_w = target_size
+
+    # Create coordinate grids
+    y_coords = mx.arange(target_h, dtype=mx.float32)
+    x_coords = mx.arange(target_w, dtype=mx.float32)
+
+    if align_corners:
+        if target_h > 1:
+            y_src = y_coords * ((H - 1) / (target_h - 1))
+        else:
+            y_src = mx.zeros_like(y_coords)
+        if target_w > 1:
+            x_src = x_coords * ((W - 1) / (target_w - 1))
+        else:
+            x_src = mx.zeros_like(x_coords)
+    else:
+        y_scale = H / target_h
+        x_scale = W / target_w
+        y_src = (y_coords + 0.5) * y_scale - 0.5
+        x_src = (x_coords + 0.5) * x_scale - 0.5
+
+    # Get base indices and fractional parts
+    y_base = mx.floor(y_src).astype(mx.int32)
+    x_base = mx.floor(x_src).astype(mx.int32)
+    y_frac = y_src - y_base.astype(mx.float32)
+    x_frac = x_src - x_base.astype(mx.float32)
+
+    # Pad input for boundary handling
+    x_padded = mx.pad(x, [(0, 0), (0, 0), (1, 2), (1, 2)], mode='edge')
+
+    # Adjust base indices for padding
+    y_base = y_base + 1
+    x_base = x_base + 1
+
+    # Initialize result
+    result = mx.zeros((N, C, target_h, target_w), dtype=x.dtype)
+
+    # 4x4 kernel
+    for dy in range(-1, 3):
+        for dx in range(-1, 3):
+            yi = mx.clip(y_base + dy, 0, H + 2)
+            xi = mx.clip(x_base + dx, 0, W + 2)
+
+            # Compute kernel weights
+            wy = _bicubic_kernel(y_frac - dy)
+            wx = _bicubic_kernel(x_frac - dx)
+
+            # Reshape for broadcasting
+            wy = mx.reshape(wy, (1, 1, target_h, 1))
+            wx = mx.reshape(wx, (1, 1, 1, target_w))
+
+            # Gather and accumulate
+            values = x_padded[:, :, yi, :][:, :, :, xi]
+            result = result + values * wy * wx
+
+    return result
+
+
+def _trilinear_interpolate(x, target_size, align_corners=False):
+    """Helper for trilinear interpolation."""
+    if len(x.shape) != 5:
+        raise NotImplementedError("Only 5D tensors supported for trilinear interpolation")
+
+    N, C, D, H, W = x.shape
+    target_d, target_h, target_w = target_size
+
+    # Create coordinate grids
+    d_coords = mx.arange(target_d, dtype=mx.float32)
+    h_coords = mx.arange(target_h, dtype=mx.float32)
+    w_coords = mx.arange(target_w, dtype=mx.float32)
+
+    if align_corners:
+        if target_d > 1:
+            d_src = d_coords * ((D - 1) / (target_d - 1))
+        else:
+            d_src = mx.zeros_like(d_coords)
+        if target_h > 1:
+            h_src = h_coords * ((H - 1) / (target_h - 1))
+        else:
+            h_src = mx.zeros_like(h_coords)
+        if target_w > 1:
+            w_src = w_coords * ((W - 1) / (target_w - 1))
+        else:
+            w_src = mx.zeros_like(w_coords)
+    else:
+        d_scale = D / target_d
+        h_scale = H / target_h
+        w_scale = W / target_w
+        d_src = (d_coords + 0.5) * d_scale - 0.5
+        h_src = (h_coords + 0.5) * h_scale - 0.5
+        w_src = (w_coords + 0.5) * w_scale - 0.5
+
+    # Clamp coordinates
+    d_src = mx.clip(d_src, 0, D - 1)
+    h_src = mx.clip(h_src, 0, H - 1)
+    w_src = mx.clip(w_src, 0, W - 1)
+
+    # Get integer and fractional parts
+    d0 = mx.floor(d_src).astype(mx.int32)
+    h0 = mx.floor(h_src).astype(mx.int32)
+    w0 = mx.floor(w_src).astype(mx.int32)
+    d1 = mx.minimum(d0 + 1, D - 1)
+    h1 = mx.minimum(h0 + 1, H - 1)
+    w1 = mx.minimum(w0 + 1, W - 1)
+
+    fd = d_src - d0.astype(mx.float32)
+    fh = h_src - h0.astype(mx.float32)
+    fw = w_src - w0.astype(mx.float32)
+
+    # Reshape for broadcasting: fd is (target_d,), fh is (target_h,), fw is (target_w,)
+    fd = mx.reshape(fd, (1, 1, target_d, 1, 1))
+    fh = mx.reshape(fh, (1, 1, 1, target_h, 1))
+    fw = mx.reshape(fw, (1, 1, 1, 1, target_w))
+
+    # Gather the 8 corner values
+    v000 = x[:, :, d0, :, :][:, :, :, h0, :][:, :, :, :, w0]
+    v001 = x[:, :, d0, :, :][:, :, :, h0, :][:, :, :, :, w1]
+    v010 = x[:, :, d0, :, :][:, :, :, h1, :][:, :, :, :, w0]
+    v011 = x[:, :, d0, :, :][:, :, :, h1, :][:, :, :, :, w1]
+    v100 = x[:, :, d1, :, :][:, :, :, h0, :][:, :, :, :, w0]
+    v101 = x[:, :, d1, :, :][:, :, :, h0, :][:, :, :, :, w1]
+    v110 = x[:, :, d1, :, :][:, :, :, h1, :][:, :, :, :, w0]
+    v111 = x[:, :, d1, :, :][:, :, :, h1, :][:, :, :, :, w1]
+
+    # Trilinear interpolation
+    result = (v000 * (1 - fd) * (1 - fh) * (1 - fw) +
+              v001 * (1 - fd) * (1 - fh) * fw +
+              v010 * (1 - fd) * fh * (1 - fw) +
+              v011 * (1 - fd) * fh * fw +
+              v100 * fd * (1 - fh) * (1 - fw) +
+              v101 * fd * (1 - fh) * fw +
+              v110 * fd * fh * (1 - fw) +
+              v111 * fd * fh * fw)
+
+    return result
+
+
+def _area_interpolate(x, target_size):
+    """Helper for area interpolation (adaptive average pooling approach)."""
+    ndim = len(x.shape)
+
+    if ndim == 4:  # 4D: NCHW
+        N, C, H, W = x.shape
+        target_h, target_w = target_size
+
+        # Collect all mean values and stack at the end
+        rows = []
+        for i in range(target_h):
+            row = []
+            for j in range(target_w):
+                # Compute source region boundaries
+                h_start = int(i * H / target_h)
+                h_end = int((i + 1) * H / target_h)
+                w_start = int(j * W / target_w)
+                w_end = int((j + 1) * W / target_w)
+
+                # Handle edge case where start == end
+                if h_end <= h_start:
+                    h_end = h_start + 1
+                if w_end <= w_start:
+                    w_end = w_start + 1
+
+                # Extract region and compute mean
+                region = x[:, :, h_start:h_end, w_start:w_end]
+                mean_val = mx.mean(region, axis=(2, 3), keepdims=True)
+                row.append(mean_val)
+            rows.append(mx.concatenate(row, axis=3))
+        result = mx.concatenate(rows, axis=2)
+        return result
+
+    elif ndim == 3:  # 3D: NCL
+        N, C, L = x.shape
+        target_l = target_size[0]
+
+        cols = []
+        for i in range(target_l):
+            l_start = int(i * L / target_l)
+            l_end = int((i + 1) * L / target_l)
+            if l_end <= l_start:
+                l_end = l_start + 1
+            region = x[:, :, l_start:l_end]
+            mean_val = mx.mean(region, axis=2, keepdims=True)
+            cols.append(mean_val)
+        result = mx.concatenate(cols, axis=2)
+        return result
+
+    else:
+        raise NotImplementedError(f"Area interpolation not supported for {ndim}D tensors")
 
 
 def upsample(
@@ -4651,52 +5097,95 @@ def multilabel_margin_loss(
             reduction = 'mean' if size_average else 'sum'
         else:
             reduction = 'none'
-    import numpy as np
-    x = np.array(input._mlx_array)
-    y = np.array(target._mlx_array).astype(np.int64)
 
+    x = input._mlx_array
+    y = target._mlx_array.astype(mx.int32)
     N, C = x.shape
 
-    # Compute margin loss for each sample
-    losses = np.zeros(N, dtype=np.float32)
-    for n in range(N):
-        sample_loss = 0.0
-        # Get the set of positive CLASSES from this sample's target
-        # Target contains class indices (>=0) followed by -1s as padding
-        positive_classes = set()
-        for c in range(C):
-            if y[n, c] >= 0:
-                positive_classes.add(int(y[n, c]))
-            else:
-                break  # -1 marks end of positive labels
+    # Create masks for positive labels (>= 0) and negative labels (< 0 marks padding)
+    positive_mask = (y >= 0).astype(x.dtype)  # (N, C) - 1 where we have valid labels
 
-        # Negative classes are all classes NOT in the positive set
-        negative_classes = set(range(C)) - positive_classes
+    # For each sample and each position, get the class index
+    # Convert target indices to one-hot-like positive class indicators
+    # y[n, j] gives the positive class index at position j
+    # We need to create a mask showing which classes are positive
 
-        # For each positive class ENTRY in target (counting duplicates),
-        # compare against each negative class
-        # PyTorch iterates over ALL j where y[j] >= 0, including duplicates
-        for j in range(C):
-            if y[n, j] < 0:
-                break  # -1 marks end of positive labels
-            pos_class = y[n, j]
-            x_pos = x[n, pos_class]
-            for neg_class in negative_classes:
-                x_neg = x[n, neg_class]
-                # Loss: max(0, 1 - x[positive_class] + x[negative_class])
-                margin_loss = max(0.0, 1.0 - x_pos + x_neg)
-                sample_loss += margin_loss
+    # Build positive class mask for each sample
+    # For each sample n, classes in y[n, :] (where y >= 0) are positive
+    class_indices = mx.arange(C)  # (C,)
 
-        losses[n] = sample_loss / C
+    # For each sample, for each valid target entry, mark that class as positive
+    # y shape: (N, C), contains class indices or -1
+    # We want: positive_class_mask (N, C) where [n, c] = 1 if class c is a positive class for sample n
+
+    # Expand for broadcasting: y (N, C, 1), class_indices (C,)
+    y_expanded = mx.expand_dims(y, axis=2)  # (N, C, 1)
+    # Check which classes match any of the target entries
+    matches = (y_expanded == class_indices)  # (N, C, C)
+    # A class is positive if it matches any valid target entry
+    # Also need to mask out invalid entries (y < 0)
+    valid_entries = mx.expand_dims(y >= 0, axis=2)  # (N, C, 1)
+    valid_matches = matches & valid_entries  # (N, C, C)
+    positive_class_mask = mx.any(valid_matches, axis=1).astype(x.dtype)  # (N, C)
+
+    # Negative class mask
+    negative_class_mask = 1.0 - positive_class_mask  # (N, C)
+
+    # For each valid positive entry j, we need to compare x[pos_class] vs all negative classes
+    # Count valid positive entries per sample
+    num_positive_entries = mx.sum(positive_mask, axis=1, keepdims=True)  # (N, 1)
+
+    # Get scores for positive classes
+    # positive_class_mask (N, C) tells us which classes are positive
+    # For each sample n, we want x[n, pos_classes]
+
+    # Broadcast approach: compute pairwise differences
+    # x_pos: scores at positive classes, x_neg: scores at negative classes
+    # Loss = sum over (pos_entry j) sum over (neg_class k): max(0, 1 - x[pos_class[j]] + x[neg_class[k]])
+
+    # Simpler vectorized approach:
+    # For each (n, pos_class), compute margin against all negative classes
+    # Then sum, weighted by how many times that pos_class appears in targets
+
+    # Positive class scores: (N, C) masked
+    pos_scores = x * positive_class_mask  # (N, C), 0 where not positive
+    neg_scores = x * negative_class_mask  # (N, C), 0 where not negative
+
+    # For margin loss: for each positive class p and negative class n:
+    # loss += max(0, 1 - x[p] + x[n])
+    # Expand for pairwise: pos_scores (N, C, 1), neg_scores (N, 1, C)
+    pos_expanded = mx.expand_dims(pos_scores, axis=2)  # (N, C, 1)
+    neg_expanded = mx.expand_dims(neg_scores, axis=1)  # (N, 1, C)
+
+    # Compute margins
+    margins = 1.0 - pos_expanded + neg_expanded  # (N, C, C)
+    margins = mx.maximum(margins, 0)  # hinge
+
+    # Mask: only count where pos_class_mask (axis 1) and neg_class_mask (axis 2)
+    pos_mask_expanded = mx.expand_dims(positive_class_mask, axis=2)  # (N, C, 1)
+    neg_mask_expanded = mx.expand_dims(negative_class_mask, axis=1)  # (N, 1, C)
+    valid_pairs = pos_mask_expanded * neg_mask_expanded  # (N, C, C)
+
+    # Weight by how many times each positive class appears in target
+    # Count occurrences of each class in target
+    # For each class c, count how many positions j have y[j] == c (and y[j] >= 0)
+    pos_class_counts = mx.sum(valid_matches.astype(x.dtype), axis=1)  # (N, C)
+    pos_class_counts_expanded = mx.expand_dims(pos_class_counts, axis=2)  # (N, C, 1)
+
+    # Weighted margins
+    weighted_margins = margins * valid_pairs * pos_class_counts_expanded
+
+    # Sum over all pairs for each sample, then divide by C
+    sample_losses = mx.sum(weighted_margins, axis=(1, 2)) / C  # (N,)
 
     if reduction == 'mean':
-        loss = np.mean(losses)
+        loss = mx.mean(sample_losses)
     elif reduction == 'sum':
-        loss = np.sum(losses)
+        loss = mx.sum(sample_losses)
     else:
-        loss = losses
+        loss = sample_losses
 
-    result = Tensor._from_mlx_array(mx.array(loss, dtype=mx.float32))
+    result = Tensor._from_mlx_array(loss)
     if is_grad_enabled() and input.requires_grad:
         result.requires_grad = True
     return result
@@ -4801,7 +5290,6 @@ def multi_head_attention_forward(
 from typing import Callable, Optional, Union
 import importlib
 import math
-import numpy as np
 import warnings
 
 # Re-export for compatibility

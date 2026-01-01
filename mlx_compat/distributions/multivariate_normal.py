@@ -27,22 +27,26 @@ class MultivariateNormal(Distribution):
         scale_tril: Optional[Union[Tensor, mx.array]] = None,
         validate_args: Optional[bool] = None,
     ):
-        self.loc = loc._data if isinstance(loc, Tensor) else mx.array(loc)
+        self.loc = loc._mlx_array if isinstance(loc, Tensor) else mx.array(loc)
 
         if sum(x is not None for x in [covariance_matrix, precision_matrix, scale_tril]) != 1:
             raise ValueError("Exactly one of covariance_matrix, precision_matrix, or scale_tril must be specified")
 
         if covariance_matrix is not None:
-            self.covariance_matrix = covariance_matrix._data if isinstance(covariance_matrix, Tensor) else mx.array(covariance_matrix)
-            self._scale_tril = mx.linalg.cholesky(self.covariance_matrix)
+            self.covariance_matrix = covariance_matrix._mlx_array if isinstance(covariance_matrix, Tensor) else mx.array(covariance_matrix)
+            # Use CPU stream for cholesky (required by MLX)
+            self._scale_tril = mx.linalg.cholesky(self.covariance_matrix, stream=mx.cpu)
+            mx.eval(self._scale_tril)
         elif scale_tril is not None:
-            self._scale_tril = scale_tril._data if isinstance(scale_tril, Tensor) else mx.array(scale_tril)
+            self._scale_tril = scale_tril._mlx_array if isinstance(scale_tril, Tensor) else mx.array(scale_tril)
             self.covariance_matrix = mx.matmul(self._scale_tril, mx.swapaxes(self._scale_tril, -2, -1))
         else:
-            self._precision_matrix = precision_matrix._data if isinstance(precision_matrix, Tensor) else mx.array(precision_matrix)
-            # Invert precision to get covariance
-            self.covariance_matrix = mx.linalg.inv(self._precision_matrix)
-            self._scale_tril = mx.linalg.cholesky(self.covariance_matrix)
+            self._precision_matrix = precision_matrix._mlx_array if isinstance(precision_matrix, Tensor) else mx.array(precision_matrix)
+            # Invert precision to get covariance (use CPU stream)
+            self.covariance_matrix = mx.linalg.inv(self._precision_matrix, stream=mx.cpu)
+            mx.eval(self.covariance_matrix)
+            self._scale_tril = mx.linalg.cholesky(self.covariance_matrix, stream=mx.cpu)
+            mx.eval(self._scale_tril)
 
         batch_shape = self.loc.shape[:-1]
         event_shape = self.loc.shape[-1:]
@@ -54,7 +58,10 @@ class MultivariateNormal(Distribution):
 
     @property
     def precision_matrix(self) -> Tensor:
-        return Tensor(mx.linalg.inv(self.covariance_matrix))
+        # inv also requires CPU stream
+        result = mx.linalg.inv(self.covariance_matrix, stream=mx.cpu)
+        mx.eval(result)
+        return Tensor(result)
 
     @property
     def mean(self) -> Tensor:
@@ -79,12 +86,15 @@ class MultivariateNormal(Distribution):
         return self.sample(sample_shape)
 
     def log_prob(self, value: Tensor) -> Tensor:
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         diff = data - self.loc
         k = self._event_shape[0]
 
         # Solve L @ y = diff for y, then y.T @ y = diff.T @ cov^-1 @ diff
-        y = mx.linalg.solve_triangular(self._scale_tril, mx.expand_dims(diff, -1), lower=True)
+        # MLX uses upper=False for lower triangular (opposite of PyTorch's lower=True)
+        # Also needs CPU stream like cholesky
+        y = mx.linalg.solve_triangular(self._scale_tril, mx.expand_dims(diff, -1), upper=False, stream=mx.cpu)
+        mx.eval(y)
         M = mx.sum(y ** 2, axis=(-2, -1))
 
         # Log det of covariance = 2 * sum(log(diag(L)))
@@ -119,9 +129,9 @@ class LowRankMultivariateNormal(Distribution):
         cov_diag: Union[Tensor, mx.array],
         validate_args: Optional[bool] = None,
     ):
-        self.loc = loc._data if isinstance(loc, Tensor) else mx.array(loc)
-        self.cov_factor = cov_factor._data if isinstance(cov_factor, Tensor) else mx.array(cov_factor)
-        self.cov_diag = cov_diag._data if isinstance(cov_diag, Tensor) else mx.array(cov_diag)
+        self.loc = loc._mlx_array if isinstance(loc, Tensor) else mx.array(loc)
+        self.cov_factor = cov_factor._mlx_array if isinstance(cov_factor, Tensor) else mx.array(cov_factor)
+        self.cov_diag = cov_diag._mlx_array if isinstance(cov_diag, Tensor) else mx.array(cov_diag)
 
         batch_shape = self.loc.shape[:-1]
         event_shape = self.loc.shape[-1:]
@@ -158,7 +168,7 @@ class LowRankMultivariateNormal(Distribution):
 
     def log_prob(self, value: Tensor) -> Tensor:
         # Simplified - compute via full covariance
-        cov = self.covariance_matrix._data
+        cov = self.covariance_matrix._mlx_array
         return MultivariateNormal(Tensor(self.loc), covariance_matrix=Tensor(cov)).log_prob(value)
 
 

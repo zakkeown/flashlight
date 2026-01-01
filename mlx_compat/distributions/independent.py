@@ -73,7 +73,7 @@ class Independent(Distribution):
 
     def log_prob(self, value: Tensor) -> Tensor:
         log_prob = self.base_dist.log_prob(value)
-        data = log_prob._data if isinstance(log_prob, Tensor) else log_prob
+        data = log_prob._mlx_array if isinstance(log_prob, Tensor) else log_prob
         # Sum over reinterpreted dims
         for _ in range(self.reinterpreted_batch_ndims):
             data = mx.sum(data, axis=-1)
@@ -81,7 +81,7 @@ class Independent(Distribution):
 
     def entropy(self) -> Tensor:
         entropy = self.base_dist.entropy()
-        data = entropy._data if isinstance(entropy, Tensor) else entropy
+        data = entropy._mlx_array if isinstance(entropy, Tensor) else entropy
         for _ in range(self.reinterpreted_batch_ndims):
             data = mx.sum(data, axis=-1)
         return Tensor(data)

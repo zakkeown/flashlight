@@ -199,6 +199,122 @@ def msort(input: Tensor) -> Tensor:
     return values
 
 
+def _unique_dim(
+    input: 'Tensor',
+    dim: int,
+    sorted: bool = True,
+    return_inverse: bool = False,
+    return_counts: bool = False
+) -> Union['Tensor', Tuple['Tensor', ...]]:
+    """
+    Find unique slices along a dimension.
+
+    Args:
+        input: Input tensor
+        dim: Dimension along which to find unique slices
+        sorted: Whether to sort the unique elements
+        return_inverse: Whether to return inverse indices
+        return_counts: Whether to return counts
+
+    Returns:
+        Unique slices and optionally inverse indices and counts
+    """
+    from ..tensor import Tensor
+
+    mlx_array = input._mlx_array
+    ndim = len(mlx_array.shape)
+
+    # Handle negative dim
+    if dim < 0:
+        dim = ndim + dim
+
+    # Move the target dimension to the front
+    if dim != 0:
+        axes = [dim] + [i for i in range(ndim) if i != dim]
+        mlx_array = mx.transpose(mlx_array, axes)
+
+    # Now work on dimension 0
+    n_slices = mlx_array.shape[0]
+    other_shape = mlx_array.shape[1:]
+
+    # Flatten each slice to compare
+    flat_slices = mlx_array.reshape(n_slices, -1)
+
+    # For comparison, we need to find which slices are equal
+    # We'll use a simple approach: compare all pairs
+    # First, create a "signature" for each slice by treating it as a tuple
+
+    # Find unique slices by comparing each slice
+    # Track unique indices and which original slice maps to which unique
+    unique_indices = []
+    inverse_mapping = []
+
+    for i in range(n_slices):
+        slice_i = flat_slices[i]
+        found = False
+        for j, unique_idx in enumerate(unique_indices):
+            slice_j = flat_slices[unique_idx]
+            # Compare slices
+            if mx.all(slice_i == slice_j).item():
+                inverse_mapping.append(j)
+                found = True
+                break
+        if not found:
+            inverse_mapping.append(len(unique_indices))
+            unique_indices.append(i)
+
+    # Extract unique slices
+    unique_slices = mlx_array[mx.array(unique_indices, dtype=mx.int32)]
+
+    # If sorted, sort the unique slices lexicographically
+    if sorted and len(unique_indices) > 1:
+        # Sort by first element, then second, etc.
+        # For simplicity, we'll sort by the sum of elements (approximate lexicographic)
+        flat_unique = unique_slices.reshape(len(unique_indices), -1)
+
+        # Compute a sortable key - use first few elements
+        sort_keys = flat_unique[:, 0] if flat_unique.shape[1] > 0 else mx.zeros(len(unique_indices))
+        sort_order = mx.argsort(sort_keys)
+
+        unique_slices = unique_slices[sort_order]
+
+        # Update inverse mapping
+        old_to_new = {}
+        for new_idx, old_idx in enumerate(sort_order.tolist()):
+            old_to_new[old_idx] = new_idx
+        inverse_mapping = [old_to_new[i] for i in inverse_mapping]
+
+    # Move dimension back to original position
+    if dim != 0:
+        # Construct reverse permutation
+        inv_axes = [0] * ndim
+        axes = [dim] + [i for i in range(ndim) if i != dim]
+        for new_pos, old_pos in enumerate(axes):
+            inv_axes[old_pos] = new_pos
+        unique_slices = mx.transpose(unique_slices, inv_axes)
+
+    result = Tensor._from_mlx_array(unique_slices)
+
+    if not return_inverse and not return_counts:
+        return result
+
+    results = [result]
+
+    if return_inverse:
+        inverse_arr = mx.array(inverse_mapping, dtype=mx.int64)
+        results.append(Tensor._from_mlx_array(inverse_arr))
+
+    if return_counts:
+        # Count occurrences of each unique slice
+        counts = [0] * len(unique_indices)
+        for inv in inverse_mapping:
+            counts[inv] += 1
+        counts_arr = mx.array(counts, dtype=mx.int64)
+        results.append(Tensor._from_mlx_array(counts_arr))
+
+    return tuple(results)
+
+
 def unique(
     input: Tensor,
     sorted: bool = True,
@@ -227,7 +343,7 @@ def unique(
     mlx_array = input._mlx_array
 
     if dim is not None:
-        raise NotImplementedError("unique with dim parameter is not yet supported")
+        return _unique_dim(input, dim, sorted, return_inverse, return_counts)
 
     # Flatten for unique operation
     flat = mlx_array.reshape(-1)

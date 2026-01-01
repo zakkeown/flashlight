@@ -17,7 +17,7 @@ class HalfCauchy(Distribution):
     has_rsample = True
 
     def __init__(self, scale: Union[Tensor, float], validate_args: Optional[bool] = None):
-        self.scale = scale._data if isinstance(scale, Tensor) else mx.array(scale)
+        self.scale = scale._mlx_array if isinstance(scale, Tensor) else mx.array(scale)
         super().__init__(self.scale.shape, validate_args=validate_args)
 
     @property
@@ -43,15 +43,15 @@ class HalfCauchy(Distribution):
         return self.sample(sample_shape)
 
     def log_prob(self, value: Tensor) -> Tensor:
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         return Tensor(math.log(2 / math.pi) - mx.log(self.scale) - mx.log(1 + (data / self.scale) ** 2))
 
     def cdf(self, value: Tensor) -> Tensor:
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         return Tensor(2 / math.pi * mx.arctan(data / self.scale))
 
     def icdf(self, value: Tensor) -> Tensor:
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         return Tensor(self.scale * mx.tan(math.pi / 2 * data))
 
     def entropy(self) -> Tensor:

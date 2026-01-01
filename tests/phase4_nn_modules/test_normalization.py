@@ -294,6 +294,94 @@ class TestInstanceNorm3d(TestCase):
         self.assertEqual(output.shape, (2, 16, 4, 4, 4))
 
 
+@skipIfNoMLX
+class TestLocalResponseNorm(TestCase):
+    """Test nn.LocalResponseNorm."""
+
+    def test_creation(self):
+        """Test LocalResponseNorm creation."""
+        lrn = mlx_compat.nn.LocalResponseNorm(size=5)
+        self.assertEqual(lrn.size, 5)
+
+    def test_creation_with_params(self):
+        """Test LocalResponseNorm creation with custom parameters."""
+        lrn = mlx_compat.nn.LocalResponseNorm(size=5, alpha=1e-4, beta=0.75, k=2.0)
+        self.assertEqual(lrn.alpha, 1e-4)
+        self.assertEqual(lrn.beta, 0.75)
+
+    def test_forward_shape(self):
+        """Test LocalResponseNorm forward pass."""
+        lrn = mlx_compat.nn.LocalResponseNorm(size=5)
+        x = mlx_compat.randn(4, 32, 8, 8)
+        output = lrn(x)
+        self.assertEqual(output.shape, (4, 32, 8, 8))
+
+
+@skipIfNoMLX
+class TestCrossMapLRN2d(TestCase):
+    """Test nn.CrossMapLRN2d."""
+
+    def test_creation(self):
+        """Test CrossMapLRN2d creation."""
+        lrn = mlx_compat.nn.CrossMapLRN2d(size=5, alpha=1e-4, beta=0.75)
+        self.assertEqual(lrn.size, 5)
+
+    def test_forward_shape(self):
+        """Test CrossMapLRN2d forward pass."""
+        lrn = mlx_compat.nn.CrossMapLRN2d(size=5)
+        x = mlx_compat.randn(4, 32, 8, 8)
+        output = lrn(x)
+        self.assertEqual(output.shape, (4, 32, 8, 8))
+
+    def test_forward_small_channels(self):
+        """Test CrossMapLRN2d with few channels."""
+        lrn = mlx_compat.nn.CrossMapLRN2d(size=3)
+        x = mlx_compat.randn(2, 4, 4, 4)
+        output = lrn(x)
+        self.assertEqual(output.shape, (2, 4, 4, 4))
+
+
+@skipIfNoMLX
+class TestRMSNorm(TestCase):
+    """Test nn.RMSNorm."""
+
+    def test_creation(self):
+        """Test RMSNorm creation."""
+        rms = mlx_compat.nn.RMSNorm(normalized_shape=64)
+        self.assertIsNotNone(rms)
+
+    def test_forward_shape_3d(self):
+        """Test RMSNorm forward pass with 3D input."""
+        rms = mlx_compat.nn.RMSNorm(normalized_shape=64)
+        x = mlx_compat.randn(4, 10, 64)
+        output = rms(x)
+        self.assertEqual(output.shape, (4, 10, 64))
+
+    def test_forward_shape_2d(self):
+        """Test RMSNorm with 2D input."""
+        rms = mlx_compat.nn.RMSNorm(normalized_shape=64)
+        x = mlx_compat.randn(4, 64)
+        output = rms(x)
+        self.assertEqual(output.shape, (4, 64))
+
+
+@skipIfNoMLX
+class TestSyncBatchNorm(TestCase):
+    """Test nn.SyncBatchNorm."""
+
+    def test_creation(self):
+        """Test SyncBatchNorm creation."""
+        bn = mlx_compat.nn.SyncBatchNorm(num_features=32)
+        self.assertEqual(bn.num_features, 32)
+
+    def test_forward_shape(self):
+        """Test SyncBatchNorm forward pass (same as BatchNorm in single-device)."""
+        bn = mlx_compat.nn.SyncBatchNorm(num_features=32)
+        x = mlx_compat.randn(4, 32, 8, 8)
+        output = bn(x)
+        self.assertEqual(output.shape, (4, 32, 8, 8))
+
+
 if __name__ == '__main__':
     from tests.common_utils import run_tests
     run_tests()

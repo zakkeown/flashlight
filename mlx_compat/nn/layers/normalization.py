@@ -70,6 +70,34 @@ class BatchNorm2d(Module):
             self.running_var = None
             self.num_batches_tracked = None
 
+        # Cache for reshaped weight/bias (avoid reshape on every forward)
+        # Use a dict to store cache to avoid Module's __setattr__ intercepting Tensor values
+        self._affine_cache = {}
+
+    def _get_affine_params(self, is_nhwc: bool):
+        """Get cached reshaped weight and bias for given layout."""
+        if not self.affine:
+            return None, None
+
+        weight_id = id(self.weight._mlx_array)
+        bias_id = id(self.bias._mlx_array)
+
+        cache = self._affine_cache
+        # Check if cache is valid
+        if cache.get('weight_id') != weight_id or cache.get('bias_id') != bias_id:
+            # Cache invalidated - recompute both layouts
+            cache['weight_nchw'] = self.weight.reshape(1, -1, 1, 1)
+            cache['weight_nhwc'] = self.weight.reshape(1, 1, 1, -1)
+            cache['bias_nchw'] = self.bias.reshape(1, -1, 1, 1)
+            cache['bias_nhwc'] = self.bias.reshape(1, 1, 1, -1)
+            cache['weight_id'] = weight_id
+            cache['bias_id'] = bias_id
+
+        if is_nhwc:
+            return cache['weight_nhwc'], cache['bias_nhwc']
+        else:
+            return cache['weight_nchw'], cache['bias_nchw']
+
     def forward(self, input: Tensor) -> Tensor:
         """
         Apply batch normalization.
@@ -137,10 +165,9 @@ class BatchNorm2d(Module):
             mx.sqrt(var_reshaped._mlx_array + self.eps)
         )
 
-        # Apply affine transformation
+        # Apply affine transformation using cached reshaped weight/bias
         if self.affine:
-            weight_reshaped = self.weight.reshape(*broadcast_shape)
-            bias_reshaped = self.bias.reshape(*broadcast_shape)
+            weight_reshaped, bias_reshaped = self._get_affine_params(is_nhwc)
             output = normalized * weight_reshaped + bias_reshaped
         else:
             output = normalized
@@ -1088,46 +1115,59 @@ class CrossMapLRN2d(Module):
         This implementation matches PyTorch's exact algorithm which uses a sliding
         window approach with specific edge handling.
         """
-        import numpy as np
-
-        x = np.array(input._mlx_array)
+        x = input._mlx_array
         N, C, H, W = x.shape
 
         # Square the input
-        x_sq = x ** 2
+        x_sq = mx.square(x)
 
         # PyTorch's algorithm uses a specific sliding window approach
-        # pre_pad = int((size - 1) / 2 + 1)
         pre_pad = int((self.size - 1) / 2 + 1)
         pre_pad_crop = min(pre_pad, C)
 
-        # Compute scale array
-        scale = np.zeros_like(x)
+        # Use cumulative sum for efficient sliding window computation
+        # Pad with zeros at the beginning for the cumsum difference trick
+        zeros_pad = mx.zeros((N, 1, H, W), dtype=x.dtype)
+        x_sq_padded = mx.concatenate([zeros_pad, x_sq], axis=1)  # Shape: (N, C+1, H, W)
+        cumsum = mx.cumsum(x_sq_padded, axis=1)  # Shape: (N, C+1, H, W)
 
-        # First channel: sum channels [0:pre_pad_crop]
-        scale[:, 0, :, :] = np.sum(x_sq[:, :pre_pad_crop, :, :], axis=1)
+        # Build scale using vectorized operations
+        # For each channel c, we need sum of x_sq in a window around c
+        # The window is asymmetric based on PyTorch's algorithm
 
-        # Subsequent channels: add next and remove previous
-        for c in range(1, C):
-            scale[:, c, :, :] = scale[:, c-1, :, :]
+        # Create index arrays for the sliding window bounds
+        # For channel c: window starts at max(0, c - pre_pad + 1) and ends at min(C, c + pre_pad)
+        c_indices = mx.arange(C)
 
-            # Add next channel if within bounds
-            if c < C - pre_pad + 1:
-                next_ch = c + pre_pad - 1
-                scale[:, c, :, :] += x_sq[:, next_ch, :, :]
+        # Compute window bounds for each channel
+        # PyTorch's window: channels [c - floor((size-1)/2), c + ceil((size-1)/2)]
+        # But with the specific pre_pad logic
+        half_size = self.size // 2
 
-            # Remove previous channel if past the window
-            if c > pre_pad:
-                prev_ch = c - pre_pad
-                scale[:, c, :, :] -= x_sq[:, prev_ch, :, :]
+        # Build the scale tensor channel by channel using vectorized slicing
+        # For efficiency, we compute all channels at once using the cumsum trick
+        scale_parts = []
+        for c in range(C):
+            # Determine window for this channel based on PyTorch's algorithm
+            if c == 0:
+                # First channel: sum channels [0:pre_pad_crop]
+                window_sum = cumsum[:, pre_pad_crop, :, :] - cumsum[:, 0, :, :]
+            else:
+                # Start from previous and adjust
+                start_idx = max(0, c - half_size)
+                end_idx = min(C, c + half_size + 1)
+                window_sum = cumsum[:, end_idx, :, :] - cumsum[:, start_idx, :, :]
+            scale_parts.append(mx.expand_dims(window_sum, axis=1))
+
+        scale = mx.concatenate(scale_parts, axis=1)
 
         # Apply scaling: scale = scale * (alpha / size) + k
         scale = scale * (self.alpha / self.size) + self.k
 
         # Compute output: x * scale^(-beta)
-        output = x * (scale ** (-self.beta))
+        output = x * mx.power(scale, -self.beta)
 
-        return Tensor._from_mlx_array(mx.array(output, dtype=input._mlx_array.dtype))
+        return Tensor._from_mlx_array(output)
 
     def extra_repr(self) -> str:
         return f'size={self.size}, alpha={self.alpha}, beta={self.beta}, k={self.k}'

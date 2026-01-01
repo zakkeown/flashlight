@@ -21,8 +21,8 @@ class LogisticNormal(Distribution):
         scale: Union[Tensor, mx.array],
         validate_args: Optional[bool] = None,
     ):
-        self.loc = loc._data if isinstance(loc, Tensor) else mx.array(loc)
-        self.scale = scale._data if isinstance(scale, Tensor) else mx.array(scale)
+        self.loc = loc._mlx_array if isinstance(loc, Tensor) else mx.array(loc)
+        self.scale = scale._mlx_array if isinstance(scale, Tensor) else mx.array(scale)
         batch_shape = mx.broadcast_shapes(self.loc.shape[:-1], self.scale.shape[:-1])
         event_shape = (self.loc.shape[-1] + 1,)
         super().__init__(batch_shape, event_shape, validate_args=validate_args)
@@ -43,7 +43,7 @@ class LogisticNormal(Distribution):
         return self.sample(sample_shape)
 
     def log_prob(self, value: Tensor) -> Tensor:
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         # Transform to unconstrained space
         x = mx.log(data[..., :-1]) - mx.log(data[..., -1:])
         # Normal log prob

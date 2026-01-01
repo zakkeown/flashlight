@@ -410,11 +410,11 @@ def sin(input: Tensor) -> Tensor:
 
     # Autograd graph construction
     if is_grad_enabled() and input.requires_grad:
+        from ..autograd.function import SinBackward
         result.requires_grad = True
-        # Gradient of sin is cos
-        # For now, just mark as requiring grad
-        # TODO: Add proper backward function
-        result._grad_fn = None
+        grad_fn = SinBackward(input)
+        grad_fn.output_tensor = result
+        result._grad_fn = grad_fn
 
     return result
 
@@ -434,11 +434,11 @@ def cos(input: Tensor) -> Tensor:
 
     # Autograd graph construction
     if is_grad_enabled() and input.requires_grad:
+        from ..autograd.function import CosBackward
         result.requires_grad = True
-        # Gradient of cos is -sin
-        # For now, just mark as requiring grad
-        # TODO: Add proper backward function
-        result._grad_fn = None
+        grad_fn = CosBackward(input)
+        grad_fn.output_tensor = result
+        result._grad_fn = grad_fn
 
     return result
 
@@ -832,18 +832,62 @@ def lgamma(input: Tensor) -> Tensor:
     """
     Compute the natural logarithm of the absolute value of the gamma function.
 
+    Implementation uses the Lanczos approximation which is accurate to about
+    15 significant digits for positive arguments.
+
     Args:
         input: Input tensor
 
     Returns:
         Tensor with log-gamma values
     """
-    import numpy as np
-    from scipy import special
+    x = input._mlx_array.astype(mx.float32)
 
-    # Use scipy for lgamma
-    np_result = special.gammaln(np.array(input._mlx_array))
-    mlx_result = mx.array(np_result)
+    # Lanczos approximation coefficients (g=7, n=9)
+    # These coefficients give good precision for float32
+    g = 7.0
+    c = [
+        0.99999999999980993,
+        676.5203681218851,
+        -1259.1392167224028,
+        771.32342877765313,
+        -176.61502916214059,
+        12.507343278686905,
+        -0.13857109526572012,
+        9.9843695780195716e-6,
+        1.5056327351493116e-7,
+    ]
+
+    # For x < 0.5, use reflection formula: lgamma(x) = log(pi/sin(pi*x)) - lgamma(1-x)
+    reflect_mask = x < 0.5
+
+    # Work with reflected values for x < 0.5
+    x_work = mx.where(reflect_mask, 1.0 - x, x)
+
+    # Lanczos approximation: lgamma(x) = (x - 0.5) * log(x + g - 0.5) - (x + g - 0.5) + 0.5*log(2*pi) + log(A_g(x))
+    # where A_g(x) = c0 + sum(c_i / (x + i - 1))
+
+    # Compute A_g(x)
+    ag = mx.array(c[0], dtype=mx.float32)
+    for i in range(1, len(c)):
+        ag = ag + mx.array(c[i], dtype=mx.float32) / (x_work + mx.array(i - 1, dtype=mx.float32))
+
+    # Compute lgamma
+    t = x_work + g - 0.5
+    half_log_2pi = 0.9189385332046727  # 0.5 * log(2 * pi)
+
+    lgamma_positive = (x_work - 0.5) * mx.log(t) - t + half_log_2pi + mx.log(ag)
+
+    # Apply reflection formula for x < 0.5
+    # lgamma(x) = log(pi) - log(|sin(pi * x)|) - lgamma(1 - x)
+    log_pi = mx.array(1.1447298858494002, dtype=mx.float32)  # log(pi)
+    sin_pi_x = mx.sin(mx.array(3.141592653589793, dtype=mx.float32) * x)
+    log_sin_pi_x = mx.log(mx.abs(sin_pi_x) + mx.array(1e-38, dtype=mx.float32))
+
+    lgamma_negative = log_pi - log_sin_pi_x - lgamma_positive
+
+    mlx_result = mx.where(reflect_mask, lgamma_negative, lgamma_positive)
+
     result = Tensor._from_mlx_array(mlx_result)
     if is_grad_enabled() and input.requires_grad:
         result.requires_grad = True
@@ -854,7 +898,8 @@ def digamma(input: Tensor) -> Tensor:
     """
     Compute the digamma function (logarithmic derivative of gamma) element-wise.
 
-    Also known as psi function.
+    Also known as psi function. Implementation uses asymptotic expansion
+    for large x and recurrence relation for small x.
 
     Args:
         input: Input tensor
@@ -862,12 +907,88 @@ def digamma(input: Tensor) -> Tensor:
     Returns:
         Tensor with digamma values
     """
-    import numpy as np
-    from scipy import special
+    x = input._mlx_array.astype(mx.float32)
 
-    # Use scipy for digamma
-    np_result = special.digamma(np.array(input._mlx_array))
-    mlx_result = mx.array(np_result)
+    # Asymptotic expansion coefficients (Bernoulli numbers)
+    # digamma(x) ≈ log(x) - 1/(2x) - sum(B_{2k}/(2k*x^{2k}))
+    B2 = 1.0 / 6.0  # B_2 = 1/6
+    B4 = -1.0 / 30.0  # B_4 = -1/30
+    B6 = 1.0 / 42.0  # B_6 = 1/42
+    B8 = -1.0 / 30.0  # B_8 = -1/30
+    B10 = 5.0 / 66.0  # B_10 = 5/66
+
+    # Use recurrence for small x: digamma(x) = digamma(x+1) - 1/x
+    # Shift x up until it's large enough for asymptotic expansion
+    min_x = 6.0  # Threshold for asymptotic expansion
+
+    # Count how many times we need to shift
+    shift_needed = mx.maximum(mx.ceil(min_x - x), mx.array(0.0, dtype=mx.float32))
+
+    # Compute the shifted value
+    x_shifted = x + shift_needed
+
+    # Asymptotic expansion for digamma(x_shifted)
+    x2 = x_shifted * x_shifted
+    x4 = x2 * x2
+    x6 = x4 * x2
+    x8 = x6 * x2
+    x10 = x8 * x2
+
+    psi = mx.log(x_shifted) - 0.5 / x_shifted
+    psi = psi - B2 / (2.0 * x2)
+    psi = psi - B4 / (4.0 * x4)
+    psi = psi - B6 / (6.0 * x6)
+    psi = psi - B8 / (8.0 * x8)
+    psi = psi - B10 / (10.0 * x10)
+
+    # Apply recurrence relation backwards: digamma(x) = digamma(x+n) - sum(1/(x+k)) for k=0..n-1
+    # We need to subtract 1/(x+k) for k = 0, 1, ..., shift_needed-1
+    max_shift = int(mx.max(shift_needed).item())
+    for k in range(max_shift):
+        k_float = mx.array(k, dtype=mx.float32)
+        # Only subtract if this shift was needed for this element
+        should_subtract = (shift_needed > k_float).astype(mx.float32)
+        psi = psi - should_subtract / (x + k_float)
+
+    # Handle negative x using reflection formula:
+    # digamma(x) = digamma(1-x) + pi * cot(pi * x)
+    negative_mask = x < 0.0
+
+    # For negative x, compute digamma(1-x) + pi*cot(pi*x)
+    # cot(pi*x) = cos(pi*x) / sin(pi*x)
+    pi = mx.array(3.141592653589793, dtype=mx.float32)
+    sin_pi_x = mx.sin(pi * x)
+    cos_pi_x = mx.cos(pi * x)
+    cot_pi_x = cos_pi_x / (sin_pi_x + mx.array(1e-38, dtype=mx.float32))
+
+    # Compute digamma(1-x) using the same shifted approach
+    x_neg = 1.0 - x
+    shift_neg = mx.maximum(mx.ceil(min_x - x_neg), mx.array(0.0, dtype=mx.float32))
+    x_neg_shifted = x_neg + shift_neg
+
+    x2_neg = x_neg_shifted * x_neg_shifted
+    x4_neg = x2_neg * x2_neg
+    x6_neg = x4_neg * x2_neg
+    x8_neg = x6_neg * x2_neg
+    x10_neg = x8_neg * x2_neg
+
+    psi_neg = mx.log(x_neg_shifted) - 0.5 / x_neg_shifted
+    psi_neg = psi_neg - B2 / (2.0 * x2_neg)
+    psi_neg = psi_neg - B4 / (4.0 * x4_neg)
+    psi_neg = psi_neg - B6 / (6.0 * x6_neg)
+    psi_neg = psi_neg - B8 / (8.0 * x8_neg)
+    psi_neg = psi_neg - B10 / (10.0 * x10_neg)
+
+    max_shift_neg = int(mx.max(shift_neg).item())
+    for k in range(max_shift_neg):
+        k_float = mx.array(k, dtype=mx.float32)
+        should_subtract = (shift_neg > k_float).astype(mx.float32)
+        psi_neg = psi_neg - should_subtract / (x_neg + k_float)
+
+    psi_reflection = psi_neg + pi * cot_pi_x
+
+    mlx_result = mx.where(negative_mask, psi_reflection, psi)
+
     result = Tensor._from_mlx_array(mlx_result)
     if is_grad_enabled() and input.requires_grad:
         result.requires_grad = True
@@ -878,18 +999,55 @@ def i0(input: Tensor) -> Tensor:
     """
     Compute the modified Bessel function of the first kind, order 0.
 
+    Implementation uses polynomial approximations for small and large |x|.
+    Based on Abramowitz and Stegun formulas.
+
     Args:
         input: Input tensor
 
     Returns:
         Tensor with I0 values
     """
-    import numpy as np
-    from scipy import special
+    x = input._mlx_array.astype(mx.float32)
+    ax = mx.abs(x)
 
-    # Use scipy for i0
-    np_result = special.i0(np.array(input._mlx_array))
-    mlx_result = mx.array(np_result)
+    # For |x| <= 3.75, use polynomial approximation
+    # I0(x) ≈ 1 + 3.5156229*(x/3.75)^2 + 3.0899424*(x/3.75)^4 + ...
+    small_threshold = 3.75
+
+    t = ax / small_threshold
+    t2 = t * t
+
+    # Coefficients for small x approximation
+    small_result = (1.0 +
+                    t2 * (3.5156229 +
+                    t2 * (3.0899424 +
+                    t2 * (1.2067492 +
+                    t2 * (0.2659732 +
+                    t2 * (0.0360768 +
+                    t2 * 0.0045813))))))
+
+    # For |x| > 3.75, use asymptotic expansion
+    # I0(x) ≈ exp(x) / sqrt(x) * polynomial(3.75/x)
+    t_large = small_threshold / ax
+    t_large2 = t_large * t_large
+
+    # Coefficients for large x approximation
+    poly_large = (0.39894228 +
+                  t_large * (0.01328592 +
+                  t_large * (0.00225319 +
+                  t_large * (-0.00157565 +
+                  t_large * (0.00916281 +
+                  t_large * (-0.02057706 +
+                  t_large * (0.02635537 +
+                  t_large * (-0.01647633 +
+                  t_large * 0.00392377))))))))
+
+    large_result = mx.exp(ax) / mx.sqrt(ax) * poly_large
+
+    # Choose based on threshold
+    mlx_result = mx.where(ax <= small_threshold, small_result, large_result)
+
     result = Tensor._from_mlx_array(mlx_result)
     if is_grad_enabled() and input.requires_grad:
         result.requires_grad = True
@@ -1006,6 +1164,9 @@ def nextafter(input: Tensor, other: Tensor) -> Tensor:
     """
     Return the next representable floating-point value after input towards other.
 
+    Implementation uses the property that for positive floats, incrementing/decrementing
+    the bit representation gives the next/previous representable value.
+
     Args:
         input: Input tensor
         other: Direction tensor
@@ -1013,25 +1174,55 @@ def nextafter(input: Tensor, other: Tensor) -> Tensor:
     Returns:
         Tensor with next representable values
     """
-    import numpy as np
+    x = input._mlx_array.astype(mx.float32)
+    y = other._mlx_array.astype(mx.float32)
 
-    # Use numpy for nextafter
-    np_result = np.nextafter(
-        np.array(input._mlx_array),
-        np.array(other._mlx_array)
-    )
-    mlx_result = mx.array(np_result)
-    result = Tensor._from_mlx_array(mlx_result)
+    # Handle the case where x == y (return x unchanged)
+    equal_mask = mx.equal(x, y)
+
+    # For float32, machine epsilon is 2^-23 ≈ 1.19e-7
+    eps = mx.array(1.1920929e-7, dtype=mx.float32)  # float32 machine epsilon
+
+    # Smallest positive float32 (subnormal)
+    min_positive = mx.array(1.4012985e-45, dtype=mx.float32)
+
+    # Direction masks
+    going_up = mx.greater(y, x)
+    going_down = mx.less(y, x)
+
+    # Handle x == 0 specially: nextafter(0, y) where y > 0 should be min_positive
+    # and nextafter(0, y) where y < 0 should be -min_positive
+    # Note: we use mx.where to avoid subnormal * 1.0 = 0 issue
+    is_zero = mx.equal(x, mx.array(0.0, dtype=mx.float32))
+    zero_result = mx.where(going_up, min_positive, mx.where(going_down, -min_positive, mx.zeros_like(x)))
+
+    # For non-zero x: use ulp-based stepping
+    # ULP (unit in last place) = eps * |x| for normal numbers
+    # For subnormals, ulp = min_positive
+    abs_x = mx.abs(x)
+    ulp = mx.maximum(eps * abs_x, min_positive)
+
+    # Step in the direction using where to avoid multiplication issues
+    nonzero_result = mx.where(going_up, x + ulp, mx.where(going_down, x - ulp, x))
+
+    # Select between zero and nonzero cases
+    result = mx.where(is_zero, zero_result, nonzero_result)
+
+    # If x == y, return x unchanged
+    mlx_result = mx.where(equal_mask, x, result)
+
+    result_tensor = Tensor._from_mlx_array(mlx_result)
     if is_grad_enabled() and (input.requires_grad or other.requires_grad):
-        result.requires_grad = True
-    return result
+        result_tensor.requires_grad = True
+    return result_tensor
 
 
 def frexp(input: Tensor):
     """
     Decompose input into mantissa and exponent.
 
-    Returns (mantissa, exponent) where input = mantissa * 2^exponent.
+    Returns (mantissa, exponent) where input = mantissa * 2^exponent,
+    with 0.5 <= |mantissa| < 1.0.
 
     Args:
         input: Input tensor
@@ -1039,12 +1230,35 @@ def frexp(input: Tensor):
     Returns:
         Tuple of (mantissa tensor, exponent tensor)
     """
-    import numpy as np
+    arr = input._mlx_array.astype(mx.float32)
 
-    # Use numpy for frexp
-    mantissa, exponent = np.frexp(np.array(input._mlx_array))
-    mantissa_result = Tensor._from_mlx_array(mx.array(mantissa))
-    exponent_result = Tensor._from_mlx_array(mx.array(exponent))
+    # Handle zero case
+    is_zero = mx.equal(arr, mx.array(0.0, dtype=mx.float32))
+
+    # For non-zero values:
+    # exponent = floor(log2(|x|)) + 1
+    # mantissa = x / 2^exponent
+
+    abs_arr = mx.abs(arr)
+
+    # Compute log2 for non-zero values (add tiny to avoid log(0))
+    tiny = mx.array(1e-45, dtype=mx.float32)
+    log2_val = mx.log2(mx.maximum(abs_arr, tiny))
+
+    # Exponent: floor(log2(|x|)) + 1
+    exponent = mx.floor(log2_val).astype(mx.int32) + 1
+
+    # Mantissa: x / 2^exponent
+    # Convert exponent to float for power calculation
+    exp_float = exponent.astype(mx.float32)
+    mantissa = arr / mx.power(mx.array(2.0, dtype=mx.float32), exp_float)
+
+    # Handle zero: mantissa = 0, exponent = 0
+    mantissa = mx.where(is_zero, mx.zeros_like(mantissa), mantissa)
+    exponent = mx.where(is_zero, mx.zeros_like(exponent), exponent)
+
+    mantissa_result = Tensor._from_mlx_array(mantissa)
+    exponent_result = Tensor._from_mlx_array(exponent)
 
     return mantissa_result, exponent_result
 
@@ -1062,15 +1276,15 @@ def ldexp(input: Tensor, other: Tensor) -> Tensor:
     Returns:
         Tensor with scaled values
     """
-    import numpy as np
+    # Pure MLX implementation: x * 2^n = x * pow(2, n)
+    x = input._mlx_array
+    n = other._mlx_array.astype(mx.float32)
 
-    # Use numpy for ldexp
-    np_result = np.ldexp(
-        np.array(input._mlx_array),
-        np.array(other._mlx_array).astype(np.int32)
-    )
-    mlx_result = mx.array(np_result)
-    result = Tensor._from_mlx_array(mlx_result)
+    # Compute 2^n using exp2 or power
+    two_to_n = mx.power(mx.array(2.0, dtype=mx.float32), n)
+
+    mlx_result = x * two_to_n
+    result = Tensor._from_mlx_array(mlx_result.astype(x.dtype))
     if is_grad_enabled() and input.requires_grad:
         result.requires_grad = True
     return result

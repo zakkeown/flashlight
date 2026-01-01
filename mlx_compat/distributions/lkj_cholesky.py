@@ -6,6 +6,7 @@ import mlx.core as mx
 from ..tensor import Tensor
 from .distribution import Distribution
 from . import constraints
+from ..ops.special import betaln
 
 
 class LKJCholesky(Distribution):
@@ -21,36 +22,34 @@ class LKJCholesky(Distribution):
         validate_args: Optional[bool] = None,
     ):
         self.dim = dim
-        self.concentration = concentration._data if isinstance(concentration, Tensor) else mx.array(concentration)
+        self.concentration = concentration._mlx_array if isinstance(concentration, Tensor) else mx.array(concentration)
         batch_shape = self.concentration.shape
         event_shape = (dim, dim)
         super().__init__(batch_shape, event_shape, validate_args=validate_args)
 
     def sample(self, sample_shape: Tuple[int, ...] = ()) -> Tensor:
         shape = sample_shape + self._batch_shape
-        import numpy as np
 
         # Sample using onion method
         d = self.dim
-        L = np.zeros(shape + (d, d))
-        L[..., 0, 0] = 1.0
+        L = mx.zeros(shape + (d, d))
+        L = L.at[..., 0, 0].add(1.0)
 
         for i in range(1, d):
             # Sample beta for partial correlations
             alpha = float(mx.max(self.concentration)) + (d - 1 - i) / 2
-            beta_sample = np.random.beta(alpha, alpha, shape)
-            # Sample uniformly on sphere
-            z = np.random.normal(size=shape + (i,))
-            z = z / np.linalg.norm(z, axis=-1, keepdims=True)
-            L[..., i, :i] = z * np.sqrt(beta_sample)[..., None]
-            L[..., i, i] = np.sqrt(1 - beta_sample)
+            # Use MLX random for beta sampling
+            beta_sample = mx.random.beta(mx.array(alpha), mx.array(alpha), shape)
+            # Sample uniformly on sphere using normal distribution
+            z = mx.random.normal(shape + (i,))
+            z = z / mx.sqrt(mx.sum(z * z, axis=-1, keepdims=True) + 1e-10)
+            L = L.at[..., i, :i].add(z * mx.sqrt(beta_sample)[..., None])
+            L = L.at[..., i, i].add(mx.sqrt(1 - beta_sample))
 
-        return Tensor(mx.array(L.astype(np.float32)))
+        return Tensor(L)
 
     def log_prob(self, value: Tensor) -> Tensor:
-        data = value._data if isinstance(value, Tensor) else value
-        import numpy as np
-        from scipy import special as sp
+        data = value._mlx_array if isinstance(value, Tensor) else value
 
         d = self.dim
         eta = self.concentration
@@ -64,10 +63,9 @@ class LKJCholesky(Distribution):
         log_prob = mx.sum((2 * eta - 2 + weights) * log_diag, axis=-1)
 
         # Normalize
-        log_norm = 0
+        log_norm = mx.array(0.0)
         for k in range(1, d):
-            log_norm += sp.betaln(eta + (d - 1 - k) / 2, eta + (d - 1 - k) / 2)
-        log_norm = mx.array(log_norm)
+            log_norm = log_norm + betaln(eta + (d - 1 - k) / 2, eta + (d - 1 - k) / 2)
 
         return Tensor(log_prob - log_norm)
 

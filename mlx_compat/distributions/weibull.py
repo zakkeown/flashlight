@@ -7,6 +7,7 @@ import mlx.core as mx
 from ..tensor import Tensor
 from .distribution import Distribution
 from . import constraints
+from ..ops.special import lgamma, gamma
 
 
 class Weibull(Distribution):
@@ -17,17 +18,16 @@ class Weibull(Distribution):
     has_rsample = True
 
     def __init__(self, scale: Union[Tensor, float], concentration: Union[Tensor, float], validate_args: Optional[bool] = None):
-        self.scale = scale._data if isinstance(scale, Tensor) else mx.array(scale)
-        self.concentration = concentration._data if isinstance(concentration, Tensor) else mx.array(concentration)
+        self.scale = scale._mlx_array if isinstance(scale, Tensor) else mx.array(scale)
+        self.concentration = concentration._mlx_array if isinstance(concentration, Tensor) else mx.array(concentration)
         batch_shape = mx.broadcast_shapes(self.scale.shape, self.concentration.shape)
         super().__init__(batch_shape, validate_args=validate_args)
 
     @property
     def mean(self) -> Tensor:
-        import numpy as np
-        from scipy import special as sp
-        gamma_val = sp.gamma(1 + 1 / np.array(self.concentration))
-        return Tensor(self.scale * mx.array(gamma_val.astype(np.float32)))
+        # E[X] = scale * Gamma(1 + 1/concentration)
+        gamma_val = gamma(1 + 1 / self.concentration)
+        return Tensor(self.scale * gamma_val)
 
     @property
     def mode(self) -> Tensor:
@@ -37,33 +37,33 @@ class Weibull(Distribution):
 
     @property
     def variance(self) -> Tensor:
-        import numpy as np
-        from scipy import special as sp
-        k = np.array(self.concentration)
-        gamma1 = sp.gamma(1 + 2 / k)
-        gamma2 = sp.gamma(1 + 1 / k) ** 2
-        return Tensor(self.scale ** 2 * mx.array((gamma1 - gamma2).astype(np.float32)))
+        # Var[X] = scale^2 * (Gamma(1 + 2/k) - Gamma(1 + 1/k)^2)
+        k = self.concentration
+        gamma1 = gamma(1 + 2 / k)
+        gamma2 = gamma(1 + 1 / k) ** 2
+        return Tensor(self.scale ** 2 * (gamma1 - gamma2))
 
     def sample(self, sample_shape: Tuple[int, ...] = ()) -> Tensor:
+        # Inverse CDF method: x = scale * (-log(u))^(1/concentration)
         shape = sample_shape + self._batch_shape
-        u = mx.random.uniform(shape)
-        return Tensor(self.scale * mx.power(-mx.log(1 - u), 1 / self.concentration))
+        u = mx.random.uniform(shape=shape)
+        return Tensor(self.scale * mx.power(-mx.log(u), 1 / self.concentration))
 
     def rsample(self, sample_shape: Tuple[int, ...] = ()) -> Tensor:
         return self.sample(sample_shape)
 
     def log_prob(self, value: Tensor) -> Tensor:
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else mx.array(value)
         return Tensor(mx.log(self.concentration / self.scale) +
                      (self.concentration - 1) * mx.log(data / self.scale) -
                      mx.power(data / self.scale, self.concentration))
 
     def cdf(self, value: Tensor) -> Tensor:
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else mx.array(value)
         return Tensor(1 - mx.exp(-mx.power(data / self.scale, self.concentration)))
 
     def icdf(self, value: Tensor) -> Tensor:
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else mx.array(value)
         return Tensor(self.scale * mx.power(-mx.log(1 - data), 1 / self.concentration))
 
     def entropy(self) -> Tensor:

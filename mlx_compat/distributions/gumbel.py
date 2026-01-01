@@ -17,8 +17,8 @@ class Gumbel(Distribution):
     has_rsample = True
 
     def __init__(self, loc: Union[Tensor, float], scale: Union[Tensor, float], validate_args: Optional[bool] = None):
-        self.loc = loc._data if isinstance(loc, Tensor) else mx.array(loc)
-        self.scale = scale._data if isinstance(scale, Tensor) else mx.array(scale)
+        self.loc = loc._mlx_array if isinstance(loc, Tensor) else mx.array(loc)
+        self.scale = scale._mlx_array if isinstance(scale, Tensor) else mx.array(scale)
         batch_shape = mx.broadcast_shapes(self.loc.shape, self.scale.shape)
         super().__init__(batch_shape, validate_args=validate_args)
 
@@ -48,12 +48,12 @@ class Gumbel(Distribution):
         return self.sample(sample_shape)
 
     def log_prob(self, value: Tensor) -> Tensor:
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         z = (data - self.loc) / self.scale
         return Tensor(-z - mx.exp(-z) - mx.log(self.scale))
 
     def cdf(self, value: Tensor) -> Tensor:
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         return Tensor(mx.exp(-mx.exp(-(data - self.loc) / self.scale)))
 
     def entropy(self) -> Tensor:

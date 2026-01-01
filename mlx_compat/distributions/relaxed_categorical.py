@@ -27,12 +27,12 @@ class RelaxedOneHotCategorical(Distribution):
         if (probs is None) == (logits is None):
             raise ValueError("Exactly one of probs or logits must be specified")
 
-        self.temperature = temperature._data if isinstance(temperature, Tensor) else mx.array(temperature)
+        self.temperature = temperature._mlx_array if isinstance(temperature, Tensor) else mx.array(temperature)
         if probs is not None:
-            self.probs = probs._data if isinstance(probs, Tensor) else mx.array(probs)
+            self.probs = probs._mlx_array if isinstance(probs, Tensor) else mx.array(probs)
             self.logits = mx.log(self.probs)
         else:
-            self.logits = logits._data if isinstance(logits, Tensor) else mx.array(logits)
+            self.logits = logits._mlx_array if isinstance(logits, Tensor) else mx.array(logits)
             self.probs = mx.softmax(self.logits, axis=-1)
 
         batch_shape = self.probs.shape[:-1]
@@ -51,7 +51,7 @@ class RelaxedOneHotCategorical(Distribution):
         return self.sample(sample_shape)
 
     def log_prob(self, value: Tensor) -> Tensor:
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         K = self._event_shape[0]
         log_scale = (K - 1) * mx.log(self.temperature)
         score = self.logits - self.temperature * mx.log(data + 1e-10)

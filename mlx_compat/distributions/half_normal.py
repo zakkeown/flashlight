@@ -17,7 +17,7 @@ class HalfNormal(Distribution):
     has_rsample = True
 
     def __init__(self, scale: Union[Tensor, float], validate_args: Optional[bool] = None):
-        self.scale = scale._data if isinstance(scale, Tensor) else mx.array(scale)
+        self.scale = scale._mlx_array if isinstance(scale, Tensor) else mx.array(scale)
         super().__init__(self.scale.shape, validate_args=validate_args)
 
     @property
@@ -40,16 +40,16 @@ class HalfNormal(Distribution):
         return self.sample(sample_shape)
 
     def log_prob(self, value: Tensor) -> Tensor:
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         log_prob = 0.5 * math.log(2 / math.pi) - mx.log(self.scale) - (data ** 2) / (2 * self.scale ** 2)
         return Tensor(log_prob)
 
     def cdf(self, value: Tensor) -> Tensor:
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         return Tensor(mx.erf(data / (self.scale * math.sqrt(2))))
 
     def icdf(self, value: Tensor) -> Tensor:
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         return Tensor(self.scale * mx.erfinv(data) * math.sqrt(2))
 
     def entropy(self) -> Tensor:

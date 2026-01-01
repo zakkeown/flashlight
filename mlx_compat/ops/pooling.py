@@ -118,8 +118,14 @@ def max_pool2d(
     # Handle autograd
     from ..autograd.context import is_grad_enabled
     if is_grad_enabled() and input.requires_grad:
+        from ..autograd.function import MaxPool2dBackward
         result.requires_grad = True
-        # TODO: Add backward function for max_pool2d
+        grad_fn = MaxPool2dBackward(
+            input, kernel_size=kernel_size, stride=stride, padding=padding,
+            nhwc_native=nhwc_native, input_nhwc=input_nhwc, output_nhwc=output_nhwc
+        )
+        grad_fn.output_tensor = result
+        result._grad_fn = grad_fn
 
     return result
 
@@ -197,8 +203,14 @@ def avg_pool2d(
     # Handle autograd
     from ..autograd.context import is_grad_enabled
     if is_grad_enabled() and input.requires_grad:
+        from ..autograd.function import AvgPool2dBackward
         result.requires_grad = True
-        # TODO: Add backward function for avg_pool2d
+        grad_fn = AvgPool2dBackward(
+            input, kernel_size=kernel_size, stride=stride, padding=padding,
+            nhwc_native=nhwc_native, divisor_override=divisor_override
+        )
+        grad_fn.output_tensor = result
+        result._grad_fn = grad_fn
 
     return result
 

@@ -995,6 +995,8 @@ def gcd(input: Tensor, other: Tensor) -> Tensor:
     """
     Greatest common divisor of input and other.
 
+    Uses the Euclidean algorithm implemented in pure MLX.
+
     Args:
         input: First tensor
         other: Second tensor
@@ -1002,26 +1004,36 @@ def gcd(input: Tensor, other: Tensor) -> Tensor:
     Returns:
         GCD tensor
     """
-    import numpy as np
-    input_np = np.array(input._mlx_array).astype(np.int64)
-    other_np = np.array(other._mlx_array).astype(np.int64)
-    result_np = np.gcd(input_np, other_np)
-    return Tensor._from_mlx_array(mx.array(result_np))
+    a = mx.abs(input._mlx_array).astype(mx.int32)
+    b = mx.abs(other._mlx_array).astype(mx.int32)
+
+    # Euclidean algorithm: gcd(a, b) = gcd(b, a % b) until b = 0
+    # For 32-bit integers, at most 32 iterations are needed
+    for _ in range(32):
+        # Where b != 0, compute a % b; otherwise keep a
+        remainder = mx.remainder(a, mx.maximum(b, mx.array(1, dtype=mx.int32)))
+        # Update: a = b, b = remainder (where b != 0)
+        mask = b != 0
+        new_a = mx.where(mask, b, a)
+        new_b = mx.where(mask, remainder, mx.zeros_like(b))
+        a = new_a
+        b = new_b
+
+    return Tensor._from_mlx_array(a)
 
 
 def gcd_(input: Tensor, other: Tensor) -> Tensor:
     """In-place version of gcd."""
-    import numpy as np
-    input_np = np.array(input._mlx_array).astype(np.int64)
-    other_np = np.array(other._mlx_array).astype(np.int64)
-    result_np = np.gcd(input_np, other_np)
-    input._mlx_array = mx.array(result_np)
+    result = gcd(input, other)
+    input._mlx_array = result._mlx_array
     return input
 
 
 def lcm(input: Tensor, other: Tensor) -> Tensor:
     """
     Least common multiple of input and other.
+
+    Uses the formula: lcm(a, b) = |a * b| / gcd(a, b)
 
     Args:
         input: First tensor
@@ -1030,20 +1042,23 @@ def lcm(input: Tensor, other: Tensor) -> Tensor:
     Returns:
         LCM tensor
     """
-    import numpy as np
-    input_np = np.array(input._mlx_array).astype(np.int64)
-    other_np = np.array(other._mlx_array).astype(np.int64)
-    result_np = np.lcm(input_np, other_np)
-    return Tensor._from_mlx_array(mx.array(result_np))
+    a = mx.abs(input._mlx_array).astype(mx.int32)
+    b = mx.abs(other._mlx_array).astype(mx.int32)
+
+    # Use the relationship: lcm(a, b) = |a * b| / gcd(a, b)
+    g = gcd(input, other)._mlx_array
+
+    # Handle zero case: lcm(0, x) = lcm(x, 0) = 0
+    # Divide before multiply to avoid overflow
+    result = mx.where(g == 0, mx.zeros_like(a), (a // g) * b)
+
+    return Tensor._from_mlx_array(result)
 
 
 def lcm_(input: Tensor, other: Tensor) -> Tensor:
     """In-place version of lcm."""
-    import numpy as np
-    input_np = np.array(input._mlx_array).astype(np.int64)
-    other_np = np.array(other._mlx_array).astype(np.int64)
-    result_np = np.lcm(input_np, other_np)
-    input._mlx_array = mx.array(result_np)
+    result = lcm(input, other)
+    input._mlx_array = result._mlx_array
     return input
 
 
@@ -1060,11 +1075,36 @@ def trapezoid(y: Tensor, x: Optional[Tensor] = None, dx: float = 1.0, dim: int =
     Returns:
         Integrated values
     """
-    import numpy as np
-    y_np = np.array(y._mlx_array)
-    x_np = np.array(x._mlx_array) if x is not None else None
-    result_np = np.trapezoid(y_np, x=x_np, dx=dx, axis=dim)
-    result = Tensor._from_mlx_array(mx.array(result_np))
+    y_arr = y._mlx_array
+    ndim = len(y_arr.shape)
+
+    # Normalize dim to positive
+    if dim < 0:
+        dim = ndim + dim
+
+    # Move the integration axis to the last position for easier slicing
+    if dim != ndim - 1:
+        axes = list(range(ndim))
+        axes[dim], axes[-1] = axes[-1], axes[dim]
+        y_arr = mx.transpose(y_arr, axes=axes)
+    else:
+        axes = None
+
+    # Trapezoidal rule: sum((y[i] + y[i+1]) / 2 * dx[i])
+    if x is not None:
+        x_arr = x._mlx_array
+        # Compute dx from x values
+        d = x_arr[1:] - x_arr[:-1]  # Differences
+        # Broadcast d to match y shape
+        # d shape is (n-1,), we need to expand it
+        for _ in range(len(y_arr.shape) - 1):
+            d = mx.expand_dims(d, axis=0)
+        integral = mx.sum((y_arr[..., :-1] + y_arr[..., 1:]) / 2.0 * d, axis=-1)
+    else:
+        # Uniform spacing
+        integral = mx.sum((y_arr[..., :-1] + y_arr[..., 1:]) / 2.0 * dx, axis=-1)
+
+    result = Tensor._from_mlx_array(integral)
 
     if is_grad_enabled() and y.requires_grad:
         result.requires_grad = True
@@ -1087,14 +1127,46 @@ def cumulative_trapezoid(y: Tensor, x: Optional[Tensor] = None, dx: float = 1.0,
         dim: Dimension along which to integrate
 
     Returns:
-        Cumulative integrated values
+        Cumulative integrated values (length n-1 along dim)
     """
-    import numpy as np
-    from scipy import integrate
-    y_np = np.array(y._mlx_array)
-    x_np = np.array(x._mlx_array) if x is not None else None
-    result_np = integrate.cumulative_trapezoid(y_np, x=x_np, dx=dx, axis=dim)
-    result = Tensor._from_mlx_array(mx.array(result_np))
+    y_arr = y._mlx_array
+    ndim = len(y_arr.shape)
+
+    # Normalize dim to positive
+    if dim < 0:
+        dim = ndim + dim
+
+    # Move the integration axis to the last position for easier slicing
+    if dim != ndim - 1:
+        axes = list(range(ndim))
+        axes[dim], axes[-1] = axes[-1], axes[dim]
+        y_arr = mx.transpose(y_arr, axes=axes)
+        need_transpose_back = True
+    else:
+        axes = None
+        need_transpose_back = False
+
+    # Trapezoidal rule for each interval: (y[i] + y[i+1]) / 2 * dx
+    if x is not None:
+        x_arr = x._mlx_array
+        # Compute dx from x values
+        d = x_arr[1:] - x_arr[:-1]  # Differences
+        # Broadcast d to match y shape
+        for _ in range(len(y_arr.shape) - 1):
+            d = mx.expand_dims(d, axis=0)
+        intervals = (y_arr[..., :-1] + y_arr[..., 1:]) / 2.0 * d
+    else:
+        # Uniform spacing
+        intervals = (y_arr[..., :-1] + y_arr[..., 1:]) / 2.0 * dx
+
+    # Cumulative sum along last axis
+    cumulative = mx.cumsum(intervals, axis=-1)
+
+    # Transpose back if needed
+    if need_transpose_back:
+        cumulative = mx.transpose(cumulative, axes=axes)
+
+    result = Tensor._from_mlx_array(cumulative)
 
     if is_grad_enabled() and y.requires_grad:
         result.requires_grad = True
@@ -1104,7 +1176,7 @@ def cumulative_trapezoid(y: Tensor, x: Optional[Tensor] = None, dx: float = 1.0,
 
 def gradient(input: Tensor, spacing: float = 1.0, dim: Optional[int] = None, edge_order: int = 1) -> tuple:
     """
-    Compute the gradient of an array.
+    Compute the gradient of an array using finite differences.
 
     Args:
         input: Input tensor
@@ -1115,20 +1187,90 @@ def gradient(input: Tensor, spacing: float = 1.0, dim: Optional[int] = None, edg
     Returns:
         Tuple of gradient tensors (one per dimension if dim is None, one element if dim is specified)
     """
-    import numpy as np
-    input_np = np.array(input._mlx_array)
+    arr = input._mlx_array
+
+    def _gradient_1d(arr_1d: mx.array, h: float, edge_order: int) -> mx.array:
+        """Compute gradient along a 1D array."""
+        n = arr_1d.shape[0]
+        if n < 2:
+            return mx.zeros_like(arr_1d)
+
+        # Interior points: central difference (f[i+1] - f[i-1]) / (2*h)
+        # We need to handle this for each position
+
+        # Allocate result
+        result = mx.zeros_like(arr_1d)
+
+        if n == 2:
+            # Only two points: forward/backward difference
+            grad = (arr_1d[1] - arr_1d[0]) / h
+            result = mx.full_like(arr_1d, grad)
+            return result
+
+        # Central differences for interior points
+        central = (arr_1d[2:] - arr_1d[:-2]) / (2.0 * h)
+
+        if edge_order == 1:
+            # First-order forward/backward differences at edges
+            left_edge = (arr_1d[1] - arr_1d[0]) / h
+            right_edge = (arr_1d[-1] - arr_1d[-2]) / h
+        else:  # edge_order == 2
+            # Second-order forward/backward differences at edges
+            # Left: (-3*f[0] + 4*f[1] - f[2]) / (2*h)
+            left_edge = (-3.0 * arr_1d[0] + 4.0 * arr_1d[1] - arr_1d[2]) / (2.0 * h)
+            # Right: (3*f[-1] - 4*f[-2] + f[-3]) / (2*h)
+            right_edge = (3.0 * arr_1d[-1] - 4.0 * arr_1d[-2] + arr_1d[-3]) / (2.0 * h)
+
+        # Concatenate: [left_edge, central..., right_edge]
+        result = mx.concatenate([
+            mx.array([left_edge]),
+            central,
+            mx.array([right_edge])
+        ])
+
+        return result
+
+    def _gradient_along_axis(arr: mx.array, axis: int, h: float, edge_order: int) -> mx.array:
+        """Compute gradient along a specific axis."""
+        ndim = arr.ndim
+        n = arr.shape[axis]
+
+        if n < 2:
+            return mx.zeros_like(arr)
+
+        # Move axis to last position, compute gradient, move back
+        arr_moved = mx.moveaxis(arr, axis, -1)
+        original_shape = arr_moved.shape
+
+        # Flatten all but last dimension
+        flat_shape = (-1, n)
+        arr_flat = arr_moved.reshape(flat_shape)
+
+        # Compute gradient for each row
+        num_rows = arr_flat.shape[0]
+        results = []
+        for i in range(num_rows):
+            row_grad = _gradient_1d(arr_flat[i], h, edge_order)
+            results.append(row_grad)
+
+        result_flat = mx.stack(results, axis=0)
+        result_moved = result_flat.reshape(original_shape)
+        result = mx.moveaxis(result_moved, -1, axis)
+
+        return result
 
     if dim is not None:
-        # Compute gradient along specific dimension - still returns a tuple with one element
-        result_np = np.gradient(input_np, spacing, axis=dim, edge_order=edge_order)
-        return (Tensor._from_mlx_array(mx.array(result_np)),)
+        # Compute gradient along specific dimension
+        result = _gradient_along_axis(arr, dim, spacing, edge_order)
+        return (Tensor._from_mlx_array(result),)
     else:
         # Compute gradient along all dimensions
-        results = np.gradient(input_np, spacing, edge_order=edge_order)
-        if isinstance(results, np.ndarray):
-            # 1D input returns a single array, wrap in tuple
-            return (Tensor._from_mlx_array(mx.array(results)),)
-        return tuple(Tensor._from_mlx_array(mx.array(r)) for r in results)
+        ndim = arr.ndim
+        results = []
+        for axis in range(ndim):
+            result = _gradient_along_axis(arr, axis, spacing, edge_order)
+            results.append(Tensor._from_mlx_array(result))
+        return tuple(results)
 
 
 def is_same_size(input: Tensor, other: Tensor) -> bool:
@@ -1171,10 +1313,23 @@ def vander(x: Tensor, N: Optional[int] = None, increasing: bool = False) -> Tens
     Returns:
         Vandermonde matrix
     """
-    import numpy as np
-    x_np = np.array(x._mlx_array)
-    result_np = np.vander(x_np, N=N, increasing=increasing)
-    return Tensor._from_mlx_array(mx.array(result_np))
+    arr = x._mlx_array
+    n = arr.shape[0]
+    num_cols = N if N is not None else n
+
+    # Create powers array [0, 1, 2, ..., num_cols-1]
+    if increasing:
+        powers = mx.arange(num_cols, dtype=mx.float32)
+    else:
+        powers = mx.arange(num_cols - 1, -1, -1, dtype=mx.float32)
+
+    # Reshape for broadcasting: x is (n,), powers is (num_cols,)
+    # Result should be (n, num_cols) where result[i,j] = x[i] ** powers[j]
+    x_col = arr.reshape(-1, 1).astype(mx.float32)  # (n, 1)
+    powers_row = powers.reshape(1, -1)  # (1, num_cols)
+
+    result = mx.power(x_col, powers_row)
+    return Tensor._from_mlx_array(result.astype(arr.dtype))
 
 
 def unravel_index(indices: Tensor, shape: tuple) -> tuple:
@@ -1188,10 +1343,26 @@ def unravel_index(indices: Tensor, shape: tuple) -> tuple:
     Returns:
         Tuple of coordinate tensors
     """
-    import numpy as np
-    indices_np = np.array(indices._mlx_array)
-    coords = np.unravel_index(indices_np, shape)
-    return tuple(Tensor._from_mlx_array(mx.array(c)) for c in coords)
+    idx = indices._mlx_array.astype(mx.int64)
+    coords = []
+
+    # Compute strides (from last dimension to first)
+    # For shape (3, 4, 5): strides are [20, 5, 1]
+    strides = []
+    stride = 1
+    for dim_size in reversed(shape):
+        strides.append(stride)
+        stride *= dim_size
+    strides = list(reversed(strides))
+
+    # Extract coordinates using divmod
+    remaining = idx
+    for stride in strides:
+        coord = mx.floor_divide(remaining, stride)
+        remaining = mx.remainder(remaining, stride)
+        coords.append(Tensor._from_mlx_array(coord))
+
+    return tuple(coords)
 
 
 def tril_indices(row: int, col: int, offset: int = 0) -> Tensor:
@@ -1206,11 +1377,31 @@ def tril_indices(row: int, col: int, offset: int = 0) -> Tensor:
     Returns:
         Tensor of shape (2, N) with row indices in [0] and column indices in [1]
     """
-    import numpy as np
-    r, c = np.tril_indices(row, offset, col)
-    # PyTorch returns a stacked tensor of shape (2, N), not a tuple
-    stacked = np.stack([r, c], axis=0)
-    return Tensor._from_mlx_array(mx.array(stacked))
+    # Build indices directly by iterating - the total number of elements
+    # in lower triangular can be computed, then we use vectorized ops
+    # For efficiency, we compute counts per row and use concatenation
+
+    row_indices_list = []
+    col_indices_list = []
+
+    for r in range(row):
+        # For row r, lower triangular includes columns where c <= r + offset
+        # But we also need c < col
+        max_c = min(r + offset + 1, col)
+        if max_c > 0:
+            row_indices_list.append(mx.full((max_c,), r, dtype=mx.int64))
+            col_indices_list.append(mx.arange(max_c, dtype=mx.int64))
+
+    if row_indices_list:
+        row_indices = mx.concatenate(row_indices_list)
+        col_indices = mx.concatenate(col_indices_list)
+    else:
+        row_indices = mx.array([], dtype=mx.int64)
+        col_indices = mx.array([], dtype=mx.int64)
+
+    # Stack to match PyTorch's return format (2, N)
+    stacked = mx.stack([row_indices, col_indices], axis=0)
+    return Tensor._from_mlx_array(stacked)
 
 
 def triu_indices(row: int, col: int, offset: int = 0) -> Tensor:
@@ -1225,11 +1416,31 @@ def triu_indices(row: int, col: int, offset: int = 0) -> Tensor:
     Returns:
         Tensor of shape (2, N) with row indices in [0] and column indices in [1]
     """
-    import numpy as np
-    r, c = np.triu_indices(row, offset, col)
-    # PyTorch returns a stacked tensor of shape (2, N), not a tuple
-    stacked = np.stack([r, c], axis=0)
-    return Tensor._from_mlx_array(mx.array(stacked))
+    # Build indices directly by iterating
+    # For efficiency, we compute counts per row and use concatenation
+
+    row_indices_list = []
+    col_indices_list = []
+
+    for r in range(row):
+        # For row r, upper triangular includes columns where c >= r + offset
+        # But we also need c < col
+        min_c = max(r + offset, 0)
+        if min_c < col:
+            num_cols = col - min_c
+            row_indices_list.append(mx.full((num_cols,), r, dtype=mx.int64))
+            col_indices_list.append(mx.arange(min_c, col, dtype=mx.int64))
+
+    if row_indices_list:
+        row_indices = mx.concatenate(row_indices_list)
+        col_indices = mx.concatenate(col_indices_list)
+    else:
+        row_indices = mx.array([], dtype=mx.int64)
+        col_indices = mx.array([], dtype=mx.int64)
+
+    # Stack to match PyTorch's return format (2, N)
+    stacked = mx.stack([row_indices, col_indices], axis=0)
+    return Tensor._from_mlx_array(stacked)
 
 
 def range_(*args, **kwargs):

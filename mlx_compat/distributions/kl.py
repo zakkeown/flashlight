@@ -60,9 +60,9 @@ def _kl_generic(p, q):
     log_p = p.log_prob(samples)
     log_q = q.log_prob(samples)
     if isinstance(log_p, Tensor):
-        log_p = log_p._data
+        log_p = log_p._mlx_array
     if isinstance(log_q, Tensor):
-        log_q = log_q._data
+        log_q = log_q._mlx_array
     return Tensor(mx.mean(log_p - log_q, axis=0))
 
 
@@ -119,17 +119,13 @@ def _register_exponential_kl():
 def _register_gamma_kl():
     """Register Gamma-Gamma KL."""
     from .gamma import Gamma
-    import numpy as np
-    from scipy import special as sp
+    from ..ops.special import lgamma, digamma
 
     @register_kl(Gamma, Gamma)
     def _kl_gamma_gamma(p: Gamma, q: Gamma) -> Tensor:
-        psi_p = sp.digamma(np.array(p.concentration))
-        psi_p = mx.array(psi_p.astype(np.float32))
-        log_gamma_p = sp.gammaln(np.array(p.concentration))
-        log_gamma_p = mx.array(log_gamma_p.astype(np.float32))
-        log_gamma_q = sp.gammaln(np.array(q.concentration))
-        log_gamma_q = mx.array(log_gamma_q.astype(np.float32))
+        psi_p = digamma(p.concentration)
+        log_gamma_p = lgamma(p.concentration)
+        log_gamma_q = lgamma(q.concentration)
         return Tensor(
             (p.concentration - q.concentration) * psi_p -
             log_gamma_p + log_gamma_q +
@@ -141,23 +137,17 @@ def _register_gamma_kl():
 def _register_beta_kl():
     """Register Beta-Beta KL."""
     from .beta import Beta
-    import numpy as np
-    from scipy import special as sp
+    from ..ops.special import betaln, digamma
 
     @register_kl(Beta, Beta)
     def _kl_beta_beta(p: Beta, q: Beta) -> Tensor:
         a_p, b_p = p.concentration1, p.concentration0
         a_q, b_q = q.concentration1, q.concentration0
-        log_beta_p = sp.betaln(np.array(a_p), np.array(b_p))
-        log_beta_p = mx.array(log_beta_p.astype(np.float32))
-        log_beta_q = sp.betaln(np.array(a_q), np.array(b_q))
-        log_beta_q = mx.array(log_beta_q.astype(np.float32))
-        psi_sum_p = sp.digamma(np.array(a_p + b_p))
-        psi_sum_p = mx.array(psi_sum_p.astype(np.float32))
-        psi_a_p = sp.digamma(np.array(a_p))
-        psi_a_p = mx.array(psi_a_p.astype(np.float32))
-        psi_b_p = sp.digamma(np.array(b_p))
-        psi_b_p = mx.array(psi_b_p.astype(np.float32))
+        log_beta_p = betaln(a_p, b_p)
+        log_beta_q = betaln(a_q, b_q)
+        psi_sum_p = digamma(a_p + b_p)
+        psi_a_p = digamma(a_p)
+        psi_b_p = digamma(b_p)
         return Tensor(
             log_beta_q - log_beta_p +
             (a_p - a_q) * psi_a_p +

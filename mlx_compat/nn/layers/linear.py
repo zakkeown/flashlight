@@ -77,6 +77,9 @@ class Linear(Module):
         # Initialize parameters using Kaiming uniform
         self.reset_parameters()
 
+        # Cache for transposed weight (avoid transpose on every forward)
+        self._weight_cache = {}
+
     def reset_parameters(self) -> None:
         """
         Initialize parameters using Kaiming uniform initialization.
@@ -108,6 +111,19 @@ class Linear(Module):
             )
             self.bias.data = Tensor._from_mlx_array(bias_data)
 
+    def _get_weight_t(self):
+        """Get transposed weight as Tensor, cached for performance."""
+        weight_id = id(self.weight._mlx_array)
+        cache = self._weight_cache
+
+        if cache.get('weight_id') != weight_id:
+            # Cache invalidated - recompute using Tensor ops to maintain autograd
+            from ... import transpose
+            cache['weight_t'] = transpose(self.weight, 0, 1)
+            cache['weight_id'] = weight_id
+
+        return cache['weight_t']
+
     def forward(self, input: Tensor) -> Tensor:
         """
         Forward pass of linear layer.
@@ -117,13 +133,14 @@ class Linear(Module):
 
         Returns:
             Output tensor of shape (*, out_features)
+
+        Note:
+            Uses cached weight transpose to avoid transpose on every forward.
         """
-        # Compute xW^T
-        # input: (batch, in_features)
-        # weight: (out_features, in_features)
-        # We need: input @ weight.T = (batch, in_features) @ (in_features, out_features)
-        from ... import transpose
-        weight_t = transpose(self.weight, 0, 1)
+        # Get cached transposed weight (Tensor, with autograd support)
+        weight_t = self._get_weight_t()
+
+        # Compute xW^T using ops.matmul for autograd support
         output = ops.matmul(input, weight_t)
 
         # Add bias if it exists

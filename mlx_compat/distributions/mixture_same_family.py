@@ -47,10 +47,10 @@ class MixtureSameFamily(Distribution):
     def mean(self) -> Tensor:
         probs = self.mixture_distribution.probs
         if isinstance(probs, Tensor):
-            probs = probs._data
+            probs = probs._mlx_array
         comp_mean = self.component_distribution.mean
         if isinstance(comp_mean, Tensor):
-            comp_mean = comp_mean._data
+            comp_mean = comp_mean._mlx_array
         # Weighted average of component means
         probs = mx.expand_dims(probs, -1)
         return Tensor(mx.sum(probs * comp_mean, axis=-2))
@@ -59,15 +59,15 @@ class MixtureSameFamily(Distribution):
     def variance(self) -> Tensor:
         probs = self.mixture_distribution.probs
         if isinstance(probs, Tensor):
-            probs = probs._data
+            probs = probs._mlx_array
         probs = mx.expand_dims(probs, -1)
         comp_mean = self.component_distribution.mean
         if isinstance(comp_mean, Tensor):
-            comp_mean = comp_mean._data
+            comp_mean = comp_mean._mlx_array
         comp_var = self.component_distribution.variance
         if isinstance(comp_var, Tensor):
-            comp_var = comp_var._data
-        mean = self.mean._data
+            comp_var = comp_var._mlx_array
+        mean = self.mean._mlx_array
         # Var = E[Var(X|Z)] + Var(E[X|Z])
         return Tensor(mx.sum(probs * (comp_var + comp_mean ** 2), axis=-2) - mean ** 2)
 
@@ -75,27 +75,27 @@ class MixtureSameFamily(Distribution):
         # Sample mixture indices
         indices = self.mixture_distribution.sample(sample_shape)
         if isinstance(indices, Tensor):
-            indices = indices._data.astype(mx.int32)
+            indices = indices._mlx_array.astype(mx.int32)
         # Sample from all components
         comp_samples = self.component_distribution.sample(sample_shape)
         if isinstance(comp_samples, Tensor):
-            comp_samples = comp_samples._data
+            comp_samples = comp_samples._mlx_array
         # Select based on indices
         result = mx.take_along_axis(comp_samples, mx.expand_dims(indices, -1), axis=-2)
         return Tensor(mx.squeeze(result, -2))
 
     def log_prob(self, value: Tensor) -> Tensor:
-        data = value._data if isinstance(value, Tensor) else value
+        data = value._mlx_array if isinstance(value, Tensor) else value
         # Expand value for each component
         data = mx.expand_dims(data, -len(self._event_shape) - 1)
         # Log prob for each component
         comp_log_prob = self.component_distribution.log_prob(Tensor(data))
         if isinstance(comp_log_prob, Tensor):
-            comp_log_prob = comp_log_prob._data
+            comp_log_prob = comp_log_prob._mlx_array
         # Log mixture weights
         mix_log_prob = mx.log(self.mixture_distribution.probs)
         if isinstance(mix_log_prob, Tensor):
-            mix_log_prob = mix_log_prob._data
+            mix_log_prob = mix_log_prob._mlx_array
         # Log-sum-exp over components
         return Tensor(mx.logsumexp(mix_log_prob + comp_log_prob, axis=-1))
 

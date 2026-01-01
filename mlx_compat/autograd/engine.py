@@ -104,9 +104,10 @@ def backward(tensor, gradient=None, retain_graph=False, create_graph=False):
     topo_order = topological_sort(tensor._grad_fn)
 
     # Dictionary to accumulate gradients for each tensor
-    # Key: tensor id, Value: accumulated gradient
-    grads: Dict[int, Tensor] = {}
-    grads[id(tensor)] = gradient
+    # Key: tensor id, Value: accumulated gradient (raw MLX array for performance)
+    # We store raw mx.array to avoid creating Tensor wrappers during accumulation
+    grads: Dict[int, mx.array] = {}
+    grads[id(tensor)] = gradient._mlx_array
 
     # Execute backward functions in reverse topological order
     for grad_fn in reversed(topo_order):
@@ -116,7 +117,8 @@ def backward(tensor, gradient=None, retain_graph=False, create_graph=False):
             # This shouldn't happen in a well-formed graph
             continue
 
-        grad_output = grads[id(output_tensor)]
+        # Wrap gradient for grad_fn.apply (which expects Tensor)
+        grad_output = Tensor._from_mlx_array(grads[id(output_tensor)])
 
         # Call the gradient function to compute input gradients
         try:
@@ -140,16 +142,15 @@ def backward(tensor, gradient=None, retain_graph=False, create_graph=False):
                 # Skip tensors that don't require gradients
                 continue
 
-            # Accumulate gradient
+            # Accumulate gradient using raw MLX arrays
             tensor_id = id(input_tensor)
+            grad_arr = grad._mlx_array
             if tensor_id in grads:
-                # Add to existing gradient
-                grads[tensor_id] = Tensor._from_mlx_array(
-                    grads[tensor_id]._mlx_array + grad._mlx_array
-                )
+                # Add to existing gradient (raw array addition)
+                grads[tensor_id] = grads[tensor_id] + grad_arr
             else:
                 # First gradient for this tensor
-                grads[tensor_id] = grad
+                grads[tensor_id] = grad_arr
 
     # Assign gradients to leaf tensors
     # Keep track of which tensors we've already assigned to avoid double-counting
@@ -164,12 +165,13 @@ def backward(tensor, gradient=None, retain_graph=False, create_graph=False):
                 tensor_id in grads):
 
                 assigned.add(tensor_id)
+                # Wrap only at final assignment to tensor.grad
                 if input_tensor.grad is None:
-                    input_tensor.grad = grads[tensor_id]
+                    input_tensor.grad = Tensor._from_mlx_array(grads[tensor_id])
                 else:
                     # Accumulate with existing gradient
                     input_tensor.grad = Tensor._from_mlx_array(
-                        input_tensor.grad._mlx_array + grads[tensor_id]._mlx_array
+                        input_tensor.grad._mlx_array + grads[tensor_id]
                     )
 
     # Clean up computation graph if not retaining

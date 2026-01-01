@@ -27,8 +27,10 @@ class MaxResult:
         >>> values, indices = max(tensor, dim=1)
     """
 
-    def __init__(self, input_array, dim: int, keepdim: bool):
-        self._input = input_array
+    def __init__(self, input_tensor: 'Tensor', dim: int, keepdim: bool):
+        # Store the input Tensor (not just MLX array) for gradient tracking
+        self._input_tensor = input_tensor
+        self._input = input_tensor._mlx_array
         self._dim = dim
         self._keepdim = keepdim
         self._values = None
@@ -38,9 +40,19 @@ class MaxResult:
     def values(self) -> 'Tensor':
         if self._values is None:
             from ..tensor import Tensor
-            self._values = Tensor._from_mlx_array(
-                mx.max(self._input, axis=self._dim, keepdims=self._keepdim)
-            )
+            from ..autograd.function import MaxBackward
+            from ..autograd.context import is_grad_enabled
+
+            mlx_result = mx.max(self._input, axis=self._dim, keepdims=self._keepdim)
+            self._values = Tensor._from_mlx_array(mlx_result)
+
+            # Attach gradient function if input requires grad
+            if is_grad_enabled() and self._input_tensor.requires_grad:
+                self._values.requires_grad = True
+                grad_fn = MaxBackward(self._input_tensor, dim=self._dim, keepdim=self._keepdim)
+                grad_fn.output_tensor = self._values
+                self._values._grad_fn = grad_fn
+
         return self._values
 
     @property

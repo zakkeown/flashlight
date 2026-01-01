@@ -96,12 +96,8 @@ class Embedding(Module):
         self.sparse = sparse
         self._freeze = _freeze
 
-        if sparse:
-            import warnings
-            warnings.warn(
-                "Sparse embeddings are not currently supported in MLX. "
-                "Using dense embeddings instead."
-            )
+        # sparse=True is now supported via simulated sparse gradients
+        # (gradients are computed only for accessed indices and scattered to the weight matrix)
 
         if _weight is None:
             # Initialize embedding weight
@@ -213,9 +209,19 @@ class Embedding(Module):
         # Wrap in Tensor
         result = Tensor._from_mlx_array(embeddings)
 
-        # Preserve gradient tracking
-        if input.requires_grad or self.weight.requires_grad:
+        # Handle autograd
+        from ...autograd.context import is_grad_enabled
+        if is_grad_enabled() and self.weight.requires_grad:
+            from ...autograd.function import EmbeddingBackward
             result.requires_grad = True
+            grad_fn = EmbeddingBackward(
+                self.weight, indices,
+                self.num_embeddings, self.embedding_dim,
+                padding_idx=self.padding_idx,
+                sparse=self.sparse
+            )
+            grad_fn.output_tensor = result
+            result._grad_fn = grad_fn
 
         return result
 

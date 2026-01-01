@@ -181,6 +181,10 @@ class Tensor:
             mx.bool_: dtype_module.bool,
         }
 
+        # Add complex64 if available
+        if hasattr(mx, 'complex64') and dtype_module.complex64 is not None:
+            dtype_map[mx.complex64] = dtype_module.complex64
+
         result = dtype_map.get(mlx_dtype)
         if result is None:
             # Default to float32 for unknown types
@@ -478,29 +482,29 @@ class Tensor:
 
     def __truediv__(self, other):
         """Element-wise division (x / y)."""
-        if isinstance(other, Tensor):
-            result_array = self._mlx_array / other._mlx_array
-        else:
-            result_array = self._mlx_array / other
-        return Tensor._from_mlx_array(result_array)
+        from .ops.arithmetic import div
+        return div(self, other)
 
     def __rtruediv__(self, other):
         """Reverse division (y / x where y is not a Tensor)."""
-        result_array = other / self._mlx_array
-        return Tensor._from_mlx_array(result_array)
+        from .ops.arithmetic import div
+        if not isinstance(other, Tensor):
+            other = Tensor(other)
+        return div(other, self)
 
     def __matmul__(self, other):
         """Matrix multiplication (x @ y)."""
-        if isinstance(other, Tensor):
-            result_array = self._mlx_array @ other._mlx_array
-        else:
-            result_array = self._mlx_array @ other
-        return Tensor._from_mlx_array(result_array)
+        from .ops.arithmetic import matmul
+        if not isinstance(other, Tensor):
+            other = Tensor(other)
+        return matmul(self, other)
 
     def __rmatmul__(self, other):
         """Reverse matrix multiplication (y @ x where y is not a Tensor)."""
-        result_array = other @ self._mlx_array
-        return Tensor._from_mlx_array(result_array)
+        from .ops.arithmetic import matmul
+        if not isinstance(other, Tensor):
+            other = Tensor(other)
+        return matmul(other, self)
 
     def __neg__(self):
         """Negation (-x)."""
@@ -593,15 +597,113 @@ class Tensor:
 
         Note: This doesn't modify in-place like PyTorch. It creates a new
         array and reassigns the internal reference.
+
+        Uses native MLX operations for better performance.
         """
         if isinstance(value, Tensor):
-            value = value._mlx_array
+            value_arr = value._mlx_array
+        elif isinstance(value, (int, float)):
+            value_arr = value
+        elif hasattr(value, '__array__'):
+            value_arr = mx.array(value)
+        else:
+            value_arr = value
 
-        # MLX arrays are immutable, so we need to create a new array
-        # This is a workaround - actual implementation would use mx ops
-        arr_np = np.array(self._mlx_array)
-        arr_np[key] = np.array(value) if hasattr(value, '__array__') else value
-        self._mlx_array = mx.array(arr_np)
+        # Handle different key types using native MLX operations
+        if isinstance(key, int):
+            # Single integer index
+            self._mlx_array = self._mlx_array.at[key].add(value_arr - self._mlx_array[key])
+        elif isinstance(key, slice):
+            # Single slice - use native slicing
+            # For slice assignment, we create mask and use where
+            indices = mx.arange(*key.indices(self.shape[0]))
+            current_vals = self._mlx_array[key]
+            if isinstance(value_arr, (int, float)):
+                new_arr = self._mlx_array.at[key].add(value_arr - current_vals)
+            else:
+                new_arr = self._mlx_array.at[key].add(value_arr - current_vals)
+            self._mlx_array = new_arr
+        elif isinstance(key, tuple):
+            # Multi-dimensional indexing
+            # Check if all elements are slices or integers (simple case)
+            simple_index = all(isinstance(k, (int, slice, type(None))) for k in key)
+            if simple_index:
+                # Use native MLX slice assignment
+                current_vals = self._mlx_array[key]
+                if isinstance(value_arr, (int, float)):
+                    self._mlx_array = self._mlx_array.at[key].add(value_arr - current_vals)
+                else:
+                    self._mlx_array = self._mlx_array.at[key].add(value_arr - current_vals)
+            else:
+                # Advanced indexing with tensor indices
+                mlx_indices = []
+                for k in key:
+                    if isinstance(k, Tensor):
+                        mlx_indices.append(k._mlx_array.reshape(-1).astype(mx.int32))
+                    elif hasattr(k, '__array__'):
+                        mlx_indices.append(mx.array(k).reshape(-1).astype(mx.int32))
+                    elif isinstance(k, (int, slice)):
+                        mlx_indices.append(k)
+                    else:
+                        mlx_indices.append(k)
+
+                # Use scatter-based assignment
+                if isinstance(value_arr, (int, float)):
+                    current = self._mlx_array[tuple(mlx_indices)]
+                    self._mlx_array = self._mlx_array.at[tuple(mlx_indices)].add(value_arr - current)
+                else:
+                    flat_vals = value_arr.reshape(-1) if hasattr(value_arr, 'reshape') else mx.array(value_arr).reshape(-1)
+                    # Create mask for overwrite
+                    mask = mx.zeros(self.shape, dtype=mx.bool_)
+                    mask = mask.at[tuple(mlx_indices)].add(mx.ones(flat_vals.size, dtype=mx.bool_))
+                    zeroed = mx.where(mask, mx.zeros_like(self._mlx_array), self._mlx_array)
+                    scattered = mx.zeros_like(self._mlx_array)
+                    scattered = scattered.at[tuple(mlx_indices)].add(flat_vals)
+                    self._mlx_array = zeroed + scattered
+        elif isinstance(key, Tensor):
+            # Boolean mask or integer tensor indexing
+            key_arr = key._mlx_array
+            if key_arr.dtype == mx.bool_:
+                # Boolean mask indexing
+                if isinstance(value_arr, (int, float)):
+                    self._mlx_array = mx.where(key_arr, value_arr, self._mlx_array)
+                else:
+                    # Need to scatter values at mask positions
+                    flat_mask = key_arr.reshape(-1)
+                    num_true = int(mx.sum(flat_mask).item())
+                    if num_true > 0:
+                        flat_arr = self._mlx_array.reshape(-1)
+                        indices = mx.arange(flat_mask.shape[0])
+                        selected = mx.where(flat_mask, indices, flat_mask.shape[0])
+                        valid_idx = mx.sort(selected)[:num_true]
+                        flat_arr = flat_arr.at[valid_idx.astype(mx.int32)].add(
+                            value_arr.reshape(-1) - flat_arr[valid_idx.astype(mx.int32)]
+                        )
+                        self._mlx_array = flat_arr.reshape(self.shape)
+            else:
+                # Integer tensor indexing
+                flat_index = key_arr.reshape(-1).astype(mx.int32)
+                if isinstance(value_arr, (int, float)):
+                    current = self._mlx_array[flat_index]
+                    self._mlx_array = self._mlx_array.at[flat_index].add(value_arr - current)
+                else:
+                    flat_vals = value_arr.reshape(-1) if hasattr(value_arr, 'reshape') else mx.array(value_arr).reshape(-1)
+                    mask = mx.zeros(self.shape, dtype=mx.bool_)
+                    mask = mask.at[flat_index].add(mx.ones(flat_vals.size, dtype=mx.bool_))
+                    zeroed = mx.where(mask, mx.zeros_like(self._mlx_array), self._mlx_array)
+                    scattered = mx.zeros_like(self._mlx_array)
+                    scattered = scattered.at[flat_index].add(flat_vals)
+                    self._mlx_array = zeroed + scattered
+        elif hasattr(key, '__array__'):
+            # NumPy array indexing - convert to MLX
+            key_arr = mx.array(key)
+            self.__setitem__(Tensor._from_mlx_array(key_arr), value)
+        else:
+            # Fallback for other key types - use numpy conversion
+            import numpy as np
+            arr_np = np.array(self._mlx_array)
+            arr_np[key] = np.array(value_arr) if hasattr(value_arr, '__array__') else value_arr
+            self._mlx_array = mx.array(arr_np)
 
     # ==================== View Operations (Instance Methods) ====================
 

@@ -1020,30 +1020,44 @@ class MultiMarginLoss(Module):
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
         import mlx.core as mx
-        import numpy as np
         x = input._mlx_array
-        y = target._mlx_array
+        y = target._mlx_array.astype(mx.int32)
         N, C = x.shape
 
-        # Compute multi-margin loss using numpy for mutable operations
-        x_np = np.array(x)
-        y_np = np.array(y).astype(np.int32)
-        losses_np = np.zeros((N,), dtype=x_np.dtype)
+        # Get scores for correct classes: (N,)
+        # Use one-hot encoding to extract correct class scores
+        y_onehot = mx.zeros((N, C), dtype=x.dtype)
+        # Create one-hot by comparing y (N,1) with arange (C,)
+        y_expanded = mx.expand_dims(y, axis=1)  # (N, 1)
+        class_indices = mx.arange(C)  # (C,)
+        y_onehot = (y_expanded == class_indices).astype(x.dtype)  # (N, C)
 
-        for n in range(N):
-            correct_class = int(y_np[n])
-            sample_loss = 0.0
-            for c in range(C):
-                if c != correct_class:
-                    margin_loss = max(0, self.margin - x_np[n, correct_class] + x_np[n, c])
-                    if self.p == 2:
-                        margin_loss = margin_loss ** 2
-                    if self.weight is not None:
-                        margin_loss = margin_loss * float(np.array(self.weight._mlx_array)[correct_class])
-                    sample_loss = sample_loss + margin_loss
-            losses_np[n] = sample_loss / C
+        # Correct class scores: (N,)
+        correct_scores = mx.sum(x * y_onehot, axis=1, keepdims=True)  # (N, 1)
 
-        result = Tensor._from_mlx_array(mx.array(losses_np))
+        # Compute margin loss for all classes: margin - correct_score + score
+        margins = self.margin - correct_scores + x  # (N, C)
+
+        # Apply max(0, margin) - hinge
+        margins = mx.maximum(margins, 0)
+
+        # Zero out the correct class (don't include it in the loss)
+        margins = margins * (1 - y_onehot)
+
+        # Apply power if p == 2
+        if self.p == 2:
+            margins = mx.square(margins)
+
+        # Apply class weights if provided
+        if self.weight is not None:
+            # Weight by correct class weight
+            weights = mx.take(self.weight._mlx_array, y)  # (N,)
+            margins = margins * mx.expand_dims(weights, axis=1)
+
+        # Sum over classes and divide by C
+        sample_losses = mx.sum(margins, axis=1) / C  # (N,)
+
+        result = Tensor._from_mlx_array(sample_losses)
 
         if self.reduction == 'none':
             return result
@@ -1325,85 +1339,101 @@ class AdaptiveLogSoftmaxWithLoss(Module):
     def forward(self, input: Tensor, target: Tensor):
         """Compute adaptive log softmax with loss."""
         import mlx.core as mx
-        import numpy as np
         from collections import namedtuple
 
         ASMOutput = namedtuple('ASMOutput', ['output', 'loss'])
 
-        x = np.array(input._mlx_array)
-        t = np.array(target._mlx_array).astype(np.int64)
+        x = input._mlx_array
+        t = target._mlx_array.astype(mx.int32)
         N = x.shape[0]
 
         # Compute head logits
         head_out = self.head(input)
-        head_logits = np.array(head_out._mlx_array)
+        head_logits = head_out._mlx_array
 
         # Compute log softmax over full head output
         # Head output has: cutoffs[0] classes + (len(cutoffs)-1) cluster indicators
-        head_max = np.max(head_logits, axis=1, keepdims=True)
-        head_log_sum_exp = np.log(np.sum(np.exp(head_logits - head_max), axis=1, keepdims=True))
+        head_max = mx.max(head_logits, axis=1, keepdims=True)
+        head_log_sum_exp = mx.log(mx.sum(mx.exp(head_logits - head_max), axis=1, keepdims=True))
         head_log_probs = head_logits - head_max - head_log_sum_exp
 
-        # Initialize output and loss
-        output = np.zeros(N, dtype=x.dtype)
-        total_loss = 0.0
+        # Initialize output
+        output = mx.zeros((N,), dtype=x.dtype)
+        total_loss = mx.array(0.0, dtype=x.dtype)
 
         # Process each cluster
         cutoffs_with_zero = [0] + self.cutoffs
-        num_tail_clusters = len(self.cutoffs) - 1
 
         for i in range(len(self.cutoffs)):
             low = cutoffs_with_zero[i]
             high = cutoffs_with_zero[i + 1]
 
-            # Find samples in this cluster
+            # Find samples in this cluster using vectorized mask
             mask = (t >= low) & (t < high)
+            mask_sum = mx.sum(mask.astype(mx.int32))
 
-            if not np.any(mask):
+            # Skip if no samples in this cluster
+            if int(mask_sum.item()) == 0:
                 continue
 
             if i == 0:
                 # Head cluster - use head log probs directly for classes 0 to cutoffs[0]-1
-                local_targets = t[mask]
-                for j, lt in enumerate(local_targets):
-                    sample_idx = np.where(mask)[0][j]
-                    log_prob = head_log_probs[sample_idx, lt]
-                    output[sample_idx] = log_prob
-                    total_loss -= log_prob
+                # Get log probs for targets in head cluster
+                # Use gather/take_along_axis to get log probs at target indices
+                local_targets = t  # (N,)
+                target_expanded = mx.expand_dims(local_targets, axis=1)  # (N, 1)
+
+                # Gather log probs at target positions
+                gathered_log_probs = mx.take_along_axis(head_log_probs, target_expanded, axis=1)
+                gathered_log_probs = mx.squeeze(gathered_log_probs, axis=1)  # (N,)
+
+                # Only include samples in this cluster
+                mask_float = mask.astype(x.dtype)
+                output = output + gathered_log_probs * mask_float
+                total_loss = total_loss - mx.sum(gathered_log_probs * mask_float)
+
             else:
                 # Tail cluster
                 cluster_idx = i - 1
                 proj, out_layer = self.tail[cluster_idx]
 
                 # Get log prob of selecting this cluster from head
-                # Cluster indicator is at position: cutoffs[0] + cluster_idx
                 cluster_indicator_idx = self.cutoffs[0] + cluster_idx
-                cluster_log_probs = head_log_probs[mask, cluster_indicator_idx]
+                cluster_log_probs_head = head_log_probs[:, cluster_indicator_idx]  # (N,)
 
-                cluster_input = Tensor._from_mlx_array(mx.array(x[mask]))
-                projected = proj(cluster_input)
+                # Compute cluster-specific logits for all samples
+                projected = proj(input)
                 cluster_out = out_layer(projected)
-                cluster_logits = np.array(cluster_out._mlx_array)
+                cluster_logits = cluster_out._mlx_array  # (N, cluster_size)
 
                 # Compute log softmax within this cluster
-                cluster_max = np.max(cluster_logits, axis=1, keepdims=True)
-                cluster_log_sum_exp = np.log(np.sum(np.exp(cluster_logits - cluster_max), axis=1, keepdims=True))
+                cluster_max = mx.max(cluster_logits, axis=1, keepdims=True)
+                cluster_log_sum_exp = mx.log(mx.sum(mx.exp(cluster_logits - cluster_max), axis=1, keepdims=True))
                 within_cluster_log_probs = cluster_logits - cluster_max - cluster_log_sum_exp
 
-                local_targets = t[mask] - low
+                # Local targets within cluster
+                local_targets = t - low  # (N,)
+                local_targets_clamped = mx.maximum(local_targets, 0)
+                local_targets_clamped = mx.minimum(local_targets_clamped, high - low - 1)
+                local_targets_expanded = mx.expand_dims(local_targets_clamped, axis=1)
 
-                for j, lt in enumerate(local_targets):
-                    sample_idx = np.where(mask)[0][j]
-                    # Total log prob = log P(cluster) + log P(class | cluster)
-                    log_prob = cluster_log_probs[j] + within_cluster_log_probs[j, lt]
-                    output[sample_idx] = log_prob
-                    total_loss -= log_prob
+                # Gather log probs at local target positions
+                gathered_within = mx.take_along_axis(within_cluster_log_probs, local_targets_expanded, axis=1)
+                gathered_within = mx.squeeze(gathered_within, axis=1)  # (N,)
+
+                # Total log prob = log P(cluster) + log P(class | cluster)
+                total_log_prob = cluster_log_probs_head + gathered_within
+
+                # Only include samples in this cluster
+                mask_float = mask.astype(x.dtype)
+                output = output + total_log_prob * mask_float
+                total_loss = total_loss - mx.sum(total_log_prob * mask_float)
 
         # Average loss
         loss = total_loss / N
 
-        output_tensor = Tensor._from_mlx_array(mx.array(output))
-        loss_tensor = Tensor._from_mlx_array(mx.array(loss, dtype=mx.float32))
+        output_tensor = Tensor._from_mlx_array(output)
+        loss_tensor = Tensor._from_mlx_array(loss)
 
         return ASMOutput(output=output_tensor, loss=loss_tensor)
 
@@ -1416,11 +1446,9 @@ class AdaptiveLogSoftmaxWithLoss(Module):
     def predict(self, input: Tensor) -> Tensor:
         """Predict the most likely class."""
         import mlx.core as mx
-        import numpy as np
         log_probs = self.log_prob(input)
-        probs = np.array(log_probs._mlx_array)
-        predictions = np.argmax(probs, axis=1)
-        return Tensor._from_mlx_array(mx.array(predictions))
+        predictions = mx.argmax(log_probs._mlx_array, axis=1)
+        return Tensor._from_mlx_array(predictions)
 
     def extra_repr(self) -> str:
         return f'in_features={self.in_features}, n_classes={self.n_classes}, cutoffs={self.cutoffs[:-1]}'

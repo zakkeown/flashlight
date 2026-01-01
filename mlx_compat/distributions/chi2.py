@@ -14,7 +14,7 @@ class Chi2(Gamma):
     arg_constraints = {'df': constraints.positive}
 
     def __init__(self, df: Union[Tensor, float], validate_args: Optional[bool] = None):
-        self.df = df._data if isinstance(df, Tensor) else mx.array(df)
+        self.df = df._mlx_array if isinstance(df, Tensor) else mx.array(df)
         super().__init__(self.df / 2, mx.array(0.5), validate_args=validate_args)
 
 

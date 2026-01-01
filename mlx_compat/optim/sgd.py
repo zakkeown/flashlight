@@ -94,6 +94,9 @@ class SGD(Optimizer):
 
         Returns:
             loss value if closure is provided, otherwise None
+
+        Note:
+            Optimized to use raw MLX arrays internally to reduce Python object overhead.
         """
         loss = None
         if closure is not None:
@@ -110,41 +113,37 @@ class SGD(Optimizer):
                 if p.grad is None:
                     continue
 
-                grad = p.grad
+                # Work directly with raw MLX arrays for performance
+                param = p._mlx_array
+                grad = p.grad._mlx_array
 
                 # Apply weight decay (L2 regularization)
                 if weight_decay != 0:
-                    grad = Tensor._from_mlx_array(
-                        grad._mlx_array + weight_decay * p._mlx_array
-                    )
+                    grad = grad + weight_decay * param
 
                 # Apply momentum
                 if momentum != 0:
                     param_state = self.state[id(p)]
 
                     if 'momentum_buffer' not in param_state:
-                        # Initialize momentum buffer
-                        buf = Tensor._from_mlx_array(mx.zeros_like(grad._mlx_array))
-                        param_state['momentum_buffer'] = buf
-                    else:
-                        buf = param_state['momentum_buffer']
+                        # Initialize momentum buffer as raw MLX array
+                        param_state['momentum_buffer'] = mx.zeros_like(grad)
+
+                    buf = param_state['momentum_buffer']
 
                     # Update momentum buffer: v = momentum * v + (1 - dampening) * grad
-                    buf_mlx = momentum * buf._mlx_array + (1 - dampening) * grad._mlx_array
-                    buf = Tensor._from_mlx_array(buf_mlx)
+                    buf = momentum * buf + (1 - dampening) * grad
                     param_state['momentum_buffer'] = buf
 
                     if nesterov:
                         # Nesterov momentum: grad = grad + momentum * buf
-                        grad = Tensor._from_mlx_array(
-                            grad._mlx_array + momentum * buf._mlx_array
-                        )
+                        grad = grad + momentum * buf
                     else:
                         # Standard momentum: grad = buf
                         grad = buf
 
                 # Update parameters: θ = θ - lr * grad
-                p._mlx_array = p._mlx_array - lr * grad._mlx_array
+                p._mlx_array = param - lr * grad
 
         return loss
 

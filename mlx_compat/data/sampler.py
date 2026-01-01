@@ -6,7 +6,8 @@ Implements PyTorch-compatible sampling strategies for DataLoader.
 
 from abc import ABC, abstractmethod
 from typing import Iterator, List, Optional, Sized, Any
-import random
+
+from ._random import mlx_permutation, mlx_shuffle_list, mlx_randint, mlx_weighted_sample
 
 
 class Sampler(ABC):
@@ -115,13 +116,12 @@ class RandomSampler(Sampler):
         n = len(self.data_source)
 
         if self.replacement:
-            # Sample with replacement
-            for _ in range(self.num_samples):
-                yield random.randint(0, n - 1)
+            # Sample with replacement using MLX random
+            indices = mlx_randint(0, n, self.num_samples)
+            yield from indices
         else:
-            # Sample without replacement (shuffle)
-            indices = list(range(n))
-            random.shuffle(indices)
+            # Sample without replacement (shuffle) using MLX random
+            indices = mlx_permutation(n)
             if self._num_samples is not None:
                 indices = indices[:self._num_samples]
             yield from indices
@@ -155,9 +155,8 @@ class SubsetRandomSampler(Sampler):
 
     def __iter__(self) -> Iterator[int]:
         """Return randomly shuffled subset indices."""
-        indices = self.indices.copy()
-        random.shuffle(indices)
-        return iter(indices)
+        shuffled = mlx_shuffle_list(self.indices)
+        return iter(shuffled)
 
     def __len__(self) -> int:
         """Return the number of indices."""
@@ -200,22 +199,13 @@ class WeightedRandomSampler(Sampler):
 
     def __iter__(self) -> Iterator[int]:
         """Return weighted random indices."""
-        indices = list(range(len(self.weights)))
-
-        if self.replacement:
-            # Weighted sampling with replacement
-            for _ in range(self.num_samples):
-                yield random.choices(indices, weights=self.weights, k=1)[0]
-        else:
-            # Weighted sampling without replacement
-            # Use a simple approach: sort by weight/random and take top num_samples
-            weighted_indices = [
-                (i, self.weights[i] * random.random())
-                for i in indices
-            ]
-            weighted_indices.sort(key=lambda x: x[1], reverse=True)
-            for i in range(self.num_samples):
-                yield weighted_indices[i][0]
+        # Use MLX-based weighted sampling (with Gumbel-top-k for without replacement)
+        indices = mlx_weighted_sample(
+            self.weights,
+            self.num_samples,
+            replacement=self.replacement
+        )
+        yield from indices
 
     def __len__(self) -> int:
         """Return the number of samples."""

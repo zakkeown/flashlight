@@ -644,16 +644,46 @@ class ReflectionPad3d(Module):
 
     def forward(self, input: Tensor) -> Tensor:
         """Apply reflection padding."""
-        import numpy as np
-
-        x = np.array(input._mlx_array)
+        x = input._mlx_array
         left, right, top, bottom, front, back = self.padding
 
-        # Use numpy pad with reflect mode
-        pad_width = [(0, 0), (0, 0), (front, back), (top, bottom), (left, right)]
-        result = np.pad(x, pad_width, mode='reflect')
+        # Pad width first (axis=4)
+        if left > 0 or right > 0:
+            parts_w = []
+            if left > 0:
+                left_pad = _flip_axis(x[:, :, :, :, 1:left + 1], axis=4)
+                parts_w.append(left_pad)
+            parts_w.append(x)
+            if right > 0:
+                right_pad = _flip_axis(x[:, :, :, :, -(right + 1):-1], axis=4)
+                parts_w.append(right_pad)
+            x = mx.concatenate(parts_w, axis=4)
 
-        return Tensor._from_mlx_array(mx.array(result, dtype=input._mlx_array.dtype))
+        # Pad height (axis=3)
+        if top > 0 or bottom > 0:
+            parts_h = []
+            if top > 0:
+                top_pad = _flip_axis(x[:, :, :, 1:top + 1, :], axis=3)
+                parts_h.append(top_pad)
+            parts_h.append(x)
+            if bottom > 0:
+                bottom_pad = _flip_axis(x[:, :, :, -(bottom + 1):-1, :], axis=3)
+                parts_h.append(bottom_pad)
+            x = mx.concatenate(parts_h, axis=3)
+
+        # Pad depth (axis=2)
+        if front > 0 or back > 0:
+            parts_d = []
+            if front > 0:
+                front_pad = _flip_axis(x[:, :, 1:front + 1, :, :], axis=2)
+                parts_d.append(front_pad)
+            parts_d.append(x)
+            if back > 0:
+                back_pad = _flip_axis(x[:, :, -(back + 1):-1, :, :], axis=2)
+                parts_d.append(back_pad)
+            x = mx.concatenate(parts_d, axis=2)
+
+        return Tensor._from_mlx_array(x)
 
     def extra_repr(self) -> str:
         return f'{self.padding}'
