@@ -7,11 +7,16 @@ Implements PyTorch-compatible container modules:
 - ModuleDict: Dictionary of modules
 """
 
+from __future__ import annotations
+
 from collections import OrderedDict
-from typing import Dict, Iterable, Iterator, Optional, Union
+from typing import TYPE_CHECKING, Dict, Iterable, Iterator, Optional, Union
 
 from ..tensor import Tensor
 from .module import Module
+
+if TYPE_CHECKING:
+    from .parameter import Parameter
 
 # Module types that benefit from NHWC layout (spatial operations)
 _SPATIAL_LAYER_NAMES = frozenset(

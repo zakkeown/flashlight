@@ -22,6 +22,15 @@ Version: 0.1.0 (Alpha)
 Status: Phase 0 - Project scaffolding complete
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Optional
+
+    from .dtype import DType
+
 __version__ = "0.1.0"
 __author__ = "Flashlight Contributors"
 
@@ -1188,7 +1197,7 @@ def set_num_threads(num: int) -> None:
 # =============================================================================
 
 
-def result_type(*tensors_or_dtypes) -> "dtype":
+def result_type(*tensors_or_dtypes) -> DType:
     """
     Determine the result dtype from input tensors/dtypes.
 
@@ -1225,7 +1234,7 @@ def result_type(*tensors_or_dtypes) -> "dtype":
     return float32
 
 
-def promote_types(type1, type2) -> "dtype":
+def promote_types(type1, type2) -> DType:
     """
     Promote two dtypes to a common type.
 
@@ -1822,10 +1831,10 @@ from .nn import functional as _F
 
 def _batch_norm_impl(
     input: Tensor,
-    weight: "Optional[Tensor]",
-    bias: "Optional[Tensor]",
-    running_mean: "Optional[Tensor]",
-    running_var: "Optional[Tensor]",
+    weight: Optional[Tensor],
+    bias: Optional[Tensor],
+    running_mean: Optional[Tensor],
+    running_var: Optional[Tensor],
     training: bool,
     momentum: float,
     eps: float,
@@ -1864,10 +1873,10 @@ def _batch_norm_impl(
 
 def _instance_norm_impl(
     input: Tensor,
-    weight: "Optional[Tensor]",
-    bias: "Optional[Tensor]",
-    running_mean: "Optional[Tensor]",
-    running_var: "Optional[Tensor]",
+    weight: Optional[Tensor],
+    bias: Optional[Tensor],
+    running_mean: Optional[Tensor],
+    running_var: Optional[Tensor],
     use_input_stats: bool,
     momentum: float,
     eps: float,
