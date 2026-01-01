@@ -97,10 +97,12 @@ jobs:
 
       - name: Run integration tests (phases 4-7)
         run: |
+          # Run without pytest-xdist (-n auto) to avoid MLX Metal initialization
+          # race conditions when multiple workers import the module simultaneously
           pytest tests/phase4_nn_modules/ tests/phase5_training/ \
             tests/phase6_distributions/ tests/phase7_signal/ \
             -v --tb=short --cov=flashlight --cov-report=xml \
-            -n auto -m "not slow"
+            -m "not slow"
 
       - name: Run integration test suite
         run: |

@@ -52,13 +52,15 @@ jobs:
       - name: Run benchmarks
         run: |
           # Use CPU for PyTorch comparison to avoid MLX/MPS Metal conflicts
+          # Use 'operator' level by default to avoid GPU hangs on CI runners
           python -m benchmarks \
-            --level ${{ github.event.inputs.level || 'all' }} \
+            --level ${{ github.event.inputs.level || 'operator' }} \
             --compare-pytorch \
             --pytorch-device cpu \
             --quick \
             -o json \
             -f benchmark-results.json
+        timeout-minutes: 10
 
       - name: Download baseline
         uses: actions/cache/restore@v4
