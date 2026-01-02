@@ -118,26 +118,59 @@ def _no_grad_normal_(tensor: Tensor, mean: float, std: float) -> Tensor:
 
 
 def _no_grad_trunc_normal_(tensor: Tensor, mean: float, std: float, a: float, b: float) -> Tensor:
-    """Fill tensor with truncated normal distribution."""
-    # Simple rejection sampling approach for truncated normal
-    l = (a - mean) / std
-    u = (b - mean) / std
+    """
+    Fill tensor with truncated normal distribution using inverse CDF method.
 
-    # Use inverse CDF method approximation
-    # Generate uniform samples and transform
+    This provides proper truncation semantics matching PyTorch's implementation.
+    The inverse CDF method ensures exact truncation rather than simple clipping.
+    """
+    import math
+    import warnings
+
+    def norm_cdf(x):
+        """Standard normal CDF."""
+        return (1.0 + math.erf(x / math.sqrt(2.0))) / 2.0
+
+    # Warn if mean is far from the truncation bounds
+    if (mean < a - 2 * std) or (mean > b + 2 * std):
+        warnings.warn(
+            "mean is more than 2 std from [a, b] in nn.init.trunc_normal_. "
+            "The distribution of values may be incorrect.",
+            stacklevel=3,
+        )
+
+    # Normalize the bounds
+    l = (a - mean) / std  # Lower bound normalized
+    u = (b - mean) / std  # Upper bound normalized
+
+    # Compute CDF at normalized bounds
+    Phi_l = norm_cdf(l)
+    Phi_u = norm_cdf(u)
+
+    # Generate uniform samples in range [2*Phi_l - 1, 2*Phi_u - 1] for erfinv
+    # erfinv maps [-1, 1] -> [-inf, inf], and erf(x/sqrt(2)) = 2*Phi(x) - 1
     shape = tensor.shape
-    size = 1
-    for s in shape:
-        size *= s
+    low = 2 * Phi_l - 1
+    high = 2 * Phi_u - 1
 
-    # Generate more samples than needed to account for rejection
-    samples = mx.random.normal(shape=(int(size * 1.5),)) * std + mean
+    # Clamp low/high to prevent numerical issues at the boundaries
+    eps = 1e-7
+    low = max(low, -1.0 + eps)
+    high = min(high, 1.0 - eps)
 
-    # Clamp to bounds (approximation of truncation)
+    uniform = mx.random.uniform(low=low, high=high, shape=shape)
+
+    # Apply inverse error function to get truncated standard normal
+    # erfinv(2*Phi(x) - 1) = x / sqrt(2)
+    samples = mx.erfinv(uniform)
+
+    # Transform from standard truncated normal to target mean/std
+    # x = erfinv(u) * sqrt(2) -> standard normal
+    samples = samples * (std * math.sqrt(2.0)) + mean
+
+    # Final clamp for numerical safety at the boundaries
     samples = mx.clip(samples, a, b)
 
-    # Take only what we need and reshape
-    samples = samples[:size].reshape(shape)
     samples = samples.astype(tensor._mlx_array.dtype)
     tensor._mlx_array = samples
     return tensor
@@ -471,21 +504,28 @@ def orthogonal_(tensor: Tensor, gain: float = 1.0) -> Tensor:
     for s in tensor.shape[1:]:
         cols *= s
 
-    # Generate random matrix
-    flat_shape = (rows, cols) if rows < cols else (cols, rows)
-    random_matrix = mx.random.normal(shape=flat_shape)
-
-    # QR decomposition
-    # Note: MLX may not have QR, so we use SVD as fallback
-    try:
-        q, r = mx.linalg.qr(random_matrix)
-    except AttributeError:
-        # Fallback to SVD-based orthogonalization
-        u, s, vh = mx.linalg.svd(random_matrix, full_matrices=False)
-        q = u if rows >= cols else vh
-
+    # Generate random matrix and transpose if rows < cols (following PyTorch)
+    flattened = mx.random.normal(shape=(rows, cols))
     if rows < cols:
-        q = q.T
+        flattened = flattened.T  # Now (cols, rows)
+
+    # Use SVD for orthogonal initialization
+    # SVD provides orthogonal matrices U and V where A = U @ diag(S) @ V^T
+    # For orthogonal init, we use U (left singular vectors) which gives orthonormal columns
+    # Note: MLX SVD requires CPU stream for now
+    cpu_stream = mx.cpu
+    u, s, vh = mx.linalg.svd(flattened, stream=cpu_stream)
+
+    # MLX returns full U matrix; we need to slice to get the reduced form
+    # u has shape (m, m) where m is flattened.shape[0]
+    # We need first min(m, n) columns for the orthonormal basis
+    m, n = flattened.shape
+    min_dim = min(m, n)
+    q = u[:, :min_dim]  # Shape (m, min_dim)
+
+    # Transpose back if we transposed before
+    if rows < cols:
+        q = q.T  # Shape (min_dim, m) = (rows, cols)
 
     # Apply gain and reshape
     q = q * gain

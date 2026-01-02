@@ -17,6 +17,13 @@ from .. import ops
 from ..tensor import Tensor
 from .module import Module
 
+# Standard epsilon values matching PyTorch defaults
+# These are used for numerical stability in various loss functions
+_BCE_EPS = 1e-7  # BCELoss input clamping
+_COSINE_EPS = 1e-8  # CosineEmbeddingLoss denominator
+_POISSON_EPS = 1e-8  # PoissonNLLLoss log stability
+_GAUSSIAN_EPS = 1e-6  # GaussianNLLLoss variance minimum
+
 
 def _verify_reduction_params(
     size_average: Optional[bool], reduce: Optional[bool], reduction: str
@@ -354,16 +361,34 @@ class BCELoss(Module):
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
         # BCE = -[y * log(x) + (1 - y) * log(1 - x)]
-        # Clamp input to avoid log(0)
+        # Clamp input to avoid log(0), with proper gradient passthrough
         import mlx.core as mx
 
-        eps = 1e-7
+        eps = _BCE_EPS
         input_clamped_mlx = mx.clip(input._mlx_array, eps, 1 - eps)
         input_clamped = Tensor._from_mlx_array(input_clamped_mlx)
+
         if input.requires_grad:
             input_clamped.requires_grad = True
-            # Note: clipping gradient is not fully correct but close enough for small eps
-            input_clamped._grad_fn = input._grad_fn
+            # Proper gradient: pass gradient where input is within [eps, 1-eps],
+            # zero gradient where clamped. This matches PyTorch's clamp backward.
+            from ..autograd.function import GradientFunction
+
+            class ClampBackward(GradientFunction):
+                def __init__(self, input_tensor, eps):
+                    super().__init__(input_tensor)
+                    self.eps = eps
+
+                def apply(self, grad_output):
+                    if not self.inputs[0].requires_grad:
+                        return (None,)
+                    input_arr = self.inputs[0]._mlx_array
+                    # Gradient is passed through only where input wasn't clamped
+                    mask = (input_arr >= self.eps) & (input_arr <= 1 - self.eps)
+                    grad_in = grad_output._mlx_array * mask.astype(grad_output._mlx_array.dtype)
+                    return (Tensor._from_mlx_array(grad_in),)
+
+            input_clamped._grad_fn = ClampBackward(input, eps)
 
         loss = -(target * ops.log(input_clamped) + (1 - target) * ops.log(1 - input_clamped))
 
@@ -902,7 +927,8 @@ class PoissonNLLLoss(Module):
 
         if self.full:
             # Stirling approximation for log(target!)
-            stirling = t * mx.log(t) - t + 0.5 * mx.log(2 * 3.14159265359 * t)
+            import math
+            stirling = t * mx.log(t) - t + 0.5 * mx.log(2 * math.pi * t)
             stirling = mx.where(t > 1, stirling, 0)
             loss = loss + stirling
 
@@ -950,7 +976,8 @@ class GaussianNLLLoss(Module):
         loss = 0.5 * (mx.log(v) + (x - t) ** 2 / v)
 
         if self.full:
-            loss = loss + 0.5 * mx.log(2 * 3.14159265359)
+            import math
+            loss = loss + 0.5 * mx.log(2 * math.pi)
 
         result = Tensor._from_mlx_array(loss)
 

@@ -604,56 +604,57 @@ def index_put(
 
     Args:
         input: Input tensor
-        indices: Tuple of index tensors
-        values: Values to put
+        indices: Tuple of index tensors (one per dimension being indexed)
+        values: Values to put (must be broadcastable to the indexed region)
         accumulate: If True, add values instead of replacing
 
     Returns:
         Tensor with put values
 
     Note:
-        Uses vectorized MLX operations for better performance.
+        Supports advanced indexing where indices can select entire slices.
+        For example, if input is (4, 8) and indices is a tuple with one
+        tensor of shape (3,), values should be (3, 8) to replace 3 full rows.
     """
-    # Convert indices to MLX arrays
+    # Convert indices to MLX arrays, preserving shape
     mlx_indices = []
     for idx in indices:
         if isinstance(idx, Tensor):
-            mlx_indices.append(idx._mlx_array.reshape(-1).astype(mx.int32))
+            mlx_indices.append(idx._mlx_array.astype(mx.int32))
         elif isinstance(idx, (int, slice)):
             mlx_indices.append(idx)
         else:
-            mlx_indices.append(mx.array(idx).reshape(-1).astype(mx.int32))
+            mlx_indices.append(mx.array(idx).astype(mx.int32))
 
-    # Handle values
+    # Handle values - don't flatten, preserve shape for proper broadcasting
     if isinstance(values, Tensor):
-        values_arr = values._mlx_array.reshape(-1)
+        values_arr = values._mlx_array
     elif isinstance(values, (int, float)):
-        # Scalar - will be broadcast
         values_arr = values
     else:
-        values_arr = mx.array(values).reshape(-1)
+        values_arr = mx.array(values)
+
+    # Get the indexed region to understand its shape
+    input_arr = input._mlx_array
+    idx_tuple = tuple(mlx_indices)
 
     if accumulate:
-        result_arr = input._mlx_array.at[tuple(mlx_indices)].add(values_arr)
+        # For accumulate mode, use .at[].add()
+        result_arr = input_arr.at[idx_tuple].add(values_arr)
     else:
-        # For non-accumulate mode, we need to overwrite
-        # Create mask and use where
+        # For non-accumulate (replace) mode, we need to overwrite values
+        # Strategy: subtract existing values, then add new values
+        # This works because: new = old - old[idx] + values = old with old[idx] replaced by values
         if isinstance(values_arr, (int, float)):
-            # Scalar case - simpler handling
-            result_arr = input._mlx_array.at[tuple(mlx_indices)].add(
-                values_arr - input._mlx_array[tuple(mlx_indices)]
-            )
+            # Scalar case
+            existing = input_arr[idx_tuple]
+            diff = values_arr - existing
+            result_arr = input_arr.at[idx_tuple].add(diff)
         else:
-            # Zero out target and add values
-            ones = mx.ones_like(values_arr)
-            mask = mx.zeros(input.shape, dtype=mx.bool_)
-            mask = mask.at[tuple(mlx_indices)].add(ones.astype(mx.bool_))
-
-            zeroed = mx.where(mask, mx.zeros_like(input._mlx_array), input._mlx_array)
-            scattered = mx.zeros(input.shape, dtype=input._mlx_array.dtype)
-            scattered = scattered.at[tuple(mlx_indices)].add(values_arr)
-
-            result_arr = zeroed + scattered
+            # Tensor case - subtract existing and add new
+            existing = input_arr[idx_tuple]
+            diff = values_arr - existing
+            result_arr = input_arr.at[idx_tuple].add(diff)
 
     result = Tensor._from_mlx_array(result_arr)
 

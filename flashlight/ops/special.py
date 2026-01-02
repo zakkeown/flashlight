@@ -459,11 +459,14 @@ def i0(x: mx.array) -> mx.array:
         x: Input array
 
     Returns:
-        Array with I0 values
+        Array with I0 values (preserves float16/bfloat16 input dtype)
     """
     x = mx.array(x) if not isinstance(x, mx.array) else x
     orig_dtype = x.dtype
-    x = x.astype(mx.float32)
+    # Preserve float16/bfloat16, only promote integers to float32
+    is_float = orig_dtype in (mx.float16, mx.float32, mx.bfloat16)
+    work_dtype = orig_dtype if is_float else mx.float32
+    x = x.astype(work_dtype)
 
     ax = mx.abs(x)
 
@@ -507,7 +510,7 @@ def i0(x: mx.array) -> mx.array:
 
     result = mx.where(ax <= 3.75, small_result, large_result)
 
-    # Always return float32 - Bessel functions produce floats
+    # Result preserves the working dtype (float16/bfloat16/float32)
     return result
 
 
@@ -524,11 +527,14 @@ def i1(x: mx.array) -> mx.array:
         x: Input array
 
     Returns:
-        Array with I1 values
+        Array with I1 values (preserves float16/bfloat16 input dtype)
     """
     x = mx.array(x) if not isinstance(x, mx.array) else x
     orig_dtype = x.dtype
-    x = x.astype(mx.float32)
+    # Preserve float16/bfloat16, only promote integers to float32
+    is_float = orig_dtype in (mx.float16, mx.float32, mx.bfloat16)
+    work_dtype = orig_dtype if is_float else mx.float32
+    x = x.astype(work_dtype)
 
     ax = mx.abs(x)
     sign = mx.sign(x)
@@ -576,7 +582,7 @@ def i1(x: mx.array) -> mx.array:
     # I1 is an odd function: I1(-x) = -I1(x)
     result = result * sign
 
-    # Always return float32 - Bessel functions produce floats
+    # Result preserves the working dtype (float16/bfloat16/float32)
     return result
 
 

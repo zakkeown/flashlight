@@ -145,12 +145,21 @@ class Module:
         # Register in appropriate dict
         if isinstance(value, Parameter):
             self._parameters[name] = value
+            # Remove from __dict__ if it was previously set there (e.g., as None)
+            if name in self.__dict__:
+                del self.__dict__[name]
         elif isinstance(value, Module):
             self._modules[name] = value
+            # Remove from __dict__ if it was previously set there (e.g., as None)
+            if name in self.__dict__:
+                del self.__dict__[name]
         elif isinstance(value, Tensor) and name != "grad":
             # Tensors that aren't parameters are registered as buffers
             # (e.g., running mean/var in BatchNorm)
             self._buffers[name] = value
+            # Remove from __dict__ if it was previously set there (e.g., as None)
+            if name in self.__dict__:
+                del self.__dict__[name]
         else:
             object.__setattr__(self, name, value)
 

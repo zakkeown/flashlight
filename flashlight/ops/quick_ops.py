@@ -4,6 +4,7 @@ Quick Operations - One-liner MLX wrappers
 These are simple pass-through functions to MLX equivalents.
 """
 
+import builtins
 from typing import List, Optional, Tuple, Union
 
 import mlx.core as mx
@@ -961,7 +962,7 @@ def grid_sampler_3d(
 def histogram(
     input: Tensor,
     bins: int = 100,
-    range_: Tuple[float, float] = None,
+    range: Tuple[float, float] = None,
     weight: Tensor = None,
     density: bool = False,
 ) -> Tuple[Tensor, Tensor]:
@@ -972,7 +973,7 @@ def histogram(
     Args:
         input: Input tensor
         bins: Number of histogram bins
-        range_: Range (min, max) for histogram
+        range: Range (min, max) for histogram
         weight: Weight for each value
         density: If True, normalize to form a density
 
@@ -982,11 +983,11 @@ def histogram(
     x = input._mlx_array.flatten().astype(mx.float32)
 
     # Determine range
-    if range_ is None:
+    if range is None:
         min_val = float(mx.min(x).item())
         max_val = float(mx.max(x).item())
     else:
-        min_val, max_val = range_
+        min_val, max_val = range
 
     # Handle edge case where min == max
     if min_val == max_val:
@@ -1009,14 +1010,14 @@ def histogram(
     if weight is not None:
         w = weight._mlx_array.flatten().astype(mx.float32)
         # Accumulate weights in each bin
-        for i in range(bins):
+        for i in builtins.range(bins):
             mask = mx.equal(bin_indices, i)
             hist_i = mx.sum(mx.where(mask, w, mx.zeros_like(w)))
             # Update hist[i] - need to use scatter or loop
             hist = hist.at[i].add(hist_i)
     else:
         # Count occurrences in each bin
-        for i in range(bins):
+        for i in builtins.range(bins):
             count = mx.sum((bin_indices == i).astype(mx.float32))
             hist = hist.at[i].add(count)
 
@@ -1034,7 +1035,7 @@ def histogram(
 def histogramdd(
     input: Tensor,
     bins: int = 10,
-    range_: List[Tuple[float, float]] = None,
+    range: List[Tuple[float, float]] = None,
     weight: Tensor = None,
     density: bool = False,
 ):
@@ -1045,7 +1046,7 @@ def histogramdd(
     Args:
         input: Input tensor of shape (N, D) where D is number of dimensions
         bins: Number of bins (int or list of ints per dimension)
-        range_: List of (min, max) per dimension
+        range: List of (min, max) per dimension
         weight: Weight tensor
         density: If True, normalize to form a density
 
@@ -1062,9 +1063,9 @@ def histogramdd(
         bins_per_dim = list(bins)
 
     # Determine range for each dimension
-    if range_ is None:
+    if range is None:
         ranges = []
-        for d in range(n_dims):
+        for d in builtins.range(n_dims):
             min_val = float(mx.min(x[:, d]).item())
             max_val = float(mx.max(x[:, d]).item())
             if min_val == max_val:
@@ -1072,12 +1073,12 @@ def histogramdd(
                 max_val += 0.5
             ranges.append((min_val, max_val))
     else:
-        ranges = list(range_)
+        ranges = list(range)
 
     # Create bin edges for each dimension
     edges_list = []
     bin_widths = []
-    for d in range(n_dims):
+    for d in builtins.range(n_dims):
         min_val, max_val = ranges[d]
         edges = mx.linspace(min_val, max_val, bins_per_dim[d] + 1).astype(mx.float32)
         edges_list.append(edges)
@@ -1085,7 +1086,7 @@ def histogramdd(
 
     # Compute bin indices for each dimension
     bin_indices_list = []
-    for d in range(n_dims):
+    for d in builtins.range(n_dims):
         min_val, _ = ranges[d]
         bin_width = bin_widths[d]
         indices = mx.floor((x[:, d] - min_val) / bin_width).astype(mx.int32)
@@ -1105,9 +1106,9 @@ def histogramdd(
         w = None
 
     # Iterate through samples
-    for i in range(n_samples):
+    for i in builtins.range(n_samples):
         # Get bin index for this sample
-        idx = tuple(int(bin_indices_list[d][i].item()) for d in range(n_dims))
+        idx = tuple(int(bin_indices_list[d][i].item()) for d in builtins.range(n_dims))
         if w is not None:
             hist = hist.at[idx].add(w[i])
         else:
@@ -2362,56 +2363,39 @@ def index_put_(
     Returns:
         Modified input tensor
 
-    Pure MLX implementation.
+    Note:
+        Uses the same logic as index_put but modifies the tensor in-place.
     """
-    arr = input._mlx_array
-    vals = values._mlx_array
-
-    # For simple 1D case, use direct indexing
-    if len(indices) == 1 and arr.ndim == 1:
-        idx = indices[0]._mlx_array.astype(mx.int32)
-        result_list = arr.tolist()
-        val_list = vals.flatten().tolist() if vals.size > 1 else [vals.item()] * idx.size
-
-        for i, ix in enumerate(idx.tolist()):
-            if accumulate:
-                result_list[ix] += val_list[i] if i < len(val_list) else val_list[0]
-            else:
-                result_list[ix] = val_list[i] if i < len(val_list) else val_list[0]
-
-        input._mlx_array = mx.array(result_list, dtype=arr.dtype)
-        return input
-
-    # For multi-dimensional indexing, convert to flat indices
-    shape = arr.shape
-    flat = mx.reshape(arr, (-1,)).tolist()
-    vals_flat = mx.reshape(vals, (-1,)).tolist()
-
-    # Convert multi-dim indices to flat indices
-    idx_arrays = [i._mlx_array.astype(mx.int32) for i in indices]
-    num_indices = idx_arrays[0].size
-
-    for i in range(num_indices):
-        flat_idx = 0
-        stride = 1
-        for dim in range(len(shape) - 1, -1, -1):
-            if dim < len(idx_arrays):
-                coord = (
-                    idx_arrays[dim].flatten()[i].item()
-                    if idx_arrays[dim].size > 1
-                    else idx_arrays[dim].item()
-                )
-            else:
-                coord = 0
-            flat_idx += coord * stride
-            stride *= shape[dim]
-
-        if accumulate:
-            flat[flat_idx] += vals_flat[i] if i < len(vals_flat) else vals_flat[0]
+    # Convert indices to MLX arrays, preserving shape
+    mlx_indices = []
+    for idx in indices:
+        if isinstance(idx, Tensor):
+            mlx_indices.append(idx._mlx_array.astype(mx.int32))
+        elif isinstance(idx, (int, slice)):
+            mlx_indices.append(idx)
         else:
-            flat[flat_idx] = vals_flat[i] if i < len(vals_flat) else vals_flat[0]
+            mlx_indices.append(mx.array(idx).astype(mx.int32))
 
-    input._mlx_array = mx.reshape(mx.array(flat, dtype=arr.dtype), shape)
+    # Handle values - preserve shape for proper broadcasting
+    if isinstance(values, Tensor):
+        values_arr = values._mlx_array
+    elif isinstance(values, (int, float)):
+        values_arr = values
+    else:
+        values_arr = mx.array(values)
+
+    input_arr = input._mlx_array
+    idx_tuple = tuple(mlx_indices)
+
+    if accumulate:
+        # For accumulate mode, use .at[].add()
+        input._mlx_array = input_arr.at[idx_tuple].add(values_arr)
+    else:
+        # For non-accumulate (replace) mode, subtract existing and add new
+        existing = input_arr[idx_tuple]
+        diff = values_arr - existing
+        input._mlx_array = input_arr.at[idx_tuple].add(diff)
+
     return input
 
 
@@ -2423,8 +2407,8 @@ def index_reduce(
     Args:
         input: Input tensor
         dim: Dimension along which to index
-        index: Index tensor
-        source: Source tensor
+        index: Index tensor (1D tensor of indices into dim)
+        source: Source tensor (same shape as input)
         reduce: Reduction operation ('prod', 'mean', 'amax', 'amin')
         include_self: Include input values in reduction
 
@@ -2437,99 +2421,126 @@ def index_reduce(
     idx = index._mlx_array.astype(mx.int32)
     src = source._mlx_array
 
-    # Convert to lists for manipulation
-    arr_list = arr.tolist()
+    # Normalize dimension
+    ndim = arr.ndim
+    dim = dim if dim >= 0 else ndim + dim
+
+    # For index_reduce, we iterate over the index dimension of source
+    # and accumulate values into the corresponding positions in input
+    idx_flat = idx.flatten().tolist()
+
+    # Start with a copy of input
+    result = arr.tolist()
+
+    # Track counts for mean reduction
+    # Shape for counts: same as input
+    if reduce == "mean":
+        counts = [[1 if include_self else 0 for _ in range(arr.shape[dim])]
+                  for _ in range(arr.size // arr.shape[dim])]
+        # Reshape counts to match result structure
+        if ndim == 1:
+            counts = [1 if include_self else 0] * arr.shape[0]
+        else:
+            # Create proper nested structure for counts
+            import copy
+            def make_counts(shape, dim_idx, current_dim=0):
+                if current_dim == len(shape):
+                    return None
+                if current_dim == len(shape) - 1:
+                    return [1 if include_self else 0] * shape[current_dim]
+                return [make_counts(shape, dim_idx, current_dim + 1) for _ in range(shape[current_dim])]
+            counts = make_counts(arr.shape, dim)
+
+    # Convert source to list for iteration
     src_list = src.tolist()
-    idx_list = idx.tolist()
 
-    # Handle 1D case
-    if arr.ndim == 1 and isinstance(idx_list, list):
-        result = list(arr_list)
-        counts = [1 if include_self else 0] * len(result)
+    # Helper to get/set nested list values
+    def get_nested(lst, indices):
+        for i in indices:
+            lst = lst[i]
+        return lst
 
-        for i, ix in enumerate(idx_list):
-            s = src_list[i] if isinstance(src_list, list) else src_list
+    def set_nested(lst, indices, value):
+        for i in indices[:-1]:
+            lst = lst[i]
+        lst[indices[-1]] = value
 
+    def add_nested(lst, indices, value):
+        for i in indices[:-1]:
+            lst = lst[i]
+        lst[indices[-1]] += value
+
+    # Handle 1D case specially
+    if ndim == 1:
+        counts = [1 if include_self else 0] * arr.shape[0]
+        for src_idx, tgt_idx in enumerate(idx_flat):
+            s = src_list[src_idx]
             if reduce == "prod":
-                if not include_self and counts[ix] == 0:
-                    result[ix] = s
+                if not include_self and counts[tgt_idx] == 0:
+                    result[tgt_idx] = s
                 else:
-                    result[ix] *= s
+                    result[tgt_idx] *= s
+                counts[tgt_idx] = 1
             elif reduce == "mean":
-                result[ix] += s
-                counts[ix] += 1
+                result[tgt_idx] += s
+                counts[tgt_idx] += 1
             elif reduce == "amax":
-                result[ix] = max(result[ix], s)
+                result[tgt_idx] = max(result[tgt_idx], s)
             elif reduce == "amin":
-                result[ix] = min(result[ix], s)
+                result[tgt_idx] = min(result[tgt_idx], s)
 
         if reduce == "mean":
             result = [r / max(c, 1) for r, c in zip(result, counts)]
 
         return Tensor._from_mlx_array(mx.array(result, dtype=arr.dtype))
 
-    # For higher dimensions, use a simplified approach
-    # Move dim to last axis, process, move back
-    ndim = arr.ndim
-    dim = dim if dim >= 0 else ndim + dim
-
-    # Transpose to bring dim to end
-    perm = list(range(ndim))
-    perm.pop(dim)
-    perm.append(dim)
-    arr_t = mx.transpose(arr, perm)
-    src_t = mx.transpose(src, perm) if src.ndim > 1 else src
-
-    shape = arr_t.shape
-    result = arr_t.tolist()
-
-    # Flatten all but last dimension for iteration
+    # For higher dimensions, iterate over all positions
     import itertools
 
-    other_dims = shape[:-1]
-    n = shape[-1]
+    # Get all indices except the reduction dimension
+    shape = list(arr.shape)
+    other_dims = shape[:dim] + shape[dim+1:]
 
-    for coords in itertools.product(*[range(d) for d in other_dims]):
-        row = result
-        for c in coords:
-            row = row[c]
+    # Initialize counts for mean reduction
+    if reduce == "mean":
+        count_arr = mx.ones(arr.shape, dtype=mx.float32) if include_self else mx.zeros(arr.shape, dtype=mx.float32)
+        count_list = count_arr.tolist()
 
-        src_row = src_t.tolist() if src.ndim == 1 else src_t
-        for c in coords:
-            if isinstance(src_row, list) and len(src_row) > 0:
-                src_row = src_row[c] if c < len(src_row) else src_row
+    # For each source index position
+    for src_idx, tgt_idx in enumerate(idx_flat):
+        # Iterate over all other dimensions
+        for other_coords in itertools.product(*[builtins.range(d) for d in other_dims]):
+            # Build full source coordinates
+            src_coords = list(other_coords[:dim]) + [src_idx] + list(other_coords[dim:])
+            # Build full target coordinates
+            tgt_coords = list(other_coords[:dim]) + [tgt_idx] + list(other_coords[dim:])
 
-        idx_flat = idx.flatten().tolist() if idx.ndim > 0 else [idx.item()]
-        src_flat = src_row if isinstance(src_row, list) else [src_row]
+            s = get_nested(src_list, src_coords)
+            r = get_nested(result, tgt_coords)
 
-        counts = [1 if include_self else 0] * n
-        for i, ix in enumerate(idx_flat):
-            s = src_flat[i] if i < len(src_flat) else src_flat[0]
             if reduce == "prod":
-                if not include_self and counts[ix] == 0:
-                    row[ix] = s
-                else:
-                    row[ix] *= s
+                new_val = r * s
+                set_nested(result, tgt_coords, new_val)
             elif reduce == "mean":
-                row[ix] += s
-                counts[ix] += 1
+                new_val = r + s
+                set_nested(result, tgt_coords, new_val)
+                c = get_nested(count_list, tgt_coords)
+                set_nested(count_list, tgt_coords, c + 1)
             elif reduce == "amax":
-                row[ix] = max(row[ix], s)
+                new_val = max(r, s)
+                set_nested(result, tgt_coords, new_val)
             elif reduce == "amin":
-                row[ix] = min(row[ix], s)
+                new_val = min(r, s)
+                set_nested(result, tgt_coords, new_val)
 
-        if reduce == "mean":
-            for j in range(n):
-                row[j] = row[j] / max(counts[j], 1)
+    # Apply mean normalization
+    if reduce == "mean":
+        for coords in itertools.product(*[builtins.range(d) for d in shape]):
+            r = get_nested(result, coords)
+            c = get_nested(count_list, coords)
+            set_nested(result, coords, r / max(c, 1))
 
-    # Convert back and transpose
-    result_arr = mx.array(result, dtype=arr.dtype)
-    inv_perm = [0] * ndim
-    for i, p in enumerate(perm):
-        inv_perm[p] = i
-    result_arr = mx.transpose(result_arr, inv_perm)
-
-    return Tensor._from_mlx_array(result_arr)
+    return Tensor._from_mlx_array(mx.array(result, dtype=arr.dtype))
 
 
 def masked_scatter(input: Tensor, mask: Tensor, source: Tensor) -> Tensor:
@@ -2739,6 +2750,9 @@ def geqrf(input: Tensor) -> Tuple[Tensor, Tensor]:
     Returns the QR factorization in compact Householder form, which can be
     used with orgqr to reconstruct Q or ormqr to apply Q to another matrix.
 
+    The Householder reflector is H = I - tau * v * v^T where v[0] = 1 and
+    the remaining elements are stored below the diagonal.
+
     Args:
         input: Input matrix of shape (m, n)
 
@@ -2748,7 +2762,7 @@ def geqrf(input: Tensor) -> Tuple[Tensor, Tensor]:
               and R on and above the diagonal
         - tau: Householder reflector coefficients
 
-    Pure MLX implementation using Householder reflections.
+    Pure MLX implementation using Householder reflections matching LAPACK convention.
     """
     arr = input._mlx_array.astype(mx.float32)
     m, n = arr.shape[-2], arr.shape[-1]
@@ -2762,46 +2776,61 @@ def geqrf(input: Tensor) -> Tuple[Tensor, Tensor]:
         # Extract column j from row j to m
         col = [qr[i][j] for i in range(j, m)]
 
-        # Compute Householder vector
-        norm_x = sum(x * x for x in col) ** 0.5
+        # Compute norm of the column (below diagonal)
+        norm_x_sq = sum(x * x for x in col)
+        norm_x = norm_x_sq ** 0.5
+
         if norm_x == 0:
             tau.append(0.0)
             continue
 
-        # Make the reflection
+        # LAPACK convention: choose sign to avoid cancellation
+        # alpha = -sign(col[0]) * norm_x
+        # This gives the R diagonal element
         if col[0] >= 0:
-            col[0] += norm_x
+            alpha = -norm_x
         else:
-            col[0] -= norm_x
+            alpha = norm_x
 
-        # Compute tau = 2 / (v'v)
-        v_norm_sq = sum(x * x for x in col)
-        if v_norm_sq > 0:
-            tau_val = 2.0 / v_norm_sq
+        # Compute the Householder vector v where H = I - tau * v * v^T
+        # v = x - alpha * e1, so v[0] = col[0] - alpha
+        v0 = col[0] - alpha
+
+        # Compute tau = 2 / (v^T v) = 2 / (v0^2 + sum(col[1:]^2))
+        # But we store normalized v with v[0] = 1, so:
+        # v_normalized = v / v0 = [1, col[1]/v0, col[2]/v0, ...]
+        # H = I - tau_normalized * v_normalized * v_normalized^T
+        # where tau_normalized = tau * v0^2
+
+        # LAPACK tau formula: tau = -v0 / alpha (after normalization)
+        # This is equivalent to: tau = (col[0] - alpha) / (-alpha) = 1 - col[0]/alpha
+        if alpha != 0:
+            tau_val = -v0 / alpha
         else:
             tau_val = 0.0
         tau.append(tau_val)
 
-        # Normalize Householder vector (store below diagonal)
-        if col[0] != 0:
-            scale = 1.0 / col[0]
+        # Store normalized Householder vector below diagonal: v[i] = col[i] / v0
+        if v0 != 0:
             for i in range(1, len(col)):
-                qr[j + i][j] = col[i] * scale
+                qr[j + i][j] = col[i] / v0
+        else:
+            for i in range(1, len(col)):
+                qr[j + i][j] = 0.0
 
         # Apply Householder reflection to remaining columns
+        # H * A = A - tau * v * (v^T * A)
+        # With normalized v where v[0] = 1
         v = [1.0] + [qr[j + i][j] for i in range(1, m - j)]
         for jj in range(j + 1, n):
-            # Compute v' * A[:, jj]
+            # Compute v^T * A[:, jj]
             dot = sum(v[i] * qr[j + i][jj] for i in range(m - j))
             # A[:, jj] -= tau * v * dot
             for i in range(m - j):
                 qr[j + i][jj] -= tau_val * v[i] * dot
 
-        # Store R value
-        if col[0] >= 0:
-            qr[j][j] = -norm_x
-        else:
-            qr[j][j] = norm_x
+        # Store R diagonal value (alpha)
+        qr[j][j] = alpha
 
     qr_arr = mx.array(qr, dtype=input._mlx_array.dtype)
     tau_arr = mx.array(tau, dtype=input._mlx_array.dtype)
@@ -3214,7 +3243,9 @@ def triangular_solve(
         A_arr = A_arr - mx.diag(mx.diag(A_arr)) + mx.eye(n, dtype=mx.float32)
 
     # Use MLX solve which handles both triangular and general matrices
-    result = mx.linalg.solve(A_arr, b_arr)
+    # Note: MLX linalg ops require CPU stream
+    result = mx.linalg.solve(A_arr, b_arr, stream=mx.cpu)
+    mx.eval(result)
 
     return (
         Tensor._from_mlx_array(result.astype(b._mlx_array.dtype)),
@@ -3920,253 +3951,52 @@ def lobpcg(
 ) -> Tuple[Tensor, Tensor]:
     """Locally Optimal Block Preconditioned Conjugate Gradient for eigenvalues.
 
-    Native MLX implementation of the LOBPCG algorithm for computing a few
-    eigenvalues and eigenvectors of a symmetric positive definite matrix.
+    PyTorch-exact implementation of the LOBPCG algorithm for computing
+    eigenvalues and eigenvectors of symmetric positive definite matrices.
+
+    This implementation addresses all 24 divergences from PyTorch:
+    - A1-A6: Algorithmic (SVQB, _get_ortho, Rayleigh-Ritz, method param)
+    - B1-B4: Numerical (norm timing, residual formula, caching, convergence)
+    - C1-C5: API (tracker, ortho params, random init, batched, niter=-1)
+    - D1-D4: Edge cases (gradients, symmetrization, sparse, TorchScript)
+    - E1-E5: Subtle (sign convention, column limiting, tolerance scaling)
 
     Args:
-        A: Symmetric positive definite matrix of shape (n, n)
-        k: Number of eigenvalues/eigenvectors to compute
-        B: Optional matrix for generalized eigenvalue problem (not yet supported)
-        X: Initial guess for eigenvectors, shape (n, k)
-        n: Not used (for API compatibility)
-        iK: Preconditioner (not yet supported)
-        niter: Maximum number of iterations (default: 100)
-        tol: Convergence tolerance (default: 1e-6)
-        largest: If True (default), compute largest eigenvalues
-        method: Not used (for API compatibility)
-        tracker: Not used (for API compatibility)
-        ortho_iparams: Not used (for API compatibility)
-        ortho_fparams: Not used (for API compatibility)
-        ortho_bparams: Not used (for API compatibility)
+        A: Symmetric positive definite matrix of shape (m, m) or batched (batch, m, m)
+        k: Number of eigenvalues/eigenvectors to compute. Default is 1.
+        B: Optional SPD matrix for generalized eigenvalue problem A @ x = λ * B @ x
+        X: Initial guess for eigenvectors, shape (m, n) where k <= n <= m
+        n: Size of generated random approximation if X is not specified
+        iK: Preconditioner matrix or callable. Should approximate inv(A - σB)
+        niter: Maximum iterations. Default is 10*m. Use -1 for unlimited.
+        tol: Convergence tolerance. Default is 1e-6.
+        largest: If True, compute largest eigenvalues. Default is False (smallest).
+        method: 'basic' or 'ortho' (default). 'ortho' is more stable.
+        tracker: Optional callable(iteration, X, E, R, converged) for monitoring
+        ortho_iparams: Integer orthogonalization params (m, n, k)
+        ortho_fparams: Float orthogonalization params (ortho_tol, ortho_fudge)
+        ortho_bparams: Boolean orthogonalization params
 
     Returns:
-        Tuple of (eigenvalues, eigenvectors) where eigenvalues has shape (k,)
-        and eigenvectors has shape (n, k)
+        Tuple of (eigenvalues, eigenvectors) where:
+        - eigenvalues has shape (k,) or (batch, k)
+        - eigenvectors has shape (m, k) or (batch, m, k)
+
+    Raises:
+        ValueError: If A is not square or m < 3*n
+
+    References:
+        [Knyazev2001] Toward the Optimal Preconditioned Eigensolver
+        [DuerschEtal2018] A Robust and Efficient Implementation of LOBPCG
     """
-    # Get dimensions
-    A_arr = A._mlx_array
-    matrix_n = A_arr.shape[0]
+    # Import and delegate to the full implementation
+    from ._lobpcg import lobpcg as _lobpcg_impl
 
-    # Default parameters
-    if k is None:
-        k = 1
-    if niter is None:
-        niter = 100
-    if tol is None:
-        tol = 1e-6
-    if largest is None:
-        largest = True
+    return _lobpcg_impl(
+        A=A, k=k, B=B, X=X, n=n, iK=iK, niter=niter, tol=tol,
+        largest=largest, method=method, tracker=tracker,
+        ortho_iparams=ortho_iparams, ortho_fparams=ortho_fparams,
+        ortho_bparams=ortho_bparams
+    )
 
-    # Handle generalized eigenvalue problem Ax = λBx
-    # Transform to standard form using Cholesky: B = LL^T
-    # Then solve L^{-1} A L^{-T} y = λ y, with x = L^{-T} y
-    B_arr = None
-    L_inv = None
-    if B is not None:
-        B_arr = B._mlx_array
-        # Compute Cholesky decomposition: B = LL^T (requires CPU stream)
-        L = mx.linalg.cholesky(B_arr, stream=mx.cpu)
-        # Compute L^{-1} using triangular solve with identity
-        I = mx.eye(matrix_n, dtype=A_arr.dtype)
-        # Solve L @ L_inv = I for L_inv (L_inv = L^{-1})
-        L_inv = mx.linalg.solve_triangular(L, I, upper=False, stream=mx.cpu)
-        # Transform A: A_tilde = L^{-1} A L^{-T}
-        L_inv_T = mx.transpose(L_inv)
-        A_arr = mx.matmul(mx.matmul(L_inv, A_arr), L_inv_T)
 
-    # Handle preconditioner
-    # iK should be an approximate inverse of A (or a callable that applies the preconditioner)
-    iK_arr = None
-    iK_is_callable = False
-    if iK is not None:
-        if callable(iK):
-            iK_is_callable = True
-        elif isinstance(iK, Tensor):
-            iK_arr = iK._mlx_array
-        else:
-            raise TypeError(f"Preconditioner iK must be a Tensor or callable, got {type(iK)}")
-
-    # Initialize X if not provided
-    if X is None:
-        # Random initialization
-        X_arr = mx.random.normal(shape=(matrix_n, k))
-    else:
-        X_arr = X._mlx_array
-
-    # Helper function for QR orthogonalization using MLX
-    def _orthogonalize(V, max_cols=None):
-        """Orthogonalize columns of V using modified Gram-Schmidt.
-
-        Handles rank-deficient cases by discarding linearly dependent columns.
-        Uses a relative tolerance to properly detect numerical linear dependence.
-
-        Args:
-            V: Matrix to orthogonalize
-            max_cols: Maximum number of columns to return (for dimension-limited cases)
-        """
-        n_rows, n_cols = V.shape
-        if max_cols is None:
-            max_cols = n_rows  # Can't have more orthogonal columns than dimension
-
-        # Build Q column by column, skipping linearly dependent ones
-        cols = []
-        for j in range(n_cols):
-            if len(cols) >= max_cols:
-                break  # Already have maximum possible orthogonal columns
-
-            v = V[:, j]
-            mx.eval(v)
-            orig_norm = float(mx.sqrt(mx.sum(v * v)))
-
-            # Subtract projections onto previous columns
-            for i in range(len(cols)):
-                q_i = cols[i]
-                proj = mx.sum(v * q_i)
-                v = v - proj * q_i
-
-            # Force evaluation to get accurate norm
-            mx.eval(v)
-            norm = float(mx.sqrt(mx.sum(v * v)))
-
-            # Use relative tolerance: norm should be significant relative to original
-            # This properly detects when a vector is in the span of previous vectors
-            rel_tol = 1e-6
-            if norm > rel_tol * max(orig_norm, CF_TINY):
-                cols.append(v / norm)
-
-        # Stack columns into matrix
-        if len(cols) == 0:
-            # Fallback: return first column normalized
-            v = V[:, 0]
-            norm = mx.sqrt(mx.sum(v * v))
-            return (v / mx.maximum(norm, mx.array(CF_TINY))).reshape(-1, 1)
-        return mx.stack(cols, axis=1)
-
-    # Helper for Rayleigh-Ritz procedure
-    def _rayleigh_ritz(A_mat, V):
-        """Compute Rayleigh-Ritz approximation."""
-        # Project A onto subspace spanned by V
-        AV = mx.matmul(A_mat, V)
-        # Compute V^T A V (Rayleigh quotient matrix)
-        H = mx.matmul(mx.transpose(V), AV)
-
-        # Solve small eigenvalue problem using MLX (requires CPU stream)
-        eigenvalues_mlx, eigenvectors_mlx = mx.linalg.eigh(H, stream=mx.cpu)
-
-        # Sort by eigenvalues (largest first if largest=True)
-        # MLX eigh returns in ascending order
-        if largest:
-            # Reverse order for largest first
-            eigenvalues_mlx = eigenvalues_mlx[::-1]
-            eigenvectors_mlx = eigenvectors_mlx[:, ::-1]
-
-        # Compute Ritz vectors: new eigenvector approximations
-        ritz_vectors = mx.matmul(V, eigenvectors_mlx)
-
-        return eigenvalues_mlx, ritz_vectors
-
-    # Orthogonalize initial guess
-    X_arr = _orthogonalize(X_arr)
-
-    # Initial Rayleigh-Ritz
-    eigenvalues, X_arr = _rayleigh_ritz(A_arr, X_arr)
-
-    # Initialize P (search directions) - stores previous X for computing update direction
-    P_arr = None  # No previous search direction initially
-    X_old = None  # Track previous X for computing P
-
-    # Main LOBPCG iteration
-    for iteration in range(niter):
-        # Compute residuals: W = A @ X - X @ diag(eigenvalues)
-        AX = mx.matmul(A_arr, X_arr)
-        # X @ diag(eigenvalues) = X * eigenvalues (broadcast)
-        W_arr = AX - X_arr * eigenvalues.reshape(1, -1)
-
-        # Check convergence using residual norms
-        residual_norms = mx.sqrt(mx.sum(W_arr * W_arr, axis=0))
-        max_residual = float(mx.max(residual_norms))
-
-        if max_residual < tol:
-            break
-
-        # Apply preconditioner to residual: W = iK @ W
-        # The preconditioner should approximate inv(A), so iK @ W ≈ inv(A) @ W
-        # This accelerates convergence by approximately solving A @ x = W
-        if iK_is_callable:
-            # Apply callable preconditioner column by column
-            W_cols = []
-            for i in range(k):
-                w_col = Tensor._from_mlx_array(W_arr[:, i])
-                precond_w = iK(w_col)
-                W_cols.append(precond_w._mlx_array)
-            W_arr = mx.stack(W_cols, axis=1)
-        elif iK_arr is not None:
-            # Apply matrix preconditioner
-            W_arr = mx.matmul(iK_arr, W_arr)
-
-        # Orthogonalize W against X using modified Gram-Schmidt
-        for i in range(k):
-            for j in range(k):
-                proj = mx.sum(W_arr[:, i] * X_arr[:, j])
-                W_arr = W_arr.at[:, i].add(-proj * X_arr[:, j])
-
-        # Normalize W columns
-        for i in range(k):
-            norm = mx.sqrt(mx.sum(W_arr[:, i] * W_arr[:, i]))
-            norm = mx.maximum(norm, mx.array(CF_TINY))
-            W_arr = W_arr.at[:, i].multiply(1.0 / norm)
-
-        # Build search subspace S = [X, W, P]
-        # Standard LOBPCG uses the previous update direction P = X_new - X_old
-        # to accelerate convergence (like conjugate gradient methods).
-        #
-        # Important: The subspace dimension cannot exceed matrix_n (the problem dimension).
-        # When n < 3k, we may need to truncate. We prioritize X, then W, then P.
-        if P_arr is None or iteration == 0:
-            # First iteration: just [X, W]
-            S = mx.concatenate([X_arr, W_arr], axis=1)
-        else:
-            # Include P for faster convergence
-            S = mx.concatenate([X_arr, W_arr, P_arr], axis=1)
-
-        # Orthogonalize S with dimension limit
-        # The max_cols parameter ensures we don't try to create more orthogonal
-        # vectors than the space dimension allows, prioritizing earlier columns (X, W)
-        S = _orthogonalize(S, max_cols=matrix_n)
-
-        # Rayleigh-Ritz on the subspace
-        new_eigenvalues, new_X = _rayleigh_ritz(A_arr, S)
-
-        # Take only the first k eigenvalues/vectors
-        eigenvalues = new_eigenvalues[:k]
-        new_X = new_X[:, :k]
-
-        # Compute P for next iteration: P = X_new - X_old
-        # This is the "conjugate" direction in LOBPCG
-        if X_old is not None:
-            P_arr = new_X - X_old
-
-        # Save current X as X_old for next iteration
-        X_old = X_arr
-
-        # Update X
-        X_arr = new_X
-
-    # If we solved a generalized eigenvalue problem, transform eigenvectors back
-    # x = L^{-T} y
-    if L_inv is not None:
-        L_inv_T = mx.transpose(L_inv)
-        X_arr = mx.matmul(L_inv_T, X_arr)
-
-    # Ensure eigenvectors are normalized (B-orthonormal for generalized case)
-    for i in range(k):
-        if B_arr is not None:
-            # B-norm: sqrt(x^T B x)
-            Bx = mx.matmul(B_arr, X_arr[:, i : i + 1])
-            norm = mx.sqrt(mx.sum(X_arr[:, i : i + 1] * Bx))
-        else:
-            norm = mx.sqrt(mx.sum(X_arr[:, i] * X_arr[:, i]))
-        norm = mx.maximum(norm, mx.array(CF_TINY))
-        X_arr = X_arr.at[:, i].multiply(1.0 / norm)
-
-    return (Tensor._from_mlx_array(eigenvalues[:k]), Tensor._from_mlx_array(X_arr))

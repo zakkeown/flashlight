@@ -491,6 +491,38 @@ class NumericalParityValidator:
                 error=f"flashlight instantiation failed: {type(e).__name__}: {str(e)}",
             )
 
+        # Check if this is a lazy module (needs forward pass before weight sync)
+        is_lazy = api_name.startswith("Lazy")
+
+        # For lazy modules, we need to do a forward pass first to materialize weights
+        if is_lazy:
+            # Generate input for materialization
+            extra = spec.extra_inputs or {}
+            input_dtype = extra.get("input_dtype", np.float32)
+            if input_dtype == np.int64:
+                init_input_np = np.random.randint(0, 100, spec.input_shape).astype(np.int64)
+            else:
+                init_input_np = np.random.randn(*spec.input_shape).astype(np.float32)
+
+            # Do forward pass on both to materialize weights
+            try:
+                torch_init_input = self.torch.from_numpy(init_input_np.copy())
+                _ = torch_module(torch_init_input)
+            except Exception as e:
+                return NumericalTestResult(
+                    module=module, api=api_name, passed=False,
+                    error=f"PyTorch lazy materialization failed: {type(e).__name__}: {str(e)}",
+                )
+
+            try:
+                mlx_init_input = self.flashlight.tensor(init_input_np.copy())
+                _ = mlx_module(mlx_init_input)
+            except Exception as e:
+                return NumericalTestResult(
+                    module=module, api=api_name, passed=False,
+                    error=f"flashlight lazy materialization failed: {type(e).__name__}: {str(e)}",
+                )
+
         # Sync weights from PyTorch to flashlight
         try:
             self._sync_weights(torch_module, mlx_module)
@@ -2758,6 +2790,16 @@ class NumericalParityValidator:
 
             param_name = parts[-1]
             mlx_param = getattr(mlx_obj, param_name, None)
+
+            # Handle flashlight lazy modules which store params in _linear/_conv/_bn/_norm submodules
+            if mlx_param is None:
+                # Try looking in various lazy module submodule names
+                for submodule_name in ("_linear", "_conv", "_bn", "_norm"):
+                    inner = getattr(mlx_obj, submodule_name, None)
+                    if inner is not None:
+                        mlx_param = getattr(inner, param_name, None)
+                        if mlx_param is not None:
+                            break
 
             if mlx_param is not None and hasattr(mlx_param, "_mlx_array"):
                 # Copy weight data

@@ -604,12 +604,18 @@ class ELUBackward(GradientFunction):
 class GELUBackward(GradientFunction):
     """Gradient for GELU using analytical formula.
 
-    GELU(x) = x * Phi(x) where Phi is the CDF of standard normal
-    GELU(x) ≈ 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3)))
+    Supports both exact and tanh approximation gradients.
 
+    Exact GELU(x) = x * Phi(x) where Phi is the CDF of standard normal
     d/dx GELU(x) = Phi(x) + x * phi(x)
     where phi(x) is the PDF of standard normal = exp(-x^2/2) / sqrt(2*pi)
+
+    Tanh approx: GELU(x) ≈ 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3)))
     """
+
+    def __init__(self, input_tensor, approximate: str = "none"):
+        super().__init__(input_tensor)
+        self.approximate = approximate
 
     def apply(self, grad_output):
         from ..tensor import Tensor
@@ -619,23 +625,42 @@ class GELUBackward(GradientFunction):
 
         x = self.inputs[0]._mlx_array
 
-        # Use the tanh approximation for GELU gradient
-        # This matches the implementation in mlx.nn.gelu
-        sqrt_2_over_pi = 0.7978845608028654  # sqrt(2/pi)
-        a = 0.044715
+        if self.approximate == "tanh":
+            # Tanh approximation gradient
+            sqrt_2_over_pi = 0.7978845608028654  # sqrt(2/pi)
+            a = 0.044715
 
-        # tanh_arg = sqrt(2/pi) * (x + a * x^3)
-        tanh_arg = sqrt_2_over_pi * (x + a * x * x * x)
-        tanh_val = mx.tanh(tanh_arg)
+            # tanh_arg = sqrt(2/pi) * (x + a * x^3)
+            tanh_arg = sqrt_2_over_pi * (x + a * x * x * x)
+            tanh_val = mx.tanh(tanh_arg)
 
-        # d/dx tanh(arg) = sech^2(arg) * d(arg)/dx
-        # d(arg)/dx = sqrt(2/pi) * (1 + 3*a*x^2)
-        sech2 = 1 - tanh_val * tanh_val
-        darg_dx = sqrt_2_over_pi * (1 + 3 * a * x * x)
+            # d/dx tanh(arg) = sech^2(arg) * d(arg)/dx
+            # d(arg)/dx = sqrt(2/pi) * (1 + 3*a*x^2)
+            sech2 = 1 - tanh_val * tanh_val
+            darg_dx = sqrt_2_over_pi * (1 + 3 * a * x * x)
 
-        # GELU(x) = 0.5 * x * (1 + tanh(arg))
-        # d/dx GELU(x) = 0.5 * (1 + tanh(arg)) + 0.5 * x * sech^2(arg) * darg_dx
-        grad_value = 0.5 * (1 + tanh_val) + 0.5 * x * sech2 * darg_dx
+            # GELU(x) = 0.5 * x * (1 + tanh(arg))
+            # d/dx GELU(x) = 0.5 * (1 + tanh(arg)) + 0.5 * x * sech^2(arg) * darg_dx
+            grad_value = 0.5 * (1 + tanh_val) + 0.5 * x * sech2 * darg_dx
+        else:
+            # Exact gradient using error function
+            # GELU(x) = x * Phi(x) where Phi(x) = 0.5 * (1 + erf(x / sqrt(2)))
+            # d/dx GELU(x) = Phi(x) + x * phi(x)
+            # where phi(x) = exp(-x^2/2) / sqrt(2*pi) is the PDF
+            M_SQRT1_2 = 0.7071067811865476  # 1/sqrt(2)
+            M_2_SQRTPI = 1.1283791670955126  # 2/sqrt(pi)
+
+            # Phi(x) = 0.5 * (1 + erf(x / sqrt(2)))
+            cdf = 0.5 * (1 + mx.erf(x * M_SQRT1_2))
+
+            # phi(x) = exp(-x^2/2) / sqrt(2*pi)
+            # = (1/sqrt(2*pi)) * exp(-x^2/2)
+            # = 0.5 * (2/sqrt(pi)) * (1/sqrt(2)) * exp(-x^2/2)
+            # Using M_2_SQRTPI = 2/sqrt(pi) and M_SQRT1_2 = 1/sqrt(2)
+            pdf = M_2_SQRTPI * M_SQRT1_2 * 0.5 * mx.exp(x * x * -0.5)
+
+            # d/dx GELU(x) = Phi(x) + x * phi(x)
+            grad_value = cdf + x * pdf
 
         grad = Tensor._from_mlx_array(grad_output._mlx_array * grad_value)
         return (grad,)
@@ -719,7 +744,11 @@ class MeanBackward(GradientFunction):
 
 
 class MaxBackward(GradientFunction):
-    """Gradient for max: gradient distributed equally among tied maximum elements (PyTorch behavior)"""
+    """Gradient for max: gradient goes to first max element only (PyTorch behavior).
+
+    Note: PyTorch picks ONE arbitrary max element (first in memory order via argmax),
+    NOT distributing equally among ties. This matches PyTorch's actual behavior.
+    """
 
     def __init__(self, input_tensor, dim, keepdim, indices=None):
         super().__init__(input_tensor)
@@ -735,53 +764,116 @@ class MaxBackward(GradientFunction):
             return (None,)
 
         input_arr = self.inputs[0]._mlx_array
+        grad_in = mx.zeros_like(input_arr)
 
         if self.dim is None:
-            # Global max: distribute gradient among all max elements
-            max_val = mx.max(input_arr)
-            is_max = mx.equal(input_arr, max_val).astype(input_arr.dtype)
-
-            # Count number of max elements to distribute gradient
-            num_max = mx.sum(is_max)
-
-            # Distribute gradient equally among all max elements
+            # Global max: gradient goes to first max element (via argmax)
+            flat_input = input_arr.flatten()
+            idx = mx.argmax(flat_input)
             grad_scalar = grad_output._mlx_array.flatten()[0]
-            grad_in = is_max * (grad_scalar / num_max)
+
+            # Place gradient at argmax position using flat indexing
+            flat_grad = grad_in.flatten()
+            flat_grad = flat_grad.at[idx].add(grad_scalar)
+            grad_in = flat_grad.reshape(self.input_shape)
 
             return (Tensor._from_mlx_array(grad_in),)
         elif isinstance(self.dim, (tuple, list)):
-            # Multi-dimension max (e.g., dim=(1, 2))
-            max_vals = mx.max(input_arr, axis=self.dim, keepdims=True)
-            is_max = mx.equal(input_arr, max_vals).astype(input_arr.dtype)
+            # Multi-dimension max: use argmax along flattened reduced dims
+            # This is more complex - we need to find the first max in the reduced subspace
+            # For now, flatten the dims and use argmax
+            dims = sorted(self.dim)
 
-            # Count ties along reduced dimensions
-            num_max = mx.sum(is_max, axis=self.dim, keepdims=True)
+            # Move dims to end and flatten them
+            perm = [i for i in range(len(self.input_shape)) if i not in dims] + dims
+            transposed = mx.transpose(input_arr, perm)
 
-            # Expand grad_output to match input shape if keepdim=False
+            # Shape after transpose: [non_reduced_dims..., reduced_dims...]
+            non_reduced_shape = [self.input_shape[i] for i in range(len(self.input_shape)) if i not in dims]
+            reduced_size = 1
+            for d in dims:
+                reduced_size *= self.input_shape[d]
+
+            # Reshape to [..., reduced_size]
+            reshaped = transposed.reshape(non_reduced_shape + [reduced_size])
+
+            # Argmax along last dim
+            indices = mx.argmax(reshaped, axis=-1)
+
+            # Expand grad_output to match
             grad_out = grad_output._mlx_array
             if not self.keepdim:
-                for d in sorted(self.dim):
+                for d in dims:
                     grad_out = mx.expand_dims(grad_out, axis=d)
 
-            # Distribute gradient equally among ties
-            grad_in = is_max * mx.broadcast_to(grad_out / num_max, self.input_shape)
+            # Create one-hot mask at argmax positions
+            one_hot = mx.zeros_like(reshaped)
+            # Use advanced indexing to place 1s at argmax positions
+            batch_indices = []
+            for i, size in enumerate(non_reduced_shape):
+                idx_shape = [1] * len(non_reduced_shape)
+                idx_shape[i] = size
+                idx = mx.arange(size).reshape(idx_shape)
+                idx = mx.broadcast_to(idx, non_reduced_shape)
+                batch_indices.append(idx.flatten())
+
+            flat_indices = indices.flatten()
+            one_hot_flat = one_hot.reshape([-1, reduced_size])
+
+            # Scatter 1s at argmax positions
+            for i in range(len(batch_indices[0]) if batch_indices else 1):
+                if batch_indices:
+                    row_idx = i
+                    col_idx = int(mx.array(flat_indices[i]).item())
+                else:
+                    row_idx = 0
+                    col_idx = int(mx.array(flat_indices).item())
+                one_hot_flat = one_hot_flat.at[row_idx, col_idx].add(1.0)
+
+            one_hot = one_hot_flat.reshape(reshaped.shape)
+
+            # Transpose back
+            inv_perm = [0] * len(perm)
+            for i, p in enumerate(perm):
+                inv_perm[p] = i
+
+            # Reshape one_hot back to transposed shape, then inverse transpose
+            one_hot_full = one_hot.reshape(transposed.shape)
+            one_hot_orig = mx.transpose(one_hot_full, inv_perm)
+
+            # Apply gradient
+            grad_out_broadcast = mx.broadcast_to(grad_out, self.input_shape)
+            grad_in = one_hot_orig.astype(input_arr.dtype) * grad_out_broadcast
 
             return (Tensor._from_mlx_array(grad_in),)
         else:
-            # Single dimension max
-            max_vals = mx.max(input_arr, axis=self.dim, keepdims=True)
-            is_max = mx.equal(input_arr, max_vals).astype(input_arr.dtype)
+            # Single dimension max: use argmax to find first max position
+            indices = mx.argmax(input_arr, axis=self.dim, keepdims=True)
 
-            # Count ties along dimension
-            num_max = mx.sum(is_max, axis=self.dim, keepdims=True)
+            # Create one-hot encoding at argmax positions
+            # indices has shape with dim reduced to 1
+            # We need to scatter 1s at these positions
 
             # Expand grad_output to match input shape if keepdim=False
             grad_out = grad_output._mlx_array
             if not self.keepdim:
                 grad_out = mx.expand_dims(grad_out, axis=self.dim)
 
-            # Distribute gradient equally among ties
-            grad_in = is_max * mx.broadcast_to(grad_out / num_max, self.input_shape)
+            # Create coordinate grid for all dimensions except dim
+            dim_size = self.input_shape[self.dim]
+            arange = mx.arange(dim_size)
+
+            # Reshape arange to broadcast: shape is 1s everywhere except dim
+            shape = [1] * len(self.input_shape)
+            shape[self.dim] = dim_size
+            arange = arange.reshape(shape)
+
+            # Create mask where position equals argmax index
+            # indices has shape [..., 1, ...] at dim position
+            mask = mx.equal(arange, indices).astype(input_arr.dtype)
+
+            # Apply gradient only at argmax positions
+            grad_in = mask * mx.broadcast_to(grad_out, self.input_shape)
 
             return (Tensor._from_mlx_array(grad_in),)
 

@@ -63,20 +63,30 @@ def gelu(input: Tensor, approximate: str = "none") -> Tensor:
 
     Args:
         input: Input tensor
-        approximate: Approximation method ('none' or 'tanh')
+        approximate: Approximation method ('none' for exact, 'tanh' for tanh approximation)
 
     Returns:
         Result tensor
     """
-    # MLX has a built-in gelu that uses the exact formula
-    mlx_result = nn.gelu(input._mlx_array)
+    x = input._mlx_array
+
+    if approximate == "tanh":
+        # Tanh approximation: GELU(x) ≈ 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3)))
+        import math
+        sqrt_2_over_pi = math.sqrt(2.0 / math.pi)  # 0.7978845608028654
+        mlx_result = 0.5 * x * (1 + mx.tanh(sqrt_2_over_pi * (x + 0.044715 * x * x * x)))
+    else:
+        # Exact: GELU(x) = x * Φ(x) = 0.5 * x * (1 + erf(x / sqrt(2)))
+        # MLX's gelu uses the exact formula
+        mlx_result = nn.gelu(x)
+
     # Preserve input layout for element-wise operations
     result = Tensor._from_mlx_array(mlx_result, layout=getattr(input, "_layout", None))
 
     # Autograd graph construction
     if is_grad_enabled() and input.requires_grad:
         result.requires_grad = True
-        grad_fn = GELUBackward(input)
+        grad_fn = GELUBackward(input, approximate=approximate)
         grad_fn.output_tensor = result
         result._grad_fn = grad_fn
 

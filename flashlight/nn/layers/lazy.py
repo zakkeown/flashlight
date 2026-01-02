@@ -463,6 +463,8 @@ class LazyBatchNorm1d(LazyModuleMixin, Module):
             affine=self.affine,
             track_running_stats=self.track_running_stats,
         )
+        # Propagate training mode to newly created submodule
+        self._bn.train(self.training)
         self._initialized = True
 
     def forward(self, input):
@@ -507,6 +509,8 @@ class LazyBatchNorm2d(LazyModuleMixin, Module):
             affine=self.affine,
             track_running_stats=self.track_running_stats,
         )
+        # Propagate training mode to newly created submodule
+        self._bn.train(self.training)
         self._initialized = True
 
     def forward(self, input):
@@ -551,6 +555,8 @@ class LazyBatchNorm3d(LazyModuleMixin, Module):
             affine=self.affine,
             track_running_stats=self.track_running_stats,
         )
+        # Propagate training mode to newly created submodule
+        self._bn.train(self.training)
         self._initialized = True
 
     def forward(self, input):
@@ -595,6 +601,8 @@ class LazyInstanceNorm1d(LazyModuleMixin, Module):
             affine=self.affine,
             track_running_stats=self.track_running_stats,
         )
+        # Propagate training mode to newly created submodule
+        self._norm.train(self.training)
         self._initialized = True
 
     def forward(self, input):
@@ -639,6 +647,8 @@ class LazyInstanceNorm2d(LazyModuleMixin, Module):
             affine=self.affine,
             track_running_stats=self.track_running_stats,
         )
+        # Propagate training mode to newly created submodule
+        self._norm.train(self.training)
         self._initialized = True
 
     def forward(self, input):
@@ -683,6 +693,8 @@ class LazyInstanceNorm3d(LazyModuleMixin, Module):
             affine=self.affine,
             track_running_stats=self.track_running_stats,
         )
+        # Propagate training mode to newly created submodule
+        self._norm.train(self.training)
         self._initialized = True
 
     def forward(self, input):

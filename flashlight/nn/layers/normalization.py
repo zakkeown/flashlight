@@ -144,9 +144,17 @@ class BatchNorm2d(Module):
                 self.running_mean._mlx_array = (
                     1 - momentum
                 ) * self.running_mean._mlx_array + momentum * batch_mean._mlx_array
+                # Apply Bessel's correction for running_var (PyTorch uses unbiased variance)
+                # n = total elements per channel = N * H * W for BatchNorm2d
+                n = input.numel // input.shape[1] if not is_nhwc else input.numel // input.shape[-1]
+                if n > 1:
+                    # Unbiased variance = biased_variance * n / (n - 1)
+                    unbiased_var_mlx = batch_var._mlx_array * (n / (n - 1))
+                else:
+                    unbiased_var_mlx = batch_var._mlx_array
                 self.running_var._mlx_array = (
                     1 - momentum
-                ) * self.running_var._mlx_array + momentum * batch_var._mlx_array
+                ) * self.running_var._mlx_array + momentum * unbiased_var_mlx
                 self.num_batches_tracked += 1
 
             mean = batch_mean
@@ -365,9 +373,16 @@ class BatchNorm1d(Module):
                 self.running_mean._mlx_array = (
                     1 - momentum
                 ) * self.running_mean._mlx_array + momentum * batch_mean._mlx_array
+                # Apply Bessel's correction for running_var (PyTorch uses unbiased variance)
+                # n = total elements per channel = N * L for 3D, N for 2D
+                n = input.numel // input.shape[1]
+                if n > 1:
+                    unbiased_var_mlx = batch_var._mlx_array * (n / (n - 1))
+                else:
+                    unbiased_var_mlx = batch_var._mlx_array
                 self.running_var._mlx_array = (
                     1 - momentum
-                ) * self.running_var._mlx_array + momentum * batch_var._mlx_array
+                ) * self.running_var._mlx_array + momentum * unbiased_var_mlx
                 self.num_batches_tracked += 1
 
             mean = batch_mean
@@ -482,9 +497,16 @@ class BatchNorm3d(Module):
                 self.running_mean._mlx_array = (
                     1 - momentum
                 ) * self.running_mean._mlx_array + momentum * batch_mean._mlx_array
+                # Apply Bessel's correction for running_var (PyTorch uses unbiased variance)
+                # n = total elements per channel = N * D * H * W for BatchNorm3d
+                n = input.numel // input.shape[1]
+                if n > 1:
+                    unbiased_var_mlx = batch_var._mlx_array * (n / (n - 1))
+                else:
+                    unbiased_var_mlx = batch_var._mlx_array
                 self.running_var._mlx_array = (
                     1 - momentum
-                ) * self.running_var._mlx_array + momentum * batch_var._mlx_array
+                ) * self.running_var._mlx_array + momentum * unbiased_var_mlx
                 self.num_batches_tracked += 1
 
             mean = batch_mean
@@ -664,8 +686,31 @@ class InstanceNorm1d(Module):
         """Apply instance normalization."""
         x = input._mlx_array
         # [N, C, L] -> normalize over L for each (N, C) pair
-        mean = mx.mean(x, axis=2, keepdims=True)
-        var = mx.var(x, axis=2, keepdims=True)
+
+        if self.track_running_stats and not self.training:
+            # In eval mode with track_running_stats, use running statistics
+            # Reshape running stats from (C,) to (1, C, 1) for broadcasting
+            mean = self.running_mean._mlx_array.reshape(1, -1, 1)
+            var = self.running_var._mlx_array.reshape(1, -1, 1)
+        else:
+            # Compute instance statistics
+            mean = mx.mean(x, axis=2, keepdims=True)
+            var = mx.var(x, axis=2, keepdims=True)
+
+            # Update running stats if in training mode with track_running_stats
+            if self.track_running_stats and self.training:
+                # Compute batch mean of instance statistics for updating running stats
+                batch_mean = mx.mean(mx.mean(x, axis=2), axis=0)  # (C,)
+                batch_var = mx.mean(mx.var(x, axis=2), axis=0)  # (C,)
+
+                self.running_mean._mlx_array = (
+                    (1 - self.momentum) * self.running_mean._mlx_array
+                    + self.momentum * batch_mean
+                )
+                self.running_var._mlx_array = (
+                    (1 - self.momentum) * self.running_var._mlx_array
+                    + self.momentum * batch_var
+                )
 
         x = (x - mean) / mx.sqrt(var + self.eps)
 
@@ -738,8 +783,31 @@ class InstanceNorm2d(Module):
         """Apply instance normalization."""
         x = input._mlx_array
         # [N, C, H, W] -> normalize over H, W for each (N, C) pair
-        mean = mx.mean(x, axis=(2, 3), keepdims=True)
-        var = mx.var(x, axis=(2, 3), keepdims=True)
+
+        if self.track_running_stats and not self.training:
+            # In eval mode with track_running_stats, use running statistics
+            # Reshape running stats from (C,) to (1, C, 1, 1) for broadcasting
+            mean = self.running_mean._mlx_array.reshape(1, -1, 1, 1)
+            var = self.running_var._mlx_array.reshape(1, -1, 1, 1)
+        else:
+            # Compute instance statistics
+            mean = mx.mean(x, axis=(2, 3), keepdims=True)
+            var = mx.var(x, axis=(2, 3), keepdims=True)
+
+            # Update running stats if in training mode with track_running_stats
+            if self.track_running_stats and self.training:
+                # Compute batch mean of instance statistics for updating running stats
+                batch_mean = mx.mean(mx.mean(x, axis=(2, 3)), axis=0)  # (C,)
+                batch_var = mx.mean(mx.var(x, axis=(2, 3)), axis=0)  # (C,)
+
+                self.running_mean._mlx_array = (
+                    (1 - self.momentum) * self.running_mean._mlx_array
+                    + self.momentum * batch_mean
+                )
+                self.running_var._mlx_array = (
+                    (1 - self.momentum) * self.running_var._mlx_array
+                    + self.momentum * batch_var
+                )
 
         x = (x - mean) / mx.sqrt(var + self.eps)
 
@@ -812,8 +880,31 @@ class InstanceNorm3d(Module):
         """Apply instance normalization."""
         x = input._mlx_array
         # [N, C, D, H, W] -> normalize over D, H, W for each (N, C) pair
-        mean = mx.mean(x, axis=(2, 3, 4), keepdims=True)
-        var = mx.var(x, axis=(2, 3, 4), keepdims=True)
+
+        if self.track_running_stats and not self.training:
+            # In eval mode with track_running_stats, use running statistics
+            # Reshape running stats from (C,) to (1, C, 1, 1, 1) for broadcasting
+            mean = self.running_mean._mlx_array.reshape(1, -1, 1, 1, 1)
+            var = self.running_var._mlx_array.reshape(1, -1, 1, 1, 1)
+        else:
+            # Compute instance statistics
+            mean = mx.mean(x, axis=(2, 3, 4), keepdims=True)
+            var = mx.var(x, axis=(2, 3, 4), keepdims=True)
+
+            # Update running stats if in training mode with track_running_stats
+            if self.track_running_stats and self.training:
+                # Compute batch mean of instance statistics for updating running stats
+                batch_mean = mx.mean(mx.mean(x, axis=(2, 3, 4)), axis=0)  # (C,)
+                batch_var = mx.mean(mx.var(x, axis=(2, 3, 4)), axis=0)  # (C,)
+
+                self.running_mean._mlx_array = (
+                    (1 - self.momentum) * self.running_mean._mlx_array
+                    + self.momentum * batch_mean
+                )
+                self.running_var._mlx_array = (
+                    (1 - self.momentum) * self.running_var._mlx_array
+                    + self.momentum * batch_var
+                )
 
         x = (x - mean) / mx.sqrt(var + self.eps)
 
@@ -1046,9 +1137,15 @@ class SyncBatchNorm(BatchNorm2d):
                 self.running_mean._mlx_array = (
                     1 - momentum
                 ) * self.running_mean._mlx_array + momentum * batch_mean._mlx_array
+                # Apply Bessel's correction for running_var (PyTorch uses unbiased variance)
+                n = input.numel // input.shape[1]
+                if n > 1:
+                    unbiased_var_mlx = batch_var._mlx_array * (n / (n - 1))
+                else:
+                    unbiased_var_mlx = batch_var._mlx_array
                 self.running_var._mlx_array = (
                     1 - momentum
-                ) * self.running_var._mlx_array + momentum * batch_var._mlx_array
+                ) * self.running_var._mlx_array + momentum * unbiased_var_mlx
                 self.num_batches_tracked += 1
 
             mean = batch_mean
@@ -1136,7 +1233,9 @@ class CrossMapLRN2d(Module):
         x_sq = mx.square(x)
 
         # PyTorch's algorithm uses a specific sliding window approach
-        pre_pad = int((self.size - 1) / 2 + 1)
+        # The window is symmetric: (size - 1) // 2 on each side
+        half_size = (self.size - 1) // 2
+        pre_pad = half_size + 1  # For cumsum indexing
         pre_pad_crop = min(pre_pad, C)
 
         # Use cumulative sum for efficient sliding window computation
@@ -1150,13 +1249,8 @@ class CrossMapLRN2d(Module):
         # The window is asymmetric based on PyTorch's algorithm
 
         # Create index arrays for the sliding window bounds
-        # For channel c: window starts at max(0, c - pre_pad + 1) and ends at min(C, c + pre_pad)
+        # For channel c: window spans [c - half_size, c + half_size] inclusive
         c_indices = mx.arange(C)
-
-        # Compute window bounds for each channel
-        # PyTorch's window: channels [c - floor((size-1)/2), c + ceil((size-1)/2)]
-        # But with the specific pre_pad logic
-        half_size = self.size // 2
 
         # Build the scale tensor channel by channel using vectorized slicing
         # For efficiency, we compute all channels at once using the cumsum trick

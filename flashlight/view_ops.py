@@ -72,6 +72,9 @@ def view(input: "Tensor", *shape: int) -> "Tensor":
     """
     View tensor with new shape (PyTorch alias for reshape).
 
+    Unlike reshape(), view() requires the input tensor to be contiguous.
+    Use reshape() or call contiguous() first if the tensor is not contiguous.
+
     Args:
         input: Input tensor
         *shape: New shape dimensions
@@ -79,11 +82,22 @@ def view(input: "Tensor", *shape: int) -> "Tensor":
     Returns:
         Reshaped tensor (view)
 
+    Raises:
+        RuntimeError: If the input tensor is not contiguous.
+
     Example:
         >>> x = randn(12)
         >>> y = x.view(3, 4)
         >>> z = x.view(-1, 2)  # -1 inferred as 6
     """
+    # Check contiguity - PyTorch requires contiguous input for view()
+    if hasattr(input, "_is_contiguous") and not input._is_contiguous:
+        raise RuntimeError(
+            "view size is not compatible with input tensor's size and stride "
+            "(at least one dimension spans across two contiguous subspaces). "
+            "Use .reshape(...) instead."
+        )
+
     if len(shape) == 1 and isinstance(shape[0], (tuple, list)):
         shape = tuple(shape[0])
 
@@ -101,6 +115,9 @@ def transpose(input: "Tensor", dim0: int, dim1: int) -> "Tensor":
 
     Returns:
         Transposed tensor (view)
+
+    Note:
+        The result is marked as non-contiguous unless the transpose is a no-op.
 
     Example:
         >>> x = randn(2, 3, 4)
@@ -121,6 +138,11 @@ def transpose(input: "Tensor", dim0: int, dim1: int) -> "Tensor":
 
     result._is_view = True
     result._base = input if input._base is None else input._base
+
+    # Mark as non-contiguous if transpose actually changed dimension order
+    # (unless it's a no-op, e.g., transposing same dimension)
+    if dim0 != dim1:
+        result._is_contiguous = False
 
     # Attach gradient function if needed
     from .autograd.context import is_grad_enabled
@@ -147,6 +169,9 @@ def permute(input: "Tensor", *dims: int) -> "Tensor":
     Returns:
         Permuted tensor (view)
 
+    Note:
+        The result is marked as non-contiguous unless the permutation is identity.
+
     Example:
         >>> x = randn(2, 3, 4)
         >>> y = permute(x, 2, 0, 1)  # Shape (4, 2, 3)
@@ -165,6 +190,11 @@ def permute(input: "Tensor", *dims: int) -> "Tensor":
 
     result._is_view = True
     result._base = input if input._base is None else input._base
+
+    # Mark as non-contiguous if permutation is not identity
+    identity_perm = tuple(range(len(dims)))
+    if dims != identity_perm:
+        result._is_contiguous = False
 
     return result
 
@@ -290,25 +320,33 @@ def flatten(input: "Tensor", start_dim: int = 0, end_dim: int = -1) -> "Tensor":
 
 def contiguous(input: "Tensor") -> "Tensor":
     """
-    Return a contiguous tensor (no-op in MLX).
+    Return a contiguous tensor.
 
-    MLX arrays are always contiguous, so this is provided for API compatibility.
+    If the input tensor is already contiguous, returns a copy.
+    If not, creates a contiguous copy of the data.
+
+    In MLX, all arrays are physically contiguous in memory, but we track
+    logical contiguity for PyTorch API compatibility (e.g., after transpose).
 
     Args:
         input: Input tensor
 
     Returns:
-        Contiguous tensor (same as input in MLX)
+        Contiguous tensor
     """
-    # In MLX, arrays are always contiguous
-    # Return a copy for proper semantics
     from .tensor import Tensor
 
     if not MLX_AVAILABLE:
         raise RuntimeError("MLX not available")
 
+    # Create a copy (MLX arrays are immutable, so this ensures a fresh array)
     mlx_array = mx.array(input._mlx_array)
-    return Tensor._from_mlx_array(mlx_array, requires_grad=input.requires_grad)
+    result = Tensor._from_mlx_array(mlx_array, requires_grad=input.requires_grad)
+
+    # Mark result as contiguous
+    result._is_contiguous = True
+
+    return result
 
 
 __all__ = [

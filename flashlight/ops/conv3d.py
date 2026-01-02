@@ -43,13 +43,78 @@ def conv3d(
         Output tensor of shape [N, C_out, D_out, H_out, W_out]
 
     Note:
-        3D convolution is not directly supported in MLX. This implementation
-        uses a loop over the depth dimension with 2D convolutions.
+        Uses MLX's native conv3d when groups=1 (the common case).
+        Falls back to loop-based 2D convolutions for grouped convolution.
     """
     stride = _triple(stride)
     padding = _triple(padding)
     dilation = _triple(dilation)
 
+    if groups == 1:
+        # Use native MLX conv3d for better performance
+        return _conv3d_native(input, weight, bias, stride, padding, dilation)
+    else:
+        # Fall back to loop-based implementation for grouped convolution
+        return _conv3d_grouped(input, weight, bias, stride, padding, dilation, groups)
+
+
+def _conv3d_native(
+    input: Tensor,
+    weight: Tensor,
+    bias: Union[Tensor, None],
+    stride: Tuple[int, int, int],
+    padding: Tuple[int, int, int],
+    dilation: Tuple[int, int, int],
+) -> Tensor:
+    """Native MLX conv3d implementation (groups=1 only)."""
+    # Convert input from NCDHW to NDHWC
+    # PyTorch: [N, C_in, D, H, W] -> MLX: [N, D, H, W, C_in]
+    input_ndhwc = mx.transpose(input._mlx_array, [0, 2, 3, 4, 1])
+
+    # Convert weight from PyTorch format to MLX format
+    # PyTorch: [C_out, C_in, kD, kH, kW] -> MLX: [C_out, kD, kH, kW, C_in]
+    weight_mlx = mx.transpose(weight._mlx_array, [0, 2, 3, 4, 1])
+
+    # Use native MLX conv3d
+    output_ndhwc = mx.conv3d(
+        input_ndhwc,
+        weight_mlx,
+        stride=stride,
+        padding=padding,
+        dilation=dilation,
+    )
+
+    # Add bias if provided (broadcast over [N, D, H, W, C_out])
+    if bias is not None:
+        output_ndhwc = output_ndhwc + bias._mlx_array
+
+    # Convert back from NDHWC to NCDHW
+    # MLX: [N, D, H, W, C_out] -> PyTorch: [N, C_out, D, H, W]
+    output_ncdhw = mx.transpose(output_ndhwc, [0, 4, 1, 2, 3])
+
+    result = Tensor._from_mlx_array(output_ncdhw)
+
+    # Handle autograd
+    from ..autograd.context import is_grad_enabled
+
+    if is_grad_enabled() and (
+        input.requires_grad or weight.requires_grad or (bias is not None and bias.requires_grad)
+    ):
+        result.requires_grad = True
+
+    return result
+
+
+def _conv3d_grouped(
+    input: Tensor,
+    weight: Tensor,
+    bias: Union[Tensor, None],
+    stride: Tuple[int, int, int],
+    padding: Tuple[int, int, int],
+    dilation: Tuple[int, int, int],
+    groups: int,
+) -> Tensor:
+    """Grouped conv3d fallback using loop-based 2D convolutions."""
     # Get input dimensions
     N, C_in, D_in, H_in, W_in = input.shape
     C_out, _, kD, kH, kW = weight.shape
@@ -92,7 +157,6 @@ def conv3d(
             weight_2d_mlx = mx.transpose(weight_2d, [0, 2, 3, 1])
 
             # Perform 2D convolution
-            # MLX conv2d padding format: single int or 2-tuple (H_pad, W_pad), NOT nested tuples
             conv_out = mx.conv2d(
                 mx.expand_dims(input_2d, axis=0) if input_2d.ndim == 3 else input_2d,
                 weight_2d_mlx,

@@ -106,7 +106,7 @@ if MLX_AVAILABLE:
     int = int32
     long = int64
     short = int16
-    byte = int8  # Note: PyTorch byte is uint8, but we map to int8
+    byte = uint8  # PyTorch byte is uint8
 else:
     # Stub dtypes when MLX is not available
     float32 = None

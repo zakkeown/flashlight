@@ -480,7 +480,7 @@ from .ops import (  # Arithmetic; Trigonometric; Extended math functions; Logari
 )
 
 # Phase 1: Tensor core
-from .tensor import Tensor
+from .tensor import Tensor, ensure_tensor
 
 # Phase 1: View operations
 from .view_ops import (
@@ -502,7 +502,19 @@ range = range_func
 # torch.fft namespace
 # torch.special namespace
 # torch.linalg namespace
-from . import amp, fft, linalg, random, special
+from . import amp, cuda, fft, linalg, quantization, random, sparse, special
+
+# Expose Generator and RNG functions at torch.* level (from random module)
+from .random import (
+    Generator,
+    default_generator,
+    manual_seed,
+    seed as random_seed,
+    initial_seed,
+    get_rng_state,
+    set_rng_state,
+    fork_rng,
+)
 
 # Expose linalg functions at torch.* level
 from .linalg import (
@@ -517,6 +529,12 @@ from .linalg import (
     qr,
     slogdet,
     svd,
+)
+
+# Expose sparse tensor factory functions at torch.* level
+from .sparse import (
+    sparse_coo_tensor,
+    sparse_csr_tensor,
 )
 
 # Transposed convolutions (from nn.functional)
@@ -1175,11 +1193,7 @@ def numel(input: Tensor) -> int:
     return input._mlx_array.size
 
 
-def manual_seed(seed: int) -> None:
-    """Set the random seed for reproducibility."""
-    import mlx.core as mx
-
-    mx.random.seed(seed)
+# Note: manual_seed is imported from random.py with full Philox RNG support
 
 
 def get_num_threads() -> int:
@@ -1201,6 +1215,12 @@ def result_type(*tensors_or_dtypes) -> DType:
     """
     Determine the result dtype from input tensors/dtypes.
 
+    Follows PyTorch's type promotion rules:
+    - Floating point types dominate integer types
+    - Larger types dominate smaller types within the same category
+    - bool is the lowest priority
+    - Complex types dominate all real types
+
     Args:
         *tensors_or_dtypes: Tensors or dtypes to determine result type
 
@@ -1220,17 +1240,67 @@ def result_type(*tensors_or_dtypes) -> DType:
         else:
             dtypes.append(get_dtype(t)._mlx_dtype)
 
-    # MLX dtype promotion - simplified
-    if any(d == mx.float64 for d in dtypes):
-        return float64
-    if any(d == mx.float32 for d in dtypes):
-        return float32
-    if any(d == mx.float16 for d in dtypes):
-        return float16
-    if any(d == mx.int64 for d in dtypes):
-        return int64
-    if any(d == mx.int32 for d in dtypes):
-        return int32
+    # Type promotion hierarchy (PyTorch-compatible)
+    # Higher number = higher priority
+    _TYPE_PRIORITY = {
+        mx.bool_: 0,
+        mx.uint8: 1,
+        mx.int8: 2,
+        mx.int16: 3,
+        mx.uint16: 4,
+        mx.int32: 5,
+        mx.uint32: 6,
+        mx.int64: 7,
+        mx.uint64: 8,
+        mx.float16: 10,
+        mx.bfloat16: 11,
+        mx.float32: 12,
+        # mx.float64 not supported in MLX, but would be 13
+    }
+
+    # Check for complex types first (if available)
+    try:
+        if any(d == mx.complex64 for d in dtypes):
+            return complex64
+    except AttributeError:
+        pass
+
+    # Check for floating point types (dominate integers)
+    float_dtypes = [d for d in dtypes if d in (mx.float16, mx.bfloat16, mx.float32)]
+    if float_dtypes:
+        # Return the highest priority float type
+        best = max(float_dtypes, key=lambda d: _TYPE_PRIORITY.get(d, 0))
+        if best == mx.float32:
+            return float32
+        elif best == mx.float16:
+            return float16
+        elif best == mx.bfloat16:
+            return bfloat16
+
+    # No floats, check integer types
+    int_dtypes = [d for d in dtypes if d in _TYPE_PRIORITY and _TYPE_PRIORITY[d] < 10]
+    if int_dtypes:
+        best = max(int_dtypes, key=lambda d: _TYPE_PRIORITY.get(d, 0))
+        if best == mx.int64:
+            return int64
+        elif best == mx.int32:
+            return int32
+        elif best == mx.int16:
+            return int16
+        elif best == mx.int8:
+            return int8
+        elif best == mx.uint64:
+            return uint64
+        elif best == mx.uint32:
+            return uint32
+        elif best == mx.uint16:
+            return uint16
+        elif best == mx.uint8:
+            return uint8
+        elif best == mx.bool_:
+            return bool
+
+    # Default to float32 (PyTorch's default for unknown types)
     return float32
 
 
@@ -2550,6 +2620,13 @@ __all__ = [
     "fft",
     "amp",
     "random",
+    # Random number generation
+    "Generator",
+    "default_generator",
+    "initial_seed",
+    "get_rng_state",
+    "set_rng_state",
+    "fork_rng",
     # Neural networks (Phase 4)
     "nn",
     # Optimizers (Phase 5)

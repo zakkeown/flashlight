@@ -22,6 +22,12 @@ from .device import Device, get_default_device
 from .dtype import DType, get_default_dtype, get_dtype
 from .tensor import Tensor
 
+# Import Generator type for type hints
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .rng.generator import Generator as GeneratorType
+
 # ==================== Helper Function ====================
 
 
@@ -405,8 +411,23 @@ def eye(
 # ==================== Random Operations ====================
 
 
+def _seed_mlx_from_generator(generator: "GeneratorType") -> None:
+    """
+    Seed MLX's internal RNG from a Generator's Philox state.
+
+    This allows us to use MLX's fast vectorized RNG while maintaining
+    reproducibility through the Philox generator state.
+    """
+    # Get two uint32 values from Philox and combine into a 64-bit seed
+    u1 = generator._next_uint32()
+    u2 = generator._next_uint32()
+    seed = (u1 | (u2 << 32)) & ((1 << 64) - 1)
+    mx.random.seed(seed)
+
+
 def randn(
     *size: Union[int, Tuple[int, ...]],
+    generator: Optional["GeneratorType"] = None,
     dtype: Optional[Union[DType, str]] = None,
     device: Optional[Union[Device, str]] = None,
     requires_grad: bool = False,
@@ -416,6 +437,7 @@ def randn(
 
     Args:
         *size: Shape of the tensor
+        generator: Optional random number generator for reproducibility
         dtype: Data type (default: float32)
         device: Device (compatibility)
         requires_grad: Whether to track gradients
@@ -426,6 +448,8 @@ def randn(
     Example:
         >>> randn(3, 4)
         >>> randn((2, 3, 4), dtype='float16')
+        >>> g = flashlight.Generator().manual_seed(42)
+        >>> randn(3, 3, generator=g)  # Reproducible
     """
     if not MLX_AVAILABLE:
         raise RuntimeError("MLX not available")
@@ -433,12 +457,17 @@ def randn(
     shape = _parse_shape(*size)
     dtype = get_dtype(dtype) if dtype else get_default_dtype()
 
+    # Seed MLX from generator if provided
+    if generator is not None:
+        _seed_mlx_from_generator(generator)
+
     mlx_array = mx.random.normal(shape, dtype=dtype._mlx_dtype)
     return Tensor._from_mlx_array(mlx_array, requires_grad=requires_grad)
 
 
 def rand(
     *size: Union[int, Tuple[int, ...]],
+    generator: Optional["GeneratorType"] = None,
     dtype: Optional[Union[DType, str]] = None,
     device: Optional[Union[Device, str]] = None,
     requires_grad: bool = False,
@@ -448,6 +477,7 @@ def rand(
 
     Args:
         *size: Shape of the tensor
+        generator: Optional random number generator for reproducibility
         dtype: Data type (default: float32)
         device: Device (compatibility)
         requires_grad: Whether to track gradients
@@ -458,12 +488,18 @@ def rand(
     Example:
         >>> rand(3, 4)
         >>> rand((5,), dtype='float32')
+        >>> g = flashlight.Generator().manual_seed(42)
+        >>> rand(3, 3, generator=g)  # Reproducible
     """
     if not MLX_AVAILABLE:
         raise RuntimeError("MLX not available")
 
     shape = _parse_shape(*size)
     dtype = get_dtype(dtype) if dtype else get_default_dtype()
+
+    # Seed MLX from generator if provided
+    if generator is not None:
+        _seed_mlx_from_generator(generator)
 
     mlx_array = mx.random.uniform(shape=shape, dtype=dtype._mlx_dtype)
     return Tensor._from_mlx_array(mlx_array, requires_grad=requires_grad)
@@ -474,6 +510,7 @@ def randint(
     high: Optional[int] = None,
     size: Union[Tuple[int, ...], Sequence[int]] = (),
     *,
+    generator: Optional["GeneratorType"] = None,
     dtype: Optional[Union[DType, str]] = None,
     device: Optional[Union[Device, str]] = None,
     requires_grad: bool = False,
@@ -485,6 +522,7 @@ def randint(
         low: Lowest integer (or high if high is None)
         high: Highest integer (exclusive)
         size: Shape of the tensor
+        generator: Optional random number generator for reproducibility
         dtype: Data type (default: int64)
         device: Device (compatibility)
         requires_grad: Whether to track gradients
@@ -495,6 +533,8 @@ def randint(
     Example:
         >>> randint(0, 10, (3, 4))  # Random integers in [0, 10)
         >>> randint(10, size=(5,))  # Random integers in [0, 10)
+        >>> g = flashlight.Generator().manual_seed(42)
+        >>> randint(0, 10, (3, 3), generator=g)  # Reproducible
     """
     if not MLX_AVAILABLE:
         raise RuntimeError("MLX not available")
@@ -510,6 +550,10 @@ def randint(
         dtype = dtype_module.int64
     else:
         dtype = get_dtype(dtype)
+
+    # Seed MLX from generator if provided
+    if generator is not None:
+        _seed_mlx_from_generator(generator)
 
     shape = tuple(size) if size else ()
     mlx_array = mx.random.randint(low, high, shape, dtype=dtype._mlx_dtype)
@@ -663,6 +707,7 @@ def cartesian_prod(*tensors: Tensor) -> Tensor:
 def rand_like(
     input: Tensor,
     *,
+    generator: Optional["GeneratorType"] = None,
     dtype: Optional[Union[DType, str]] = None,
     device: Optional[Union[Device, str]] = None,
     requires_grad: bool = False,
@@ -672,6 +717,7 @@ def rand_like(
 
     Args:
         input: Tensor whose shape to use
+        generator: Optional random number generator for reproducibility
         dtype: Data type (default: same as input)
         device: Device (compatibility)
         requires_grad: Whether to track gradients
@@ -680,12 +726,13 @@ def rand_like(
         Tensor with random uniform values
     """
     dtype = get_dtype(dtype) if dtype else input.dtype
-    return rand(*input.shape, dtype=dtype, device=device, requires_grad=requires_grad)
+    return rand(*input.shape, generator=generator, dtype=dtype, device=device, requires_grad=requires_grad)
 
 
 def randn_like(
     input: Tensor,
     *,
+    generator: Optional["GeneratorType"] = None,
     dtype: Optional[Union[DType, str]] = None,
     device: Optional[Union[Device, str]] = None,
     requires_grad: bool = False,
@@ -695,6 +742,7 @@ def randn_like(
 
     Args:
         input: Tensor whose shape to use
+        generator: Optional random number generator for reproducibility
         dtype: Data type (default: same as input)
         device: Device (compatibility)
         requires_grad: Whether to track gradients
@@ -703,7 +751,7 @@ def randn_like(
         Tensor with random normal values
     """
     dtype = get_dtype(dtype) if dtype else input.dtype
-    return randn(*input.shape, dtype=dtype, device=device, requires_grad=requires_grad)
+    return randn(*input.shape, generator=generator, dtype=dtype, device=device, requires_grad=requires_grad)
 
 
 def randint_like(
@@ -711,6 +759,7 @@ def randint_like(
     low: int,
     high: Optional[int] = None,
     *,
+    generator: Optional["GeneratorType"] = None,
     dtype: Optional[Union[DType, str]] = None,
     device: Optional[Union[Device, str]] = None,
     requires_grad: bool = False,
@@ -722,6 +771,7 @@ def randint_like(
         input: Tensor whose shape to use
         low: Lowest integer (or high if high is None)
         high: Highest integer (exclusive)
+        generator: Optional random number generator for reproducibility
         dtype: Data type (default: int64)
         device: Device (compatibility)
         requires_grad: Whether to track gradients
@@ -735,12 +785,13 @@ def randint_like(
         dtype = dtype_module.int64
     else:
         dtype = get_dtype(dtype)
-    return randint(low, high, input.shape, dtype=dtype, device=device, requires_grad=requires_grad)
+    return randint(low, high, input.shape, generator=generator, dtype=dtype, device=device, requires_grad=requires_grad)
 
 
 def randperm(
     n: int,
     *,
+    generator: Optional["GeneratorType"] = None,
     dtype: Optional[Union[DType, str]] = None,
     device: Optional[Union[Device, str]] = None,
     requires_grad: bool = False,
@@ -750,12 +801,18 @@ def randperm(
 
     Args:
         n: Upper bound (exclusive)
+        generator: Optional random number generator for reproducibility
         dtype: Data type (default: int64)
         device: Device (compatibility)
         requires_grad: Whether to track gradients
 
     Returns:
         1-D tensor with random permutation
+
+    Example:
+        >>> randperm(10)  # Random permutation of 0-9
+        >>> g = flashlight.Generator().manual_seed(42)
+        >>> randperm(10, generator=g)  # Reproducible permutation
     """
     if not MLX_AVAILABLE:
         raise RuntimeError("MLX not available")
@@ -766,6 +823,10 @@ def randperm(
         dtype = dtype_module.int64
     else:
         dtype = get_dtype(dtype)
+
+    # Seed MLX from generator if provided
+    if generator is not None:
+        _seed_mlx_from_generator(generator)
 
     # Create range and shuffle using random.permutation
     indices = mx.array(list(range(n)), dtype=dtype._mlx_dtype)
@@ -839,6 +900,7 @@ def normal(
     std: Union[float, Tensor] = 1.0,
     size: Optional[Union[Tuple[int, ...], Sequence[int]]] = None,
     *,
+    generator: Optional["GeneratorType"] = None,
     dtype: Optional[Union[DType, str]] = None,
     device: Optional[Union[Device, str]] = None,
     requires_grad: bool = False,
@@ -850,12 +912,18 @@ def normal(
         mean: Mean of the distribution (scalar or tensor)
         std: Standard deviation of the distribution (scalar or tensor)
         size: Shape of the output tensor (required if mean/std are scalars)
+        generator: Optional random number generator for reproducibility
         dtype: Data type (default: float32)
         device: Device (compatibility)
         requires_grad: Whether to track gradients
 
     Returns:
         Tensor with normally distributed values
+
+    Example:
+        >>> normal(0.0, 1.0, (3, 3))  # Standard normal
+        >>> g = flashlight.Generator().manual_seed(42)
+        >>> normal(5.0, 2.0, (3, 3), generator=g)  # Reproducible N(5, 2)
     """
     if not MLX_AVAILABLE:
         raise RuntimeError("MLX not available")
@@ -871,6 +939,10 @@ def normal(
         raise ValueError("size must be specified when mean and std are scalars")
 
     dtype = get_dtype(dtype) if dtype else get_default_dtype()
+
+    # Seed MLX from generator if provided
+    if generator is not None:
+        _seed_mlx_from_generator(generator)
 
     # Generate standard normal, then scale and shift
     z = mx.random.normal(shape, dtype=dtype._mlx_dtype)
@@ -894,7 +966,7 @@ def normal(
 def bernoulli(
     input: Tensor,
     *,
-    generator=None,
+    generator: Optional["GeneratorType"] = None,
 ) -> Tensor:
     """
     Draw binary random numbers (0 or 1) from Bernoulli distributions.
@@ -904,13 +976,23 @@ def bernoulli(
 
     Args:
         input: Tensor of probabilities (values in [0, 1])
-        generator: Random number generator (ignored, for compatibility)
+        generator: Optional random number generator for reproducibility
 
     Returns:
         Tensor with values 0 or 1
+
+    Example:
+        >>> probs = flashlight.tensor([0.2, 0.5, 0.8])
+        >>> bernoulli(probs)  # Random 0/1 based on probabilities
+        >>> g = flashlight.Generator().manual_seed(42)
+        >>> bernoulli(probs, generator=g)  # Reproducible
     """
     if not MLX_AVAILABLE:
         raise RuntimeError("MLX not available")
+
+    # Seed MLX from generator if provided
+    if generator is not None:
+        _seed_mlx_from_generator(generator)
 
     # Generate uniform random and compare to probabilities
     probs = input._mlx_array
@@ -925,7 +1007,7 @@ def multinomial(
     num_samples: int,
     replacement: bool = False,
     *,
-    generator=None,
+    generator: Optional["GeneratorType"] = None,
 ) -> Tensor:
     """
     Draw samples from multinomial distributions.
@@ -934,13 +1016,23 @@ def multinomial(
         input: Tensor of probabilities (can be unnormalized)
         num_samples: Number of samples to draw
         replacement: Whether to draw with replacement
-        generator: Random number generator (ignored, for compatibility)
+        generator: Optional random number generator for reproducibility
 
     Returns:
         Tensor of sampled indices
+
+    Example:
+        >>> probs = flashlight.tensor([0.1, 0.3, 0.6])
+        >>> multinomial(probs, 5, replacement=True)
+        >>> g = flashlight.Generator().manual_seed(42)
+        >>> multinomial(probs, 3, generator=g)  # Reproducible
     """
     if not MLX_AVAILABLE:
         raise RuntimeError("MLX not available")
+
+    # Seed MLX from generator if provided
+    if generator is not None:
+        _seed_mlx_from_generator(generator)
 
     probs = input._mlx_array
 
@@ -998,20 +1090,30 @@ def multinomial(
 def poisson(
     input: Tensor,
     *,
-    generator=None,
+    generator: Optional["GeneratorType"] = None,
 ) -> Tensor:
     """
     Draw samples from Poisson distributions.
 
     Args:
         input: Tensor of rate parameters (lambda)
-        generator: Random number generator (ignored, for compatibility)
+        generator: Optional random number generator for reproducibility
 
     Returns:
         Tensor with Poisson-distributed samples
+
+    Example:
+        >>> rates = flashlight.tensor([1.0, 5.0, 10.0])
+        >>> poisson(rates)  # Random Poisson samples
+        >>> g = flashlight.Generator().manual_seed(42)
+        >>> poisson(rates, generator=g)  # Reproducible
     """
     if not MLX_AVAILABLE:
         raise RuntimeError("MLX not available")
+
+    # Seed MLX from generator if provided
+    if generator is not None:
+        _seed_mlx_from_generator(generator)
 
     # Pure MLX implementation of Poisson sampling
     # Uses inverse transform method with rejection for large lambda

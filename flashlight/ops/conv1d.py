@@ -43,7 +43,8 @@ def conv1d(
         Output tensor of shape [N, C_out, L_out]
 
     Note:
-        MLX uses channels-last format, so we need to convert from PyTorch's NCL.
+        Uses MLX's native conv1d. MLX expects channels-last format (NLC),
+        while PyTorch uses channels-first (NCL), so we transpose.
     """
     # Normalize parameters to single ints
     stride = _single(stride)
@@ -51,43 +52,29 @@ def conv1d(
     dilation = _single(dilation)
 
     # Convert input from NCL to NLC (channels-last)
-    # input: [N, C, L] -> [N, L, C]
+    # PyTorch: [N, C_in, L] -> MLX: [N, L, C_in]
     input_nlc = mx.transpose(input._mlx_array, [0, 2, 1])
 
-    # Convert weight from [C_out, C_in/groups, K] to [C_out, K, C_in/groups]
+    # Convert weight from PyTorch format to MLX format
+    # PyTorch: [C_out, C_in/groups, K] -> MLX: [C_out, K, C_in/groups]
     weight_mlx = mx.transpose(weight._mlx_array, [0, 2, 1])
 
-    # Perform 1D convolution via 2D convolution with height=1
-    # Reshape to add H=1 dimension
-    N, L, C_in = input_nlc.shape
-    C_out, K, _ = weight_mlx.shape
-
-    # Add H=1 dimension: [N, L, C] -> [N, 1, L, C]
-    input_4d = mx.reshape(input_nlc, (N, 1, L, C_in))
-
-    # Weight: [C_out, K, C_in] -> [C_out, 1, K, C_in]
-    weight_4d = mx.reshape(weight_mlx, (C_out, 1, K, weight_mlx.shape[2]))
-
-    # Perform 2D convolution with kernel_size=(1, K), stride=(1, stride), padding=(0, padding)
-    # MLX conv2d padding format: single int or 2-tuple (H_pad, W_pad), NOT nested tuples
-    output_4d = mx.conv2d(
-        input_4d,
-        weight_4d,
-        stride=(1, stride),
-        padding=(0, padding),
-        dilation=(1, dilation),
+    # Use native MLX conv1d
+    output_nlc = mx.conv1d(
+        input_nlc,
+        weight_mlx,
+        stride=stride,
+        padding=padding,
+        dilation=dilation,
         groups=groups,
     )
 
-    # Remove H dimension: [N, 1, L_out, C_out] -> [N, L_out, C_out]
-    output_nlc = mx.squeeze(output_4d, axis=1)
-
-    # Add bias if provided
+    # Add bias if provided (broadcast over [N, L_out, C_out])
     if bias is not None:
         output_nlc = output_nlc + bias._mlx_array
 
     # Convert back from NLC to NCL
-    # [N, L_out, C_out] -> [N, C_out, L_out]
+    # MLX: [N, L_out, C_out] -> PyTorch: [N, C_out, L_out]
     output_ncl = mx.transpose(output_nlc, [0, 2, 1])
 
     result = Tensor._from_mlx_array(output_ncl)

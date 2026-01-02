@@ -4,6 +4,7 @@ Pooling Operations
 Implements pooling operations with PyTorch-compatible API.
 """
 
+import math
 from functools import lru_cache
 from typing import Optional, Tuple, Union
 
@@ -19,6 +20,40 @@ def _pair(x):
     if isinstance(x, (list, tuple)):
         return tuple(x)
     return (x, x)
+
+
+def _compute_pool_output_size(input_size, kernel_size, stride, padding, dilation, ceil_mode):
+    """
+    Compute pooling output size following PyTorch's formula.
+
+    Args:
+        input_size: Size of the input dimension
+        kernel_size: Size of the pooling kernel
+        stride: Stride of the pooling
+        padding: Padding on each side
+        dilation: Dilation factor
+        ceil_mode: Whether to use ceiling division
+
+    Returns:
+        Output size for this dimension
+    """
+    # Effective kernel size with dilation
+    effective_kernel = dilation * (kernel_size - 1) + 1
+
+    # Padded input size
+    padded_size = input_size + 2 * padding
+
+    if ceil_mode:
+        # Ceiling division formula
+        output_size = math.ceil((padded_size - effective_kernel) / stride) + 1
+        # Safety check: ensure last pooling starts inside the input
+        if (output_size - 1) * stride >= input_size + padding:
+            output_size -= 1
+    else:
+        # Floor division (standard)
+        output_size = (padded_size - effective_kernel) // stride + 1
+
+    return max(1, output_size)
 
 
 # Cached pool object getters to avoid allocation overhead on every call
@@ -109,13 +144,45 @@ def max_pool2d(
     if nhwc_native and getattr(input, "_layout", None) == Layout.NHWC:
         # Input is already in NHWC - no conversion needed
         input_nhwc = input._mlx_array
+        N, H, W, C = input_nhwc.shape
     else:
         # Convert input from NCHW to NHWC
         # input: [N, C, H, W] -> [N, H, W, C]
         input_nhwc = mx.transpose(input._mlx_array, [0, 2, 3, 1])
+        N, H, W, C = input_nhwc.shape
 
-    # Get cached MLX pooling layer and apply
-    pool = _get_max_pool2d(kernel_size, stride, padding)
+    # Handle ceil_mode by adding extra padding if needed
+    kH, kW = kernel_size
+    sH, sW = stride
+    pH, pW = padding
+
+    # Calculate expected output dimensions with ceil_mode
+    H_out = _compute_pool_output_size(H, kH, sH, pH, 1, ceil_mode)
+    W_out = _compute_pool_output_size(W, kW, sW, pW, 1, ceil_mode)
+    H_out_floor = _compute_pool_output_size(H, kH, sH, pH, 1, False)
+    W_out_floor = _compute_pool_output_size(W, kW, sW, pW, 1, False)
+
+    # If ceil_mode requires extra outputs, add padding
+    extra_pad_h = 0
+    extra_pad_w = 0
+    if ceil_mode and H_out > H_out_floor:
+        extra_pad_h = max(0, (H_out - 1) * sH + kH - H - 2 * pH)
+    if ceil_mode and W_out > W_out_floor:
+        extra_pad_w = max(0, (W_out - 1) * sW + kW - W - 2 * pW)
+
+    if extra_pad_h > 0 or extra_pad_w > 0:
+        # For max pooling, pad with -inf so padded values never win
+        input_nhwc = mx.pad(
+            input_nhwc,
+            [(0, 0), (pH, pH + extra_pad_h), (pW, pW + extra_pad_w), (0, 0)],
+            constant_values=float('-inf')
+        )
+        # Use pool with padding=0 since we pre-padded
+        pool = _get_max_pool2d(kernel_size, stride, (0, 0))
+    else:
+        # Get cached MLX pooling layer and apply
+        pool = _get_max_pool2d(kernel_size, stride, padding)
+
     output_nhwc = pool(input_nhwc)
 
     # Determine output layout based on mode
@@ -202,21 +269,62 @@ def avg_pool2d(
         input_nhwc = mx.transpose(input._mlx_array, [0, 2, 3, 1])
         N, H, W, C = input_nhwc.shape
 
-    # Handle count_include_pad=False with padding
-    # When count_include_pad=False, we need to divide each output element by the
-    # actual number of non-padded input elements that contributed to it
-    if not count_include_pad and (padding[0] > 0 or padding[1] > 0):
+    # Handle ceil_mode by adding extra padding if needed
+    kH, kW = kernel_size
+    sH, sW = stride
+    pH, pW = padding
+
+    # Calculate expected output dimensions with ceil_mode
+    H_out = _compute_pool_output_size(H, kH, sH, pH, 1, ceil_mode)
+    W_out = _compute_pool_output_size(W, kW, sW, pW, 1, ceil_mode)
+    H_out_floor = _compute_pool_output_size(H, kH, sH, pH, 1, False)
+    W_out_floor = _compute_pool_output_size(W, kW, sW, pW, 1, False)
+
+    # If ceil_mode requires extra outputs, add padding
+    extra_pad_h = 0
+    extra_pad_w = 0
+    if ceil_mode and H_out > H_out_floor:
+        extra_pad_h = max(0, (H_out - 1) * sH + kH - H - 2 * pH)
+    if ceil_mode and W_out > W_out_floor:
+        extra_pad_w = max(0, (W_out - 1) * sW + kW - W - 2 * pW)
+
+    # For avg pooling with ceil_mode, we need to handle the count properly
+    ceil_mode_active = extra_pad_h > 0 or extra_pad_w > 0
+
+    # Handle count_include_pad=False with padding, OR ceil_mode with extra padding
+    # Note: ceil_mode extra padding is NEVER included in count, even with count_include_pad=True
+    # Regular padding is included only when count_include_pad=True
+    if ceil_mode_active or (not count_include_pad and (padding[0] > 0 or padding[1] > 0)):
         # Use sum pooling approach: compute sum, then divide by actual counts
-        # First, pad the input with zeros
+        # First, pad the input with zeros (including extra for ceil_mode)
+        total_pad_h = padding[0] + extra_pad_h
+        total_pad_w = padding[1] + extra_pad_w
         padded_input = mx.pad(
-            input_nhwc, [(0, 0), (padding[0], padding[0]), (padding[1], padding[1]), (0, 0)]
+            input_nhwc, [(0, 0), (padding[0], total_pad_h), (padding[1], total_pad_w), (0, 0)]
         )
 
-        # Create a mask of 1s for original input, 0s for padding
+        # Create a mask: 1s for elements to include in average, 0s for excluded
+        # When count_include_pad=True: include regular padding (1s), exclude ceil_mode extra (0s)
+        # When count_include_pad=False: exclude all padding (0s)
         ones_mask = mx.ones((N, H, W, C))
-        padded_mask = mx.pad(
-            ones_mask, [(0, 0), (padding[0], padding[0]), (padding[1], padding[1]), (0, 0)]
-        )
+        if count_include_pad:
+            # Include regular padding in count, but not ceil_mode extra padding
+            padded_mask = mx.pad(
+                ones_mask, [(0, 0), (padding[0], padding[0]), (padding[1], padding[1]), (0, 0)],
+                constant_values=1.0
+            )
+            # Add extra ceil_mode padding as 0s
+            if extra_pad_h > 0 or extra_pad_w > 0:
+                padded_mask = mx.pad(
+                    padded_mask, [(0, 0), (0, extra_pad_h), (0, extra_pad_w), (0, 0)],
+                    constant_values=0.0
+                )
+        else:
+            # Exclude all padding from count
+            padded_mask = mx.pad(
+                ones_mask, [(0, 0), (padding[0], total_pad_h), (padding[1], total_pad_w), (0, 0)],
+                constant_values=0.0
+            )
 
         # Compute sum pooling (use avg pool and multiply by kernel area)
         pool_no_pad = _get_avg_pool2d(kernel_size, stride, (0, 0))
@@ -226,7 +334,7 @@ def avg_pool2d(
         # Divide sum by count to get average (avoiding division by zero)
         output_nhwc = sum_output / mx.maximum(count_output, PROB_EPSILON)
     else:
-        # Standard case: count_include_pad=True or no padding
+        # Standard case: count_include_pad=True with no ceil_mode and no special padding handling needed
         pool = _get_avg_pool2d(kernel_size, stride, padding)
         output_nhwc = pool(input_nhwc)
 
@@ -305,15 +413,65 @@ def avg_pool1d(
         stride = _single(stride)
     padding = _single(padding)
 
+    # Get input dimensions
+    x = input._mlx_array
+    N, C, L = x.shape
+
+    # Calculate expected output dimension with ceil_mode
+    L_out = _compute_pool_output_size(L, kernel_size, stride, padding, 1, ceil_mode)
+    L_out_floor = _compute_pool_output_size(L, kernel_size, stride, padding, 1, False)
+
+    # If ceil_mode requires extra outputs, add padding
+    extra_pad = 0
+    if ceil_mode and L_out > L_out_floor:
+        extra_pad = max(0, (L_out - 1) * stride + kernel_size - L - 2 * padding)
+
+    ceil_mode_active = extra_pad > 0
+
     # Convert to 2D: [N, C, L] -> [N, C, 1, L]
-    input_4d = mx.expand_dims(input._mlx_array, axis=2)
+    input_4d = mx.expand_dims(x, axis=2)
 
     # Convert from NCHW to NHWC
     input_nhwc = mx.transpose(input_4d, [0, 2, 3, 1])
 
-    # Apply 2D pooling with kernel (1, kernel_size)
-    pool = mxnn.AvgPool2d(kernel_size=(1, kernel_size), stride=(1, stride), padding=(0, padding))
-    output_nhwc = pool(input_nhwc)
+    # Handle count_include_pad=False with padding, OR ceil_mode with extra padding
+    # Note: ceil_mode extra padding is NEVER included in count, even with count_include_pad=True
+    if ceil_mode_active or (not count_include_pad and padding > 0):
+        # Use sum pooling approach: compute sum, then divide by actual counts
+        total_pad = padding + extra_pad
+        padded_input = mx.pad(input_nhwc, [(0, 0), (0, 0), (padding, total_pad), (0, 0)])
+
+        # Create a mask: 1s for elements to include in average, 0s for excluded
+        ones_mask = mx.ones_like(input_nhwc)
+        if count_include_pad:
+            # Include regular padding in count, but not ceil_mode extra padding
+            padded_mask = mx.pad(
+                ones_mask, [(0, 0), (0, 0), (padding, padding), (0, 0)],
+                constant_values=1.0
+            )
+            if extra_pad > 0:
+                padded_mask = mx.pad(
+                    padded_mask, [(0, 0), (0, 0), (0, extra_pad), (0, 0)],
+                    constant_values=0.0
+                )
+        else:
+            # Exclude all padding from count
+            padded_mask = mx.pad(
+                ones_mask, [(0, 0), (0, 0), (padding, total_pad), (0, 0)],
+                constant_values=0.0
+            )
+
+        # Compute sum pooling
+        pool_no_pad = mxnn.AvgPool2d(kernel_size=(1, kernel_size), stride=(1, stride), padding=(0, 0))
+        sum_output = pool_no_pad(padded_input) * kernel_size
+        count_output = pool_no_pad(padded_mask) * kernel_size
+
+        # Divide sum by count
+        output_nhwc = sum_output / mx.maximum(count_output, PROB_EPSILON)
+    else:
+        # Standard case: count_include_pad=True with no ceil_mode
+        pool = mxnn.AvgPool2d(kernel_size=(1, kernel_size), stride=(1, stride), padding=(0, padding))
+        output_nhwc = pool(input_nhwc)
 
     # Convert back and squeeze
     output_nchw = mx.transpose(output_nhwc, [0, 3, 1, 2])
@@ -373,14 +531,38 @@ def max_pool1d(
         stride = _single(stride)
     padding = _single(padding)
 
+    # Get input dimensions
+    x = input._mlx_array
+    N, C, L = x.shape
+
+    # Calculate expected output dimension with ceil_mode
+    L_out = _compute_pool_output_size(L, kernel_size, stride, padding, 1, ceil_mode)
+    L_out_floor = _compute_pool_output_size(L, kernel_size, stride, padding, 1, False)
+
+    # If ceil_mode requires extra outputs, add padding
+    extra_pad = 0
+    if ceil_mode and L_out > L_out_floor:
+        extra_pad = max(0, (L_out - 1) * stride + kernel_size - L - 2 * padding)
+
     # Convert to 2D: [N, C, L] -> [N, C, 1, L]
-    input_4d = mx.expand_dims(input._mlx_array, axis=2)
+    input_4d = mx.expand_dims(x, axis=2)
 
     # Convert from NCHW to NHWC
     input_nhwc = mx.transpose(input_4d, [0, 2, 3, 1])
 
-    # Apply 2D pooling with kernel (1, kernel_size)
-    pool = mxnn.MaxPool2d(kernel_size=(1, kernel_size), stride=(1, stride), padding=(0, padding))
+    if extra_pad > 0:
+        # For max pooling, pad with -inf so padded values never win
+        input_nhwc = mx.pad(
+            input_nhwc,
+            [(0, 0), (0, 0), (padding, padding + extra_pad), (0, 0)],
+            constant_values=float('-inf')
+        )
+        # Use pool with padding=0 since we pre-padded
+        pool = mxnn.MaxPool2d(kernel_size=(1, kernel_size), stride=(1, stride), padding=(0, 0))
+    else:
+        # Standard case
+        pool = mxnn.MaxPool2d(kernel_size=(1, kernel_size), stride=(1, stride), padding=(0, padding))
+
     output_nhwc = pool(input_nhwc)
 
     # Convert back and squeeze
@@ -521,36 +703,115 @@ def avg_pool3d(
     sD, sH, sW = stride
     pD, pH, pW = padding
 
-    # Pad if needed
-    if pD > 0 or pH > 0 or pW > 0:
-        x = mx.pad(x, [(0, 0), (0, 0), (pD, pD), (pH, pH), (pW, pW)])
+    # Calculate output dimensions with ceil_mode
+    D_out = _compute_pool_output_size(D, kD, sD, pD, 1, ceil_mode)
+    H_out = _compute_pool_output_size(H, kH, sH, pH, 1, ceil_mode)
+    W_out = _compute_pool_output_size(W, kW, sW, pW, 1, ceil_mode)
+    D_out_floor = _compute_pool_output_size(D, kD, sD, pD, 1, False)
+    H_out_floor = _compute_pool_output_size(H, kH, sH, pH, 1, False)
+    W_out_floor = _compute_pool_output_size(W, kW, sW, pW, 1, False)
 
-    # Convert NCDHW to NDHWC
-    x = mx.transpose(x, [0, 2, 3, 4, 1])
+    # Calculate extra padding needed for ceil_mode
+    extra_pad_d = 0
+    extra_pad_h = 0
+    extra_pad_w = 0
+    if ceil_mode and D_out > D_out_floor:
+        extra_pad_d = max(0, (D_out - 1) * sD + kD - D - 2 * pD)
+    if ceil_mode and H_out > H_out_floor:
+        extra_pad_h = max(0, (H_out - 1) * sH + kH - H - 2 * pH)
+    if ceil_mode and W_out > W_out_floor:
+        extra_pad_w = max(0, (W_out - 1) * sW + kW - W - 2 * pW)
 
-    # Calculate output dimensions
-    D_padded = D + 2 * pD
-    H_padded = H + 2 * pH
-    W_padded = W + 2 * pW
-    D_out = (D_padded - kD) // sD + 1
-    H_out = (H_padded - kH) // sH + 1
-    W_out = (W_padded - kW) // sW + 1
+    ceil_mode_active = extra_pad_d > 0 or extra_pad_h > 0 or extra_pad_w > 0
 
-    # Apply pooling depth by depth using mxnn.AvgPool2d
-    pool_2d = mxnn.AvgPool2d(kernel_size=(kH, kW), stride=(sH, sW), padding=(0, 0))
+    # Handle count_include_pad=False with padding, OR ceil_mode with extra padding
+    # Note: ceil_mode extra padding is NEVER included in count, even with count_include_pad=True
+    if ceil_mode_active or (not count_include_pad and (pD > 0 or pH > 0 or pW > 0)):
+        # Use sum/count approach for proper average calculation
+        total_pad_d = pD + extra_pad_d
+        total_pad_h = pH + extra_pad_h
+        total_pad_w = pW + extra_pad_w
 
-    outputs = []
-    for d_out in range(D_out):
-        d_start = d_out * sD
-        depth_slice = x[:, d_start : d_start + kD, :, :, :]
-        depth_avg = mx.mean(depth_slice, axis=1)  # [N, H, W, C]
+        # Pad with zeros
+        x_padded = mx.pad(x, [(0, 0), (0, 0), (pD, total_pad_d), (pH, total_pad_h), (pW, total_pad_w)])
 
-        # Apply 2D pooling on H,W dimensions
-        pooled = pool_2d(depth_avg)
-        outputs.append(pooled)
+        # Create mask: 1s for elements to include in average, 0s for excluded
+        ones = mx.ones((N, C, D, H, W))
+        if count_include_pad:
+            # Include regular padding in count, but not ceil_mode extra padding
+            mask_padded = mx.pad(
+                ones, [(0, 0), (0, 0), (pD, pD), (pH, pH), (pW, pW)],
+                constant_values=1.0
+            )
+            if extra_pad_d > 0 or extra_pad_h > 0 or extra_pad_w > 0:
+                mask_padded = mx.pad(
+                    mask_padded, [(0, 0), (0, 0), (0, extra_pad_d), (0, extra_pad_h), (0, extra_pad_w)],
+                    constant_values=0.0
+                )
+        else:
+            # Exclude all padding from count
+            mask_padded = mx.pad(
+                ones, [(0, 0), (0, 0), (pD, total_pad_d), (pH, total_pad_h), (pW, total_pad_w)],
+                constant_values=0.0
+            )
 
-    result = mx.stack(outputs, axis=1)  # [N, D_out, H_out, W_out, C]
-    result = mx.transpose(result, [0, 4, 1, 2, 3])  # [N, C, D_out, H_out, W_out]
+        # Convert to NDHWC
+        x_ndhwc = mx.transpose(x_padded, [0, 2, 3, 4, 1])
+        mask_ndhwc = mx.transpose(mask_padded, [0, 2, 3, 4, 1])
+
+        # Apply pooling and compute sum/count
+        pool_2d = mxnn.AvgPool2d(kernel_size=(kH, kW), stride=(sH, sW), padding=(0, 0))
+        kernel_area_2d = kH * kW
+
+        sum_outputs = []
+        count_outputs = []
+        for d_idx in range(D_out):
+            d_start = d_idx * sD
+            # Sum over depth kernel
+            depth_slice = x_ndhwc[:, d_start:d_start + kD, :, :, :]
+            mask_slice = mask_ndhwc[:, d_start:d_start + kD, :, :, :]
+            depth_sum = mx.sum(depth_slice, axis=1)  # [N, H, W, C]
+            depth_count = mx.sum(mask_slice, axis=1)  # [N, H, W, C]
+
+            # Apply 2D pooling (which computes average, so multiply by area to get sum)
+            pooled_sum = pool_2d(depth_sum) * kernel_area_2d
+            pooled_count = pool_2d(depth_count) * kernel_area_2d
+            sum_outputs.append(pooled_sum)
+            count_outputs.append(pooled_count)
+
+        sum_result = mx.stack(sum_outputs, axis=1)
+        count_result = mx.stack(count_outputs, axis=1)
+        result = sum_result / mx.maximum(count_result, PROB_EPSILON)
+        result = mx.transpose(result, [0, 4, 1, 2, 3])
+    else:
+        # Standard case: count_include_pad=True with no ceil_mode and no special handling needed
+        # Pad if needed
+        if pD > 0 or pH > 0 or pW > 0:
+            x = mx.pad(x, [(0, 0), (0, 0), (pD, pD), (pH, pH), (pW, pW)])
+
+        # Convert NCDHW to NDHWC
+        x = mx.transpose(x, [0, 2, 3, 4, 1])
+
+        # Apply pooling depth by depth using mxnn.AvgPool2d
+        pool_2d = mxnn.AvgPool2d(kernel_size=(kH, kW), stride=(sH, sW), padding=(0, 0))
+
+        outputs = []
+        for d_idx in range(D_out):
+            d_start = d_idx * sD
+            depth_slice = x[:, d_start:d_start + kD, :, :, :]
+            depth_avg = mx.mean(depth_slice, axis=1)  # [N, H, W, C]
+
+            # Apply 2D pooling on H,W dimensions
+            pooled = pool_2d(depth_avg)
+            outputs.append(pooled)
+
+        result = mx.stack(outputs, axis=1)  # [N, D_out, H_out, W_out, C]
+        result = mx.transpose(result, [0, 4, 1, 2, 3])  # [N, C, D_out, H_out, W_out]
+
+    if divisor_override is not None:
+        # Adjust for custom divisor
+        kernel_volume = kD * kH * kW
+        result = result * (kernel_volume / divisor_override)
 
     out = Tensor._from_mlx_array(result)
 
@@ -612,26 +873,52 @@ def max_pool3d(
     sD, sH, sW = stride
     pD, pH, pW = padding
 
-    # Pad if needed
-    if pD > 0 or pH > 0 or pW > 0:
-        x = mx.pad(x, [(0, 0), (0, 0), (pD, pD), (pH, pH), (pW, pW)])
+    # Calculate output dimensions with ceil_mode
+    D_out = _compute_pool_output_size(D, kD, sD, pD, 1, ceil_mode)
+    H_out = _compute_pool_output_size(H, kH, sH, pH, 1, ceil_mode)
+    W_out = _compute_pool_output_size(W, kW, sW, pW, 1, ceil_mode)
+    D_out_floor = _compute_pool_output_size(D, kD, sD, pD, 1, False)
+    H_out_floor = _compute_pool_output_size(H, kH, sH, pH, 1, False)
+    W_out_floor = _compute_pool_output_size(W, kW, sW, pW, 1, False)
+
+    # Calculate extra padding needed for ceil_mode
+    extra_pad_d = 0
+    extra_pad_h = 0
+    extra_pad_w = 0
+    if ceil_mode and D_out > D_out_floor:
+        extra_pad_d = max(0, (D_out - 1) * sD + kD - D - 2 * pD)
+    if ceil_mode and H_out > H_out_floor:
+        extra_pad_h = max(0, (H_out - 1) * sH + kH - H - 2 * pH)
+    if ceil_mode and W_out > W_out_floor:
+        extra_pad_w = max(0, (W_out - 1) * sW + kW - W - 2 * pW)
+
+    total_pad_d = pD + extra_pad_d
+    total_pad_h = pH + extra_pad_h
+    total_pad_w = pW + extra_pad_w
+
+    # Pad if needed - for max pooling use -inf for extra ceil_mode padding
+    if total_pad_d > 0 or total_pad_h > 0 or total_pad_w > 0:
+        if extra_pad_d > 0 or extra_pad_h > 0 or extra_pad_w > 0:
+            # For max pooling with ceil_mode extra padding, pad with -inf
+            x = mx.pad(
+                x,
+                [(0, 0), (0, 0), (pD, total_pad_d), (pH, total_pad_h), (pW, total_pad_w)],
+                constant_values=float('-inf')
+            )
+        else:
+            # Standard padding (no extra ceil_mode padding)
+            x = mx.pad(x, [(0, 0), (0, 0), (pD, pD), (pH, pH), (pW, pW)])
 
     # Convert NCDHW to NDHWC
     x = mx.transpose(x, [0, 2, 3, 4, 1])
-
-    # Calculate output dimensions
-    D_padded = D + 2 * pD
-    H_padded = H + 2 * pH
-    W_padded = W + 2 * pW
-    D_out = (D_padded - kD) // sD + 1
 
     # Apply pooling depth by depth using mxnn.MaxPool2d
     pool_2d = mxnn.MaxPool2d(kernel_size=(kH, kW), stride=(sH, sW), padding=(0, 0))
 
     outputs = []
-    for d_out in range(D_out):
-        d_start = d_out * sD
-        depth_slice = x[:, d_start : d_start + kD, :, :, :]
+    for d_idx in range(D_out):
+        d_start = d_idx * sD
+        depth_slice = x[:, d_start:d_start + kD, :, :, :]
         depth_max = mx.max(depth_slice, axis=1)  # [N, H, W, C]
 
         # Apply 2D pooling on H,W dimensions

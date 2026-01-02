@@ -64,6 +64,35 @@ def _get_cached_default_device():
     return _CACHED_DEFAULT_DEVICE
 
 
+def ensure_tensor(x, requires_grad: bool = False):
+    """
+    Ensure input is a Tensor, converting from raw MLX array if needed.
+
+    This is useful when working with low-level code that may have raw
+    MLX arrays (e.g., gradients extracted from parameters).
+
+    Args:
+        x: Input that is either a Tensor or an mx.array
+        requires_grad: Whether the resulting tensor should track gradients
+
+    Returns:
+        A Tensor object
+
+    Example:
+        >>> import mlx.core as mx
+        >>> arr = mx.array([1.0, 2.0, 3.0])
+        >>> t = ensure_tensor(arr)
+        >>> isinstance(t, Tensor)
+        True
+    """
+    if isinstance(x, Tensor):
+        return x
+    if MLX_AVAILABLE and isinstance(x, mx.array):
+        return Tensor._from_mlx_array(x, requires_grad=requires_grad)
+    # Try to convert via standard tensor creation
+    return Tensor(x, requires_grad=requires_grad)
+
+
 class Tensor:
     """
     PyTorch-compatible tensor wrapper around MLX arrays.
@@ -173,6 +202,24 @@ class Tensor:
         # Device (compatibility - MLX uses unified memory)
         self._device = Device(device) if device is not None else get_default_device()
 
+        # Validate requires_grad is only set for floating point / complex types
+        if requires_grad:
+            from . import dtype as dtype_module
+
+            allowed_dtypes = {
+                dtype_module.float16,
+                dtype_module.float32,
+                dtype_module.bfloat16,
+            }
+            # Add complex64 if available
+            if dtype_module.complex64 is not None:
+                allowed_dtypes.add(dtype_module.complex64)
+
+            if self._dtype not in allowed_dtypes:
+                raise RuntimeError(
+                    "Only Tensors of floating point and complex dtype can require gradients"
+                )
+
         # Autograd metadata (Phase 3)
         self.requires_grad = requires_grad
         self._grad = None  # Accumulated gradients
@@ -184,6 +231,17 @@ class Tensor:
 
         # Layout tracking for NHWC optimization
         self._layout = None  # None = infer from shape and mode
+
+        # Hook storage for register_hook
+        self._hooks = []  # List of (hook_id, hook_fn) tuples
+        self._next_hook_id = 0
+
+        # Retain grad flag for non-leaf tensors
+        self._retain_grad = False
+
+        # Contiguity tracking (MLX arrays are always contiguous in memory,
+        # but we track logical contiguity for PyTorch API compatibility)
+        self._is_contiguous = True
 
     @classmethod
     def _from_mlx_array(
@@ -216,6 +274,12 @@ class Tensor:
         tensor._base = None
         tensor._is_view = False
         tensor._layout = layout
+        # Hook and retain_grad support
+        tensor._hooks = []
+        tensor._next_hook_id = 0
+        tensor._retain_grad = False
+        # Contiguity tracking
+        tensor._is_contiguous = True
         return tensor
 
     def _infer_dtype(self, mlx_array) -> DType:
@@ -304,6 +368,19 @@ class Tensor:
         - It doesn't require gradients
         """
         return self._grad_fn is None
+
+    @property
+    def grad_fn(self):
+        """
+        Returns the gradient function for this tensor.
+
+        This is the function that will be called during backpropagation
+        to compute gradients for this tensor's inputs.
+
+        Returns:
+            The gradient function, or None if this is a leaf tensor.
+        """
+        return self._grad_fn
 
     @property
     def is_view(self) -> bool:
@@ -833,8 +910,31 @@ class Tensor:
 
         return flatten_fn(self, start_dim, end_dim)
 
+    def is_contiguous(self, memory_format=None) -> bool:
+        """
+        Check if tensor is contiguous in memory.
+
+        In MLX, all arrays are contiguous in memory, but we track logical
+        contiguity for PyTorch API compatibility (e.g., after transpose).
+
+        Args:
+            memory_format: Memory format to check (ignored, for API compatibility).
+
+        Returns:
+            True if the tensor is logically contiguous.
+        """
+        return self._is_contiguous
+
     def contiguous(self) -> "Tensor":
-        """Return contiguous tensor (no-op in MLX)."""
+        """
+        Return a contiguous tensor.
+
+        If the tensor is already contiguous, returns self.
+        Otherwise, returns a contiguous copy.
+        """
+        if self._is_contiguous:
+            return self
+
         from .view_ops import contiguous as contiguous_fn
 
         return contiguous_fn(self)
@@ -879,6 +979,86 @@ class Tensor:
     def zero_grad(self):
         """Zero out the gradient."""
         self._grad = None
+
+    def register_hook(self, hook):
+        """
+        Register a backward hook on this tensor.
+
+        The hook will be called every time a gradient with respect to this tensor
+        is computed during backward(). The hook should have the following signature:
+
+            hook(grad) -> Tensor or None
+
+        The hook should not modify its argument. If the hook returns a Tensor,
+        it will be used as the new gradient.
+
+        Args:
+            hook: A callable that takes a gradient tensor as input.
+
+        Returns:
+            A handle that can be used to remove the hook by calling handle.remove().
+
+        Example:
+            >>> x = flashlight.tensor([1.0, 2.0], requires_grad=True)
+            >>> def print_grad(grad):
+            ...     print(f"Gradient: {grad}")
+            >>> handle = x.register_hook(print_grad)
+            >>> y = (x ** 2).sum()
+            >>> y.backward()
+            Gradient: tensor([2., 4.])
+            >>> handle.remove()  # Remove the hook
+        """
+        if not self.requires_grad:
+            raise RuntimeError(
+                "Cannot register a hook on a tensor that doesn't require gradients"
+            )
+
+        hook_id = self._next_hook_id
+        self._next_hook_id += 1
+        self._hooks.append((hook_id, hook))
+
+        # Create a removable handle
+        class RemovableHandle:
+            def __init__(handle_self, tensor, hook_id):
+                handle_self._tensor = tensor
+                handle_self._hook_id = hook_id
+
+            def remove(handle_self):
+                handle_self._tensor._hooks = [
+                    (hid, h) for hid, h in handle_self._tensor._hooks
+                    if hid != handle_self._hook_id
+                ]
+
+        return RemovableHandle(self, hook_id)
+
+    def retain_grad(self):
+        """
+        Enable gradient retention for a non-leaf tensor.
+
+        By default, gradients are only stored for leaf tensors (tensors created
+        by the user, not by operations). This method allows you to retain the
+        gradient for intermediate tensors as well.
+
+        This is useful when you need to inspect or use the gradient of an
+        intermediate computation.
+
+        Example:
+            >>> x = flashlight.tensor([1.0, 2.0], requires_grad=True)
+            >>> y = x * 2
+            >>> y.retain_grad()
+            >>> z = y.sum()
+            >>> z.backward()
+            >>> print(y.grad)  # Would be None without retain_grad()
+            tensor([1., 1.])
+        """
+        if not self.requires_grad:
+            raise RuntimeError(
+                "Cannot call retain_grad() on a tensor that doesn't require gradients"
+            )
+        if self.is_leaf:
+            # Leaf tensors always retain gradients, no-op
+            return
+        self._retain_grad = True
 
     def backward(self, gradient=None, retain_graph=False, create_graph=False):
         """
@@ -1043,6 +1223,34 @@ class Tensor:
         from . import ops
 
         return ops.argmin(self, dim=dim, keepdim=keepdim)
+
+    def norm(self, p="fro", dim=None, keepdim=False, *, dtype=None):
+        """
+        Compute vector or matrix norm.
+
+        Args:
+            p: Order of norm. Can be:
+               - "fro" (Frobenius norm, default for matrices)
+               - "nuc" (nuclear norm)
+               - int or float (p-norm)
+               - float('inf') or float('-inf')
+            dim: Dimension(s) to reduce. If None, compute over all elements.
+            keepdim: If True, keep reduced dimensions.
+            dtype: Optional dtype for computation.
+
+        Returns:
+            Tensor containing the norm.
+
+        Example:
+            >>> x = flashlight.tensor([[1., 2.], [3., 4.]])
+            >>> x.norm()  # Frobenius norm
+            tensor(5.4772)
+            >>> x.norm(p=2, dim=1)  # L2 norm along dim 1
+            tensor([2.2361, 5.])
+        """
+        from . import linalg
+
+        return linalg.norm(self, ord=p, dim=dim, keepdim=keepdim, dtype=dtype)
 
     def all(self, dim=None, keepdim=False):
         """

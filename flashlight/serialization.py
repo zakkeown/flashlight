@@ -70,6 +70,7 @@ def load(
     Load an object from a file.
 
     Loads an object that was saved with flashlight.save() or torch.save().
+    Supports loading PyTorch checkpoint files directly.
 
     Args:
         f: A file-like object or a string/path-like object containing a filename
@@ -100,15 +101,137 @@ def load(
     if pickle_module is None:
         pickle_module = pickle
 
-    # Handle file path vs file object
-    if isinstance(f, (str, os.PathLike)):
-        with open(f, "rb") as file:
-            obj = pickle_module.load(file, **pickle_load_args)
-    else:
-        obj = pickle_module.load(f, **pickle_load_args)
+    # First, try to load as flashlight format
+    try:
+        if isinstance(f, (str, os.PathLike)):
+            with open(f, "rb") as file:
+                obj = pickle_module.load(file, **pickle_load_args)
+        else:
+            obj = pickle_module.load(f, **pickle_load_args)
 
-    # Convert from serializable format back to Tensors
-    return _from_serializable(obj)
+        # Convert from serializable format back to Tensors
+        return _from_serializable(obj)
+    except Exception as flashlight_error:
+        pass
+
+    # If that fails, try to load as PyTorch format
+    try:
+        return _load_pytorch_checkpoint(f, weights_only=weights_only)
+    except ImportError:
+        raise RuntimeError(
+            "Failed to load file. It may be a PyTorch checkpoint, but PyTorch "
+            "is not installed. Install PyTorch to load PyTorch checkpoints: "
+            "pip install torch"
+        )
+    except Exception as pytorch_error:
+        raise RuntimeError(
+            f"Failed to load file. Tried flashlight format and PyTorch format.\n"
+            f"Flashlight error: {flashlight_error}\n"
+            f"PyTorch error: {pytorch_error}"
+        )
+
+
+def _load_pytorch_checkpoint(
+    f: Union[str, os.PathLike, IO[bytes]],
+    weights_only: bool = None,
+) -> Any:
+    """
+    Load a PyTorch checkpoint and convert tensors to flashlight Tensors.
+
+    Args:
+        f: File path or file object
+        weights_only: If True, only load weights (passed to torch.load)
+
+    Returns:
+        Loaded object with PyTorch tensors converted to flashlight Tensors
+    """
+    import torch
+
+    # Build kwargs for torch.load
+    load_kwargs = {"map_location": "cpu"}
+    if weights_only is not None:
+        load_kwargs["weights_only"] = weights_only
+
+    # Load with PyTorch
+    obj = torch.load(f, **load_kwargs)
+
+    # Convert PyTorch tensors to flashlight Tensors
+    return _convert_pytorch_object(obj)
+
+
+def _convert_pytorch_object(obj: Any) -> Any:
+    """
+    Recursively convert PyTorch tensors to flashlight Tensors.
+    """
+    # Check if it's a PyTorch tensor
+    try:
+        import torch
+
+        if isinstance(obj, torch.Tensor):
+            return _convert_pytorch_tensor(obj)
+    except ImportError:
+        pass
+
+    if isinstance(obj, dict):
+        return {k: _convert_pytorch_object(v) for k, v in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        result = [_convert_pytorch_object(item) for item in obj]
+        return type(obj)(result) if isinstance(obj, tuple) else result
+    else:
+        return obj
+
+
+def _convert_pytorch_tensor(torch_tensor) -> Tensor:
+    """
+    Convert a PyTorch tensor to a flashlight Tensor.
+
+    Args:
+        torch_tensor: A PyTorch tensor
+
+    Returns:
+        A flashlight Tensor with the same data
+    """
+    import numpy as np
+
+    # Move to CPU and convert to numpy
+    numpy_array = torch_tensor.detach().cpu().numpy()
+
+    # Map dtype
+    dtype_map = {
+        np.float32: mx.float32,
+        np.float16: mx.float16,
+        np.float64: mx.float32,  # MLX doesn't support float64
+        np.int32: mx.int32,
+        np.int64: mx.int64,
+        np.int16: mx.int16,
+        np.int8: mx.int8,
+        np.uint8: mx.uint8,
+        np.uint16: mx.uint16,
+        np.uint32: mx.uint32,
+        np.uint64: mx.uint64,
+        np.bool_: mx.bool_,
+    }
+
+    # Get target dtype
+    numpy_dtype = numpy_array.dtype.type
+    mlx_dtype = dtype_map.get(numpy_dtype, mx.float32)
+
+    # Handle bfloat16 specially (numpy doesn't have it)
+    if str(torch_tensor.dtype) == "torch.bfloat16":
+        # Convert to float32 first, then to bfloat16
+        numpy_array = torch_tensor.float().detach().cpu().numpy()
+        mlx_dtype = mx.bfloat16
+
+    # Create MLX array
+    arr = mx.array(numpy_array, dtype=mlx_dtype)
+
+    # Create flashlight Tensor
+    tensor = Tensor._from_mlx_array(arr)
+
+    # Note: We don't preserve requires_grad for loaded tensors
+    # (consistent with PyTorch's default behavior when loading)
+
+    return tensor
 
 
 def _to_serializable(obj: Any) -> Any:

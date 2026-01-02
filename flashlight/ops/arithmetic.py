@@ -637,7 +637,8 @@ def angle(input: Tensor) -> Tensor:
     else:
         # For real tensors, angle is 0 for positive, pi for negative
         # NaN should remain NaN, which we handle by checking for NaN explicitly
-        pi_array = mx.full(x.shape, 3.141592653589793, dtype=x.dtype)
+        import math
+        pi_array = mx.full(x.shape, math.pi, dtype=x.dtype)
         zeros = mx.zeros_like(x)
 
         # First compute the basic result: 0 for x >= 0, pi for x < 0
@@ -899,12 +900,21 @@ def lgamma(input: Tensor) -> Tensor:
     # Apply reflection formula for x < 0.5
     # lgamma(x) = log(pi) - log(|sin(pi * x)|) - lgamma(1 - x)
     log_pi = mx.array(1.1447298858494002, dtype=mx.float32)  # log(pi)
-    sin_pi_x = mx.sin(mx.array(3.141592653589793, dtype=mx.float32) * x)
+    import math
+    sin_pi_x = mx.sin(mx.array(math.pi, dtype=mx.float32) * x)
     log_sin_pi_x = mx.log(mx.abs(sin_pi_x) + mx.array(FLOAT32_TINY, dtype=mx.float32))
 
     lgamma_negative = log_pi - log_sin_pi_x - lgamma_positive
 
     mlx_result = mx.where(reflect_mask, lgamma_negative, lgamma_positive)
+
+    # Handle special cases: lgamma at non-positive integers is +inf
+    # These are poles of the gamma function
+    is_nonpositive_int = (x <= 0) & (mx.abs(x - mx.round(x)) < 1e-7)
+    mlx_result = mx.where(is_nonpositive_int, mx.array(float("inf")), mlx_result)
+
+    # lgamma(1) = lgamma(2) = 0 exactly
+    mlx_result = mx.where((x == 1.0) | (x == 2.0), mx.zeros_like(mlx_result), mlx_result)
 
     result = Tensor._from_mlx_array(mlx_result)
     if is_grad_enabled() and input.requires_grad:
@@ -974,7 +984,8 @@ def digamma(input: Tensor) -> Tensor:
 
     # For negative x, compute digamma(1-x) + pi*cot(pi*x)
     # cot(pi*x) = cos(pi*x) / sin(pi*x)
-    pi = mx.array(3.141592653589793, dtype=mx.float32)
+    import math
+    pi = mx.array(math.pi, dtype=mx.float32)
     sin_pi_x = mx.sin(pi * x)
     cos_pi_x = mx.cos(pi * x)
     cot_pi_x = cos_pi_x / (sin_pi_x + mx.array(FLOAT32_TINY, dtype=mx.float32))
