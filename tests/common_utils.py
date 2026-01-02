@@ -20,7 +20,6 @@ except ImportError:
     TORCH_AVAILABLE = False
     torch = None
 
-# Will be available after Phase 1
 try:
     import mlx.core as mx
 
@@ -105,8 +104,6 @@ class TestCase(unittest.TestCase):
 
         Handles mapping between MLX, PyTorch, and NumPy dtypes.
         """
-        # Will implement dtype mapping in Phase 1
-        # For now, simple equality check
         self.assertEqual(actual_dtype, expected_dtype, msg)
 
     def assert_shape_equal(self, actual_shape, expected_shape, msg: Optional[str] = None):
@@ -270,10 +267,9 @@ def make_tensor(
             raise RuntimeError("PyTorch not available")
         return torch.randn(*shape, dtype=dtype, device=device, requires_grad=requires_grad)
     elif backend == "mlx":
-        # Will implement in Phase 1
-        # import flashlight
-        # return flashlight.randn(*shape, dtype=dtype, requires_grad=requires_grad)
-        raise NotImplementedError("MLX backend not yet implemented (Phase 1)")
+        import flashlight
+
+        return flashlight.randn(*shape, dtype=dtype, requires_grad=requires_grad)
     else:
         raise ValueError(f"Unknown backend: {backend}")
 
@@ -301,14 +297,54 @@ def gradcheck(
     Returns:
         True if gradients match
     """
-    # Will implement in Phase 3 (Autograd)
-    raise NotImplementedError("Gradient checking not yet implemented (Phase 3)")
+    import flashlight
+
+    if not isinstance(inputs, tuple):
+        inputs = (inputs,)
+
+    # Get analytical gradients
+    for inp in inputs:
+        if inp.requires_grad:
+            inp.grad = None
+
+    output = func(*inputs)
+    output.backward()
+
+    for inp in inputs:
+        if not inp.requires_grad:
+            continue
+
+        analytical_grad = inp.grad.numpy()
+
+        # Compute numerical gradients
+        numerical_grad = np.zeros_like(analytical_grad)
+        flat_inp = inp.detach().numpy().flatten()
+
+        for i in range(len(flat_inp)):
+            orig = flat_inp[i]
+
+            flat_inp[i] = orig + eps
+            inp_plus = flashlight.tensor(flat_inp.reshape(inp.shape), requires_grad=False)
+            out_plus = func(inp_plus).item()
+
+            flat_inp[i] = orig - eps
+            inp_minus = flashlight.tensor(flat_inp.reshape(inp.shape), requires_grad=False)
+            out_minus = func(inp_minus).item()
+
+            numerical_grad.flatten()[i] = (out_plus - out_minus) / (2 * eps)
+            flat_inp[i] = orig
+
+        if not np.allclose(analytical_grad, numerical_grad, rtol=rtol, atol=atol):
+            return False
+
+    return True
 
 
 def set_default_dtype(dtype):
     """Set default floating point dtype for tensor creation."""
-    # Will implement in Phase 1
-    raise NotImplementedError("set_default_dtype not yet implemented (Phase 1)")
+    import flashlight
+
+    flashlight.set_default_dtype(dtype)
 
 
 # Test markers and decorators

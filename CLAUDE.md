@@ -4,10 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**MLX Compat** is a PyTorch-compatible API layer for Apple's MLX framework. It enables PyTorch code to run on Apple Silicon with minimal modifications through a complete bottom-up implementation.
+**Flashlight** is a PyTorch-compatible API layer for Apple's MLX framework. It enables PyTorch code to run on Apple Silicon with minimal modifications through a complete bottom-up implementation.
 
 **Package name**: `flashlight` (import as `flashlight`)
-**Status**: Phase 6 Complete - Full training pipeline verified
+**Status**: Production Ready - Full training pipeline verified
 
 ## Build/Test/Lint Commands
 
@@ -18,7 +18,9 @@ pip3 install -e ".[dev]"           # Development mode with all deps
 
 # Testing
 pytest tests/                      # Run all tests
-pytest tests/phase1_tensor_core/   # Specific phase
+pytest tests/tensor_core/          # Tensor core tests
+pytest tests/operators/            # Operator tests
+pytest tests/nn_modules/           # Neural network tests
 pytest tests/ -m parity            # PyTorch parity tests only
 pytest tests/ -m integration       # Integration tests
 pytest tests/ -k "test_name"       # Single test by name
@@ -72,4 +74,4 @@ MLX Backend (external, Apple's Metal-based ML framework)
 
 - Parity tests compare against PyTorch (markers: `@pytest.mark.parity`)
 - Numerical tolerance: <1e-5 (forward), <1e-4 (gradients)
-- Test files organized by phase in `tests/phase*/`
+- Test files organized by component in `tests/*/`

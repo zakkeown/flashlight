@@ -1,5 +1,5 @@
 """
-Test Phase 0: Project Scaffolding
+Test Project Scaffolding
 
 Verifies that the project structure is set up correctly.
 """
@@ -39,13 +39,6 @@ class TestScaffolding(TestCase):
         self.assertIsNotNone(flashlight.nn)
         self.assertIsNotNone(flashlight.optim)
         self.assertIsNotNone(flashlight.utils)
-
-    def test_implementation_status(self):
-        """Test that implementation status can be retrieved."""
-        status = flashlight._get_implementation_status()
-        self.assertIsInstance(status, dict)
-        self.assertEqual(status["phase_0_scaffolding"], "✓ Complete")
-        self.assertEqual(status["phase_1_tensor_core"], "✓ Complete")
 
 
 class TestCommonUtils(TestCase):
