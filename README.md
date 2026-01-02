@@ -1,4 +1,4 @@
-# MLX Compat: PyTorch-Compatible API for Apple MLX
+# Flashlight: PyTorch-Compatible API for Apple MLX
 
 [![CI](https://github.com/yourusername/flashlight/workflows/CI/badge.svg)](https://github.com/yourusername/flashlight/actions)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
@@ -6,14 +6,24 @@
 
 A PyTorch-compatible API layer for Apple's MLX framework, enabling PyTorch code to run on Apple Silicon with minimal modifications.
 
-## 🎯 Project Goals
+## Features
+
+- **Tensor Core**: Full tensor operations with PyTorch-compatible API
+- **50+ Operators**: Arithmetic, activations, reductions, convolutions, and more
+- **Automatic Differentiation**: Tape-based autograd system
+- **Neural Network Modules**: 15+ layer types (Linear, Conv2d, LSTM, BatchNorm, etc.)
+- **Optimizers**: SGD, Adam, AdamW with learning rate schedulers
+- **Distributions**: Statistical probability distributions
+- **Signal Processing**: FFT and window functions
+
+## Project Goals
 
 - **PyTorch Compatibility**: ~90% API compatibility for common ML workflows
 - **Numerical Parity**: <1e-5 error on forward pass, <1e-4 on gradients
 - **Performance**: Within 20% of PyTorch MPS backend performance
 - **Test Coverage**: >90% code coverage with comprehensive testing
 
-## 🚀 Quick Start
+## Quick Start
 
 ```python
 import flashlight
@@ -46,7 +56,7 @@ for batch_x, batch_y in dataloader:
     optimizer.step()
 ```
 
-## 📦 Installation
+## Installation
 
 ### Prerequisites
 - Python 3.9+
@@ -66,76 +76,21 @@ pip install -e .
 pip install -e ".[dev]"
 ```
 
-## 🗺️ Implementation Roadmap
+## Architecture
 
-This project follows a **6-phase bottom-up implementation** strategy:
-
-### ✅ Phase 0: Project Scaffolding
-- [x] Package structure
-- [x] Testing infrastructure
-- [x] CI/CD pipeline
-- [x] Documentation
-
-### ✅ Phase 1: Tensor Core
-- [x] Tensor wrapper class
-- [x] Dtype system mapping
-- [x] Device management
-- [x] View semantics
-- [x] 20+ tensor creation functions
-
-### ✅ Phase 2: Operators
-- [x] 50+ Tier 1 operators
-  - Arithmetic (12): add, sub, mul, div, matmul, etc.
-  - Activations (7): relu, gelu, sigmoid, tanh, softmax, etc.
-  - Reductions (8): sum, mean, max, min, argmax, etc.
-  - Shape (8): cat, stack, split, reshape, etc.
-  - Indexing (5): gather, scatter, where, etc.
-  - Convolution (3): conv1d, conv2d, conv3d
-  - Other (7): embedding, dropout, layer_norm, etc.
-
-### ✅ Phase 3: Autograd
-- [x] Tape-based computational graph
-- [x] Backward pass engine
-- [x] Gradient formulas for all operators
-- [x] Custom autograd functions
-- [x] Numerical gradient checking
-
-### ✅ Phase 4: Neural Networks
-- [x] nn.Module base class
-- [x] 15+ layer types
-  - Linear, Conv2d, BatchNorm, LayerNorm
-  - ReLU, GELU, Dropout, MaxPool2d
-  - RNN, LSTM, GRU
-- [x] Loss functions
-- [x] Model serialization
-
-### ✅ Phase 5: Training Infrastructure
-- [x] Optimizers: SGD, Adam, AdamW
-- [x] Learning rate schedulers
-- [x] Gradient clipping
-- [x] Checkpointing
-
-### ✅ Phase 6: Validation
-- [x] Reference models (ResNet, Transformer)
-- [x] MNIST/CIFAR-10 training
-- [x] Numerical parity validation
-- [x] Performance benchmarking
-
-## 🏗️ Architecture
-
-### Bottom-Up Design
+Flashlight follows a layered, bottom-up design:
 
 ```
 ┌─────────────────────────────────────┐
-│  Python API (torch-like interface) │  Phase 4-5
+│  Python API (torch-like interface)  │
 ├─────────────────────────────────────┤
-│      Autograd (tape-based)          │  Phase 3
+│      Autograd (tape-based)          │
 ├─────────────────────────────────────┤
-│    Operators (50 Tier 1 ops)        │  Phase 2
+│    Operators (50+ operations)       │
 ├─────────────────────────────────────┤
-│     Tensor Core (wrappers)          │  Phase 1
+│     Tensor Core (wrappers)          │
 ├─────────────────────────────────────┤
-│         MLX Backend                 │  External
+│         MLX Backend                 │
 └─────────────────────────────────────┘
 ```
 
@@ -146,7 +101,7 @@ This project follows a **6-phase bottom-up implementation** strategy:
 3. **Unified Memory**: Device management is compatibility shim (MLX uses unified memory)
 4. **Tape-based Autograd**: Build PyTorch-style tape system on top of MLX transforms
 
-## 🧪 Testing
+## Testing
 
 We use **Test-Driven Development (TDD)** with comprehensive numerical parity testing:
 
@@ -154,9 +109,11 @@ We use **Test-Driven Development (TDD)** with comprehensive numerical parity tes
 # Run all tests
 pytest tests/
 
-# Run specific phase tests
-pytest tests/phase1_tensor_core/
-pytest tests/phase2_operators/
+# Run specific component tests
+pytest tests/tensor_core/
+pytest tests/operators/
+pytest tests/autograd/
+pytest tests/nn_modules/
 
 # Run with coverage
 pytest tests/ --cov=flashlight --cov-report=html
@@ -171,35 +128,18 @@ pytest tests/ -m parity
 ### Test Organization
 ```
 tests/
-├── common_utils.py              # Shared utilities
-├── phase1_tensor_core/          # 15+ tests
-├── phase2_operators/            # 50+ tests
-├── phase3_autograd/             # 20+ tests
-├── phase4_nn_modules/           # 30+ tests
-├── phase5_training/             # 10+ tests
-└── integration/                 # End-to-end tests
+├── common_utils.py       # Shared utilities
+├── tensor_core/          # Tensor operations
+├── operators/            # Mathematical operators
+├── autograd/             # Automatic differentiation
+├── nn_modules/           # Neural network layers
+├── training/             # Optimizers and schedulers
+├── distributions/        # Probability distributions
+├── signal/               # Signal processing
+└── integration/          # End-to-end tests
 ```
 
-## 📚 Documentation
-
-Comprehensive documentation is available in the `pytorch-mlx-porting-docs/` directory:
-
-- **[00-OVERVIEW.md](pytorch-mlx-porting-docs/00-OVERVIEW.md)**: PyTorch architecture overview
-- **[08-PORTING-GUIDE/implementation-roadmap.md](pytorch-mlx-porting-docs/08-PORTING-GUIDE/implementation-roadmap.md)**: 12-week implementation plan
-- **[08-PORTING-GUIDE/mlx-mapping.md](pytorch-mlx-porting-docs/08-PORTING-GUIDE/mlx-mapping.md)**: PyTorch → MLX API mappings
-
-### Documentation Structure
-- `01-FOUNDATIONS/`: Tensor core, dispatch, type system (6 files)
-- `02-OPERATORS/`: Operator reference (19 files)
-- `03-AUTOGRAD/`: Automatic differentiation (8 files)
-- `04-NEURAL-NETWORKS/`: Layers and modules (22 files)
-- `05-TRAINING/`: Optimizers and schedulers (8 files)
-- `08-PORTING-GUIDE/`: Implementation guides (3 files)
-
-### Reference Implementation
-The full PyTorch source code is available at `reference/pytorch/` for reference.
-
-## 🎓 Examples
+## Examples
 
 ```
 examples/
@@ -209,7 +149,7 @@ examples/
 └── transformer.py        # Transformer model
 ```
 
-## 🔧 Development
+## Development
 
 ### Code Style
 - **Formatter**: Black (line length: 100)
@@ -230,28 +170,8 @@ flake8 flashlight tests
 2. Ensure numerical parity with PyTorch
 3. Maintain >90% code coverage
 4. Follow existing code style
-5. Reference documentation and PyTorch implementation
 
-## 📊 Success Metrics
-
-### Phase Completion Criteria
-| Phase | Success Criteria |
-|-------|------------------|
-| Phase 0 | ✅ Package structure, tests run |
-| Phase 1 | All tensor operations work, 100% coverage |
-| Phase 2 | 50 Tier 1 operators pass numerical parity |
-| Phase 3 | Autograd backward works, gradient checking passes |
-| Phase 4 | 15+ layers, model composition works |
-| Phase 5 | Full training loop runs, checkpointing works |
-| Phase 6 | 3+ models train, benchmarks complete |
-
-### Overall Success
-- **API Coverage**: 90%+ of common PyTorch workflows
-- **Numerical Parity**: <1e-5 error (forward), <1e-4 error (gradients)
-- **Performance**: Within 20% of PyTorch MPS
-- **Test Coverage**: >90%
-
-## ⚠️ Known Limitations
+## Known Limitations
 
 ### MLX Constraints
 - **No float64**: MLX only supports float16/float32/bfloat16
@@ -264,22 +184,16 @@ flake8 flashlight tests
 - MLX uses NHWC (channels-last) for Metal optimization
 - Automatic transpose operations may impact performance
 
-## 📄 License
+## License
 
 MIT License - see [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - **PyTorch Team**: For the reference implementation and design patterns
 - **Apple MLX Team**: For the high-performance ML framework
-- **Documentation**: Based on extensive PyTorch architecture analysis
 
-## 📞 Contact
+## Contact
 
 For questions, issues, or contributions:
 - GitHub Issues: [https://github.com/yourusername/flashlight/issues](https://github.com/yourusername/flashlight/issues)
-- Documentation: See `pytorch-mlx-porting-docs/`
-
----
-
-**Status**: Phase 6 Complete ✅ | Production Ready

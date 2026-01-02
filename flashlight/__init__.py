@@ -2562,30 +2562,6 @@ __all__ = [
 ]
 
 
-# Development status indicator
-def _get_implementation_status():
-    """Return current implementation status."""
-    return {
-        "phase_0_scaffolding": "✓ Complete",
-        "phase_1_tensor_core": "✓ Complete",
-        "phase_2_operators": "○ Not started",
-        "phase_3_autograd": "○ Not started",
-        "phase_4_nn_modules": "○ Not started",
-        "phase_5_training": "○ Not started",
-        "phase_6_validation": "○ Not started",
-    }
-
-
-def show_status():
-    """Display implementation status."""
-    print(f"MLX Compat v{__version__}")
-    print("=" * 50)
-    status = _get_implementation_status()
-    for phase, state in status.items():
-        print(f"{phase}: {state}")
-    print("=" * 50)
-
-
 # Check MLX availability
 try:
     import mlx.core as mx
